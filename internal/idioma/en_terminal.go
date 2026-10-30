@@ -33,9 +33,10 @@ func init() {
 		"web":                              "web",
 		"Código":                           "Code",
 		"Pidiendo el enlace de la Web UI…": "Getting the Web UI link…",
-		"Abre esta dirección en un navegador; vale un minuto y una sola vez:":              "Open this address in a browser; it works once, for one minute:",
-		"Abre esta dirección en un navegador y entra con la contraseña del administrador:": "Open this address in a browser and sign in with the administrator password:",
-		"En el servidor, la suscripción se hace con: %s":                                   "On the server, the subscription is set up with: %s",
+		"Abre esta dirección en un navegador; vale un minuto y una sola vez:":                                                  "Open this address in a browser; it works once, for one minute:",
+		"Abre esta dirección en un navegador y entra con la contraseña del administrador:":                                     "Open this address in a browser and sign in with the administrator password:",
+		"Para entrar desde otro equipo, crea antes la contraseña del administrador: tramtai-servidor administrador contraseña": "To sign in from another computer, first set the administrator password: tramtai-servidor admin password",
+		"En el servidor, la suscripción se hace con: %s":                                                                       "On the server, the subscription is set up with: %s",
 
 		// Componentes
 		"Sin resultados":           "No results",

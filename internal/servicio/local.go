@@ -24,6 +24,27 @@ func ContextoDeConexion(ctx context.Context, _ net.Conn) context.Context {
 	return context.WithValue(ctx, claveDueno{}, &duenoConexion{})
 }
 
+type claveOyenteLocal struct{}
+
+// contextoOyenteLocal es el ConnContext del oyente local (BaseLocal), el de la CLI, la terminal y la app de este
+// equipo: lo que llega por él nunca lo trae un proxy, aunque la dirección de loopback sea de confianza.
+func contextoOyenteLocal(ctx context.Context, c net.Conn) context.Context {
+	return context.WithValue(ContextoDeConexion(ctx, c), claveOyenteLocal{}, true)
+}
+
+type claveDeProxy struct{}
+
+// marcarProxy envuelve el handler de un oyente público: lo que llega desde una dirección de servicio.proxy.confiables
+// lo reenvía ese proxy y nunca es local (desdeEsteEquipo), lleve o no cabeceras de proxy (R35).
+func (s *Servicio) marcarProxy(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if deProxy(r, s.opc.Confiables) {
+			r = r.WithContext(context.WithValue(r.Context(), claveDeProxy{}, true))
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
 // esLocal indica que la petición llega por loopback desde un programa del mismo usuario del sistema que el
 // servicio (el navegador o la aplicación de escritorio). Entonces la Web UI entra sin token: el token protege
 // frente a otros usuarios del equipo, y eso se comprueba aquí con el dueño de la conexión. Las
@@ -61,10 +82,13 @@ func mismoUsuarioLocal(r *http.Request) bool {
 }
 
 // desdeEsteEquipo indica que la petición llega por loopback y no la reenvía un proxy o túnel (que traería peticiones
-// ajenas desde loopback). Vale también para un proxy de confianza (servicio.proxy.confiables): lo que reenvía nunca es
-// local. No dice de qué usuario es: eso lo comprueba esLocal o, con un código de un solo uso, el hecho de que solo el
-// dueño del servicio puede pedirlo con el token de servicio.
+// ajenas desde loopback). Lo que llega por un oyente público desde un proxy de confianza (servicio.proxy.confiables)
+// nunca es local, aunque no traiga esas cabeceras (marcarProxy). No dice de qué usuario es: eso lo comprueba esLocal
+// o, con un código de un solo uso, el hecho de que solo el dueño del servicio puede pedirlo con el token de servicio.
 func desdeEsteEquipo(r *http.Request) bool {
+	if r.Context().Value(claveDeProxy{}) != nil {
+		return false
+	}
 	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
 		if r.Header.Get(cabecera) != "" {
 			return false

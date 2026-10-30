@@ -91,6 +91,10 @@ func (m *modelo) webAbierta(msg msgWeb) tea.Cmd {
 	if u, err := url.Parse(msg.url); err == nil && u.Query().Get("codigo") != "" {
 		texto += "\n\n" + idioma.T("Código") + ": " + u.Query().Get("codigo")
 	}
+	// Tras un proxy de confianza, el enlace con código va al oyente local (R35): desde fuera solo se entra con contraseña.
+	if s := m.servidor; s != nil && !s.Administrador && len(s.Confiables) > 0 {
+		texto += "\n\n" + idioma.T("Para entrar desde otro equipo, crea antes la contraseña del administrador: tramtai-servidor administrador contraseña")
+	}
 	m.pregunta = &comp.Confirmacion{Texto: texto, Leer: true} // sin pregunta abierta, saliendo y cambiarA ya están vacíos
 	return nil
 }

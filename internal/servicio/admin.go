@@ -355,7 +355,9 @@ func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {
 	api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
 }
 
-// adminSesion devuelve una URL de un solo uso que abre la Web UI de una instancia (tramtai global abrir).
+// adminSesion devuelve una URL de un solo uso que abre la Web UI de una instancia (tramtai abrir, la tecla W, la app).
+// Con proxies de confianza va al oyente local: por el puerto público, el navegador de este equipo llega desde una
+// dirección de confianza y su sesión sería remota (R35). Con solo TLS propio, la pública (el navegador habla TLS).
 func (s *Servicio) adminSesion(w http.ResponseWriter, r *http.Request) {
 	var peticion struct {
 		Instancia string `json:"instancia"`
@@ -369,5 +371,9 @@ func (s *Servicio) adminSesion(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	api.EscribirJSON(w, http.StatusOK, map[string]any{"url": s.BasePublica() + "/ui/entrar?codigo=" + codigo})
+	base := s.BasePublica()
+	if len(s.opc.Confiables) > 0 {
+		base = s.BaseLocal()
+	}
+	api.EscribirJSON(w, http.StatusOK, map[string]any{"url": base + "/ui/entrar?codigo=" + codigo})
 }

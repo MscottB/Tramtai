@@ -57,7 +57,8 @@ type Opciones struct {
 	Dominios   []string
 	// TLS es la configuración del TLS propio (ConfigTLS); nil = HTTP plano. Con ella, el servicio abre además un oyente
 	// HTTP solo en 127.0.0.1 para su propia CLI, terminal y app (BaseLocal), y lo que anuncia a las personas es https
-	// (BasePublica). Los puntos de acceso con puerto propio también hablan TLS.
+	// (BasePublica). Los puntos de acceso con puerto propio también hablan TLS. Con Confiables también se abre ese
+	// oyente local.
 	TLS       *tls.Config
 	Registros io.Writer // mensajes de operación; nil los descarta
 	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
@@ -205,7 +206,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	s.actualizaciones.Consultar = opc.ConsultarVersion
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
-	s.handler = s.conHSTS(api.Proteger(opc.Hosts, nil, s.frenarClaves(http.HandlerFunc(s.enrutar))))
+	s.handler = s.marcarProxy(s.conHSTS(api.Proteger(opc.Hosts, nil, s.frenarClaves(http.HandlerFunc(s.enrutar)))))
 	if opc.RaizConversor != "" {
 		s.conversor = documentos.NuevaPreparacion(opc.RaizConversor, opc.Config.Texto("conversion.comando"), opc.UV)
 		s.conversor.Registros = opc.Registros // cada preparación, también la que se pide a mano, queda anotada
@@ -214,12 +215,13 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 			s.conversor.Preparar()
 		}
 	}
-	if opc.TLS != nil {
+	// Con proxies de confianza, la CLI no comparte oyente con el proxy, que puede estar en 127.0.0.1 (R35).
+	if opc.TLS != nil || len(opc.Confiables) > 0 {
 		if s.local, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
 			return nil, err
 		}
 		s.localSrv = &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
-			ConnContext: ContextoDeConexion}
+			ConnContext: contextoOyenteLocal}
 		go s.localSrv.Serve(s.local)
 	}
 	return s, nil
@@ -255,7 +257,8 @@ func (s *Servicio) conHSTS(h http.Handler) http.Handler {
 }
 
 // BaseLocal es la dirección a la que se conectan la CLI, la terminal y la app de este equipo (la del descriptor). Con TLS
-// propio es el oyente HTTP de 127.0.0.1, porque esos clientes no hablan TLS; si no, la del puerto principal.
+// propio es el oyente HTTP de 127.0.0.1, porque esos clientes no hablan TLS; con proxies de confianza, también, para no
+// compartir oyente con un proxy en loopback; si no, la del puerto principal.
 func (s *Servicio) BaseLocal() string {
 	if s.local != nil {
 		return "http://" + s.local.Addr().String()

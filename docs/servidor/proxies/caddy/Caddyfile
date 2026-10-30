@@ -1,0 +1,20 @@
+# Caddy delante del servidor de Tramtai: HTTPS solo con TLS 1.3 en el 443, y Tramtai solo en este equipo
+# (127.0.0.1:17373). En /var/lib/tramtai/config.yaml (o %ProgramData%\Tramtai\config.yaml):
+#   servicio:
+#     host: 127.0.0.1
+#     dominios: [tramtai.example.com]
+#     proxy:
+#       confiables: [127.0.0.1/32]
+# Caddy conserva el Host y pone X-Forwarded-For, X-Forwarded-Proto y X-Forwarded-Host: sustituye lo que mande un
+# cliente que no es de confianza.
+# No añadas HSTS (Strict-Transport-Security): lo pone Tramtai.
+tramtai.example.com {
+	# Con tu certificado; sin las dos rutas, Caddy lo saca solo con Let's Encrypt.
+	tls /etc/caddy/tls/fullchain.pem /etc/caddy/tls/privkey.pem {
+		protocols tls1.3
+	}
+	reverse_proxy 127.0.0.1:17373 {
+		# Sin búfer: el flujo en vivo (SSE) llega trozo a trozo.
+		flush_interval -1
+	}
+}

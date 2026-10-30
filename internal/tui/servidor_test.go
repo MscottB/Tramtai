@@ -115,3 +115,33 @@ func TestTeclaWServidorConAdministrador(t *testing.T) {
 		}
 	}
 }
+
+// TestTeclaWSinAdministradorTrasProxy: tras un proxy de confianza y sin administrador, el enlace con código de W va al
+// oyente local (R35) y no sirve desde otro equipo; la ventana lo dice y da la orden. Con administrador o sin proxies,
+// no.
+func TestTeclaWSinAdministradorTrasProxy(t *testing.T) {
+	aviso := idioma.T("Para entrar desde otro equipo, crea antes la contraseña del administrador: tramtai-servidor administrador contraseña")
+	for _, c := range []struct {
+		nombre string
+		estado contrato.EstadoServidor
+		quiere bool
+	}{
+		{"tras un proxy y sin administrador", contrato.EstadoServidor{TLS: "ninguno", Confiables: []string{"127.0.0.1/32"}}, true},
+		{"tras un proxy y con administrador", contrato.EstadoServidor{Administrador: true, TLS: "ninguno", Confiables: []string{"127.0.0.1/32"}}, false},
+		{"sin proxies y sin administrador", contrato.EstadoServidor{TLS: "ninguno"}, false},
+		{"sin proxies, con administrador y sin HTTPS", contrato.EstadoServidor{Administrador: true, TLS: "ninguno"}, false},
+	} {
+		m, _ := conWeb(t, false)
+		m.o.Entorno = "servidor"
+		m.servidor = &c.estado
+		a := conducir(t, m)
+		_, cmd := m.Update(tecla("W"))
+		a.Correr(cmd)
+		if m.pregunta == nil {
+			t.Fatalf("%s: sin ventana", c.nombre)
+		}
+		if strings.Contains(m.pregunta.Texto, aviso) != c.quiere {
+			t.Errorf("%s: aviso %v en %q", c.nombre, !c.quiere, m.pregunta.Texto)
+		}
+	}
+}

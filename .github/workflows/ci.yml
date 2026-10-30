@@ -1,5 +1,6 @@
-# Pruebas en cada push y pull request: el servicio y la CLI en Windows, Linux y macOS, la app de escritorio en Windows
-# y la Web UI (tipos y compilación). Publicar también lo llama antes de crear un release.
+# Pruebas en cada push y pull request: el servicio y la CLI en Windows, Linux y macOS, la app de escritorio en Windows,
+# el servidor (Linux y Windows Server) con sus ejemplos de proxies y la Web UI (tipos y compilación). Publicar también
+# lo llama antes de crear un release.
 name: CI
 
 on:
@@ -252,6 +253,70 @@ jobs:
           PEBBLE_URL: https://localhost:14000/dir
           PEBBLE_CA: ${{ runner.temp }}/pebble.minica.pem
         run: go test -tags pebble -run Pebble -v ./internal/servicio/
+
+  # El servidor de Linux con systemd de verdad (el runner es una máquina virtual): con dos versiones del .tar.gz y del
+  # paquete del servidor, scripts/servidor/probar-servidor.sh instala, inicia sesión por HTTPS, hace una petición al
+  # Claude simulado, guarda una clave con una petición larga en curso, actualiza y quita; desde el .tar.gz y al pasar
+  # del .tar.gz al paquete.
+  servidor-linux:
+    name: Servidor (Linux)
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      # El .tar.gz, igual que en publicar.yml (job unix): mantenlos a la par.
+      - name: Dos versiones del .tar.gz y del paquete del servidor
+        run: |
+          for version in v0.0.1+ci v0.0.2+ci; do
+            sh scripts/linux/empaquetar.sh "$version" amd64 servidor
+            carpeta=$(mktemp -d)
+            mkdir "$carpeta/tramtai"
+            cp paquete/tramtai paquete/uv "$carpeta/tramtai/"
+            cp LICENSE.md "$carpeta/tramtai/LICENCIA.md"
+            tar -C "$carpeta" -czf "dist/tramtai-$version-linux-amd64.tar.gz" tramtai
+          done
+      - name: Instalar, usar, actualizar y quitar con systemd
+        run: sudo env "PATH=$PATH" sh scripts/servidor/probar-servidor.sh dist
+
+  # El servicio de Windows de verdad, en Windows Server 2025: la misma secuencia con «servidor instalar» desde el .zip
+  # portable (scripts/servidor/probar-servidor.ps1).
+  servidor-windows:
+    name: Servidor (Windows Server)
+    timeout-minutes: 25
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Instalar, usar, actualizar y desinstalar el servicio
+        run: ./scripts/servidor/probar-servidor.ps1
+
+  # Los ejemplos de docs/servidor/proxies delante de un Tramtai en modo servidor, en contenedores
+  # (scripts/servidor/probar-proxies.sh): TLS 1.3, inicio de sesión, flujo SSE sin búfer y la dirección del cliente.
+  proxies:
+    name: Proxies
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Caddy, nginx, Apache, Traefik y HAProxy delante de Tramtai
+        run: sh scripts/servidor/probar-proxies.sh
 
   web:
     name: Web UI
