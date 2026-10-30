@@ -5,7 +5,8 @@
 #     dominios: [tramtai.example.com]
 #     proxy:
 #       confiables: [127.0.0.1/32]
-# Caddy conserva el Host y añade X-Forwarded-For (Tramtai toma el último salto), X-Forwarded-Proto y X-Forwarded-Host.
+# Caddy conserva el Host y pone X-Forwarded-For, X-Forwarded-Proto y X-Forwarded-Host: sustituye lo que mande un
+# cliente que no es de confianza.
 # No añadas HSTS (Strict-Transport-Security): lo pone Tramtai.
 tramtai.example.com {
 	# Con tu certificado; sin las dos rutas, Caddy lo saca solo con Let's Encrypt.

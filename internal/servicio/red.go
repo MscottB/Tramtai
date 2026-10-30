@@ -11,7 +11,7 @@ import (
 // proxy añade la suya al final y lo de la izquierda lo puede escribir el cliente. Si todas son de confianza, la más lejana.
 func ClienteReal(r *http.Request, confiables []netip.Prefix) netip.Addr {
 	cliente := direccionRemota(r)
-	if !deConfianza(cliente, confiables) {
+	if !deProxy(r, confiables) {
 		return cliente
 	}
 	saltos := lista(r, "X-Forwarded-For")
@@ -40,7 +40,7 @@ func EsHTTPS(r *http.Request, confiables []netip.Prefix) bool {
 		return true
 	}
 	protos := lista(r, "X-Forwarded-Proto")
-	return deConfianza(direccionRemota(r), confiables) && strings.EqualFold(protos[len(protos)-1], "https")
+	return deProxy(r, confiables) && strings.EqualFold(protos[len(protos)-1], "https")
 }
 
 // lista son los elementos de una cabecera de lista, de todas sus apariciones y sin espacios (al menos uno, quizá vacío).
@@ -59,6 +59,12 @@ func direccionRemota(r *http.Request) netip.Addr {
 		return netip.Addr{}
 	}
 	return d.Addr().Unmap()
+}
+
+// deProxy dice si la petición la reenvía un proxy de confianza: llega desde una dirección de confiables y no por el
+// oyente local (BaseLocal), cuyas peticiones son de la CLI, la terminal y la app de este equipo, nunca de un proxy.
+func deProxy(r *http.Request, confiables []netip.Prefix) bool {
+	return r.Context().Value(claveOyenteLocal{}) == nil && deConfianza(direccionRemota(r), confiables)
 }
 
 func deConfianza(a netip.Addr, confiables []netip.Prefix) bool {

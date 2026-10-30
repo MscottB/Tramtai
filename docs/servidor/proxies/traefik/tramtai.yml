@@ -2,7 +2,8 @@
 # (127.0.0.1:17373). Es la configuración dinámica (proveedor de archivos); en la estática hacen falta el punto de
 # entrada y el archivo, por ejemplo:
 #   traefik --entryPoints.websecure.address=:443 --providers.file.filename=/etc/traefik/dinamica/tramtai.yml
-# Traefik conserva el Host y añade X-Forwarded-For (Tramtai toma el último salto), X-Forwarded-Proto y X-Forwarded-Host.
+# Traefik conserva el Host y pone X-Forwarded-For, X-Forwarded-Proto y X-Forwarded-Host: sustituye lo que mande un
+# cliente que no es de confianza.
 # En /var/lib/tramtai/config.yaml (o %ProgramData%\Tramtai\config.yaml):
 #   servicio:
 #     host: 127.0.0.1

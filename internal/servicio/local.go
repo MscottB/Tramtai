@@ -38,7 +38,7 @@ type claveDeProxy struct{}
 // lo reenvía ese proxy y nunca es local (desdeEsteEquipo), lleve o no cabeceras de proxy (R35).
 func (s *Servicio) marcarProxy(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Context().Value(claveOyenteLocal{}) == nil && deConfianza(direccionRemota(r), s.opc.Confiables) {
+		if deProxy(r, s.opc.Confiables) {
 			r = r.WithContext(context.WithValue(r.Context(), claveDeProxy{}, true))
 		}
 		h.ServeHTTP(w, r)

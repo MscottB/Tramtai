@@ -1,10 +1,15 @@
 package servicio
 
 import (
+	"context"
 	"crypto/tls"
+	"encoding/json"
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -89,7 +94,11 @@ func TestProxyLoopbackNoEsLocal(t *testing.T) {
 	g, b, l := guardarCredencial, borrarCredencial, leerCredencial
 	t.Cleanup(func() { guardarCredencial, borrarCredencial, leerCredencial = g, b, l })
 	leerCredencial = func(string) (string, error) { return "", nil }
-	s, ts, _ := entornoCon(t, "", "", adaptadores.Simulado{}, func(o *Opciones) {
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puertoPunto := libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
+	global := "puntos_acceso:\n  - nombre: fijo\n    puerto: " + strconv.Itoa(puertoPunto) + "\n    agente: simulado\n"
+	s, ts, _ := entornoCon(t, global, "", adaptadores.Simulado{}, func(o *Opciones) {
 		o.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
 		o.EntradaLocal = true
 		o.Confiables = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
@@ -116,5 +125,73 @@ func TestProxyLoopbackNoEsLocal(t *testing.T) {
 		if quiere := map[bool]int{true: 200, false: 403}[c.quiere == 200]; r.StatusCode != quiere {
 			t.Errorf("%s: GET /api/v1/servicio/claves %d %s, se esperaba %d", c.nombre, r.StatusCode, cuerpo, quiere)
 		}
+	}
+	// Un punto con puerto propio también es un oyente público: lo que llega del proxy no está exento del freno de las
+	// claves falsas (30 en un minuto dan 429), aunque no traiga cabeceras de proxy.
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	if estado := s.Recargar(); len(estado) != 1 || !estado[0].Activo {
+		t.Fatalf("el punto con puerto propio no se abrió: %+v %v", estado, s.erroresPuntos)
+	}
+	frenado := false
+	for range 31 {
+		if r, _ := pedir(t, "http://127.0.0.1:"+strconv.Itoa(puertoPunto), "GET", "/api/v1/capacidades", "clave-falsa", ""); r.StatusCode == http.StatusTooManyRequests {
+			frenado = true
+			break
+		}
+	}
+	if !frenado {
+		t.Error("punto con puerto propio: lo que llega del proxy de confianza quedó exento del freno de claves falsas")
+	}
+}
+
+// TestEnlaceAbrirConProxyEsLocal: con proxies de confianza, el enlace de un solo uso (tramtai abrir, la tecla W, la app)
+// va al oyente local; canjeado ahí, la sesión es local (por el puerto público el navegador de este equipo llegaría
+// desde una dirección de confianza y entraría como remoto). La cookie va sin __Host- ni Secure, como la sesión local
+// por HTTP de siempre.
+func TestEnlaceAbrirConProxyEsLocal(t *testing.T) {
+	s, _, _ := entornoCon(t, "", "", adaptadores.Simulado{}, func(o *Opciones) {
+		o.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
+		o.Confiables = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+	})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	local := s.BaseLocal()
+	r, cuerpo := pedir(t, local, "POST", "/api/v1/servicio/sesiones", s.tokenAdmin, `{"instancia":"global"}`)
+	var respuesta struct{ URL string }
+	if r.StatusCode != 200 || json.Unmarshal([]byte(cuerpo), &respuesta) != nil || !strings.HasPrefix(respuesta.URL, local+"/ui/entrar?codigo=") {
+		t.Fatalf("el enlace no va al oyente local (%s): %d %s", local, r.StatusCode, cuerpo)
+	}
+	n := nuevoNavegador(t, local)
+	if r, _ := n.pedir("GET", strings.TrimPrefix(respuesta.URL, local), ""); r.StatusCode != http.StatusSeeOther {
+		t.Fatalf("canjear el código: %d", r.StatusCode)
+	}
+	if r, cuerpo := n.pedir("GET", "/ui/sesion", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) {
+		t.Fatalf("la sesión del enlace no es local: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, _ := n.pedir("GET", "/", ""); r.StatusCode != 200 {
+		t.Fatalf("el oyente local no sirve la Web UI: %d", r.StatusCode)
+	}
+}
+
+// TestOyenteLocalNoCreeCabeceras: por el oyente local, 127.0.0.1 no es un proxy aunque esté en confiables: un
+// X-Forwarded-For o un X-Forwarded-Proto falsos no cambian la dirección registrada ni hacen la petición HTTPS.
+func TestOyenteLocalNoCreeCabeceras(t *testing.T) {
+	confiables := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+	r := httptest.NewRequest("GET", "/ui/sesion", nil)
+	r.RemoteAddr = "127.0.0.1:40000"
+	r.Header.Set("X-Forwarded-For", "203.0.113.9")
+	r.Header.Set("X-Forwarded-Proto", "https")
+	if ClienteReal(r, confiables).String() != "203.0.113.9" || !EsHTTPS(r, confiables) {
+		t.Fatal("por el oyente público, el proxy de confianza sí se cree")
+	}
+	r = r.WithContext(context.WithValue(r.Context(), claveOyenteLocal{}, true))
+	if a := ClienteReal(r, confiables); a.String() != "127.0.0.1" {
+		t.Errorf("por el oyente local, la dirección registrada es %s", a)
+	}
+	if EsHTTPS(r, confiables) {
+		t.Error("por el oyente local, un X-Forwarded-Proto falso hace la petición HTTPS")
 	}
 }
