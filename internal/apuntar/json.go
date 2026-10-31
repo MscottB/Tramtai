@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -21,6 +22,8 @@ var (
 	errSinOrden    = errors.New(idioma.T("falta la orden que entrega la clave"))
 	errSinClave    = errors.New(idioma.T("falta la clave del espacio"))
 	errSinProyecto = errors.New(idioma.T("falta la carpeta del proyecto"))
+	// errOrdenConPorcentaje: el apiKeyHelper lo ejecuta cmd.exe en Windows, que expande «%» incluso entre comillas.
+	errOrdenConPorcentaje = errors.New(idioma.T("la ruta de Tramtai lleva un «%»: cmd.exe la expandiría; instálalo en otra carpeta"))
 )
 
 var bom = []byte("\xef\xbb\xbf")
@@ -84,6 +87,7 @@ type documento struct {
 	bom    bool
 	vacio  bool   // el archivo estaba en blanco: se parte de {}
 	unidad string // un nivel de sangrado del archivo; vacío si está en una línea
+	eol    string // «\r\n» si el archivo los usa, si no «\n»
 }
 
 var salto = []byte("\n")
@@ -108,8 +112,11 @@ func unidadDe(raiz *hujson.Object) string {
 }
 
 func abrir(actual []byte) (*documento, error) {
-	d := &documento{bom: bytes.HasPrefix(actual, bom)}
+	d := &documento{bom: bytes.HasPrefix(actual, bom), eol: "\n"}
 	cuerpo := bytes.Clone(bytes.TrimPrefix(actual, bom)) // hujson edita sobre el búfer que recibe: no el del llamador
+	if n := bytes.Count(cuerpo, salto); n > 0 && n == bytes.Count(cuerpo, []byte("\r\n")) {
+		d.eol = "\r\n" // solo si todos lo son: un archivo ya mezclado se deja como está
+	}
 	if len(bytes.TrimSpace(cuerpo)) == 0 {
 		cuerpo, d.vacio = []byte("{}"), true
 	}
@@ -158,6 +165,30 @@ func (d *documento) parche(op, ptr string, valor any) error {
 	return d.v.Patch(b)
 }
 
+// quitar borra la clave. Si arrastra un comentario de línea de la clave anterior hasta la llave de cierre, el sangrado
+// que traía la clave borrada se reemplaza por el de la llave.
+func (d *documento) quitar(ruta []string) error {
+	if err := d.parche("remove", puntero(ruta), nil); err != nil {
+		return err
+	}
+	prof := len(ruta) - 1
+	if n := d.v.Find(puntero(ruta[:prof])); n != nil && d.unidad != "" {
+		if obj, ok := n.Value.(*hujson.Object); ok && tieneComentario(obj.AfterExtra) && bytes.Contains(obj.AfterExtra, salto) {
+			obj.AfterExtra = conSangrado(obj.AfterExtra, d.eol, strings.Repeat(d.unidad, prof))
+		}
+	}
+	return nil
+}
+
+// conSangrado deja el espacio en blanco que sigue al último salto de línea de extra (o uno nuevo, si no hay) como indent.
+func conSangrado(extra []byte, eol, indent string) []byte {
+	i := bytes.LastIndexByte(extra, '\n')
+	if i < 0 {
+		return append(bytes.Clone(extra), eol+indent...)
+	}
+	return append(bytes.Clone(extra[:i+1]), indent...)
+}
+
 // anadir pone el valor en la ruta. Si la clave es nueva y el archivo está en varias líneas, la deja con su línea y su
 // sangrado (el parche la inserta en compacto); si ya existía, solo cambia el valor.
 func (d *documento) anadir(ruta []string, valor any) error {
@@ -172,11 +203,11 @@ func (d *documento) anadir(ruta []string, valor any) error {
 	}
 	m := &obj.Members[len(obj.Members)-1]
 	m.Value.BeforeExtra = []byte(" ")
-	if !tieneComentario(m.Name.BeforeExtra) {
-		m.Name.BeforeExtra = []byte("\n" + strings.Repeat(d.unidad, prof+1))
-	}
-	if !bytes.Contains(obj.AfterExtra, salto) && !tieneComentario(obj.AfterExtra) {
-		obj.AfterExtra = []byte("\n" + strings.Repeat(d.unidad, prof))
+	// un comentario de línea de la clave anterior (`"a": 1 // mío`) pasa a ir antes de la nueva: se conserva y solo se
+	// rehace el sangrado que va tras su último salto de línea
+	m.Name.BeforeExtra = conSangrado(m.Name.BeforeExtra, d.eol, strings.Repeat(d.unidad, prof+1))
+	if !bytes.Contains(obj.AfterExtra, salto) {
+		obj.AfterExtra = conSangrado(obj.AfterExtra, d.eol, strings.Repeat(d.unidad, prof))
 	}
 	b, err := aJSON(valor)
 	if err != nil {
@@ -184,7 +215,7 @@ func (d *documento) anadir(ruta []string, valor any) error {
 	}
 	var sangrado bytes.Buffer
 	if json.Indent(&sangrado, b, strings.Repeat(d.unidad, prof+1), d.unidad) == nil {
-		if v, err := hujson.Parse(sangrado.Bytes()); err == nil {
+		if v, err := hujson.Parse(bytes.ReplaceAll(sangrado.Bytes(), salto, []byte(d.eol))); err == nil {
 			m.Value.Value = v.Value
 		}
 	}
@@ -207,7 +238,9 @@ func (d *documento) poner(ruta []string, valor any) error {
 	return d.anadir(ruta, valor)
 }
 
-// podar borra los objetos que han quedado vacíos al quitar la ruta, de dentro hacia fuera, sin llegar a la raíz.
+// podar borra los objetos que han quedado vacíos al quitar la ruta, de dentro hacia fuera, sin llegar a la raíz. Límite
+// conocido: un objeto que ya estaba vacío antes de activar (`"env": {}`) tampoco sobrevive a desactivar, porque la
+// anotación solo guarda claves de hoja y no puede distinguirlo del que creó Tramtai; no cambia el sentido del archivo.
 func (d *documento) podar(ruta []string) error {
 	for i := len(ruta) - 1; i > 0; i-- {
 		if v, hay := d.leer(ruta[:i]); !hay {
@@ -215,7 +248,7 @@ func (d *documento) podar(ruta []string) error {
 		} else if m, ok := v.(map[string]any); !ok || len(m) > 0 {
 			return nil
 		}
-		if err := d.parche("remove", puntero(ruta[:i]), nil); err != nil {
+		if err := d.quitar(ruta[:i]); err != nil {
 			return err
 		}
 	}
@@ -233,11 +266,14 @@ func (d *documento) bytes(original []byte) []byte {
 			salida = f
 		}
 	}
-	if d.vacio && !bytes.HasSuffix(salida, []byte("\n")) {
+	if d.eol == "\r\n" { // hujson reescribe algunos saltos como «\n» al mover comentarios y comas
+		salida = bytes.ReplaceAll(bytes.ReplaceAll(salida, []byte("\r\n"), salto), salto, []byte("\r\n"))
+	}
+	if d.vacio && !bytes.HasSuffix(salida, salto) {
 		salida = append(salida, '\n')
 	}
 	if d.bom {
-		salida = append(bom, salida...)
+		salida = slices.Concat(bom, salida)
 	}
 	return salida
 }
@@ -282,7 +318,7 @@ func (f formatoJSON) Quitar(actual []byte, a Anotacion) ([]byte, bool, error) {
 		if previo, ok := a.Previos[k]; ok {
 			err = d.poner(ruta, previo)
 		} else {
-			err = d.parche("remove", puntero(ruta), nil)
+			err = d.quitar(ruta)
 			quitadas = append(quitadas, ruta)
 		}
 		if err != nil {
@@ -323,15 +359,20 @@ func clavesOrdenadas(m map[string]any) []string {
 
 // ordenEnLinea une la orden con espacios, entre comillas dobles las partes que los tengan: la ejecuta una shell (cmd.exe
 // en Windows, según la M0).
-func ordenEnLinea(orden []string) string {
+// Entre comillas dobles cmd trata como literales los caracteres &^()|<>, pero «%» lo expande aunque haya comillas y no se
+// puede escapar de forma fiable: una parte con «%» es un error.
+func ordenEnLinea(orden []string) (string, error) {
 	partes := make([]string, len(orden))
 	for i, p := range orden {
+		if strings.Contains(p, "%") {
+			return "", errOrdenConPorcentaje
+		}
 		partes[i] = p
-		if strings.ContainsAny(p, " \t") {
+		if strings.ContainsAny(p, " \t&^()|<>") {
 			partes[i] = `"` + p + `"`
 		}
 	}
-	return strings.Join(partes, " ")
+	return strings.Join(partes, " "), nil
 }
 
 // ClaudeCode escribe en settings.json la URL, el modelo y el apiKeyHelper que entrega la clave de la API desde el
@@ -341,10 +382,14 @@ func ClaudeCode() Formato {
 		if len(v.Orden) == 0 {
 			return nil, errSinOrden
 		}
+		helper, err := ordenEnLinea(v.Orden)
+		if err != nil {
+			return nil, err
+		}
 		return []claveJSON{
 			{ruta: []string{"env", "ANTHROPIC_BASE_URL"}, valor: v.URLAnthropic},
 			{ruta: []string{"env", "ANTHROPIC_MODEL"}, valor: v.Modelo},
-			{ruta: []string{"apiKeyHelper"}, valor: ordenEnLinea(v.Orden)},
+			{ruta: []string{"apiKeyHelper"}, valor: helper},
 		}, nil
 	}}
 }

@@ -394,6 +394,73 @@ func TestJSONEstilos(t *testing.T) {
 	}
 }
 
+func TestJSONComentarioDeLineaEnLaUltimaClave(t *testing.T) {
+	original := "{\n  \"env\": {\n    \"ANTHROPIC_MODEL\": \"opus\" // el mío\n  },\n  \"x\": 1 // y este\n}\n"
+	nuevo, escrito, previos, err := ClaudeCode().Aplicar([]byte(original), valoresClaude())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []string{"// el mío", "// y este", "\n    \"ANTHROPIC_BASE_URL\": ", "\n  \"apiKeyHelper\": "} {
+		if !strings.Contains(string(nuevo), c) {
+			t.Errorf("falta %q (sangrado o comentario) en:\n%s", c, nuevo)
+		}
+	}
+	if strings.Contains(string(nuevo), "\n\"") {
+		t.Errorf("una clave quedó en la columna 0:\n%s", nuevo)
+	}
+	quitado, _, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(quitado) != original {
+		t.Errorf("Quitar no devolvió el original:\n%s", quitado)
+	}
+}
+
+func TestJSONConFinesDeLineaCRLF(t *testing.T) {
+	crlf := func(s string) string { return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\n", "\r\n") }
+	original := crlf(string(datosPrueba(t, "settings.json")))
+	nuevo, escrito, previos, err := ClaudeCode().Aplicar([]byte(original), valoresClaude())
+	if err != nil {
+		t.Fatal(err)
+	}
+	solo := func(s string) bool { return strings.Count(s, "\n") == strings.Count(s, "\r\n") }
+	if !solo(string(nuevo)) || en(t, comoMapa(t, nuevo), "env", "ANTHROPIC_MODEL") != "claude/sonnet" {
+		t.Errorf("fines de línea mezclados tras Aplicar: %q", nuevo)
+	}
+	quitado, _, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+	if err != nil || string(quitado) != original {
+		t.Errorf("tras Quitar (err %v): %q", err, quitado)
+	}
+	// también un valor compuesto (models de opencode)
+	nuevo, _, _, err = OpenCode().Aplicar([]byte(crlf(string(datosPrueba(t, "opencode.jsonc")))), valoresOpenCode())
+	if err != nil || !solo(string(nuevo)) {
+		t.Errorf("opencode con CRLF (err %v): %q", err, nuevo)
+	}
+}
+
+func TestOrdenEnLineaCmd(t *testing.T) {
+	for _, c := range []struct{ parte, quiere string }{
+		{`C:\Tramtai\tramtai.exe`, `C:\Tramtai\tramtai.exe`},
+		{`C:\Ana María\t.exe`, `"C:\Ana María\t.exe"`},
+		{`C:\R&D\t.exe`, `"C:\R&D\t.exe"`},
+		{`C:\Program Files (x86)\t.exe`, `"C:\Program Files (x86)\t.exe"`},
+		{`C:\a^b\t.exe`, `"C:\a^b\t.exe"`},
+		{`C:\a|b\t.exe`, `"C:\a|b\t.exe"`},
+		{`C:\a<b>\t.exe`, `"C:\a<b>\t.exe"`},
+	} {
+		got, err := ordenEnLinea([]string{c.parte, "herramientas"})
+		if err != nil || got != c.quiere+" herramientas" {
+			t.Errorf("%q -> %q, %v; quería %q", c.parte, got, err, c.quiere)
+		}
+	}
+	v := valoresClaude()
+	v.Orden = []string{`C:\100%\tramtai.exe`, "herramientas"}
+	if _, _, _, err := ClaudeCode().Aplicar(nil, v); !errors.Is(err, errOrdenConPorcentaje) {
+		t.Errorf("con %%: err = %v", err)
+	}
+}
+
 func TestJSONRoto(t *testing.T) {
 	roto := datosPrueba(t, "roto.json")
 	for _, c := range []struct{ nombre, contenido string }{

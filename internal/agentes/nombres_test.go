@@ -19,7 +19,7 @@ func TestSinNombresFuera(t *testing.T) {
 		relativa := filepath.ToSlash(strings.TrimPrefix(ruta, raiz+string(filepath.Separator)))
 		if d.IsDir() {
 			switch relativa {
-			case "internal/agentes", "internal/idioma", "internal/apuntar", "pruebas", "web", "node_modules", ".git", "graphify-out":
+			case "internal/agentes", "internal/idioma", "pruebas", "web", "node_modules", ".git", "graphify-out":
 				return filepath.SkipDir
 			}
 			return nil
@@ -32,7 +32,9 @@ func TestSinNombresFuera(t *testing.T) {
 			return err
 		}
 		for i, linea := range strings.Split(string(datos), "\n") {
-			if strings.Contains(linea, "predeterminados.agente") || strings.HasPrefix(strings.TrimSpace(linea), "//") {
+			// en internal/apuntar, «Programa:» es el ejecutable de otra herramienta en el PATH («claude»), no el agente
+			enApuntar := strings.HasPrefix(relativa, "internal/apuntar/") && strings.Contains(linea, "Programa:")
+			if enApuntar || strings.Contains(linea, "predeterminados.agente") || strings.HasPrefix(strings.TrimSpace(linea), "//") {
 				continue
 			}
 			for _, f := range Todos() {
