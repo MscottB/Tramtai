@@ -81,6 +81,12 @@ func TestAdministradorEnServidorHablaConElServicio(t *testing.T) {
 	if err := raiz.Execute(); err != nil {
 		t.Fatalf("como administrador, con el servicio en marcha: %v\n%s", err, salida.String())
 	}
+	// «espacio global» solo lo imprime la ejecución en el servicio (la local no tiene espacio) y el agente simulado devuelve el texto.
+	for _, quiere := range []string{"espacio global · agente simulado", "hola", "completado"} {
+		if !strings.Contains(salida.String(), quiere) {
+			t.Errorf("la petición no pasó por el servicio: falta %q en %q", quiere, salida.String())
+		}
+	}
 }
 
 // dentroDeTemporal dice si ruta cuelga de la carpeta temporal, con o sin enlaces ni nombres cortos (ADMINI~1) resueltos.
