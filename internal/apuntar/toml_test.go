@@ -111,7 +111,7 @@ func TestCodexComentaYDevuelvePrevios(t *testing.T) {
 	// activar otra vez (otro modelo): un solo bloque de cada y las líneas previas siguen comentadas una sola vez
 	v := valoresCodex()
 	v.Modelo = "claude/haiku"
-	otro, _, previos, err := Codex().Aplicar([]byte(nuevo), v)
+	otro, escrito2, previos, err := Codex().Aplicar([]byte(nuevo), v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestCodexComentaYDevuelvePrevios(t *testing.T) {
 	if strings.Contains(string(otro), "# tramtai: # tramtai:") || len(previos) != 0 {
 		t.Errorf("reaplicar toca los previos: %v\n%s", previos, otro)
 	}
-	if quitado, _, err := Codex().Quitar(otro, a); err != nil || string(quitado) != original {
+	if quitado, _, err := Codex().Quitar(otro, Anotacion{ID: "codex", Escrito: escrito2, Previos: a.Previos}); err != nil || string(quitado) != original {
 		t.Errorf("Quitar tras reaplicar = %q, %v", quitado, err)
 	}
 }
@@ -253,8 +253,6 @@ func TestCodexRutaWindows(t *testing.T) {
 func TestCodexArchivoIlegible(t *testing.T) {
 	for nombre, original := range map[string]string{
 		"roto":                    datosTOML(t, "roto.toml"),
-		"proveedor ya definido":   "[model_providers.tramtai]\nname = \"mio\"\n",
-		"modelo en varias lineas": "model = \"\"\"\nuno\n\"\"\"\n",
 		"model_provider punteado": "model_provider.x = 1\n",
 	} {
 		if _, _, _, err := Codex().Aplicar([]byte(original), valoresCodex()); !errors.Is(err, ErrArchivoIlegible) {
@@ -263,6 +261,94 @@ func TestCodexArchivoIlegible(t *testing.T) {
 		if _, _, err := Codex().Quitar([]byte(original), Anotacion{}); nombre == "roto" && !errors.Is(err, ErrArchivoIlegible) {
 			t.Errorf("%s: Quitar err = %v", nombre, err)
 		}
+	}
+}
+
+// Un proveedor «tramtai» del usuario, o un model de varias líneas, son conflictos con su propio error y no se tocan.
+func TestCodexConflictos(t *testing.T) {
+	for original, quiero := range map[string]error{
+		"[model_providers.tramtai]\nname = \"mio\"\n":     errProveedorAjeno,
+		"[model_providers.tramtai.auth]\ncommand = \"x\"": errProveedorAjeno,
+		"model = \"\"\"\nuno\n\"\"\"\n":                   errClaveVariasLineas,
+		"model_provider = [\n  \"a\",\n]\n":               errClaveVariasLineas,
+	} {
+		_, _, _, err := Codex().Aplicar([]byte(original), valoresCodex())
+		if !errors.Is(err, quiero) || errors.Is(err, ErrArchivoIlegible) {
+			t.Errorf("%q: err = %v, quería %v", original, err, quiero)
+		}
+	}
+}
+
+// Lo que el usuario cambió o añadió dentro de lo que escribió Tramtai se queda, sin marcas; lo demás se va.
+func TestCodexRespetaLoDelUsuario(t *testing.T) {
+	original := datosTOML(t, "con-modelo.toml")
+	nuevo, a := aplicarCodex(t, original)
+	quitar := func(archivo string) (string, map[string]any) {
+		t.Helper()
+		quitado, _, err := Codex().Quitar([]byte(archivo), a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(quitado), leerTOML(t, string(quitado))
+	}
+
+	// Codex reescribe «model» en su sitio (/model): Quitar no lo pisa con el anterior ni lo borra
+	cambiado := strings.Replace(nuevo, `model = "claude/sonnet"`, `model = "otro"`, 1)
+	quitado, m := quitar(cambiado)
+	if m["model"] != "otro" || m["model_provider"] != "openai" {
+		t.Errorf("model = %v, model_provider = %v\n%s", m["model"], m["model_provider"], quitado)
+	}
+	if !strings.Contains(quitado, "# tramtai:   model = \"gpt-5\"   # el que uso\n") {
+		t.Errorf("el model previo debe seguir comentado:\n%s", quitado)
+	}
+	if strings.Contains(quitado, marcaIni) || strings.Contains(quitado, marcaFin) || strings.Contains(quitado, "model_providers") {
+		t.Errorf("sobran marcas o proveedor:\n%s", quitado)
+	}
+	if !strings.Contains(quitado, "model = \"otro\"\n") {
+		t.Errorf("la línea del usuario no se conservó tal cual:\n%s", quitado)
+	}
+
+	// una línea añadida por el usuario dentro del bloque de arriba
+	conExtra := strings.Replace(nuevo, "model_provider = \"tramtai\"\n", "model_provider = \"tramtai\"\nmodel_reasoning_effort = \"high\"\n", 1)
+	quitado, m = quitar(conExtra)
+	if m["model_reasoning_effort"] != "high" || m["model_provider"] != "openai" || strings.Contains(quitado, marcaIni) {
+		t.Errorf("la línea añadida debía quedarse:\n%s", quitado)
+	}
+
+	// una clave añadida al proveedor: la tabla se queda entera (sin marcas) y también lo que Tramtai había escrito
+	conClave := strings.Replace(nuevo, "wire_api = \"responses\"\n", "wire_api = \"responses\"\nrequest_max_retries = 7\n", 1)
+	quitado, m = quitar(conClave)
+	if got := en(t, m, "model_providers", "tramtai", "request_max_retries"); got != int64(7) {
+		t.Errorf("request_max_retries = %v\n%s", got, quitado)
+	}
+	if got := en(t, m, "model_providers", "tramtai", "auth", "command"); got != ordenCodex[0] || strings.Contains(quitado, marcaIni) {
+		t.Errorf("el proveedor debía quedarse entero y sin marcas:\n%s", quitado)
+	}
+	if m["model"] != "gpt-5" {
+		t.Errorf("model = %v: lo de Tramtai arriba sí se quita y vuelve el previo", m["model"])
+	}
+
+	// un proveedor cuya URL cambió el usuario: tampoco se quita
+	conURL := strings.Replace(nuevo, "17373", "9999", 1)
+	if _, m = quitar(conURL); en(t, m, "model_providers", "tramtai", "base_url") == nil {
+		t.Error("el proveedor con otra URL debía quedarse")
+	}
+
+	// marcas borradas a mano con el contenido en su sitio: se quita lo que vale lo escrito y Contiene lo ve mientras esté
+	sinMarcas := strings.NewReplacer(marcaIni+"\n", "", marcaFin+"\n", "").Replace(nuevo)
+	if !Codex().Contiene([]byte(sinMarcas), a) {
+		t.Error("Contiene debería dar true: el contenido sigue ahí")
+	}
+	quitadoB, vacio, err := Codex().Quitar([]byte(sinMarcas), a)
+	quitado = string(quitadoB)
+	if err != nil || vacio {
+		t.Fatalf("Quitar sin marcas: %v, vacio = %v", err, vacio)
+	}
+	if m := leerTOML(t, string(quitado)); m["model"] != "gpt-5" || m["model_provider"] != "openai" || m["model_providers"] != nil {
+		t.Errorf("sin marcas debía quedar lo previo:\n%s", quitado)
+	}
+	if Codex().Contiene(quitadoB, a) {
+		t.Error("Contiene debería dar false tras quitar")
 	}
 }
 

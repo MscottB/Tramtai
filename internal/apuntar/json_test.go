@@ -533,8 +533,11 @@ func TestRutasDeLista(t *testing.T) {
 	if got, want := ruta("kilo", AlcanceGlobal, ""), filepath.Join(xdg, "kilo", "kilo.jsonc"); got != want {
 		t.Errorf("kilo con XDG_CONFIG_HOME = %s, quería %s", got, want)
 	}
+	// por herramienta: si la clave va en el archivo (si no, en el almacén y una orden la entrega) y si admite proyecto
+	claveEnArchivo := map[string]bool{"claude-code": false, "codex": false, "opencode": true, "kilo": true}
 	for _, h := range Lista() {
-		if h.EnProyecto != (h.ID == "claude-code") || h.ClaveEnArchivo != (h.ID == "opencode" || h.ID == "kilo") || (h.Gestionado != nil) != (h.ID == "claude-code") {
+		want, conocida := claveEnArchivo[h.ID]
+		if !conocida || h.ClaveEnArchivo != want || h.EnProyecto != (h.ID == "claude-code") || (h.Gestionado != nil) != (h.ID == "claude-code") {
 			t.Errorf("%s: EnProyecto/ClaveEnArchivo/Gestionado mal puestos", h.ID)
 		}
 	}
