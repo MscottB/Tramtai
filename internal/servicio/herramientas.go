@@ -183,25 +183,41 @@ func elegirHerramientas(ids []string, todas bool, incluir func(apuntar.Herramien
 	return lista, nil
 }
 
-// modeloPorDefecto es el primer agente conectado, en el orden de sus fichas, con el modelo predeterminado de su CLI.
-func (s *Servicio) modeloPorDefecto() (string, error) {
+// modeloPorDefecto es el primer agente conectado y habilitado para aplicaciones, en el orden de sus fichas, con el modelo
+// predeterminado de su CLI.
+func (s *Servicio) modeloPorDefecto(inst *Instancia) (string, error) {
 	for _, f := range agentes.Todos() {
-		if s.opc.Registro[f.Nombre] != nil && !s.opc.Conexiones.Desconectado(f.Nombre) {
+		if s.opc.Registro[f.Nombre] != nil && !s.opc.Conexiones.Desconectado(f.Nombre) && agentes.PermitidoEnApps(inst.Config, f.Nombre) {
 			return f.Nombre, nil
 		}
 	}
 	return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("no hay ningún agente conectado: conecta uno en Agentes o elige el modelo"))
 }
 
+// sinHTTPPropio: con el HTTPS propio, el puerto principal solo habla TLS y el oyente HTTP de este equipo cambia de puerto
+// en cada arranque, así que la URL http://127.0.0.1:<puerto> que se escribe en la herramienta no funcionaría.
+func (s *Servicio) sinHTTPPropio() string {
+	if s.opc.TLS == nil {
+		return ""
+	}
+	return idioma.T("con HTTPS propio activado, las herramientas no pueden usar Tramtai en este equipo: desactiva el HTTPS propio o pon Tramtai detrás de un proxy")
+}
+
 func (s *Servicio) activarHerramientas(inst *Instancia, p contrato.ActivarHerramientas) error {
 	s.muHerramientas.Lock()
 	defer s.muHerramientas.Unlock()
+	if motivo := s.sinHTTPPropio(); motivo != "" {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, motivo)
+	}
 	modelo := strings.TrimSpace(p.Modelo)
 	var err error
 	if modelo == "" {
-		modelo, err = s.modeloPorDefecto()
-	} else {
-		err = s.modeloDePunto(inst, &ConfigPunto{}, modelo) // solo valida: un agente que existe o un perfil del espacio
+		modelo, err = s.modeloPorDefecto(inst)
+	} else if err = s.modeloDePunto(inst, &ConfigPunto{}, modelo); err == nil { // solo valida: un agente que existe o un perfil
+		// las peticiones de la herramienta llegan por su API, como las de una aplicación
+		if agente, _, _ := strings.Cut(modelo, "/"); !agentes.PermitidoEnApps(inst.Config, agente) {
+			err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad. Úsalo desde Probar o la terminal", agentes.NombreVisible(agente)))
+		}
 	}
 	if err != nil {
 		return err
@@ -252,10 +268,10 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 	}
 	clave, err := NuevaClave(RutaTokenPunto(s.opc.Datos, h.ID))
 	if err != nil {
+		_ = detenerAPI(h.ID)
 		return err
 	}
-	// shortcut: siempre http://127.0.0.1:<puerto>; con TLS propio el puerto principal habla https y habría que usar BaseLocal.
-	puerto := s.puertoActual()
+	puerto := s.puertoActual() // sin HTTPS propio (sinHTTPPropio): el puerto principal habla HTTP en 127.0.0.1
 	base := "http://127.0.0.1:" + strconv.Itoa(puerto) + "/p/" + h.ID
 	v := apuntar.Valores{URLAnthropic: base + "/anthropic", URLOpenAI: base + "/openai/v1", Modelo: modelo, Puerto: puerto}
 	if h.ClaveEnArchivo {
@@ -278,8 +294,8 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 	return nil
 }
 
-// Las APIs de las herramientas van todas en la configuración global, también la de un proyecto (con su instancia, como
-// crearPuntoUI): el local.yaml de un proyecto solo admite APIs si el proyecto es de confianza.
+// Las APIs de las herramientas van todas en la configuración global, también la de un proyecto (con el campo instancia
+// de puntos_acceso, que la ata a su espacio): el local.yaml de un proyecto solo admite APIs si el proyecto es de confianza.
 func editarAPIs(f func([]ConfigPunto) ([]ConfigPunto, error)) error {
 	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
@@ -344,7 +360,7 @@ func (s *Servicio) desactivarHerramientas(inst *Instancia, ids []string, todas b
 	}
 	var errs []error
 	for _, h := range lista {
-		if err := s.desactivarHerramienta(h, false); err != nil {
+		if err := s.desactivarHerramienta(h); err != nil {
 			errs = append(errs, errorHerramienta(h, err))
 		}
 	}
@@ -353,36 +369,43 @@ func (s *Servicio) desactivarHerramientas(inst *Instancia, ids []string, todas b
 	return unirErrores(errs)
 }
 
-// desactivarHerramienta quita lo de Tramtai del archivo de la herramienta y detiene su API; la clave sigue en el almacén.
-// Con aunqueFalle (olvidar), un archivo que no se puede deshacer no impide seguir.
-func (s *Servicio) desactivarHerramienta(h apuntar.Herramienta, aunqueFalle bool) error {
+// quitarDelArchivo deshace lo de Tramtai en el archivo de la herramienta, si está activada.
+func (s *Servicio) quitarDelArchivo(h apuntar.Herramienta) (apuntar.Anotacion, error) {
 	a, activa, err := apuntar.Leer(s.opc.Datos, h.ID)
 	if err == nil && activa {
 		err = apuntar.Quitar(s.opc.Datos, h, a)
 	}
-	if err != nil && !aunqueFalle {
+	return a, err
+}
+
+// desactivarHerramienta quita lo de Tramtai del archivo de la herramienta y detiene su API; la clave sigue en el almacén.
+// Si el archivo no se puede deshacer, no se detiene nada: la herramienta sigue funcionando.
+func (s *Servicio) desactivarHerramienta(h apuntar.Herramienta) error {
+	if _, err := s.quitarDelArchivo(h); err != nil {
 		return err
 	}
 	return detenerAPI(h.ID)
 }
 
-// olvidarHerramienta es desactivar y, además, borrar su clave del almacén, la anotación y su API: Tramtai deja de saber de
-// ella. Es la salida cuando desactivar no puede deshacer el archivo (lo que quede en él se queda; Restaurar lo devuelve).
+// olvidarHerramienta es desactivar y, además, borrar su clave del almacén y la anotación: Tramtai deja de saber de ella.
+// La API queda detenida, para que el usuario decida si borrarla en Mis APIs. Si el archivo no se pudo deshacer, se olvida
+// igual y se avisa: lo que quede de Tramtai en él hay que quitarlo a mano (sin anotación, Restaurar ya no puede).
 func (s *Servicio) olvidarHerramienta(h apuntar.Herramienta) error {
 	s.muHerramientas.Lock()
 	defer s.muHerramientas.Unlock()
-	err := s.desactivarHerramienta(h, true)
+	a, errQuitar := s.quitarDelArchivo(h)
+	err := detenerAPI(h.ID)
 	if err == nil {
 		err = apuntar.Borrar(s.opc.Datos, h.ID)
 	}
 	if err == nil && !h.ClaveEnArchivo {
 		err = s.borrarClave(NombreClaveHerramienta(h.ID))
 	}
-	if ruta, errRuta := configuracion.RutaGlobal(); err == nil && errRuta == nil && apiHerramienta(h.ID) != nil {
-		err = s.eliminarPunto(ruta, configuracion.OrigenGlobal, h.ID)
-	}
 	s.Recargar()
 	_ = s.persistirEstado()
+	if err == nil && errQuitar != nil {
+		err = nucleo.NuevoError(nucleo.CodigoHerramientaEnConflicto, idioma.Tf("Tramtai la olvidó, pero no pudo quitar lo suyo de %s: %s", a.Ruta, nucleo.MensajeDe(errQuitar)))
+	}
 	return err
 }
 
@@ -411,7 +434,12 @@ func (s *Servicio) restaurarHerramienta(h apuntar.Herramienta) (string, error) {
 func (s *Servicio) estadoHerramienta(inst *Instancia, h apuntar.Herramienta) (e contrato.EstadoHerramienta) {
 	e = contrato.EstadoHerramienta{ID: h.ID, Nombre: h.Nombre, ClaveEnArchivo: h.ClaveEnArchivo, Gestionado: h.Gestionado != nil && h.Gestionado()}
 	defer func() {
-		if e.Gestionado && e.Motivo == "" {
+		if motivo := s.sinHTTPPropio(); motivo != "" {
+			if e.Estado == "activa" {
+				e.Estado = "desactualizada"
+			}
+			e.Motivo = motivo
+		} else if e.Gestionado && e.Motivo == "" {
 			e.Motivo = idioma.T("una política de la organización manda sobre su configuración: puede que no use lo que escriba Tramtai")
 		}
 	}()

@@ -270,8 +270,8 @@ func TestClienteHerramientas(t *testing.T) {
 	if err := cli.OlvidarHerramienta(ctx, "global", "continue"); err != nil {
 		t.Fatal(err)
 	}
-	if e := estado(cli.Herramientas(ctx, "global")); e != "detectada" {
-		t.Fatalf("olvidada: %s", e)
+	if e := estado(cli.Herramientas(ctx, "global")); e != "desactivada" {
+		t.Fatalf("olvidada, su API queda detenida: %s", e)
 	}
 }
 

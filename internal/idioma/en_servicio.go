@@ -456,6 +456,8 @@ func init() {
 		"Tramtai usa ahora el puerto %d y la herramienta apunta al %d: vuelve a activarla":                      "Tramtai now uses port %d and the tool points to %d: enable it again",
 		"ya no existe %s, el Tramtai que da la clave: vuelve a activarla":                                       "%s, the Tramtai that gives the key, no longer exists: enable it again",
 		"su clave ya no está en el almacén del sistema: vuelve a activarla":                                     "its key is no longer in the system credential store: enable it again",
-		"se cambió a mano lo que escribió Tramtai en %s":                                                        "what Tramtai wrote in %s was changed by hand",
+		"con HTTPS propio activado, las herramientas no pueden usar Tramtai en este equipo: desactiva el HTTPS propio o pon Tramtai detrás de un proxy": "with Tramtai’s own HTTPS turned on, tools can’t use Tramtai on this computer: turn off its own HTTPS or put Tramtai behind a proxy",
+		"Tramtai la olvidó, pero no pudo quitar lo suyo de %s: %s":                                                                                      "Tramtai forgot it, but could not remove its settings from %s: %s",
+		"se cambió a mano lo que escribió Tramtai en %s":                                                                                                "what Tramtai wrote in %s was changed by hand",
 	})
 }

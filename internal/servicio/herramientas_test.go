@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -218,8 +219,60 @@ func TestOlvidarBorraClave(t *testing.T) {
 	if _, activa, _ := apuntar.Leer(p.s.opc.Datos, "codex"); activa {
 		t.Fatal("no queda anotación")
 	}
-	if e := p.estados(t, "global")["codex"]; e.Estado != "detectada" || apiGlobal(t, "codex") != nil {
-		t.Fatalf("olvidada: %+v", e)
+	// La API queda detenida: borrarla es cosa del usuario, en Mis APIs.
+	if e, api := p.estados(t, "global")["codex"], apiGlobal(t, "codex"); e.Estado != "desactivada" || api == nil || api.EstaActivo() {
+		t.Fatalf("olvidada: %+v %+v", e, api)
+	}
+	if toml, _ := os.ReadFile(filepath.Join(p.casa, "codex", "config.toml")); strings.Contains(string(toml), "/p/codex") {
+		t.Fatalf("olvidar quita lo de Tramtai del archivo:\n%s", toml)
+	}
+
+	// Un archivo que no se deja deshacer no impide olvidar, pero se avisa.
+	p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
+	os.WriteFile(filepath.Join(p.casa, "codex", "config.toml"), []byte("[[[ no es toml\n"), 0o600)
+	r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/codex/olvidar", "")
+	if r.StatusCode != 409 || !strings.Contains(cuerpo, "no pudo quitar") {
+		t.Fatalf("olvidar con el archivo ilegible: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, activa, _ := apuntar.Leer(p.s.opc.Datos, "codex"); activa || len(p.almacen) != 0 || apiGlobal(t, "codex").EstaActivo() {
+		t.Fatalf("se olvida igual: %v %v", activa, p.almacen)
+	}
+}
+
+func TestHerramientasConHTTPSPropio(t *testing.T) {
+	p := entornoHerramientas(t, nil, "codex", "continue")
+	p.s.ActivarGlobal()
+	p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
+	p.s.opc.TLS = &tls.Config{}
+	for id, e := range p.estados(t, "global") {
+		if !strings.Contains(e.Motivo, "HTTPS propio") || e.Estado == "activa" {
+			t.Errorf("%s con HTTPS propio: %+v", id, e)
+		}
+	}
+	if e := p.estados(t, "global")["codex"]; e.Estado != "desactualizada" {
+		t.Fatalf("la activa pasa a desactualizada: %+v", e)
+	}
+	r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["continue"]}`)
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, "HTTPS propio") || apiGlobal(t, "continue") != nil {
+		t.Fatalf("no se activa: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+func TestHerramientaAgenteNoHabilitadoParaApps(t *testing.T) {
+	// Sin Claude y con Antigravity, que no está habilitado para aplicaciones.
+	p := entornoHerramientas(t, func(o *Opciones) {
+		delete(o.Registro, "claude")
+		o.Registro["antigravity"] = adaptadores.Simulado{}
+	}, "codex")
+	p.s.ActivarGlobal()
+	for _, cuerpo := range []string{`{"ids":["codex"],"modelo":"antigravity"}`, `{"ids":["codex"]}`} {
+		r, respuesta := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", cuerpo)
+		if r.StatusCode != 400 || apiGlobal(t, "codex") != nil || len(p.almacen) != 0 {
+			t.Fatalf("%s: %d %s", cuerpo, r.StatusCode, respuesta)
+		}
+		if cuerpo == `{"ids":["codex"]}` != strings.Contains(respuesta, "no hay ningún agente conectado") {
+			t.Fatalf("%s: el motivo: %s", cuerpo, respuesta)
+		}
 	}
 }
 

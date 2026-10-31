@@ -584,7 +584,8 @@ func (c *Cliente) herramientas(ctx context.Context, metodo, ruta, inst string, c
 	return r.Herramientas, err
 }
 
-// OlvidarHerramienta desactiva la herramienta y borra su clave, su API y lo que Tramtai sabía de ella.
+// OlvidarHerramienta desactiva la herramienta y borra su clave del almacén y lo que Tramtai sabía de ella; su API queda
+// detenida en Mis APIs.
 func (c *Cliente) OlvidarHerramienta(ctx context.Context, inst, id string) error {
 	return c.pedir(ctx, "POST", "/api/v1/herramientas/"+url.PathEscape(id)+"/olvidar", inst, nil, "", nil)
 }
