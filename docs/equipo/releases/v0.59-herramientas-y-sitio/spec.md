@@ -211,7 +211,8 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
 - En «Cómo funciona», el paso 3 («Apunta tu aplicación») añade que Tramtai apunta por ti Claude Code, Codex, Continue y
   opencode/Kilo, guarda antes una copia de su configuración y se desactiva con un interruptor.
 - En la línea de ventajas, la parada «Sin tocar tu código» lo menciona en su frase.
-- «La app» puede sumar una captura de la pestaña Herramientas de Mis APIs, si cabe sin pasar de cinco capturas.
+- «La app» se queda en cinco capturas; la pestaña Herramientas se enseña con su captura en el tema de Ayuda «Conectar
+  tus herramientas».
 - El plan pone estas tareas después de las de herramientas.
 
 ### 4. Las ventajas: franja de cifras y línea de seis paradas
