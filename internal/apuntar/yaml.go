@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,6 +21,7 @@ import (
 const (
 	nombreModeloYAML = "Tramtai"
 	claveEscritoYAML = "models.Tramtai" // en escrito, la entrada entera con su apiKey como marca
+	claveModels      = "models"         // en escrito, la lista que contiene el modelo; en previos, la línea de «models» que había si estaba vacía
 )
 
 var (
@@ -27,6 +29,8 @@ var (
 	errModeloAjeno = errors.New(idioma.T("ya hay un modelo «Tramtai» en config.yaml que no es de Tramtai: renómbralo o quítalo"))
 	// errModelosEnLinea: Tramtai edita la lista por líneas, y una lista entre corchetes con elementos no tiene una por elemento.
 	errModelosEnLinea = errors.New(idioma.T("«models» de config.yaml está escrito entre corchetes: pásalo a una lista con guiones"))
+	// errContinueJSON: Continue lee config.yaml si existe y, si no, config.json; crear el YAML dejaría sin efecto el JSON del usuario.
+	errContinueJSON = errors.New(idioma.T("Continue usa config.json en esta carpeta: pásalo a config.yaml antes de activarlo"))
 )
 
 // cabeceraNueva es lo que lleva un config.yaml que crea Tramtai además del modelo (Continue lo exige).
@@ -139,6 +143,14 @@ func (a *archivoYAML) guion(item *yaml.Node) int {
 	return i
 }
 
+// terminaEnBloque dice si lo último del elemento es un texto de bloque («|» o «>»).
+func terminaEnBloque(it *yaml.Node) bool {
+	for len(it.Content) > 0 {
+		it = it.Content[len(it.Content)-1]
+	}
+	return it.Kind == yaml.ScalarNode && it.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0
+}
+
 // tramos son los de cada elemento de la lista models, que está en el par k de la raíz: la línea de su guion y la siguiente a su contenido.
 func (a *archivoYAML) tramos(raiz *yaml.Node, k int) (inicio, fin []int) {
 	limite := len(a.ls)
@@ -146,13 +158,21 @@ func (a *archivoYAML) tramos(raiz *yaml.Node, k int) (inicio, fin []int) {
 		limite = raiz.Content[k+2].Line - 1
 	}
 	items := raiz.Content[k+1].Content
-	for i, it := range items {
+	for _, it := range items {
 		inicio = append(inicio, a.guion(it))
-		if i > 0 {
-			fin = append(fin, a.fin(inicio[i-1], inicio[i], sangria(a.ls[inicio[i-1]])))
-		}
 	}
-	fin = append(fin, a.fin(inicio[len(inicio)-1], limite, sangria(a.ls[inicio[len(inicio)-1]])))
+	for i, it := range items {
+		sig := limite
+		if i+1 < len(items) {
+			sig = inicio[i+1]
+		}
+		// solo un texto de varias líneas (| o >) puede llevar dentro líneas que parecen comentarios; si no, todo comentario o blanco del final es de lo que sigue
+		sangr := math.MaxInt
+		if terminaEnBloque(it) {
+			sangr = sangria(a.ls[inicio[i]])
+		}
+		fin = append(fin, a.fin(inicio[i], sig, sangr))
+	}
 	return inicio, fin
 }
 
@@ -311,6 +331,7 @@ func (formatoYAML) Aplicar(actual []byte, v Valores) ([]byte, map[string]any, ma
 		return nil, nil, nil, err
 	}
 	fin := len(a.ls)
+	previos := map[string]any{}
 	k := -1
 	if raiz != nil {
 		k = par(raiz, "models")
@@ -328,15 +349,20 @@ func (formatoYAML) Aplicar(actual []byte, v Valores) ([]byte, map[string]any, ma
 		clave, lista := raiz.Content[k], raiz.Content[k+1]
 		switch {
 		case lista.Kind == yaml.ScalarNode && lista.Tag == "!!null" && lista.Value == "":
+			previos[claveModels] = finDeLinea(a.ls[clave.Line-1])
 			a.reemplazar(clave.Line, clave.Line, bloqueYAML(v, "  "))
 		case lista.Kind == yaml.SequenceNode && lista.Style&yaml.FlowStyle != 0 && len(lista.Content) == 0:
 			// «models: []»: se quitan los corchetes y la lista se escribe debajo
+			if lista.Line != clave.Line {
+				return nil, nil, nil, errModelosEnLinea
+			}
 			l := a.ls[lista.Line-1]
 			i := len(string([]rune(l)[:lista.Column-1]))
 			j := strings.IndexByte(l[i:], ']')
 			if j < 0 {
 				return nil, nil, nil, errModelosEnLinea
 			}
+			previos[claveModels] = finDeLinea(l)
 			a.ls[lista.Line-1] = strings.TrimRight(l[:i], " \t") + l[i+j+1:]
 			a.reemplazar(lista.Line, lista.Line, bloqueYAML(v, "  "))
 		case lista.Kind == yaml.SequenceNode && lista.Style&yaml.FlowStyle != 0:
@@ -368,11 +394,11 @@ func (formatoYAML) Aplicar(actual []byte, v Valores) ([]byte, map[string]any, ma
 	}
 	anotada := entradaYAML(v)
 	anotada["apiKey"] = marca(v.Clave)
-	escrito := map[string]any{claveEscritoYAML: anotada}
+	escrito := map[string]any{claveEscritoYAML: anotada, claveModels: nombreModeloYAML}
 	if !(formatoYAML{}).Contiene(a.bytes(), Anotacion{Escrito: escrito}) {
 		return nil, nil, nil, fmt.Errorf("%w: el modelo no quedó como se escribió", ErrArchivoIlegible)
 	}
-	return a.bytes(), escrito, map[string]any{}, nil
+	return a.bytes(), escrito, previos, nil
 }
 
 func (formatoYAML) Quitar(actual []byte, anot Anotacion) ([]byte, bool, error) {
@@ -396,7 +422,7 @@ func (formatoYAML) Quitar(actual []byte, anot Anotacion) ([]byte, bool, error) {
 
 // quitarModelo borra los elementos de Tramtai que siguen como se escribieron; si la lista se queda sin ninguno, su clave
 // también, y si no queda más que la cabecera que pone Tramtai a un archivo nuevo, esa también. Límite conocido: un models
-// que ya estaba vacío antes de activar tampoco vuelve, porque no se puede distinguir del que creó Tramtai.
+// que ya estaba vacío antes de activar vuelve como estaba (Aplicar anota su línea en previos).
 func (a *archivoYAML) quitarModelo(raiz *yaml.Node, k int, anot Anotacion) {
 	inicio, fin := a.tramos(raiz, k)
 	quitar := map[int]bool{}
@@ -414,9 +440,15 @@ func (a *archivoYAML) quitarModelo(raiz *yaml.Node, k int, anot Anotacion) {
 		return
 	}
 	if quitados == len(items) {
-		quitar[raiz.Content[k].Line-1] = true
-		if len(raiz.Content) == 2*(len(cabeceraNueva)/2)+2 {
-			a.marcarCabecera(raiz, k, quitar)
+		linea := raiz.Content[k].Line - 1
+		if previo, ok := anot.Previos[claveModels].(string); ok {
+			// el models estaba vacío antes de activar: vuelve su línea tal cual, con su comentario
+			a.ls[linea] = previo + strings.TrimPrefix(a.ls[linea], finDeLinea(a.ls[linea]))
+		} else {
+			quitar[linea] = true
+			if len(raiz.Content) == 2*(len(cabeceraNueva)/2)+2 {
+				a.marcarCabecera(raiz, k, quitar)
+			}
 		}
 	}
 	a.quitarLineas(quitar)
@@ -457,6 +489,17 @@ func (formatoYAML) Contiene(actual []byte, anot Anotacion) bool {
 		return false
 	}
 	return slices.ContainsFunc(raiz.Content[k+1].Content, func(it *yaml.Node) bool { return esTramtai(it) && sigueEscrito(it, anot) })
+}
+
+// previaContinue se niega a crear config.yaml junto a un config.json: Continue dejaría de leer el JSON.
+func previaContinue(ruta string, existe bool) error {
+	if existe {
+		return nil
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(ruta), "config.json")); err == nil {
+		return errContinueJSON
+	}
+	return nil
 }
 
 // rutaContinue es $CONTINUE_GLOBAL_DIR/config.yaml o, sin esa variable, ~/.continue/config.yaml.

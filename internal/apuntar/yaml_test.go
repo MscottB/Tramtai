@@ -320,9 +320,23 @@ func TestContinueModelsVacio(t *testing.T) {
 			if err != nil || vacio {
 				t.Fatalf("Quitar: %v, %v", vacio, err)
 			}
-			// límite conocido: un «models» vacío no sobrevive a desactivar (no se puede distinguir del que creó Tramtai)
-			if m := leerYAML(t, string(quitado)); m["models"] != nil || m["name"] != "A" {
-				t.Errorf("tras Quitar:\n%s", quitado)
+			// el models vacío que había vuelve tal cual, con su comentario
+			if string(quitado) != original {
+				t.Errorf("tras Quitar:\n%q\nquería\n%q", quitado, original)
+			}
+			// y también tras activar dos veces con el núcleo, que arrastra los previos de la primera
+			datos, ruta, h := herramientaTemporal(t, "continue", []byte(original), "config.yaml")
+			var an Anotacion
+			for i := 0; i < 2; i++ {
+				if an, err = Aplicar(datos, h, AlcanceGlobal, "", valoresContinue()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := Quitar(datos, h, an); err != nil {
+				t.Fatal(err)
+			}
+			if got := leerTexto(t, ruta); got != original {
+				t.Errorf("tras activar dos veces y desactivar:\n%q", got)
 			}
 		})
 	}
@@ -386,5 +400,53 @@ func TestContinueDetectada(t *testing.T) {
 	}
 	if !Detectada(h) {
 		t.Error("con ~/.continue debería detectarse (Continue suele ser una extensión del editor, sin programa en el PATH)")
+	}
+}
+
+func TestContinueNoUsaConfigJSON(t *testing.T) {
+	datos, ruta, h := herramientaTemporal(t, "continue", nil, "config.yaml")
+	json := filepath.Join(filepath.Dir(ruta), "config.json")
+	if err := os.WriteFile(json, []byte(`{"models":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresContinue()); !errors.Is(err, errContinueJSON) {
+		t.Fatalf("solo con config.json: err = %v, quería errContinueJSON", err)
+	}
+	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
+		t.Errorf("se creó config.yaml: %v", err)
+	}
+	if _, hay, _ := Leer(datos, "continue"); hay {
+		t.Error("quedó una anotación")
+	}
+	if _, err := os.Stat(filepath.Join(datos, "herramientas", "copias")); !os.IsNotExist(err) {
+		t.Errorf("se creó una copia: %v", err)
+	}
+	// con los dos archivos Continue ya lee el YAML: se puede activar
+	if err := os.WriteFile(ruta, []byte("name: A\nmodels: []\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresContinue()); err != nil {
+		t.Errorf("con config.yaml y config.json: %v", err)
+	}
+}
+
+func TestContinueComentarioTrasSuModelo(t *testing.T) {
+	original := datosYAML(t, "config.yaml")
+	nuevo, a := aplicarContinue(t, original)
+	// una nota del usuario, más sangrada que el guion, justo tras el modelo de Tramtai
+	con := strings.Replace(nuevo, "      - tool_use\n", "      - tool_use\n    # nota mía\n\n    # otra\n", 1)
+	want := strings.Replace(original, "roles: [chat, autocomplete]\n", "roles: [chat, autocomplete]\n    # nota mía\n\n    # otra\n", 1)
+	if con == nuevo || want == original {
+		t.Fatal("la prueba no cambió nada")
+	}
+	quitado, _, err := Continue().Quitar([]byte(con), a)
+	if err != nil || string(quitado) != want {
+		t.Errorf("Quitar = %q, %v;\nquería %q", quitado, err, want)
+	}
+	v := valoresContinue()
+	v.Modelo = "claude/haiku"
+	otro, _, _, err := Continue().Aplicar([]byte(con), v)
+	if err != nil || !strings.Contains(string(otro), "      - tool_use\n    # nota mía\n\n    # otra\n") {
+		t.Errorf("reaplicar perdió la nota: %v\n%s", err, otro)
 	}
 }
