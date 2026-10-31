@@ -174,6 +174,29 @@ func TestHerramientasListar(t *testing.T) {
 	}
 }
 
+// TestMotivoNoEnsanchaLaTabla: la explicación va en la última columna; una larga no mueve las demás (herramientas y espacios).
+func TestMotivoNoEnsanchaLaTabla(t *testing.T) {
+	largo := strings.Repeat("motivo larguísimo ", 10)
+	posicion := func(salida, columna string) int { return strings.Index(strings.SplitN(salida, "\n", 2)[0], columna) }
+	var sin, con strings.Builder
+	h := contrato.EstadoHerramienta{ID: "codex", Nombre: "Codex", Estado: "desactualizada", Ruta: "config.toml"}
+	escribirHerramientas(&sin, []contrato.EstadoHerramienta{h})
+	h.Motivo = largo
+	escribirHerramientas(&con, []contrato.EstadoHerramienta{h})
+	if !strings.Contains(con.String(), "↳ "+largo) || posicion(sin.String(), "ID") != posicion(con.String(), "ID") || posicion(sin.String(), "ARCHIVO") != posicion(con.String(), "ARCHIVO") {
+		t.Errorf("el motivo ensancha las columnas de herramientas:\n%s\n%s", sin.String(), con.String())
+	}
+	sin.Reset()
+	con.Reset()
+	e := contrato.Espacio{ID: "global", Nombre: "global", Estado: "activo", Ruta: "C:/x"}
+	escribirEspacios(&sin, []contrato.Espacio{e})
+	e.UltimoError = largo
+	escribirEspacios(&con, []contrato.Espacio{e})
+	if !strings.Contains(con.String(), "↳ "+largo) || posicion(sin.String(), "ID") != posicion(con.String(), "ID") || posicion(sin.String(), "CARPETA") != posicion(con.String(), "CARPETA") {
+		t.Errorf("el error ensancha las columnas de espacios:\n%s\n%s", sin.String(), con.String())
+	}
+}
+
 func TestHerramientasActivarYDesactivar(t *testing.T) {
 	peticiones := herramientasFalsas(t)
 	pasos := []struct {

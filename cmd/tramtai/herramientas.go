@@ -164,7 +164,7 @@ func escribirHerramientas(w io.Writer, lista []contrato.EstadoHerramienta) {
 		}
 		fmt.Fprintf(t, "%s\t%s\t%s\t%s\t%s\t%s\n", h.Nombre, h.ID, estado, valorO(h.Modelo, "-"), copia, valorO(h.Ruta, "-"))
 		if h.Motivo != "" {
-			fmt.Fprintf(t, "  ↳ %s\t\t\t\t\t\n", h.Motivo)
+			fmt.Fprintf(t, "\t\t\t\t\t↳ %s\n", h.Motivo) // en la última columna, sin cerrar con tabulador: no ensancha ninguna
 		}
 	}
 	t.Flush()

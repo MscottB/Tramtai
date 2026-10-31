@@ -402,7 +402,7 @@ func init() {
 		"%s no tiene clave: actívala con «tramtai herramientas activar %s»":                                                      "%s has no key: turn it on with “tramtai herramientas activar %s”",
 		"HERRAMIENTA\tID\tESTADO\tMODELO\tCOPIA\tARCHIVO":                                                                        "TOOL\tID\tSTATE\tMODEL\tCOPY\tFILE",
 		"Activa":         "Active",
-		"Desactivada":    "Off",
+		"Desactivada":    "Turned off",
 		"Desactualizada": "Out of date",
 		"Detectada":      "Detected",
 		"No detectada":   "Not detected",
