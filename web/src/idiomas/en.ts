@@ -805,6 +805,8 @@ const en: Textos = {
   'error.entrada_remota_no_disponible': 'You can’t sign in with a password here',
   'error.accion_no_permitida': 'The server does not allow that right now',
   'error.entrada_ocupada': 'There are too many sign-in attempts at once: try again in a few seconds',
+  'error.no_disponible_en_servidor': 'Tools are not available on the server',
+  'error.herramienta_en_conflicto': 'The tool could not be changed right now: read the details',
   'error.confianza_requerida': 'You need to decide whether you trust that folder',
   'error.espacio_detenido': 'This project’s workspace is stopped',
   'error.conflicto_idempotencia': 'Another request already uses that idempotency key: use a new key for each different send',

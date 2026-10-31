@@ -228,6 +228,53 @@ func terminado(t *testing.T, cli *Cliente, inst, id string) {
 	}
 }
 
+// Las herramientas por el cliente, con Continue (su clave va en su archivo: el almacén del sistema no se toca) y sus
+// carpetas en temporales.
+func TestClienteHerramientas(t *testing.T) {
+	casa := t.TempDir()
+	for _, v := range []string{"HOME", "USERPROFILE", "APPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME"} {
+		t.Setenv(v, casa)
+	}
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("CONTINUE_GLOBAL_DIR", filepath.Join(casa, "continue"))
+	os.MkdirAll(filepath.Join(casa, "continue"), 0o700)
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	estado := func(lista []contrato.EstadoHerramienta, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range lista {
+			if e.ID == "continue" {
+				return e.Estado
+			}
+		}
+		return ""
+	}
+	if e := estado(cli.Herramientas(ctx, "global")); e != "detectada" {
+		t.Fatalf("antes: %s", e)
+	}
+	if e := estado(cli.ActivarHerramientas(ctx, "global", contrato.ActivarHerramientas{IDs: []string{"continue"}, Modelo: "simulado"})); e != "activa" {
+		t.Fatalf("activar: %s", e)
+	}
+	if _, err := cli.RestaurarHerramienta(ctx, "global", "continue"); err == nil || !strings.Contains(err.Error(), "no hay copia") {
+		t.Fatalf("restaurar sin copia: %v", err)
+	}
+	if e := estado(cli.DesactivarHerramientas(ctx, "global", []string{"continue"}, false)); e != "desactivada" {
+		t.Fatalf("desactivar: %s", e)
+	}
+	if err := cli.OlvidarHerramienta(ctx, "global", "continue"); err != nil {
+		t.Fatal(err)
+	}
+	if e := estado(cli.Herramientas(ctx, "global")); e != "detectada" {
+		t.Fatalf("olvidada: %s", e)
+	}
+}
+
 func TestClientePuntosConUso(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()
