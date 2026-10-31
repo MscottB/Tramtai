@@ -47,6 +47,11 @@ func conjunto(claves ...string) map[string]bool {
 // sinEfecto indica que un parámetro no soportado llega con un valor que no cambia nada (null, false, [], n=1).
 func sinEfecto(clave string, valor json.RawMessage) bool {
 	v := strings.TrimSpace(string(valor))
+	if clave == "thinking" { // Claude Code lo envía siempre: «adaptive» deja decidir al modelo y «disabled» no pide nada
+		var t struct{ Type string }
+		_ = json.Unmarshal(valor, &t)
+		return t.Type == "adaptive" || t.Type == "disabled" || v == "null"
+	}
 	return v == "null" || v == "false" || v == "[]" || v == "{}" || (clave == "n" && v == "1")
 }
 

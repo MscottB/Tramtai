@@ -438,6 +438,25 @@ func TestRespuestasYEsquema(t *testing.T) {
 	}
 }
 
+// TestRespuestasAceptaPeticionDeCodex: los campos que Codex 0.160.0 envía en cada petición a /responses (M0 de v0.59,
+// capturados con el programa real). Ninguno cambia la respuesta de un agente CLI: se ignoran con aviso.
+func TestRespuestasAceptaPeticionDeCodex(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), nil)
+	cuerpo := `{"model":"simulado","instructions":"breve","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"di hola"}]}],` +
+		`"tools":[{"type":"namespace","name":"multi_agent_v1","tools":[{"type":"function","name":"spawn_agent","parameters":{"type":"object"}}]},{"type":"web_search"}],"tool_choice":"auto","parallel_tool_calls":true,"reasoning":{"summary":"auto"},"store":false,"stream":true,` +
+		`"include":["reasoning.encrypted_content"],"prompt_cache_key":"01a19396","client_metadata":{"x-codex-installation-id":"29a441b9"}}`
+	r, flujo := pedir(t, ts, "POST", "/openai/v1/responses", cuerpo, "originator", "codex_exec")
+	if r.StatusCode != 200 || !strings.Contains(flujo, "event: response.completed") {
+		t.Fatalf("Codex: %d %s", r.StatusCode, flujo)
+	}
+	// Las herramientas que no son funciones (namespace, web_search) no existen en los agentes CLI: se dejan fuera con aviso.
+	for _, campo := range []string{"prompt_cache_key", "client_metadata", "namespace", "web_search"} {
+		if !strings.Contains(r.Header.Get("Tramtai-Advertencia"), campo) {
+			t.Errorf("falta el aviso de %s: %v", campo, r.Header)
+		}
+	}
+}
+
 func TestMensajesAnthropic(t *testing.T) {
 	ts := servidor(t, simulado(trozos{}), nil)
 	if r, cuerpo := pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","messages":[{"role":"user","content":"hola"}]}`); r.StatusCode != 400 ||
@@ -461,6 +480,29 @@ func TestMensajesAnthropic(t *testing.T) {
 			t.Fatalf("orden de eventos incorrecto en %s:\n%s", evento, flujo)
 		}
 		ultimo = i
+	}
+}
+
+// TestAnthropicAceptaPeticionDeClaudeCode: los campos y cabeceras que Claude Code 2.1.288 envía en cada petición
+// (M0 de v0.59, capturados con el programa real). Ninguno cambia la respuesta de un agente CLI: se ignoran con aviso.
+func TestAnthropicAceptaPeticionDeClaudeCode(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), nil)
+	cuerpo := `{"model":"simulado","max_tokens":32000,"stream":true,"messages":[{"role":"user","content":[{"type":"text","text":"di hola"}]}],` +
+		`"system":[{"type":"text","text":"breve"}],"metadata":{"user_id":"{}"},"thinking":{"type":"adaptive","display":"omitted"},` +
+		`"context_management":{"edits":[{"type":"clear_thinking_20251015","keep":"all"}]},"safeguards":{"x":1},"output_config":{"effort":"high"}}`
+	r, flujo := pedir(t, ts, "POST", "/anthropic/v1/messages?beta=true", cuerpo, "x-api-key", "secreto", "anthropic-version", "2023-06-01",
+		"anthropic-beta", "interleaved-thinking-2025-05-14,context-management-2025-06-27,claude-code-20250219")
+	if r.StatusCode != 200 || !strings.Contains(flujo, "event: message_stop") {
+		t.Fatalf("Claude Code: %d %s", r.StatusCode, flujo)
+	}
+	for _, campo := range []string{"context_management", "safeguards", "output_config"} {
+		if !strings.Contains(r.Header.Get("Tramtai-Advertencia"), campo) {
+			t.Errorf("falta el aviso de %s: %v", campo, r.Header)
+		}
+	}
+	// Con thinking activado a mano (budget_tokens) sí se rechaza: un agente CLI no puede respetar ese presupuesto.
+	if r, cuerpo := pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"thinking":{"type":"enabled","budget_tokens":2000},"messages":[{"role":"user","content":"x"}]}`); r.StatusCode != 400 {
+		t.Fatalf("thinking enabled: %d %s", r.StatusCode, cuerpo)
 	}
 }
 
