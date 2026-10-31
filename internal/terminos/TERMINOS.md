@@ -1,6 +1,6 @@
 # Términos de uso de Tramtai
 
-**Versión 2 · [día de publicación]** · [English below](#terms-of-use)
+**Versión 2 · 31 de octubre de 2026** · [English below](#terms-of-use)
 
 **Resumen de riesgos (léelo antes de aceptar).** Tramtai es gratuito y se entrega tal cual. (1) Si usas tu
 suscripción de un proveedor con Tramtai, **ese proveedor puede limitar, suspender o cerrar tu cuenta**, y puede
@@ -163,7 +163,7 @@ respaldo ni asociación.
 
 ## Terms of use
 
-**Version 2 · [publication date]**
+**Version 2 · October 31, 2026**
 
 The Spanish version prevails.
 

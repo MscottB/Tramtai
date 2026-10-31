@@ -34,7 +34,7 @@ Antes de instalarlo, `tramtai servidor instalar` enseña estos cinco riesgos y p
 5. Tramtai es gratuito y se entrega tal cual, sin garantías.
 <!-- /riesgos-servidor:es -->
 
-El texto completo está en los [términos de uso](../TERMINOS.md) (versión 2, [día de publicación]). La aceptación queda en
+El texto completo está en los [términos de uso](../TERMINOS.md) (versión 2, 31 de octubre de 2026). La aceptación queda en
 `datos/terminos.json` del servidor; la de tu Tramtai de escritorio no cuenta para él.
 
 ## Dos entornos
@@ -550,7 +550,7 @@ accept”):
 5. Tramtai is free and provided as is, without warranties.
 <!-- /riesgos-servidor:en -->
 
-The full text is in the [terms of use](../TERMINOS.md#terms-of-use) (version 2, [publication date]). The acceptance
+The full text is in the [terms of use](../TERMINOS.md#terms-of-use) (version 2, October 31, 2026). The acceptance
 is stored in the server’s `datos/terminos.json`; your desktop Tramtai’s doesn’t count for it.
 
 ## Two environments
