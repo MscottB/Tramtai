@@ -229,7 +229,7 @@ func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.Solic
 	if err := conversionLocalPermitida(archivos); err != nil {
 		return err
 	}
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}

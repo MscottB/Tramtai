@@ -11,7 +11,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
@@ -40,7 +39,7 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error 
 	if err != nil {
 		return err
 	}
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
