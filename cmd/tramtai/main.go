@@ -82,6 +82,7 @@ func nuevaRaiz() *cobra.Command {
 		comandoAgentes(),
 		comandoConfiguracion(),
 		comandoClaves(),
+		comandoHerramientas(),
 		comandoInstalacion(),
 		comandoActualizar(),
 		comandoTerminos(),
