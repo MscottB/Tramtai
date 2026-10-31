@@ -70,6 +70,7 @@ func Lista() []Herramienta {
 		{ID: "claude-code", Nombre: "Claude Code", EnProyecto: true, Programa: "claude", Ruta: rutaClaudeCode,
 			Gestionado: gestionadoClaudeCode, Formato: ClaudeCode()},
 		{ID: "codex", Nombre: "Codex", Programa: "codex", Ruta: rutaCodex, Formato: Codex()},
+		{ID: "continue", Nombre: "Continue", ClaveEnArchivo: true, Programa: "cn", Ruta: rutaContinue, Formato: Continue()},
 		{ID: "opencode", Nombre: "opencode", ClaveEnArchivo: true, Programa: "opencode", Ruta: rutaOpenCode, Formato: OpenCode()},
 		{ID: "kilo", Nombre: "Kilo Code", ClaveEnArchivo: true, Programa: "kilo", Ruta: rutaKilo, Formato: OpenCode()},
 	}

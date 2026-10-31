@@ -487,6 +487,7 @@ func TestRutasDeLista(t *testing.T) {
 	t.Setenv("USERPROFILE", casa)
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("CONTINUE_GLOBAL_DIR", "")
 	ruta := func(id string, alcance Alcance, proyecto string) string {
 		for _, h := range Lista() {
 			if h.ID == id {
@@ -529,12 +530,19 @@ func TestRutasDeLista(t *testing.T) {
 	if got, want := ruta("kilo", AlcanceGlobal, ""), filepath.Join(casa, ".config", "kilo", "kilo.jsonc"); got != want {
 		t.Errorf("kilo = %s, quería %s", got, want)
 	}
+	if got, want := ruta("continue", AlcanceGlobal, ""), filepath.Join(casa, ".continue", "config.yaml"); got != want {
+		t.Errorf("continue = %s, quería %s", got, want)
+	}
+	t.Setenv("CONTINUE_GLOBAL_DIR", xdg)
+	if got, want := ruta("continue", AlcanceGlobal, ""), filepath.Join(xdg, "config.yaml"); got != want {
+		t.Errorf("continue con CONTINUE_GLOBAL_DIR = %s, quería %s", got, want)
+	}
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	if got, want := ruta("kilo", AlcanceGlobal, ""), filepath.Join(xdg, "kilo", "kilo.jsonc"); got != want {
 		t.Errorf("kilo con XDG_CONFIG_HOME = %s, quería %s", got, want)
 	}
 	// por herramienta: si la clave va en el archivo (si no, en el almacén y una orden la entrega) y si admite proyecto
-	claveEnArchivo := map[string]bool{"claude-code": false, "codex": false, "opencode": true, "kilo": true}
+	claveEnArchivo := map[string]bool{"claude-code": false, "codex": false, "continue": true, "opencode": true, "kilo": true}
 	for _, h := range Lista() {
 		want, conocida := claveEnArchivo[h.ID]
 		if !conocida || h.ClaveEnArchivo != want || h.EnProyecto != (h.ID == "claude-code") || (h.Gestionado != nil) != (h.ID == "claude-code") {
