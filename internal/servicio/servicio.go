@@ -280,6 +280,12 @@ func (s *Servicio) BasePublica() string { return s.urlPublica(s.opc.Puerto) }
 // urlPublica es la URL del servicio en ese puerto, con el esquema y el nombre con que se anuncia.
 func (s *Servicio) urlPublica(puerto int) string {
 	esquema, nombre := "http", s.opc.Host
+	if ip := net.ParseIP(nombre); ip != nil && ip.IsUnspecified() { // todas las direcciones: se anuncia la de este equipo
+		nombre = "127.0.0.1"
+		if ip.To4() == nil {
+			nombre = "::1"
+		}
+	}
 	if s.opc.TLS != nil {
 		esquema = "https"
 		if len(s.opc.Dominios) > 0 {

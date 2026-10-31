@@ -4,9 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -34,15 +31,7 @@ func ejecutarComoServicio(cmd *cobra.Command, archivo string) (bool, error) {
 	dentroDelServicio.Store(true)
 	m := &manejador{ejecutar: func(ctx context.Context) error {
 		cmd.SetContext(ctx)
-		err := iniciarServicio(cmd, archivo, false)
-		// Sin consola: que el error quede en el registro (tramtai-servidor registro); el reinicio pedido ya lo anotó.
-		if err != nil && archivo != "" && !errors.Is(err, errReinicioPedido) {
-			if f, e := os.OpenFile(archivo, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600); e == nil {
-				fmt.Fprintf(f, "%s %v\n", time.Now().Format(time.RFC3339), err)
-				f.Close()
-			}
-		}
-		return err
+		return iniciarServicio(cmd, archivo, false) // el error queda en el registro (anotarError)
 	}}
 	// El nombre no cuenta con un servicio de proceso propio: vale también para el de las pruebas.
 	if err := svc.Run("Tramtai", m); err != nil {
@@ -72,8 +61,10 @@ func (m *manejador) Execute(_ []string, peticiones <-chan svc.ChangeRequest, est
 	for {
 		select {
 		case m.err = <-fin:
-			if m.err != nil { // un código propio (1, o codigoReinicio): la recuperación lo vuelve a arrancar
-				return true, uint32(codigoSalida(m.err))
+			// Con la configuración inválida sale limpio: la recuperación no lo arranca una y otra vez (fallaría igual);
+			// el registro dice por qué.
+			if m.err != nil && !configuracionMala(m.err) {
+				return true, uint32(codigoSalida(m.err)) // 1, o codigoReinicio: la recuperación lo vuelve a arrancar
 			}
 			return false, 0
 		case <-paso:

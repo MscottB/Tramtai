@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -102,6 +101,9 @@ func (s *Servicio) autoarranqueUI(w http.ResponseWriter, r *http.Request, ses *s
 // fijarAutoarranque registra que Tramtai arranque al iniciar sesión, la app en la bandeja o solo el servicio, o lo quita
 // (Opciones.CambiarAutoarranque lo cambia).
 func (s *Servicio) fijarAutoarranque(p peticionArranque) error {
+	if s.entorno() == "servidor" { // la cuenta del servicio no inicia sesión
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, autoarranque.ErrEnServidor.Error())
+	}
 	var modo autoarranque.Modo
 	if p.Activo {
 		var err error
@@ -133,12 +135,16 @@ func (s *Servicio) servidorUI(w http.ResponseWriter, r *http.Request, _ *sesion)
 }
 
 // estadoServidor es lo que enseña Ajustes → Servidor, de la configuración con la que arrancó el servicio (la red y el TLS
-// solo cambian al reiniciar). Nunca lleva rutas de claves ni secretos.
+// solo cambian al reiniciar): los dominios y los proxies, como los usa (normalizados al arrancar). Nunca lleva rutas de
+// claves ni secretos.
 func (s *Servicio) estadoServidor() contrato.EstadoServidor {
 	c := s.opc.Config
-	e := contrato.EstadoServidor{TLS: cmp.Or(c.Texto("servicio.tls.modo"), "ninguno"), Dominios: textos(c.Lista("servicio.dominios")),
-		Confiables: textos(c.Lista("servicio.proxy.confiables")), Administrador: leerAdministrador(s.opc.Datos) != "", Expuesto: s.opc.Expuesto,
+	e := contrato.EstadoServidor{TLS: cmp.Or(c.Texto("servicio.tls.modo"), "ninguno"), Dominios: append([]string{}, s.opc.Dominios...),
+		Confiables: []string{}, Administrador: leerAdministrador(s.opc.Datos) != "", Expuesto: s.opc.Expuesto,
 		Suscripciones: []contrato.SuscripcionServidor{}}
+	for _, red := range s.opc.Confiables {
+		e.Confiables = append(e.Confiables, red.String())
+	}
 	switch e.TLS {
 	case "archivos":
 		e.VenceCertificado = venceCertificado(c.Texto("servicio.tls.certificado"))
@@ -179,15 +185,6 @@ func venceCertificado(ruta string) *time.Time {
 			return nil
 		}
 	}
-}
-
-// textos son los valores de una lista de la configuración, como texto.
-func textos(lista []any) []string {
-	salida := make([]string, 0, len(lista))
-	for _, v := range lista {
-		salida = append(salida, fmt.Sprint(v))
-	}
-	return salida
 }
 
 // ajustesServicio son el puerto y el arranque con el sistema, para Ajustes en la terminal y la sesión de la Web UI.

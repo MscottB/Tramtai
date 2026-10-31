@@ -97,6 +97,7 @@ func TestComprobarArranque(t *testing.T) {
 		{"6 archivos ilegibles", con(func(e *Entrada) { e.Certificado = filepath.Join(t.TempDir(), "falta.pem") }), "servicio.tls.certificado"},
 		{"6 archivos sin el dominio", con(func(e *Entrada) { e.Dominios = []string{"tramtai.ejemplo.org", "otro.ejemplo.org"} }), "otro.ejemplo.org"},
 	} {
+		c.e.Servidor = true // las reglas 3 y 4 remiten a órdenes del servidor
 		err := ComprobarArranque(c.e)
 		switch {
 		case c.falla == "" && err != nil:
@@ -105,8 +106,55 @@ func TestComprobarArranque(t *testing.T) {
 			t.Errorf("%s: se esperaba un error con %q: %v", c.nombre, c.falla, err)
 		}
 	}
-	if err := ComprobarArranque(con(func(e *Entrada) { e.TLS, e.Correo, e.Puerto = "letsencrypt", "admin@ejemplo.org", 443 })); err != nil {
+	if err := ComprobarArranque(con(func(e *Entrada) {
+		e.TLS, e.Correo, e.Puerto, e.Servidor = "letsencrypt", "admin@ejemplo.org", 443, true
+	})); err != nil {
 		t.Errorf("letsencrypt completo: %v", err)
+	}
+}
+
+// TestSuscripcionExpuestaFueraDelServidor: fuera del servidor (sin TOTP ni órdenes de tramtai-servidor), con el servicio
+// abierto a la red una suscripción, también la personal, no se admite: el mensaje pide la clave de API, sin remitir a
+// órdenes que solo existen con --servidor.
+func TestSuscripcionExpuestaFueraDelServidor(t *testing.T) {
+	proxy := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+	for _, personal := range []bool{false, true} {
+		err := ComprobarArranque(Entrada{Host: "127.0.0.1", Confiables: proxy, Suscripciones: []Suscripcion{{Agente: "claude", Personal: personal}}})
+		if err == nil || !strings.Contains(err.Error(), "adaptadores.claude.autenticacion: clave_api") || strings.Contains(err.Error(), "servidor") {
+			t.Errorf("personal %v: %v", personal, err)
+		}
+	}
+}
+
+// TestCertificadoIlegibleReintentable: un certificado o una clave que no se pueden leer impiden arrancar, pero se puede
+// reintentar (un montaje que aún no ha llegado al arrancar el equipo); el resto de errores de configuración, no.
+func TestCertificadoIlegibleReintentable(t *testing.T) {
+	falta := filepath.Join(t.TempDir(), "falta.pem")
+	err := ComprobarArranque(Entrada{Host: "127.0.0.1", TLS: "archivos", Certificado: falta, Clave: falta})
+	if err == nil || !Reintentable(err) || !strings.Contains(err.Error(), "servicio.tls.certificado") {
+		t.Errorf("certificado ilegible: %v (reintentable %v)", err, Reintentable(err))
+	}
+	if err := ComprobarArranque(Entrada{Host: "0.0.0.0", TLS: "archivos"}); err == nil || Reintentable(err) {
+		t.Errorf("otra regla: %v", err)
+	}
+}
+
+// TestAvisoSinDominios: escuchando en todas las direcciones sin servicio.dominios arranca, pero desde otros equipos no
+// se entra (el Host que mandan no está admitido): un aviso, no una regla.
+func TestAvisoSinDominios(t *testing.T) {
+	for _, c := range []struct {
+		e     Entrada
+		aviso bool
+	}{
+		{Entrada{Host: "0.0.0.0"}, true},
+		{Entrada{Host: "::"}, true},
+		{Entrada{Host: "0.0.0.0", Dominios: []string{"tramtai.ejemplo.org"}}, false},
+		{Entrada{Host: "192.0.2.10"}, false},
+		{Entrada{Host: "127.0.0.1"}, false},
+	} {
+		if a := AvisoSinDominios(c.e); (a != "") != c.aviso || (c.aviso && !strings.Contains(a, "servicio.dominios")) {
+			t.Errorf("%+v: %q", c.e, a)
+		}
 	}
 }
 

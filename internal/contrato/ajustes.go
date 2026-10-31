@@ -78,13 +78,12 @@ type RutasAcerca struct {
 }
 
 // EstadoTerminos es lo que la Web UI necesita para pedir la aceptación de los términos de uso: la versión vigente, si
-// este entorno aún no la aceptó y los cinco riesgos que se enseñan antes de aceptar; Servidor dice si son los del modo
-// servidor (la Web UI toma el texto de sus propias claves, con la redacción que corresponda).
+// este entorno aún no la aceptó y si los cinco riesgos que se enseñan antes de aceptar son los del modo servidor (la
+// Web UI toma el texto de sus propias claves, riesgos.*, con la redacción que corresponda).
 type EstadoTerminos struct {
-	Version   string   `json:"version"`
-	Pendiente bool     `json:"pendiente"`
-	Riesgos   []string `json:"riesgos"`
-	Servidor  bool     `json:"servidor"`
+	Version   string `json:"version"`
+	Pendiente bool   `json:"pendiente"`
+	Servidor  bool   `json:"servidor"`
 }
 
 // EntradaRemota es lo que la página de entrada de la Web UI necesita saber antes de pedir nada (GET /ui/entrada, sin

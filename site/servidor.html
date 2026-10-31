@@ -187,10 +187,11 @@ sudo tramtai-servidor administrador contraseña</code></pre>
             <tr><td>Apache httpd</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/apache/tramtai.conf">tramtai.conf</a></td><td>En el CI, en cada cambio</td></tr>
             <tr><td>Traefik</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/traefik/tramtai.yml">tramtai.yml</a></td><td>En el CI, en cada cambio</td></tr>
             <tr><td>HAProxy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/haproxy/haproxy.cfg">haproxy.cfg</a></td><td>En el CI, en cada cambio</td></tr>
-            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Pendiente: se comprueba a mano antes de publicar</td></tr>
+            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Sin comprobar a mano todavía</td></tr>
           </tbody>
         </table></div>
-        <p><strong>Túneles:</strong> Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puertos (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">cómo</a>). Con Cloudflare, el HTTPS termina en Cloudflare, que ve tus peticiones y tus claves, y corta a los 125 s una respuesta que no ha empezado: en las peticiones largas, pide la respuesta en vivo. Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.</p>
+        <p><strong>Túneles:</strong> Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puertos (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">cómo</a>). Con Cloudflare, el HTTPS termina en Cloudflare, que ve tus peticiones y tus claves, y corta a los 125 s una respuesta que no ha empezado: en las peticiones largas, pide la respuesta en vivo. Cloudflare Tunnel y Tailscale Serve: sin comprobar a mano todavía.</p>
+        <p><strong>En tu red local:</strong> tampoco hay HTTP plano. Tailscale Serve, Caddy con su CA interna, un certificado de tu propia CA (por ejemplo, con mkcert) o un túnel SSH, en <a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md#red-local-homelab">Red local (homelab)</a>.</p>
         <p><strong>En el propio servidor:</strong> <code>tramtai-servidor abrir</code>, la tecla <kbd>W</kbd> de la terminal y la app entran directamente. Con un proxy de confianza, abrir a mano el puerto de Tramtai en el navegador del servidor cuenta como entrar desde fuera, y desde fuera no se entra sin la contraseña del administrador.</p>
       </div>
       <div lang="en">
@@ -208,10 +209,11 @@ sudo tramtai-servidor administrador contraseña</code></pre>
             <tr><td>Apache httpd</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/apache/tramtai.conf">tramtai.conf</a></td><td>By CI, on every change</td></tr>
             <tr><td>Traefik</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/traefik/tramtai.yml">tramtai.yml</a></td><td>By CI, on every change</td></tr>
             <tr><td>HAProxy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/haproxy/haproxy.cfg">haproxy.cfg</a></td><td>By CI, on every change</td></tr>
-            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Pending: checked by hand before release</td></tr>
+            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Not yet checked by hand</td></tr>
           </tbody>
         </table></div>
-        <p><strong>Tunnels:</strong> Cloudflare Tunnel and Tailscale Serve or Funnel publish the server without opening ports (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">how</a>). With Cloudflare, HTTPS ends at Cloudflare, which sees your requests and your keys, and it cuts a response that hasn’t started within 125 s: for long requests, ask for the streamed response. Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.</p>
+        <p><strong>Tunnels:</strong> Cloudflare Tunnel and Tailscale Serve or Funnel publish the server without opening ports (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">how</a>). With Cloudflare, HTTPS ends at Cloudflare, which sees your requests and your keys, and it cuts a response that hasn’t started within 125 s: for long requests, ask for the streamed response. Cloudflare Tunnel and Tailscale Serve: not yet checked by hand.</p>
+        <p><strong>On your local network:</strong> there’s no plain HTTP either. Tailscale Serve, Caddy with its internal CA, a certificate from your own CA (for example, with mkcert) or an SSH tunnel, in <a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md#local-network-homelab">Local network (homelab)</a>.</p>
         <p><strong>On the server itself:</strong> <code>tramtai-servidor abrir</code>, the terminal’s <kbd>W</kbd> key and the app get in directly. With a trusted proxy, opening Tramtai’s port by hand in the server’s browser counts as coming from outside, and nobody gets in from outside without the administrator password.</p>
       </div>
     </section>

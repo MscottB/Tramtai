@@ -83,7 +83,7 @@ func (c *Configuracion) AplicarPerfil(s nucleo.SolicitudEjecucion) (nucleo.Solic
 
 func (c *Configuracion) buscarPerfil(nombre string) (Perfil, carpetaPerfiles, error) {
 	for _, carpeta := range c.perfiles {
-		datos, err := os.ReadFile(filepath.Join(carpeta.dir, nombre+".yaml"))
+		datos, err := leerArchivo(filepath.Join(carpeta.dir, nombre+".yaml"))
 		if os.IsNotExist(err) {
 			continue
 		}
@@ -119,7 +119,7 @@ func leerEsquema(carpeta carpetaPerfiles, relativa string) (json.RawMessage, err
 	if err != nil || info.Size() > maximoEsquema {
 		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no se puede leer o supera 1 MB", relativa))
 	}
-	datos, err := os.ReadFile(ruta)
+	datos, err := leerArchivo(ruta)
 	if err != nil || !json.Valid(datos) {
 		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no es JSON válido", relativa))
 	}

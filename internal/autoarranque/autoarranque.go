@@ -33,6 +33,9 @@ func ModoDe(texto string) (Modo, error) {
 	return "", errors.New(idioma.T("el modo del arranque es app o servicio"))
 }
 
+// ErrEnServidor es lo que dice pedir el arranque al iniciar sesión en el modo servidor.
+var ErrEnServidor = errors.New(idioma.T("en el servidor no hay arranque al iniciar sesión: el servicio del sistema arranca con el equipo"))
+
 // propia es la aplicación de escritorio de esta copia: el arranque solo cuenta como activo si es el de ella (la
 // instalada y la portable no se pisan). Las pruebas la sustituyen.
 var propia = Escritorio
@@ -44,6 +47,10 @@ func Elegir(modo Modo) error {
 		return errors.New(idioma.T("el modo del arranque es app o servicio"))
 	}
 	escritorio, err := propia()
+	if err != nil && modo == ModoServicio && runtime.GOOS != "windows" {
+		// En Linux y macOS, ModoServicio arranca tramtai (programa()), no la app: basta con saber dónde estaría.
+		escritorio, err = rutaEscritorio()
+	}
 	if err != nil {
 		return err
 	}
@@ -58,6 +65,19 @@ func Activo() (bool, error) {
 
 // Escritorio devuelve la ruta de la aplicación de escritorio, que se instala junto al ejecutable actual.
 func Escritorio() (string, error) {
+	ruta, err := rutaEscritorio()
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(ruta); err != nil {
+		propio, _ := os.Executable()
+		return "", errors.New(idioma.Tf("no se encontró %s junto a %s", filepath.Base(ruta), filepath.Base(propio)))
+	}
+	return ruta, nil
+}
+
+// rutaEscritorio es donde estaría la aplicación de escritorio: junto al ejecutable actual, esté o no.
+func rutaEscritorio() (string, error) {
 	propio, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -66,9 +86,5 @@ func Escritorio() (string, error) {
 	if runtime.GOOS == "windows" {
 		nombre += ".exe"
 	}
-	ruta := filepath.Join(filepath.Dir(propio), nombre)
-	if _, err := os.Stat(ruta); err != nil {
-		return "", errors.New(idioma.Tf("no se encontró %s junto a %s", nombre, filepath.Base(propio)))
-	}
-	return ruta, nil
+	return filepath.Join(filepath.Dir(propio), nombre), nil
 }

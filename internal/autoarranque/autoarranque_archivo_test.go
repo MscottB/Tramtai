@@ -3,6 +3,7 @@
 package autoarranque
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -252,5 +253,32 @@ func TestConfiguradoDistingueModos(t *testing.T) {
 	}
 	if _, err := os.Stat(ruta); err != nil {
 		t.Fatal("Desactivar borró el arranque de otra copia")
+	}
+}
+
+// TestElegirServicioSinLaApp: en Linux y macOS, ModoServicio arranca tramtai (programa()), no la app: vale sin
+// tramtai-escritorio junto a tramtai (la copia de solo CLI) y cuenta como de esta copia. ModoApp necesita la app.
+func TestElegirServicioSinLaApp(t *testing.T) {
+	carpeta := t.TempDir()
+	t.Setenv("HOME", carpeta)
+	t.Setenv("XDG_CONFIG_HOME", carpeta)
+	nombreAnterior, anterior := nombreArchivo, propia
+	nombreArchivo = "prueba-" + nombreArchivo
+	propia = func() (string, error) { return "", errors.New("no se encontró tramtai-escritorio junto a tramtai") }
+	t.Cleanup(func() { nombreArchivo, propia = nombreAnterior, anterior })
+	if err := Elegir(ModoApp); err == nil {
+		t.Error("ModoApp necesita la app de escritorio")
+	}
+	if err := Elegir(ModoServicio); err != nil {
+		t.Fatalf("ModoServicio sin la app: %v", err)
+	}
+	if modo, err := Configurado(); err != nil || modo != ModoServicio {
+		t.Errorf("Configurado = %q %v; se esperaba servicio", modo, err)
+	}
+	if err := Desactivar(); err != nil {
+		t.Fatal(err)
+	}
+	if modo, _ := Configurado(); modo != "" {
+		t.Errorf("tras Desactivar: %q", modo)
 	}
 }

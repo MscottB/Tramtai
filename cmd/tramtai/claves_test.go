@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
 
+	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/credenciales"
 	"tramtai/internal/servidor"
@@ -50,6 +52,12 @@ func TestClavesEnServidor(t *testing.T) {
 	if salida, err := ejecutarServidor(t, "", "claves", "listar"); err != nil ||
 		!strings.Contains(salida, "ANTHROPIC_API_KEY    la tiene el servicio del sistema") || !strings.Contains(salida, "OPENAI_API_KEY       no configurada") {
 		t.Errorf("listar: %v\n%s", err, salida)
+	}
+	// Con el servicio parado, solo él sabe qué claves tiene: la lista dice cómo arrancarlo (lo gestiona el sistema), no
+	// «tramtai servicio iniciar».
+	clavesServicio = func() ([]contrato.ClaveGuardada, error) { return nil, cliente.ErrServicioInactivo }
+	if _, err := ejecutarServidor(t, "", "keys", "list"); !errors.Is(err, cliente.ErrServidorNoEnMarcha) {
+		t.Errorf("listar con el servicio parado: %v", err)
 	}
 }
 

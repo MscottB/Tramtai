@@ -313,7 +313,7 @@ var rutasDeUI = []rutaUI{
 	{http.MethodPost, "/ui/espacios/ubicar", soloLocal, (*Servicio).accionEspacioUI},
 	{http.MethodPost, "/ui/espacios/olvidar", soloLocal, (*Servicio).accionEspacioUI},
 	{http.MethodPost, "/ui/autoarranque", soloLocal, (*Servicio).autoarranqueUI},
-	{http.MethodPost, "/ui/autenticacion", conSesion, (*Servicio).autenticacionUI}, // solo local: lo comprueba la ruta
+	{http.MethodPost, "/ui/autenticacion", conSesion, (*Servicio).autenticacionUI}, // solo desde este equipo; la sesión remota del servidor recibe un 403 que dice por qué (lo comprueba la ruta)
 	{http.MethodPost, "/ui/agentes/conexion", soloLocal, (*Servicio).conexionUI},
 	{http.MethodPost, "/ui/servicio/puerto", soloLocal, (*Servicio).puertoUI},
 	{http.MethodPost, "/ui/servicio/reiniciar", soloLocal, (*Servicio).reiniciarUI},

@@ -37,10 +37,21 @@ func TestMarcaEntorno(t *testing.T) {
 	}
 
 	otro := idioma.Tf("Hay otro Tramtai, del sistema, en el puerto %d: es otro entorno, con sus propias APIs y claves", 17374)
-	m := nuevoEn(Opciones{Datos: t.TempDir(), Entorno: "escritorio", AvisoCruzado: otro}, "es")
+	// Se vuelve a mirar en cada comprobación del servicio (el latido): el del sistema se instala, se quita o cambia de
+	// puerto mientras la terminal sigue abierta.
+	aviso := otro
+	m := nuevoEn(Opciones{Datos: t.TempDir(), Entorno: "escritorio", AvisoCruzado: func() string { return aviso }}, "es")
 	m.Update(tea.WindowSizeMsg{Width: 200, Height: 30})
+	m.Update(m.conectar(false, false, false)()) // sin servicio en la prueba: «no responde» taparía los avisos fijos
+	m.caido = nil
 	if l := lineaEstado(m); !strings.Contains(l, otro) || !strings.Contains(l, datos.Texto("es", "entorno.escritorio")) {
 		t.Errorf("el aviso cruzado queda fijo en la línea de estado: %q", l)
+	}
+	aviso = ""
+	m.Update(m.conectar(false, false, false)())
+	m.caido = nil
+	if l := lineaEstado(m); strings.Contains(l, otro) {
+		t.Errorf("sin el Tramtai del sistema, el aviso se va en la siguiente comprobación: %q", l)
 	}
 
 	s := nuevoEn(Opciones{Datos: t.TempDir(), Entorno: "servidor"}, "es")

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -287,7 +286,7 @@ func (s *Servicio) activarTOTPUI(w http.ResponseWriter, r *http.Request, ses *se
 		s.muSesiones.Lock()
 		ses.totpPendiente = secreto
 		s.muSesiones.Unlock()
-		api.EscribirJSON(w, http.StatusOK, contrato.SecretoTOTP{Secreto: secreto, URI: totp.URI(secreto, s.cuentaTOTP())})
+		api.EscribirJSON(w, http.StatusOK, contrato.SecretoTOTP{Secreto: secreto, URI: totp.URI(secreto, totp.Cuenta(s.opc.Dominios))})
 		return
 	}
 	s.muSesiones.Lock()
@@ -313,17 +312,6 @@ func (s *Servicio) activarTOTPUI(w http.ResponseWriter, r *http.Request, ses *se
 	}
 	fmt.Fprintf(s.opc.Registros, "web ui: TOTP del administrador activado desde %s\n", ip)
 	api.EscribirJSON(w, http.StatusOK, contrato.CodigosRecuperacion{Codigos: codigos})
-}
-
-// cuentaTOTP es el nombre con el que la app de autenticación muestra este servidor: su dominio o el nombre del equipo.
-func (s *Servicio) cuentaTOTP() string {
-	if len(s.opc.Dominios) > 0 {
-		return s.opc.Dominios[0]
-	}
-	if nombre, err := os.Hostname(); err == nil {
-		return nombre
-	}
-	return "servidor"
 }
 
 // leerActual lee {actual, codigo} del cuerpo: la contraseña y, con TOTP, el código que piden quitar el TOTP y regenerar

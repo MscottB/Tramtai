@@ -2,6 +2,7 @@ package totp
 
 import (
 	"encoding/base32"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -77,5 +78,16 @@ func TestGenerarYURI(t *testing.T) {
 	}
 	if u := URI("ABC", "tramtai.ejemplo.org"); u != "otpauth://totp/Tramtai:tramtai.ejemplo.org?secret=ABC&issuer=Tramtai" {
 		t.Fatal(u)
+	}
+}
+
+// TestCuenta: la cuenta con la que la app de autenticación muestra el servidor es la misma desde la CLI y desde la Web
+// UI: el primer dominio o, sin dominios, el nombre del equipo.
+func TestCuenta(t *testing.T) {
+	if c := Cuenta([]string{"tramtai.ejemplo.org", "otro.ejemplo.org"}); c != "tramtai.ejemplo.org" {
+		t.Errorf("con dominios: %q", c)
+	}
+	if equipo, err := os.Hostname(); err == nil && Cuenta(nil) != equipo {
+		t.Errorf("sin dominios: %q, el equipo es %q", Cuenta(nil), equipo)
 	}
 }

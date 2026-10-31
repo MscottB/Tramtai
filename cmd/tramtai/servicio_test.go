@@ -22,6 +22,7 @@ import (
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
+	"tramtai/internal/servicio"
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
 )
@@ -107,6 +108,25 @@ func TestSinServidorNoTocaElDelSistema(t *testing.T) {
 	}
 }
 
+// TestErrorDeArranqueEnRegistro: con registro (el servicio sin consola: el del sistema o el de segundo plano), el error
+// que le impide arrancar, como una regla de exposición, queda en el registro, que es lo que se mira (tramtai servicio
+// registro, y el aviso de «el servicio no respondió»).
+func TestErrorDeArranqueEnRegistro(t *testing.T) {
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte("servicio:\n  host: 0.0.0.0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	archivo := filepath.Join(t.TempDir(), "servicio.log")
+	err := iniciarServicio(&cobra.Command{}, archivo, false)
+	if err == nil || !strings.Contains(err.Error(), "servicio.permitir_remoto") {
+		t.Fatalf("una regla de exposición impide arrancar: %v", err)
+	}
+	if b, _ := os.ReadFile(archivo); !strings.Contains(string(b), err.Error()) {
+		t.Errorf("el registro no dice por qué no arrancó: %q", b)
+	}
+}
+
 // arrancarHastaDatos lanza iniciarServicio con esta configuración global y lo corta justo después de las reglas de
 // exposición (al pedir la carpeta de datos). Devuelve lo que escribió en el registro y el error.
 func arrancarHastaDatos(t *testing.T, config string) (registro string, err error) {
@@ -140,6 +160,40 @@ func TestAvisoExpuestoEnRegistro(t *testing.T) {
 		}
 		if strings.Contains(registro, riesgo) != quiere {
 			t.Errorf("%q: riesgo 3 en el registro %v: %q", config, !quiere, registro)
+		}
+	}
+}
+
+// TestOpcionesExpuesto: el servicio recibe Expuesto según las reglas de exposición: con un proxy de confianza, sí; en
+// loopback sin proxy, no (de él dependen la clave de servicio solo local y la Web UI del servidor).
+func TestOpcionesExpuesto(t *testing.T) {
+	anterior, nuevo0 := dirDatos, nuevoServicio
+	t.Cleanup(func() { dirDatos, nuevoServicio = anterior, nuevo0 })
+	var recibido []bool
+	nuevoServicio = func(o servicio.Opciones) (*servicio.Servicio, error) {
+		recibido = append(recibido, o.Expuesto)
+		return nil, errors.New("parada de la prueba")
+	}
+	for _, c := range []struct {
+		config string
+		quiere bool
+	}{
+		{"servicio:\n  host: 127.0.0.1\n  puerto: 17391\n  proxy:\n    confiables: [127.0.0.1/32]\n", true},
+		{"servicio:\n  host: 127.0.0.1\n  puerto: 17391\n", false},
+	} {
+		datos := t.TempDir()
+		dirDatos = func() (string, error) { return datos, nil }
+		global := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(global, []byte(c.config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+		recibido = nil
+		if err := iniciarServicio(&cobra.Command{}, "", false); err == nil || !strings.Contains(err.Error(), "parada de la prueba") {
+			t.Fatalf("%q: %v", c.config, err)
+		}
+		if !slices.Equal(recibido, []bool{c.quiere}) {
+			t.Errorf("%q: Expuesto %v, se esperaba %v", c.config, recibido, c.quiere)
 		}
 	}
 }

@@ -531,6 +531,8 @@ const ayudaEs = {
   'ayuda.servidor.rHttps': 'Porque las claves y la contraseña viajarían sin cifrar. Fuera de este equipo, solo con HTTPS: un proxy, tu certificado (servicio.tls.modo: archivos) o Let’s Encrypt.',
   'ayuda.servidor.pProxy': '¿Qué proxy uso?',
   'ayuda.servidor.rProxy': 'El que ya tengas: la guía trae Caddy, nginx, Apache, Traefik, HAProxy e IIS. Pon su dirección en servicio.proxy.confiables y tu dominio en servicio.dominios.',
+  'ayuda.servidor.pRedLocal': '¿Y en mi red local, sin HTTPS?',
+  'ayuda.servidor.rRedLocal': 'Tampoco hay HTTP plano: la contraseña y las claves irían en claro. Usa Tailscale Serve, Caddy con su CA interna, un certificado de tu CA (mkcert) o un túnel SSH; la guía trae cada uno.',
   'ayuda.servidor.pMismo': '¿Y desde el propio servidor?',
   'ayuda.servidor.rMismo': '«tramtai-servidor abrir», la tecla W y la app entran por la entrada local. Con proxies de confianza, abrir a mano el puerto público en el servidor cuenta como entrar desde fuera.',
   'ayuda.servidor.pClaves': '¿Dónde quedan las claves de los agentes?',

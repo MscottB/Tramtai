@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,16 +22,18 @@ import (
 
 // TestEstadoServidorUI: GET /ui/servidor da a cualquier sesión del servidor (también la remota, la de la contraseña) el
 // modo de HTTPS, los dominios, los proxies de confianza, cuándo vence el certificado, si hay administrador con TOTP y las
-// suscripciones; la API de administración (la terminal) da lo mismo. Fuera del servidor, 404; sin sesión, 401.
+// suscripciones; la API de administración (la terminal) da lo mismo. Los dominios y los proxies son los que usa el
+// servicio (normalizados al arrancar), no lo escrito en config.yaml. Fuera del servidor, 404; sin sesión, 401.
 func TestEstadoServidorUI(t *testing.T) {
 	dir := t.TempDir()
 	certificado, clave := parTemporal(t, dir, "tramtai.ejemplo.org")
-	global := "servicio:\n  dominios: [tramtai.ejemplo.org]\n  proxy:\n    confiables: [10.0.0.0/8]\n  tls:\n    modo: archivos\n" +
+	global := "servicio:\n  dominios: [' Tramtai.Ejemplo.org.']\n  proxy:\n    confiables: ['10.0.0.1']\n  tls:\n    modo: archivos\n" +
 		"    certificado: " + strconv.Quote(certificado) + "\n    clave: " + strconv.Quote(clave) + "\n" +
 		"adaptadores:\n  claude:\n    autenticacion: suscripcion\n    suscripcion_personal: true\n    suscripcion_simultaneas: 2\n"
 	secreto, _ := totp.Generar()
 	s, ts, seguro := conAdministrador(t, global, secreto)
 	s.opc.Expuesto = true
+	s.opc.Dominios, s.opc.Confiables = []string{"tramtai.ejemplo.org"}, []netip.Prefix{netip.MustParsePrefix("10.0.0.1/32")}
 	n := navegadorSeguro(t, seguro)
 	if r, _ := n.pedir("GET", "/ui/servidor", ""); r.StatusCode != 401 {
 		t.Fatalf("sin sesión: %d", r.StatusCode)
@@ -47,7 +50,7 @@ func TestEstadoServidorUI(t *testing.T) {
 	pemCert, _ := os.ReadFile(certificado)
 	bloque, _ := pem.Decode(pemCert)
 	x, _ := x509.ParseCertificate(bloque.Bytes)
-	if e.TLS != "archivos" || !slices.Equal(e.Dominios, []string{"tramtai.ejemplo.org"}) || !slices.Equal(e.Confiables, []string{"10.0.0.0/8"}) ||
+	if e.TLS != "archivos" || !slices.Equal(e.Dominios, []string{"tramtai.ejemplo.org"}) || !slices.Equal(e.Confiables, []string{"10.0.0.1/32"}) ||
 		e.VenceCertificado == nil || !e.VenceCertificado.Equal(x.NotAfter) || !e.Administrador || !e.TOTP || !e.Expuesto ||
 		!slices.Equal(e.Suscripciones, []contrato.SuscripcionServidor{{Agente: "claude", Personal: true, Simultaneas: 2}}) {
 		t.Errorf("estado del servidor: %+v", e)

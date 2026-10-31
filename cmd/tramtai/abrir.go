@@ -69,11 +69,24 @@ func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	return nil
 }
 
+// escritorioJunto busca la app de escritorio junto a tramtai; las pruebas lo sustituyen.
+var escritorioJunto = autoarranque.Escritorio
+
+// appEscritorio da la app de escritorio con la que abrir la interfaz, si la hay y no se pidió el navegador. En el
+// servidor, nunca: la app es del entorno del usuario y no vería el servicio del sistema.
+func appEscritorio(enNavegador bool) (string, bool) {
+	if enNavegador || carpetas.Servidor() {
+		return "", false
+	}
+	escritorio, err := escritorioJunto()
+	return escritorio, err == nil
+}
+
 // abrirInterfaz abre la app de escritorio (si está junto a tramtai y no se pidió el navegador) o la Web UI en el
 // navegador, ya dentro y en la instancia del ámbito.
 func abrirInterfaz(cmd *cobra.Command, c *cliente.Cliente, ambito, raiz string, enNavegador bool) error {
 	out := cmd.OutOrStdout()
-	if escritorio, err := autoarranque.Escritorio(); err == nil && !enNavegador {
+	if escritorio, ok := appEscritorio(enNavegador); ok {
 		args := []string{}
 		if ambito == "proyecto" {
 			args = append(args, "-proyecto", raiz)

@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -70,6 +71,18 @@ func Valido(secreto, codigo string, t time.Time, ultimoPaso int64) (int64, bool)
 		}
 	}
 	return 0, false
+}
+
+// Cuenta es el nombre con el que la app de autenticación muestra este servidor, el mismo desde la CLI y la Web UI: su
+// primer dominio (servicio.dominios, normalizado) o el nombre del equipo.
+func Cuenta(dominios []string) string {
+	if len(dominios) > 0 {
+		return dominios[0]
+	}
+	if nombre, err := os.Hostname(); err == nil {
+		return nombre
+	}
+	return "servidor"
 }
 
 // URI es el enlace otpauth:// que las apps de autenticación leen como código QR o a mano.

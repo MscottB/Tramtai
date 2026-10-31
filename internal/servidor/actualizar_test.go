@@ -80,7 +80,7 @@ func versionPublicada(t *testing.T, archivos map[string]string, firmaMala bool) 
 		}
 		w.Write(datos)
 	})
-	actualizacion.ParaPruebas(t, srv.URL+"/ultima", srv.URL+"/descargas/", publica)
+	actualizacion.ParaPruebas(t.Cleanup, srv.URL+"/ultima", srv.URL+"/descargas/", publica)
 	anterior := version.Version
 	version.Version = "v0.1.0+1"
 	t.Cleanup(func() { version.Version = anterior })

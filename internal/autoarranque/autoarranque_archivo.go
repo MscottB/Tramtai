@@ -47,8 +47,10 @@ func deEstaCopia(ruta string) (Modo, error) {
 		return "", err
 	}
 	escritorio, err := propia()
-	if err != nil {
-		return "", nil
+	if err != nil { // sin la app (ModoServicio no la necesita), la copia es la de este tramtai
+		if escritorio, err = rutaEscritorio(); err != nil {
+			return "", nil
+		}
 	}
 	for _, modo := range []Modo{ModoApp, ModoServicio} {
 		if string(datos) == contenido(escritorio, modo, filepath.Base(ruta)) {

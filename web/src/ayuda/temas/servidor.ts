@@ -24,6 +24,7 @@ export const servidor: Tema = {
         { id: 'servidor-que-es', pregunta: 'ayuda.servidor.pQue', respuesta: 'ayuda.servidor.rQue', tema: 'entornos' },
         { id: 'servidor-https', pregunta: 'ayuda.servidor.pHttps', respuesta: 'ayuda.servidor.rHttps' },
         { id: 'servidor-proxy', pregunta: 'ayuda.servidor.pProxy', respuesta: 'ayuda.servidor.rProxy' },
+        { id: 'servidor-red-local', pregunta: 'ayuda.servidor.pRedLocal', respuesta: 'ayuda.servidor.rRedLocal' },
         { id: 'servidor-mismo-equipo', pregunta: 'ayuda.servidor.pMismo', respuesta: 'ayuda.servidor.rMismo' },
         { id: 'servidor-claves', pregunta: 'ayuda.servidor.pClaves', respuesta: 'ayuda.servidor.rClaves' },
         { id: 'servidor-agentes', pregunta: 'ayuda.servidor.pAgentes', respuesta: 'ayuda.servidor.rAgentes' },

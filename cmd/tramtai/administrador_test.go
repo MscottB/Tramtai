@@ -69,8 +69,9 @@ func TestAdministradorContrasena(t *testing.T) {
 	}
 }
 
-// TestAdministradorTOTPActivar: enseña el secreto y el enlace, y solo lo guarda si el código que se escribe vale; luego
-// da los 10 códigos de recuperación. Sin contraseña no se activa.
+// TestAdministradorTOTPActivar: enseña el secreto y el enlace (con la cuenta que pone la Web UI: el primer dominio, o el
+// nombre del equipo), y solo lo guarda si el código que se escribe vale; luego da los 10 códigos de recuperación. Sin
+// contraseña no se activa.
 func TestAdministradorTOTPActivar(t *testing.T) {
 	simularServidor(t, true)
 	t.Setenv("TRAMTAI_SERVIDOR", "1")
@@ -86,9 +87,14 @@ func TestAdministradorTOTPActivar(t *testing.T) {
 	if err := servicio.FijarContrasena(datos, "una contraseña larga"); err != nil {
 		t.Fatal(err)
 	}
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte("servicio:\n  dominios: [' Tramtai.Ejemplo.org.']\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	malo := map[bool]string{true: "111111", false: "000000"}[codigo == "000000"]
 	salida, err := ejecutarAdmin(t, malo+"\n", "admin", "totp", "enable")
-	if err == nil || *guardado != "" || !strings.Contains(salida, "otpauth://totp/Tramtai:") || !strings.Contains(salida, secreto) {
+	if err == nil || *guardado != "" || !strings.Contains(salida, "otpauth://totp/Tramtai:tramtai.ejemplo.org?") || !strings.Contains(salida, secreto) {
 		t.Fatalf("con un código que no vale: %v %q\n%s", err, *guardado, salida)
 	}
 	salida, err = ejecutarAdmin(t, codigo+"\n", "administrador", "totp", "activar")
@@ -113,7 +119,7 @@ func TestArranqueConTOTP(t *testing.T) {
 		}
 		return secreto, nil
 	}
-	expuesta := servidor.Entrada{Host: "127.0.0.1", Confiables: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}, TLS: "ninguno",
+	expuesta := servidor.Entrada{Servidor: true, Host: "127.0.0.1", Confiables: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}, TLS: "ninguno",
 		Suscripciones: []servidor.Suscripcion{{Agente: "claude", Personal: true}}}
 	if err := servidor.ComprobarArranque(conTOTP(expuesta)); err == nil || !strings.Contains(err.Error(), "TOTP") {
 		t.Fatalf("sin secreto: %v", err)

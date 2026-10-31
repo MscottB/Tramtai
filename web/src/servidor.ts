@@ -40,6 +40,14 @@ export const pestanasAjustes = (servidor: boolean): PestanaAjustes[] => (servido
 // conArranque: el arranque con el sistema es del Tramtai del usuario; el servicio del sistema arranca con el equipo.
 export const conArranque = (s: Sesion | null | undefined) => !esServidor(s) && s?.autoarranque !== undefined
 
+// modosArranque son las opciones del arranque con el sistema: no arrancar, la app en la bandeja o solo el servicio. El
+// valor es el modo_arranque de la sesión y el que se envía al elegirlo.
+export const modosArranque = [
+  { valor: '', titulo: 'arranque.no', texto: 'arranque.noTexto' },
+  { valor: 'app', titulo: 'arranque.app', texto: 'arranque.appTexto' },
+  { valor: 'servicio', titulo: 'arranque.servicio', texto: 'arranque.servicioTexto' },
+] as const satisfies readonly { valor: Sesion['modo_arranque']; titulo: Clave; texto: Clave }[]
+
 // ofrecerInstalar: «Instalar ahora» no existe en el servidor (se actualiza con tramtai-servidor actualizar).
 export const ofrecerInstalar = (instalable: boolean | undefined, s: Sesion | null | undefined) => !!instalable && !esServidor(s)
 

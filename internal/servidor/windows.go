@@ -33,11 +33,12 @@ import (
 	"tramtai/internal/terminos"
 )
 
-// envoltorio es tramtai-servidor.cmd, junto al programa: el programa del servidor con la raíz de datos del servidor.
-// (goto) termina el .cmd antes de lanzar tramtai (la línea ya está leída y expandida): cmd no vuelve a leerlo, así que
+// envoltorio es tramtai-servidor.cmd, en la carpeta bin del programa: el programa del servidor con la raíz de datos del
+// servidor. Solo bin va al PATH del sistema, que va delante del del usuario: con la carpeta del programa, su tramtai.exe
+// taparía al de escritorio. (goto) termina el .cmd antes de lanzar tramtai (la línea ya está leída y expandida): cmd no vuelve a leerlo, así que
 // «tramtai-servidor desinstalar», que lo borra, no acaba con «no se encuentra la ruta» ni con código 1; tampoco
 // pregunta «¿Desea terminar el trabajo por lotes?» con Ctrl+C. El código de salida es el de tramtai.
-const envoltorio = "@(goto) 2>nul & \"%~dp0tramtai.exe\" --servidor %*\r\n"
+const envoltorio = "@(goto) 2>nul & \"%~dp0..\\tramtai.exe\" --servidor %*\r\n"
 
 // sinBloquear: en Windows no hay FIFO en una carpeta (leerConfiguracion).
 const sinBloquear = 0
@@ -77,7 +78,7 @@ func abrirServicio() (m *mgr.Mgr, s *mgr.Service, err error) {
 }
 
 // Instalar copia el programa, crea el servicio con su cuenta virtual, prepara la carpeta de datos con su DACL, añade
-// el programa al PATH del sistema y arranca el servicio. Repetirla es seguro: con el mismo programa no cambia nada; con
+// la carpeta bin del envoltorio al PATH del sistema y arranca el servicio. Repetirla es seguro: con el mismo programa no cambia nada; con
 // otro, detiene el servicio (con drenaje), lo sustituye y lo vuelve a arrancar.
 func Instalar(o Opciones) error {
 	if !o.AceptoTerminos {
@@ -117,6 +118,9 @@ func Instalar(o Opciones) error {
 			return err
 		}
 	}
+	if err := os.MkdirAll(filepath.Dir(r.Envoltorio), 0o755); err != nil {
+		return err
+	}
 	if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
 		return err
 	}
@@ -155,7 +159,7 @@ func Instalar(o Opciones) error {
 	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar), o.Conversor); err != nil {
 		return err
 	}
-	if err := editarRutaSistema(r.Programa, true); err != nil {
+	if err := editarRutaSistema(filepath.Dir(r.Envoltorio), true); err != nil {
 		return err
 	}
 	if err := s.Start(); err != nil && !errors.Is(err, windows.ERROR_SERVICE_ALREADY_RUNNING) {
@@ -228,7 +232,7 @@ func plazoParada() time.Duration {
 	return time.Duration(plazo+30) * time.Second
 }
 
-// Desinstalar detiene el servicio (con drenaje), lo borra y quita el programa y su entrada del PATH del sistema. Con
+// Desinstalar detiene el servicio (con drenaje), lo borra y quita el programa y la entrada de bin del PATH del sistema. Con
 // borrarDatos borra también la carpeta de datos, las claves del servicio y el perfil de la cuenta virtual, que sobrevive
 // al servicio y guarda las sesiones de los agentes; si Windows aún lo tiene cargado, devuelve un Aviso con la orden para quitarlo después.
 func Desinstalar(borrarDatos bool) error {
@@ -248,7 +252,7 @@ func Desinstalar(borrarDatos bool) error {
 			return err
 		}
 	}
-	if err := editarRutaSistema(r.Programa, false); err != nil {
+	if err := editarRutaSistema(filepath.Dir(r.Envoltorio), false); err != nil {
 		return err
 	}
 	// Los avisos no paran la desinstalación: se juntan y se devuelven al final.

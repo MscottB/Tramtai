@@ -533,6 +533,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.servidor.rHttps': 'Because the keys and the password would travel unencrypted. Outside this computer, HTTPS only: a proxy, your certificate (servicio.tls.modo: archivos) or Let’s Encrypt.',
   'ayuda.servidor.pProxy': 'Which proxy do I use?',
   'ayuda.servidor.rProxy': 'The one you already have: the guide covers Caddy, nginx, Apache, Traefik, HAProxy and IIS. Put its address in servicio.proxy.confiables and your domain in servicio.dominios.',
+  'ayuda.servidor.pRedLocal': 'And on my local network, without HTTPS?',
+  'ayuda.servidor.rRedLocal': 'No plain HTTP there either: the password and keys would travel unencrypted. Use Tailscale Serve, Caddy with its internal CA, your own CA’s certificate (mkcert) or an SSH tunnel; see the guide.',
   'ayuda.servidor.pMismo': 'And from the server itself?',
   'ayuda.servidor.rMismo': '“tramtai-servidor abrir”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside.',
   'ayuda.servidor.pClaves': 'Where do the agents’ keys go?',

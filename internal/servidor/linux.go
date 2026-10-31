@@ -209,7 +209,7 @@ func limpiarTarGz(r Sitios) (reiniciar bool, avisos []string, err error) {
 	case errors.Is(err, fs.ErrNotExist):
 	case err != nil:
 		return false, nil, err
-	case bytes.HasPrefix(unidad, []byte(cabeceraUnidad)) || bytes.HasPrefix(unidad, []byte(cabeceraUnidadAntigua)):
+	case bytes.HasPrefix(unidad, []byte(cabeceraUnidad)):
 		if err := orden("systemctl", "disable", "tramtai"); err != nil {
 			return false, nil, err
 		}
@@ -514,7 +514,7 @@ func OrdenEntrar(_, comando string, args []string) (*exec.Cmd, error) {
 		return nil, errors.New(idioma.T("agentes entrar necesita sudo para iniciar sesión con la cuenta del servicio: instálalo y vuelve a probar"))
 	}
 	orden := []string{"-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
-	for _, nombre := range []string{"TERM", "LANG"} { // el código de dispositivo se lee en la terminal, en su idioma
+	for _, nombre := range []string{"TERM", "LANG", "LC_ALL", "LC_MESSAGES"} { // el código de dispositivo se lee en la terminal, en su idioma
 		if valor := os.Getenv(nombre); valor != "" {
 			orden = append(orden, nombre+"="+valor)
 		}

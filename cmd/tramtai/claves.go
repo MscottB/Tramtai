@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/carpetas"
+	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
@@ -124,6 +125,9 @@ func comandoClaves() *cobra.Command {
 			}
 			if delServidor {
 				lista, err := clavesServicio()
+				if errors.Is(err, cliente.ErrServicioInactivo) { // solo el servicio sabe qué claves tiene; lo arranca el sistema
+					return cliente.ErrServidorNoEnMarcha
+				}
 				if err != nil {
 					return err
 				}

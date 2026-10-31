@@ -95,7 +95,10 @@ func medir(modo string) informe {
 // escribir mide y deja el JSON en la ruta. Guardar toca el almacén real de quien ejecuta: por eso main no lo lanza
 // fuera de un servicio.
 func escribir(ruta, modo string) error {
-	datos, _ := json.MarshalIndent(medir(modo), "", "  ")
+	datos, err := json.MarshalIndent(medir(modo), "", "  ")
+	if err != nil {
+		return err
+	}
 	return os.WriteFile(ruta, datos, 0o644)
 }
 

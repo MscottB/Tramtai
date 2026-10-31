@@ -37,3 +37,7 @@ notas-*.txt
 
 # Copia de docs/ejemplos que hace el workflow de la página (y la vista previa local)
 /site/ejemplos/
+
+# Notas de trabajo locales (planes de los agentes y revisiones de estilo): nunca van al repo.
+/.superpowers/
+/anti-slop/

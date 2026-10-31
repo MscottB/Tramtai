@@ -45,7 +45,7 @@ type Sitios struct {
 var rutas = func() Sitios {
 	if runtime.GOOS == "windows" {
 		programa := filepath.Join(cmp.Or(os.Getenv("ProgramFiles"), `C:\Program Files`), "Tramtai Servidor")
-		return Sitios{Programa: programa, Datos: carpetas.RaizServidor(), Envoltorio: filepath.Join(programa, "tramtai-servidor.cmd")}
+		return Sitios{Programa: programa, Datos: carpetas.RaizServidor(), Envoltorio: filepath.Join(programa, "bin", "tramtai-servidor.cmd")}
 	}
 	s := Sitios{Programa: "/opt/tramtai", Datos: carpetas.RaizServidor(), Envoltorio: "/usr/local/bin/tramtai-servidor",
 		Unidad: "/etc/systemd/system/tramtai.service", UnidadConf: "/etc/systemd/system/tramtai.service.d/10-tramtai.conf",

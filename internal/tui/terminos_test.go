@@ -64,6 +64,18 @@ func TestTerminalSaleSinAceptar(t *testing.T) {
 	}
 }
 
+// TestTerminalNoConectaAntesDeAceptar: con los términos pendientes, Init no se conecta al servicio; aceptar sí lo hace.
+func TestTerminalNoConectaAntesDeAceptar(t *testing.T) {
+	m := nuevoEn(Opciones{Datos: t.TempDir(), Terminos: true}, "es")
+	m.Init()
+	if m.conectando || m.comprobando {
+		t.Fatal("con los términos pendientes, la terminal no se conecta al servicio")
+	}
+	if _, cmd := m.Update(tecla("enter")); cmd == nil || !m.conectando || !m.comprobando {
+		t.Error("al aceptar, la terminal se conecta al servicio")
+	}
+}
+
 // TestTerminosEnLaTerminalConVentanaPequena: aceptar y salir valen también con la ventana por debajo del mínimo.
 func TestTerminosEnLaTerminalConVentanaPequena(t *testing.T) {
 	m := nuevoEn(Opciones{Datos: t.TempDir(), Terminos: true}, "es")

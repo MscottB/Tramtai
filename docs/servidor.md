@@ -15,7 +15,8 @@ la cuenta de la empresa no están en esta versión.
 - [Instalar en Linux](#instalar-en-linux)
 - [Instalar en Windows Server](#instalar-en-windows-server)
 - [Administrar desde el propio servidor](#administrar-desde-el-propio-servidor)
-- [Abrir a la red](#abrir-a-la-red): proxy, túneles, certificado propio y Let’s Encrypt
+- [Abrir a la red](#abrir-a-la-red): proxy, túneles, certificado propio, Let’s Encrypt y
+  [red local (homelab)](#red-local-homelab)
 - [Administrador y TOTP](#administrador-y-totp)
 - [Claves y suscripción](#claves-y-suscripción)
 - [Actualizar](#actualizar) y [desinstalar](#desinstalar)
@@ -120,8 +121,9 @@ Expand-Archive .\Tramtai-*-portable-windows-x64.zip -DestinationPath .\tramtai
 
 También vale desde el instalador de Windows o desde cualquier copia de `tramtai.exe`. La instalación:
 
-- copia el programa a `C:\Program Files\Tramtai Servidor\` con `tramtai-servidor.cmd`, y añade esa carpeta al PATH del
-  sistema (abre una consola nueva para usarlo);
+- copia el programa a `C:\Program Files\Tramtai Servidor\`, con `tramtai-servidor.cmd` en su carpeta `bin`, y añade solo
+  `bin` al PATH del sistema (abre una consola nueva para usarlo): así el `tramtai.exe` del servidor no tapa al de
+  escritorio;
 - crea el servicio `Tramtai` («Tramtai (servidor)») con la cuenta virtual `NT SERVICE\Tramtai`, arranque automático
   retrasado y reinicio si se cae;
 - crea `%ProgramData%\Tramtai`, que solo pueden usar `SYSTEM`, los administradores y la cuenta del servicio.
@@ -170,6 +172,13 @@ de este equipo o si `servicio.proxy.confiables` no está vacío. El servicio **n
 - `letsencrypt` sin `servicio.dominios`, sin correo o sin `servicio.puerto: 443`;
 - `archivos` con el certificado o la clave ilegibles, o con un certificado que no cubre `servicio.dominios`.
 
+El motivo queda en el registro (`tramtai-servidor registro`). Con la configuración mal, el sistema no lo vuelve a
+arrancar una y otra vez (fallaría igual): corrígela y `sudo tramtai-servidor reiniciar`. Si lo que falta son el
+certificado o la clave (por ejemplo, un disco que aún no se ha montado al arrancar el equipo), sí lo reintenta.
+
+Con `servicio.host` `0.0.0.0` (o `::`) y sin `servicio.dominios` arranca, pero desde otros equipos no se entra: hace
+falta `servicio.dominios` o la IP en `servicio.host`. El registro y `tramtai-servidor estado` lo avisan.
+
 **Cambio de la v0.58:** quien usaba `servicio.permitir_remoto` por HTTP plano verá que el servicio ya no arranca. El
 mensaje ofrece las salidas: un proxy, el HTTPS propio o un túnel SSH.
 
@@ -207,7 +216,7 @@ Un ejemplo por proxy, cada uno con TLS 1.3 y sin búfer para el flujo en vivo (S
 | Apache httpd | [`proxies/apache/tramtai.conf`](servidor/proxies/apache/tramtai.conf) | En el CI, en cada cambio |
 | Traefik | [`proxies/traefik/tramtai.yml`](servidor/proxies/traefik/tramtai.yml) | En el CI, en cada cambio |
 | HAProxy | [`proxies/haproxy/haproxy.cfg`](servidor/proxies/haproxy/haproxy.cfg) | En el CI, en cada cambio |
-| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Pendiente: se comprueba a mano antes de publicar |
+| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Sin comprobar a mano todavía |
 
 El CI comprueba con cada uno que solo acepta TLS 1.3, que hay una sola cabecera HSTS, que se inicia sesión por el
 proxy, que el flujo en vivo llega a trozos, que Tramtai anota la dirección real del cliente y que un `X-Forwarded-For`
@@ -246,7 +255,7 @@ Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puer
 - Cloudflare corta a los 125 s una respuesta que no ha empezado (error 524): en las peticiones largas, usa
   `stream: true` o la API propia.
 
-Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.
+Cloudflare Tunnel y Tailscale Serve: sin comprobar a mano todavía (los proxies de la tabla, salvo IIS, sí se comprueban en el CI).
 
 ### Certificado propio
 
@@ -288,6 +297,76 @@ servicio:
 - Solo pide certificados para los nombres de `servicio.dominios`. Los guarda en `datos/acme` (0700); son ECDSA P-256.
 - En Linux, `servidor reiniciar` da a la unidad el permiso de escuchar el 443 (`CAP_NET_BIND_SERVICE`); sin Let’s
   Encrypt ni un puerto menor de 1024, no lo tiene.
+
+### Red local (homelab)
+
+**En el modo servidor no hay HTTP plano, tampoco dentro de tu red.** Si `servicio.host` no es de este equipo y no hay
+HTTPS propio, el servicio no arranca (las reglas de arranque de `internal/servidor/reglas.go`). El motivo: la
+contraseña del administrador, las claves de las APIs y la cookie de la sesión viajarían en claro, al alcance de
+cualquier equipo de la red, también de un aparato doméstico comprometido. Por eso la contraseña solo se acepta por
+HTTPS o desde un proxy de confianza.
+
+Cuatro formas, de la más fácil a la más manual:
+
+1. **Tailscale Serve:** HTTPS válido sin abrir puertos ni instalar certificados, solo para tus equipos de la tailnet.
+   `tailscale serve --bg 17373` en el servidor; en Tramtai, `servicio.dominios` con el nombre de la máquina en la tailnet
+   y `servicio.proxy.confiables: [127.0.0.1/32]`. Detalle en [túneles](servidor/tuneles.md) (sin comprobar a mano
+   todavía).
+2. **Caddy delante, con su CA interna:** Caddy pone el HTTPS con un certificado de su propia autoridad para un nombre
+   de tu red, como `tramtai.lan` (que tu router o el archivo `hosts` de cada equipo resuelva a la IP del servidor).
+
+   ```
+   tramtai.lan {
+   	tls internal {
+   		protocols tls1.3
+   	}
+   	reverse_proxy 127.0.0.1:17373 {
+   		# Sin búfer: el flujo en vivo (SSE) llega trozo a trozo.
+   		flush_interval -1
+   	}
+   }
+   ```
+
+   Del lado de Tramtai, como en el [ejemplo de Caddy](servidor/proxies/caddy/Caddyfile):
+
+   ```yaml
+   servicio:
+     host: 127.0.0.1
+     puerto: 17373
+     puerto_automatico: false   # que el puerto no cambie y Caddy siempre lo encuentre
+     dominios: [tramtai.lan]
+     proxy:
+       confiables: [127.0.0.1/32]
+   ```
+
+   Los equipos tienen que confiar una vez en la raíz de Caddy: `caddy trust` la instala en el equipo donde corre Caddy;
+   en los demás, copia su certificado raíz (`pki/authorities/local/root.crt`, en la carpeta de datos de Caddy) y añádelo
+   como autoridad de confianza en el sistema o en el navegador.
+3. **Un certificado de tu propia CA local**, por ejemplo con [mkcert](https://github.com/FiloSottile/mkcert):
+   `mkcert tramtai.lan` crea el certificado y su clave en PEM (ECDSA con `-ecdsa`; si no, RSA: los dos valen para TLS
+   1.3). Cópialos donde la cuenta del servicio los pueda leer y usa el [certificado propio](#certificado-propio):
+
+   ```yaml
+   servicio:
+     host: 0.0.0.0
+     permitir_remoto: true
+     dominios: [tramtai.lan]      # el nombre tiene que estar en el certificado, o no arranca
+     tls:
+       modo: archivos
+       certificado: /etc/tramtai/tramtai.lan.pem
+       clave: /etc/tramtai/tramtai.lan-key.pem
+   ```
+
+   Los equipos que lo usan tienen que confiar en la raíz de mkcert (`mkcert -install` en cada uno, o el `rootCA.pem`
+   de `mkcert -CAROOT`).
+4. **Túnel SSH:** el servidor sigue solo en `127.0.0.1` y llegas a él por SSH:
+   `ssh -L 17373:127.0.0.1:17373 usuario@servidor`. Después abre `http://127.0.0.1:17373` en tu equipo; para entrar,
+   en esa misma sesión SSH, `sudo tramtai-servidor` y la tecla `W`, que sin navegador enseña la dirección con su código
+   de un solo uso. Si tu propio Tramtai ya usa el 17373 en tu equipo, pon otro puerto local
+   (`ssh -L 17400:127.0.0.1:17373 …`) y cámbialo en la dirección.
+
+**Let’s Encrypt no sirve en una red solo local:** su desafío TLS-ALPN-01 necesita que el 443 del servidor llegue desde
+internet.
 
 ## Administrador y TOTP
 
@@ -536,8 +615,9 @@ Expand-Archive .\Tramtai-*-portable-windows-x64.zip -DestinationPath .\tramtai
 .\tramtai\tramtai.exe server install
 ```
 
-It copies the program to `C:\Program Files\Tramtai Servidor\` with `tramtai-servidor.cmd` and adds it to the system PATH
-(open a new console to use it), creates the `Tramtai` service (“Tramtai (servidor)”) with the virtual account
+It copies the program to `C:\Program Files\Tramtai Servidor\`, with `tramtai-servidor.cmd` in its `bin` folder, and adds
+only `bin` to the system PATH (open a new console to use it), so the server’s `tramtai.exe` doesn’t shadow the desktop one;
+it creates the `Tramtai` service (“Tramtai (servidor)”) with the virtual account
 `NT SERVICE\Tramtai`, delayed automatic start and restart on failure, and creates `%ProgramData%\Tramtai`, usable only by
 `SYSTEM`, administrators and the service account. Offline, `--conversor <zip>` prepares the file converter from its
 package.
@@ -565,7 +645,13 @@ After installing, the service only listens on this computer. It’s **open to th
 what to do, with a non-local `servicio.host` and no `servicio.permitir_remoto`; with a non-local `servicio.host` and no
 HTTPS of its own (keys would travel unencrypted; a proxy on another machine also needs HTTPS to Tramtai); exposed with a
 subscription that isn’t the personal one, or personal without TOTP; `letsencrypt` without domains, email or port 443;
-and `archivos` with unreadable files or a certificate that doesn’t cover `servicio.dominios`.
+and `archivos` with unreadable files or a certificate that doesn’t cover `servicio.dominios`. The reason goes to the
+log (`tramtai-servidor log`). With a bad configuration the system doesn’t keep restarting it (it would fail the same way):
+fix it and run `sudo tramtai-servidor restart`. If what’s missing is the certificate or the key (say, a disk not yet
+mounted when the computer starts), it does retry.
+
+With `servicio.host` `0.0.0.0` (or `::`) and no `servicio.dominios` it starts, but other computers can’t get in: set
+`servicio.dominios` or put the IP address in `servicio.host`. The log and `tramtai-servidor status` warn about it.
 
 **v0.58 change:** if you used `servicio.permitir_remoto` over plain HTTP, the service no longer starts. The message
 offers the ways out: a proxy, its own HTTPS or an SSH tunnel.
@@ -580,7 +666,7 @@ headers only count from those addresses; without `X-Forwarded-Proto: https` nobo
 TLS 1.3 and no buffering for the live stream (SSE): [Caddy](servidor/proxies/caddy/Caddyfile),
 [nginx](servidor/proxies/nginx/tramtai.conf), [Apache httpd](servidor/proxies/apache/tramtai.conf),
 [Traefik](servidor/proxies/traefik/tramtai.yml) and [HAProxy](servidor/proxies/haproxy/haproxy.cfg) are checked by CI on
-every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite): Pending: checked by hand before release.
+every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite): not yet checked by hand.
 
 **Any other proxy** works if it ends HTTPS with TLS 1.3, sends `X-Forwarded-Proto: https`, **replaces** (doesn’t append
 to) the client’s `X-Forwarded-For`, keeps the original `Host` (which must be in `servicio.dominios`), doesn’t buffer
@@ -603,7 +689,7 @@ everyone) and the log notes the proxy’s IP instead of the client’s.
 Cloudflare Tunnel and Tailscale Serve or Funnel are in [tunnels](servidor/tuneles.md). With Cloudflare, HTTPS ends at
 Cloudflare, which sees the requests and the keys, and a response that hasn’t started within 125 s ends in error 524: use
 `stream: true` or the native API for long requests.
-Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.
+Cloudflare Tunnel and Tailscale Serve: not yet checked by hand (the proxies in the table, except IIS, are checked by CI).
 
 ### Your own certificate
 
@@ -620,6 +706,41 @@ Optional: `servicio.tls.modo: letsencrypt` with `servicio.tls.letsencrypt.correo
 doesn’t open port 80), only for the names in `servicio.dominios`, cached in `datos/acme` (0700), ECDSA P-256. Port 443
 must be reachable from the internet. On Linux, `server restart` gives the unit permission to listen on 443; without
 Let’s Encrypt or a port below 1024, it doesn’t have it.
+
+### Local network (homelab)
+
+**Server mode has no plain HTTP, not even inside your network.** If `servicio.host` isn’t on this computer and there’s
+no HTTPS of its own, the service won’t start (the startup rules in `internal/servidor/reglas.go`). The reason: the
+administrator password, the API keys and the session cookie would travel unencrypted, within reach of any device on the
+network, including a compromised smart-home gadget. That’s why the password is only accepted over HTTPS or from a
+trusted proxy.
+
+Four ways, from easiest to most manual (the Spanish section above has the full examples):
+
+1. **Tailscale Serve:** valid HTTPS without opening ports or installing certificates, only for your tailnet devices.
+   `tailscale serve --bg 17373` on the server; in Tramtai, the machine’s tailnet name in `servicio.dominios` and
+   `servicio.proxy.confiables: [127.0.0.1/32]`. Details in [tunnels](servidor/tuneles.md) (not yet checked by hand).
+2. **Caddy in front, with its internal CA:** a site block for a name on your network, such as `tramtai.lan`, with
+   `tls internal { protocols tls1.3 }` and `reverse_proxy 127.0.0.1:17373 { flush_interval -1 }` (no buffering, for the
+   live stream). On Tramtai’s side, `servicio.host: 127.0.0.1`, `servicio.puerto: 17373` with
+   `servicio.puerto_automatico: false`, `servicio.dominios: [tramtai.lan]` and `servicio.proxy.confiables: [127.0.0.1/32]`.
+   Devices must trust Caddy’s root once: `caddy trust` installs it on the computer running Caddy; on the others, add its
+   root certificate (`pki/authorities/local/root.crt`, in Caddy’s data folder) as a trusted authority.
+3. **A certificate from your own local CA**, for example with [mkcert](https://github.com/FiloSottile/mkcert):
+   `mkcert tramtai.lan` creates the certificate and its key in PEM (ECDSA with `-ecdsa`, otherwise RSA: both work with
+   TLS 1.3). Copy them where the service account can read them and use [your own certificate](#your-own-certificate):
+   `servicio.host: 0.0.0.0`, `servicio.permitir_remoto: true`, `servicio.dominios: [tramtai.lan]` (the name must be in
+   the certificate, or it won’t start) and `servicio.tls.modo: archivos` with `servicio.tls.certificado` and
+   `servicio.tls.clave`. Devices that use it must trust mkcert’s root (`mkcert -install` on each, or the `rootCA.pem`
+   from `mkcert -CAROOT`).
+4. **SSH tunnel:** the server stays on `127.0.0.1` only and you reach it over SSH:
+   `ssh -L 17373:127.0.0.1:17373 user@server`. Then open `http://127.0.0.1:17373` on your computer; to sign in, in that
+   same SSH session, run `sudo tramtai-servidor` and press `W`, which without a browser shows the address with its
+   one-time code. If your own Tramtai already uses 17373 on your computer, pick another local port
+   (`ssh -L 17400:127.0.0.1:17373 …`) and change it in the address.
+
+**Let’s Encrypt doesn’t work on a local-only network:** its TLS-ALPN-01 challenge needs the server’s port 443 to be
+reachable from the internet.
 
 ## Administrator and TOTP
 
