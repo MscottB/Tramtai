@@ -1,6 +1,7 @@
 package apuntar
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -55,7 +56,9 @@ func Leer(datos, id string) (Anotacion, bool, error) {
 	if err != nil {
 		return a, false, err
 	}
-	if err := json.Unmarshal(crudo, &a); err != nil {
+	d := json.NewDecoder(bytes.NewReader(crudo))
+	d.UseNumber() // un número de Escrito/Previos vuelve como json.Number, no como un float64 que pierde enteros grandes
+	if err := d.Decode(&a); err != nil {
 		return a, false, err
 	}
 	return a, true, nil
