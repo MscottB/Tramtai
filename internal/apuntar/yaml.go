@@ -29,8 +29,8 @@ var (
 	errModeloAjeno = errors.New(idioma.T("ya hay un modelo «Tramtai» en config.yaml que no es de Tramtai: renómbralo o quítalo"))
 	// errModelosEnLinea: Tramtai edita la lista por líneas, y una lista entre corchetes con elementos no tiene una por elemento.
 	errModelosEnLinea = errors.New(idioma.T("«models» de config.yaml está escrito entre corchetes: pásalo a una lista con guiones"))
-	// errContinueJSON: Continue lee config.yaml si existe y, si no, config.json; crear el YAML dejaría sin efecto el JSON del usuario.
-	errContinueJSON = errors.New(idioma.T("Continue usa config.json en esta carpeta: pásalo a config.yaml antes de activarlo"))
+	// ErrContinueJSON: Continue lee config.yaml si existe y, si no, config.json; crear el YAML dejaría sin efecto el JSON del usuario.
+	ErrContinueJSON = errors.New(idioma.T("Continue usa config.json en esta carpeta: pásalo a config.yaml antes de activarlo"))
 )
 
 // cabeceraNueva es lo que lleva un config.yaml que crea Tramtai además del modelo (Continue lo exige).
@@ -497,7 +497,7 @@ func previaContinue(ruta string, existe bool) error {
 		return nil
 	}
 	if _, err := os.Stat(filepath.Join(filepath.Dir(ruta), "config.json")); err == nil {
-		return errContinueJSON
+		return ErrContinueJSON
 	}
 	return nil
 }

@@ -7,7 +7,8 @@ import { readFileSync } from 'node:fs'
 import { sesion } from '../../estado.ts'
 import { idioma } from '../../i18n.ts'
 import { fichas, opcionModelo, type FichaAgente } from '../../agentes.ts'
-import { accionesDe, claseEstado, crearHerramientas, estaPuesta, modeloInicial, opcionesPermitidas, puedeCambiar, textoEstado } from '../../herramientas.ts'
+import { accionesDe, claseEstado, crearHerramientas, estaPuesta, modeloInicial, opcionesPermitidas, puedeActivarTodas, puedeCambiar, TEMA_AYUDA, textoEstado, textoMotivo, textoRestaurar } from '../../herramientas.ts'
+import { temaPorId } from '../../ayuda/indice.ts'
 import type { EstadoHerramienta, Modelo, Sesion } from '../../api/tipos.ts'
 
 idioma.value = 'es' // el idioma inicial sale del sistema, y el runner del CI está en inglés
@@ -159,4 +160,121 @@ test('la plantilla usa el selector de Probar, un diálogo persistente para resta
   }
   const pagina = readFileSync(new URL('../../paginas/Accesos.vue', import.meta.url), 'utf8')
   assert.ok(pagina.includes('name="herramientas"') && pagina.includes("'apis' | 'principal' | 'herramientas'") && pagina.includes('<Herramientas'))
+})
+
+test('el motivo se dice en el idioma de la interfaz según su código, con sus datos, y si no hay texto para el código se queda el del servicio', () => {
+  const puerto = h('codex', 'desactualizada', { motivo: 'Tramtai usa ahora el puerto 2 y la herramienta apunta al 1: vuelve a activarla', motivo_codigo: 'puerto', motivo_datos: { actual: '2', anotado: '1' } })
+  const gestionada = h('claude-code', 'activa', { gestionado: true, motivo: 'una política de la organización manda…', motivo_codigo: 'gestionado' })
+  try {
+    idioma.value = 'es'
+    assert.equal(textoMotivo(puerto), 'Tramtai usa ahora el puerto 2 y la herramienta apunta al 1: vuelve a activarla.')
+    idioma.value = 'en'
+    assert.equal(textoMotivo(puerto), 'Tramtai now uses port 2 and the tool points to 1: turn it on again.')
+    assert.ok(textoMotivo(gestionada).startsWith('An organization policy'))
+    // un código que la Web UI no conoce, o sin código (un servicio anterior): el texto del servicio
+    assert.equal(textoMotivo(h('a', 'detectada', { motivo: 'texto del servicio', motivo_codigo: 'previa' })), 'texto del servicio')
+    assert.equal(textoMotivo(h('a', 'detectada', { motivo: 'texto del servicio' })), 'texto del servicio')
+    assert.equal(textoMotivo(h('a', 'detectada')), '')
+  } finally {
+    idioma.value = 'es'
+  }
+})
+
+test('cada código de motivo que pone el servicio tiene su texto en español y en inglés', () => {
+  const codigos = ['gestionado', 'sin_https_propio', 'api_no_existe', 'api_detenida', 'puerto', 'orden_no_existe', 'clave_no_almacen', 'editada_a_mano', 'otro_archivo', 'anotacion_ilegible', 'continue_json']
+  const servicio = readFileSync(new URL('../../../../internal/servicio/herramientas.go', import.meta.url), 'utf8')
+  try {
+    for (const c of codigos) {
+      assert.ok(servicio.includes(`"${c}"`), `el servicio no pone ${c}`)
+      for (const l of ['es', 'en'] as const) {
+        idioma.value = l
+        const datos = { api: 'A', ruta: 'R', actual: '1', anotado: '2', detalle: 'D' }
+        assert.notEqual(textoMotivo(h('a', 'activa', { motivo: 'x', motivo_codigo: c, motivo_datos: datos })), 'x', `${c} en ${l}`)
+      }
+    }
+  } finally {
+    idioma.value = 'es'
+  }
+})
+
+test('restaurar dice de qué fecha es la copia y, sin fecha, no la inventa', () => {
+  const con = h('codex', 'activa', { hay_copia: true, fecha_copia: '2026-11-05T14:05:00Z' })
+  const sin = h('codex', 'activa', { hay_copia: true })
+  try {
+    for (const l of ['es', 'en'] as const) {
+      idioma.value = l
+      const texto = textoRestaurar(con)
+      assert.ok(texto.includes(new Date('2026-11-05T14:05:00Z').toLocaleString(l)) && !texto.includes('{fecha}'), texto)
+      assert.ok(!textoRestaurar(sin).includes('{fecha}'))
+      assert.notEqual(textoRestaurar(sin), texto)
+    }
+  } finally {
+    idioma.value = 'es'
+  }
+})
+
+test('«Activar todas» solo se ofrece si alguna fila se puede activar o reactivar', () => {
+  assert.equal(puedeActivarTodas([h('a', 'activa'), h('b', 'no_detectada'), h('c', 'solo_global')]), false, 'todas activas o sin archivo')
+  for (const e of ['detectada', 'desactivada', 'desactualizada']) assert.equal(puedeActivarTodas([h('a', 'activa'), h(e, e)]), true, e)
+  assert.equal(puedeActivarTodas([]), false)
+})
+
+test('activar todas de principio a fin: se elige el modelo una vez y se manda todas: true', async () => {
+  const llamadas = simular([h('codex', 'activa'), h('continue', 'activa')])
+  fichas.value = [ficha('claude'), ficha('codex')]
+  const opciones = ['claude', 'claude/sonnet', 'codex'].map((id) => opcionModelo(modelo(id)))
+  const x = crearHerramientas()
+  x.pedirModelo(opciones)
+  assert.equal(x.dialogoModelo.value, true)
+  assert.deepEqual(x.objetivo.value, { ids: [], todas: true, cambiando: false, nombre: '' })
+  assert.equal(x.modelo.value, 'claude')
+  x.modelo.value = 'claude/sonnet'
+  assert.equal(await x.confirmarModelo(), true)
+  assert.equal(x.dialogoModelo.value, false)
+  assert.deepEqual(llamadas[0], { metodo: 'POST', ruta: '/api/v1/herramientas/activar', cuerpo: { ids: [], todas: true, modelo: 'claude/sonnet' } })
+  fichas.value = []
+})
+
+test('el interruptor de una activa pide cambiar de modelo con el suyo; el de una detectada, activar con el primero conectado', async () => {
+  const llamadas = simular([h('codex', 'activa', { modelo: 'claude/haiku' }), h('continue', 'detectada')])
+  fichas.value = [ficha('codex')]
+  const opciones = ['codex', 'claude/haiku'].map((id) => opcionModelo(modelo(id)))
+  const x = crearHerramientas()
+  await x.cargar()
+  x.pedirModelo(opciones, ['codex'], 'claude/haiku')
+  assert.deepEqual(x.objetivo.value, { ids: ['codex'], todas: false, cambiando: true, nombre: 'codex' })
+  assert.equal(x.modelo.value, 'claude/haiku')
+  x.pedirModelo(opciones, ['continue'])
+  assert.deepEqual(x.objetivo.value, { ids: ['continue'], todas: false, cambiando: false, nombre: 'continue' })
+  assert.equal(x.modelo.value, 'codex')
+  await x.confirmarModelo()
+  assert.deepEqual(llamadas.find((l) => l.metodo === 'POST')?.cuerpo, { ids: ['continue'], todas: false, modelo: 'codex' })
+  fichas.value = []
+})
+
+test('lo que cambia en una herramienta avisa a Mis APIs; un fallo no', async () => {
+  let avisos = 0
+  simular([h('codex', 'activa')])
+  const x = crearHerramientas(() => avisos++)
+  await x.activar(['codex'], 'claude/haiku')
+  await x.desactivar(['codex'], false)
+  await x.olvidar('codex')
+  assert.equal(avisos, 3)
+  simular([h('codex', 'activa')], (metodo) => (metodo === 'POST' ? respuesta(400, { error: { codigo: 'solicitud_invalida', mensaje: 'no' } }) : undefined))
+  // sin lista aún, el fallo queda en error (con lista sería un aviso de Quasar, que estas pruebas no montan)
+  const y = crearHerramientas(() => avisos++)
+  assert.equal(await y.activar(['codex'], 'x'), false)
+  assert.equal(avisos, 3)
+})
+
+test('el tema de Ayuda de la pestaña existe', () => {
+  assert.ok(temaPorId(TEMA_AYUDA), TEMA_AYUDA)
+})
+
+test('la plantilla avisa del cambio, olvida en color de error y usa lo que decide herramientas.ts', () => {
+  const fuente = readFileSync(new URL('./Herramientas.vue', import.meta.url), 'utf8')
+  for (const parte of ["emit('cambio')", "color: 'negative', label: t('herramientas.olvidar')", 'puedeActivarTodas(lista)', 'textoMotivo(herramienta)', 'textoRestaurar(aRestaurar']) {
+    assert.ok(fuente.includes(parte), parte)
+  }
+  assert.ok(readFileSync(new URL('../../paginas/Accesos.vue', import.meta.url), 'utf8').includes('@cambio="cargarPuntos"'))
 })

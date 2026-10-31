@@ -261,9 +261,12 @@ export interface EstadoHerramienta {
   modelo?: string
   ruta?: string
   motivo?: string
+  motivo_codigo?: string
+  motivo_datos?: Record<string, string>
   clave_en_archivo: boolean
   gestionado: boolean
   hay_copia: boolean
+  fecha_copia?: string
 }
 
 export interface ActivarHerramientas {

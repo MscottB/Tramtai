@@ -6,8 +6,8 @@
         <div class="texto-suave text-body2">{{ t('herramientas.texto') }}</div>
       </div>
       <div v-if="!noDisponible && lista.length" class="row items-center q-gutter-xs">
-        <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="t('herramientas.activarTodas')" :disable="!lista.some(puedeCambiar) || !!ocupado"
-          :loading="ocupado === 'todas:1'" @click="pedirModelo()" />
+        <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="t('herramientas.activarTodas')" :disable="!puedeActivarTodas(lista) || !!ocupado"
+          :loading="ocupado === 'todas:1'" @click="pedirModelo(permitidas)" />
         <q-btn flat dense no-caps size="sm" color="neutro" icon="o_stop" :label="t('herramientas.desactivarTodas')" :disable="!lista.some(estaPuesta) || !!ocupado"
           :loading="ocupado === 'todas:0'" @click="desactivarTodas" />
         <q-btn flat round dense size="sm" icon="o_refresh" :aria-label="t('herramientas.refrescar')" :loading="cargando" @click="cargar"><q-tooltip>{{ t('herramientas.refrescar') }}</q-tooltip></q-btn>
@@ -35,8 +35,8 @@
         <div v-if="herramienta.estado === 'solo_global'" class="text-caption">{{ t('herramientas.soloGlobal') }}</div>
         <div v-else-if="herramienta.estado === 'no_detectada'" class="text-caption texto-suave">{{ t('herramientas.noDetectadaFila') }}</div>
         <!-- El motivo lo da el servicio: por qué está desactualizada, qué impide activarla, si la gestiona una política de la organización. -->
-        <div v-else-if="herramienta.motivo" class="text-caption text-warning row no-wrap items-start">
-          <q-icon name="o_info" class="q-mr-xs q-mt-xs" aria-hidden="true" /><span class="romper">{{ herramienta.motivo }}</span>
+        <div v-else-if="textoMotivo(herramienta)" class="text-caption text-warning row no-wrap items-start">
+          <q-icon name="o_info" class="q-mr-xs q-mt-xs" aria-hidden="true" /><span class="romper">{{ textoMotivo(herramienta) }}</span>
         </div>
       </div>
       <div class="fila-herramienta__acciones">
@@ -48,7 +48,7 @@
         <q-btn v-if="accionesDe(herramienta).length" flat round dense icon="more_horiz" :aria-label="t('herramientas.acciones', { nombre: herramienta.nombre })" :disable="!!ocupado">
           <q-menu>
             <q-list style="min-width: 220px">
-              <q-item v-if="accionesDe(herramienta).includes('modelo')" v-close-popup clickable @click="pedirModelo([herramienta.id], herramienta.modelo)">
+              <q-item v-if="accionesDe(herramienta).includes('modelo')" v-close-popup clickable @click="pedirModelo(permitidas, [herramienta.id], herramienta.modelo)">
                 <q-item-section avatar><q-icon name="o_tune" /></q-item-section>
                 <q-item-section>{{ t('herramientas.cambiarModelo') }}</q-item-section>
               </q-item>
@@ -101,7 +101,7 @@
       <q-card-section>
         <h2 id="titulo-herramientas-restaurar" class="titulo-seccion">{{ t('herramientas.restaurarTitulo', { nombre: aRestaurar?.nombre ?? '' }) }}</h2>
       </q-card-section>
-      <q-card-section class="q-pt-none text-body2">{{ t('herramientas.restaurarTexto') }}</q-card-section>
+      <q-card-section class="q-pt-none text-body2">{{ aRestaurar ? textoRestaurar(aRestaurar) : '' }}</q-card-section>
       <q-card-actions align="right">
         <q-btn flat no-caps :label="t('comun.cancelar')" @click="dialogoRestaurar = false" />
         <q-btn unelevated no-caps color="negative" :label="t('herramientas.restaurar')" @click="confirmarRestaurar" />
@@ -122,42 +122,29 @@ import { avisar } from '../../api/cliente'
 import type { EstadoHerramienta } from '../../api/tipos'
 import { etiquetaModelo, type OpcionModelo } from '../../agentes'
 import { escaparConAviso } from '../../cierre'
-import { accionesDe, claseEstado, crearHerramientas, estaPuesta, modeloInicial, opcionesPermitidas, puedeCambiar, textoEstado } from '../../herramientas'
+import { accionesDe, claseEstado, crearHerramientas, estaPuesta, modeloInicial, opcionesPermitidas, puedeActivarTodas, puedeCambiar, TEMA_AYUDA, textoEstado, textoMotivo, textoRestaurar } from '../../herramientas'
 import { t } from '../../i18n'
 
 // opciones son los modelos del catálogo (los de Probar); solo se ofrecen los de agentes que una API admite.
 const props = defineProps<{ opciones: OpcionModelo[] }>()
 const $q = useQuasar()
-// El tema de la Ayuda que explica estas herramientas.
-const TEMA_AYUDA = 'conectar'
+// cambio avisa a Mis APIs de que algo cambió: la API de la herramienta se crea, se detiene o se reanuda con ella.
+const emit = defineEmits<{ cambio: [] }>()
 
-const { lista, cargando, error, noDisponible, ocupado, cargar, activar, activarTodas, desactivar, olvidar: olvidarId, restaurar: restaurarId } = crearHerramientas()
+const { lista, cargando, error, noDisponible, ocupado, cargar, activar, desactivar, olvidar: olvidarId, restaurar: restaurarId, dialogoModelo, modelo, objetivo,
+  pedirModelo, confirmarModelo: confirmar } = crearHerramientas(() => emit('cambio'))
 
 const permitidas = computed(() => opcionesPermitidas(props.opciones))
-const dialogoModelo = ref(false)
-const modelo = ref('')
-// objetivo es a quién se activa: las ids elegidas o todas; cambiando, que ya está activa y solo cambia de modelo.
-const objetivo = ref({ ids: [] as string[], todas: false, cambiando: false, nombre: '' })
 const tituloModelo = computed(() => objetivo.value.todas ? t('herramientas.activarTodasTitulo')
   : t(objetivo.value.cambiando ? 'herramientas.cambiarTitulo' : 'herramientas.activarTitulo', { nombre: objetivo.value.nombre }))
 
-// pedirModelo abre el diálogo para activar esas herramientas (sin ids: todas), con su modelo actual o el primer agente conectado.
-function pedirModelo(ids?: string[], actual = '') {
-  const primera = ids && lista.value.find((x) => x.id === ids[0])
-  objetivo.value = { ids: ids ?? [], todas: !ids, cambiando: !!primera && estaPuesta(primera), nombre: primera ? primera.nombre : '' }
-  modelo.value = actual || modeloInicial(permitidas.value)
-  dialogoModelo.value = true
-}
-
 async function confirmarModelo() {
-  dialogoModelo.value = false
-  const { ids, todas } = objetivo.value
-  if (await (todas ? activarTodas(modelo.value) : activar(ids, modelo.value))) avisar(t('herramientas.avisoActivada'))
+  if (await confirmar()) avisar(t('herramientas.avisoActivada'))
 }
 
 // Encender el interruptor pide el modelo; apagarlo desactiva sin más (la clave y la API se conservan).
 async function cambiar(h: EstadoHerramienta, valor: boolean) {
-  if (valor) return pedirModelo([h.id], h.modelo)
+  if (valor) return pedirModelo(permitidas.value, [h.id], h.modelo)
   if (await desactivar([h.id], false)) avisar(t('herramientas.avisoDesactivada'))
 }
 
@@ -172,7 +159,7 @@ async function volverAActivar(h: EstadoHerramienta) {
 
 function olvidar(h: EstadoHerramienta) {
   $q.dialog({ title: t('herramientas.olvidarTitulo', { nombre: h.nombre }), message: t('herramientas.olvidarTexto'),
-    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('herramientas.olvidar'), unelevated: true, noCaps: true } })
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('herramientas.olvidar'), unelevated: true, noCaps: true } })
     .onOk(async () => {
       if (await olvidarId(h.id)) avisar(t('herramientas.avisoOlvidada'))
     })

@@ -77,7 +77,7 @@
       </template>
         </q-tab-panel>
         <q-tab-panel name="herramientas" class="q-pa-none">
-          <Herramientas :opciones="opciones" />
+          <Herramientas :opciones="opciones" @cambio="cargarPuntos" />
         </q-tab-panel>
       </q-tab-panels>
     </q-card>

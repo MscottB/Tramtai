@@ -144,7 +144,7 @@ export const CLAVES_APIS: string[] = [
   'herramientas.modelo', 'herramientas.soloGlobal', 'herramientas.noDetectadaFila', 'herramientas.claveEnArchivo', 'herramientas.volverAActivar',
   'herramientas.cambiarModelo', 'herramientas.olvidar', 'herramientas.restaurar', 'herramientas.activarTitulo', 'herramientas.activarTodasTitulo',
   'herramientas.cambiarTitulo', 'herramientas.modeloTexto', 'herramientas.modeloEtiqueta', 'herramientas.sinAgentes', 'herramientas.olvidarTitulo',
-  'herramientas.olvidarTexto', 'herramientas.restaurarTitulo', 'herramientas.restaurarTexto', 'herramientas.avisoActivada',
+  'herramientas.olvidarTexto', 'herramientas.restaurarTitulo', 'herramientas.restaurarTexto', 'herramientas.restaurarTextoSinFecha', 'herramientas.avisoActivada',
   'herramientas.avisoDesactivada', 'herramientas.avisoOlvidada', 'herramientas.avisoRestaurada', 'herramientas.vacio', 'herramientas.vacioTexto',
   'herramientas.servidor', 'herramientas.servidorTexto',
 ]
