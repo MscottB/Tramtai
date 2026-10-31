@@ -65,7 +65,14 @@ type Herramienta struct {
 }
 
 // Lista son las herramientas conocidas, en el orden en que se muestran.
-func Lista() []Herramienta { return []Herramienta{} }
+func Lista() []Herramienta {
+	return []Herramienta{
+		{ID: "claude-code", Nombre: "Claude Code", EnProyecto: true, Programa: "claude", Ruta: rutaClaudeCode,
+			Gestionado: gestionadoClaudeCode, Formato: ClaudeCode()},
+		{ID: "opencode", Nombre: "opencode", ClaveEnArchivo: true, Programa: "opencode", Ruta: rutaOpenCode, Formato: OpenCode()},
+		{ID: "kilo", Nombre: "Kilo Code", ClaveEnArchivo: true, Programa: "kilo", Ruta: rutaKilo, Formato: OpenCode()},
+	}
+}
 
 // Detectada dice si la herramienta parece instalada: su programa está en el PATH o existe su carpeta de configuración.
 func Detectada(h Herramienta) bool {

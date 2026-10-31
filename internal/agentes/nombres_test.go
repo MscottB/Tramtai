@@ -19,7 +19,7 @@ func TestSinNombresFuera(t *testing.T) {
 		relativa := filepath.ToSlash(strings.TrimPrefix(ruta, raiz+string(filepath.Separator)))
 		if d.IsDir() {
 			switch relativa {
-			case "internal/agentes", "internal/idioma", "pruebas", "web", "node_modules", ".git", "graphify-out":
+			case "internal/agentes", "internal/idioma", "internal/apuntar", "pruebas", "web", "node_modules", ".git", "graphify-out":
 				return filepath.SkipDir
 			}
 			return nil
