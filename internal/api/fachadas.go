@@ -49,8 +49,9 @@ func sinEfecto(clave string, valor json.RawMessage) bool {
 	v := strings.TrimSpace(string(valor))
 	if clave == "thinking" { // Claude Code lo envía siempre: «adaptive» deja decidir al modelo y «disabled» no pide nada
 		var t struct{ Type string }
-		_ = json.Unmarshal(valor, &t)
-		return t.Type == "adaptive" || t.Type == "disabled" || v == "null"
+		if json.Unmarshal(valor, &t) == nil && (t.Type == "adaptive" || t.Type == "disabled") {
+			return true
+		}
 	}
 	return v == "null" || v == "false" || v == "[]" || v == "{}" || (clave == "n" && v == "1")
 }
