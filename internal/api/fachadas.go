@@ -44,12 +44,18 @@ func conjunto(claves ...string) map[string]bool {
 	return m
 }
 
+// tipoThinking es el type de thinking ("" si no es un objeto con type).
+func tipoThinking(valor json.RawMessage) string {
+	var t struct{ Type string }
+	_ = json.Unmarshal(valor, &t)
+	return t.Type
+}
+
 // sinEfecto indica que un parámetro no soportado llega con un valor que no cambia nada (null, false, [], n=1).
 func sinEfecto(clave string, valor json.RawMessage) bool {
 	v := strings.TrimSpace(string(valor))
 	if clave == "thinking" { // Claude Code lo envía siempre: «adaptive» deja decidir al modelo y «disabled» no pide nada
-		var t struct{ Type string }
-		if json.Unmarshal(valor, &t) == nil && (t.Type == "adaptive" || t.Type == "disabled") {
+		if t := tipoThinking(valor); t == "adaptive" || t == "disabled" {
 			return true
 		}
 	}
@@ -72,6 +78,9 @@ func (p politica) revisar(campos map[string]json.RawMessage, tolerante bool) ([]
 		case p.noSoportados[clave]:
 			if !sinEfecto(clave, campos[clave]) {
 				return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("el parámetro %s no se puede respetar con los agentes CLI", clave))
+			}
+			if clave == "thinking" && tipoThinking(campos[clave]) == "adaptive" { // pide razonar y el agente decide solo: se avisa
+				avisos = append(avisos, clave)
 			}
 		case tolerante:
 			avisos = append(avisos, clave)

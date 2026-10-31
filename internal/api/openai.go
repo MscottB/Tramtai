@@ -447,6 +447,10 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 			avisos = append(avisos, "tools["+tipo+"]")
 		}
 		err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
+		if modo := sol.EleccionHerramienta.Modo; err == nil && len(otras) > 0 && len(sol.Herramientas) == 0 && (modo == "obligatoria" || modo == "una") {
+			err = nucleo.NuevoError(nucleo.CodigoParametroNoSoportado,
+				idioma.T("tool_choice exige una función y no hay ninguna: las demás herramientas no existen aquí"))
+		}
 	}
 	if err != nil {
 		EscribirError(w, r, err)

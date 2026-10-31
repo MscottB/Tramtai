@@ -457,6 +457,31 @@ func TestRespuestasAceptaPeticionDeCodex(t *testing.T) {
 	}
 }
 
+// TestRespuestasHerramientasQueNoSonFunciones: un type vacío también se deja fuera con aviso, y una elección forzada
+// sin ninguna función que la cumpla es un 400, no una petición reenviada sin herramientas.
+func TestRespuestasHerramientasQueNoSonFunciones(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), nil)
+	base := func(herramientas, eleccion string) string {
+		return `{"model":"simulado","input":"hola","stream":true,"tools":[` + herramientas + `],"tool_choice":` + eleccion + `}`
+	}
+	r, flujo := pedir(t, ts, "POST", "/openai/v1/responses", base(`{"name":"sin_tipo"}`, `"auto"`))
+	if r.StatusCode != 200 || !strings.Contains(r.Header.Get("Tramtai-Advertencia"), "tools[]") {
+		t.Fatalf("type vacío: %d %v %s", r.StatusCode, r.Header, flujo)
+	}
+	for nombre, eleccion := range map[string]string{"required": `"required"`, "una función": `{"type":"function","name":"spawn_agent"}`} {
+		r, cuerpo := pedir(t, ts, "POST", "/openai/v1/responses", base(`{"type":"namespace","name":"m","tools":[]},{"type":"web_search"}`, eleccion))
+		if r.StatusCode != 400 || !strings.Contains(cuerpo, "parametro_no_soportado") || !strings.Contains(cuerpo, "tool_choice exige una función") {
+			t.Errorf("%s: %d %s", nombre, r.StatusCode, cuerpo)
+		}
+	}
+	// Con auto o none no hay nada que forzar: se acepta.
+	for _, eleccion := range []string{`"auto"`, `"none"`} {
+		if r, cuerpo := pedir(t, ts, "POST", "/openai/v1/responses", base(`{"type":"web_search"}`, eleccion)); r.StatusCode != 200 {
+			t.Errorf("%s: %d %s", eleccion, r.StatusCode, cuerpo)
+		}
+	}
+}
+
 func TestMensajesAnthropic(t *testing.T) {
 	ts := servidor(t, simulado(trozos{}), nil)
 	if r, cuerpo := pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","messages":[{"role":"user","content":"hola"}]}`); r.StatusCode != 400 ||
@@ -498,6 +523,16 @@ func TestAnthropicAceptaPeticionDeClaudeCode(t *testing.T) {
 	for _, campo := range []string{"context_management", "safeguards", "output_config"} {
 		if !strings.Contains(r.Header.Get("Tramtai-Advertencia"), campo) {
 			t.Errorf("falta el aviso de %s: %v", campo, r.Header)
+		}
+	}
+	// thinking en adaptive pide razonar y el agente decide solo: se avisa; disabled, null, false y {} no pedían nada.
+	if !strings.Contains(r.Header.Get("Tramtai-Advertencia"), "thinking") {
+		t.Errorf("falta el aviso de thinking adaptive: %v", r.Header)
+	}
+	for _, thinking := range []string{`{"type":"disabled"}`, `null`, `false`, `{}`} {
+		r, cuerpo := pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"thinking":`+thinking+`,"messages":[{"role":"user","content":"x"}]}`)
+		if r.StatusCode != 200 || strings.Contains(r.Header.Get("Tramtai-Advertencia"), "thinking") {
+			t.Errorf("thinking %s: %d %v %s", thinking, r.StatusCode, r.Header, cuerpo)
 		}
 	}
 	// Con thinking activado a mano (budget_tokens) sí se rechaza: un agente CLI no puede respetar ese presupuesto.
