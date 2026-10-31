@@ -1,6 +1,6 @@
 <template>
   <div class="fullscreen flex flex-center q-pa-md" style="background: var(--fondo)">
-    <q-card class="q-pa-md" style="width: 440px; max-width: 100%">
+    <q-card class="q-pa-md" style="width: 440px; max-width: 100%" data-captura="entrar">
       <q-card-section class="text-center">
         <img src="/logo.png" alt="" width="56" height="56" style="border-radius: 14px" />
         <div class="titulo-pagina q-mt-sm">{{ t('entrar.titulo') }}</div>

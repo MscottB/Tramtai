@@ -56,9 +56,23 @@ tramtai servicio iniciar -d   # el servicio en segundo plano
 tramtai terminal              # las mismas páginas que la app
 ```
 
-Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, Esc vuelve, `r` reintenta si el servicio
-no responde y `q` sale. En Probar, `c` cancela la petición en curso. Necesita una ventana de 60×20 como mínimo; con
-`NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo.
+Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, Esc vuelve, `W` abre la Web UI en el
+navegador, `r` reintenta si el servicio no responde y `q` sale. En Probar, `c` cancela la petición en curso. Necesita una
+ventana de 60×20 como mínimo; con `NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo.
+
+## Modo servidor
+
+Nuevo en la v0.58: un Tramtai del sistema para Linux con systemd y Windows Server, que arranca con el equipo sin que
+nadie inicie sesión y se abre desde otros equipos **solo por HTTPS** (detrás de un proxy, con tu certificado o con
+Let’s Encrypt) y con la contraseña del administrador, con TOTP opcional:
+
+```sh
+sudo ./tramtai servidor instalar              # desde el .tar.gz; con el paquete .deb o .rpm: sudo tramtai-servidor instalar
+sudo tramtai-servidor administrador contraseña
+```
+
+En Windows Server, `tramtai.exe servidor instalar` desde una consola de administrador. **Es otro entorno:** tus APIs,
+claves y ajustes de escritorio no pasan al servidor, ni al revés. Todo, en la [guía del servidor](docs/servidor.md).
 
 ## Documentación
 
@@ -67,17 +81,31 @@ no responde y `q` sale. En Probar, `c` cancela la petición en curso. Necesita u
 | [Primeros pasos](docs/inicio.md) | Instalar en cada sistema (también portable, Homebrew y solo CLI), agentes, archivos y modelos |
 | [Operación](docs/operacion.md) | Servicio, la terminal y sus teclas, APIs por aplicación, actualizaciones, arranque con el sistema y retención |
 | [Desarrolladores](docs/desarrolladores.md) | Conectar tu app: primer mensaje, archivos, JSON, herramientas y errores, con ejemplos en Python, JavaScript, Go y curl |
+| [Servidor](docs/servidor.md) | El modo servidor: instalar, dos entornos, HTTPS y proxies, administrador, claves, suscripción y qué hacer si algo falla |
 | [API](docs/api.md) | Las tres APIs, sus rutas, opciones y errores |
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento y seguridad |
 | [Desarrollo](docs/equipo/desarrollo.md) | Compilar desde el código, pruebas y publicación |
 
 La app trae su propia **Ayuda**, con guías paso a paso y qué hacer ante cada error.
 
+## Aviso
+
+Los cinco riesgos de usar Tramtai, los mismos que enseñan la app y el instalador:
+
+<!-- riesgos:es -->
+1. Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.
+2. Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.
+3. Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.
+4. Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.
+5. Tramtai es gratuito y se entrega tal cual, sin garantías.
+<!-- /riesgos:es -->
+
 ## Términos y licencia
 
 Tramtai no es un proveedor de IA ni está afiliado a ninguno: necesitas tu propia cuenta o clave y cumplir los términos de
-cada proveedor. Usar tu **suscripción** es solo para uso personal; para tus aplicaciones, usa una **clave de API**. Más
-en los [términos de uso](TERMINOS.md).
+cada proveedor. Usar tu **suscripción** es solo para uso personal; para tus aplicaciones, usa una **clave de API**. Se
+aceptan de forma expresa al instalar o al abrir Tramtai por primera vez, una vez en cada entorno. Más en los
+[términos de uso](TERMINOS.md).
 
 Gratis para uso personal y no comercial con la licencia [PolyForm Noncommercial 1.0.0](LICENSE.md); para una empresa o
 un producto comercial, escribe a [MscottB](https://github.com/MscottB). Claude, Codex, GitHub Copilot, Gemini y
@@ -99,6 +127,20 @@ URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
   without the app open, also over SSH (`tramtai servicio iniciar -d` starts the service in the background). Tab opens the
   menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes back and `q` quits.
 - **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
+- **Server mode (new in v0.58):** a system-wide Tramtai for Linux with systemd and Windows Server that starts with the
+  computer and opens from other computers over HTTPS only, with an administrator password and optional TOTP
+  (`sudo ./tramtai server install`). It’s a separate environment: your desktop APIs, keys and settings don’t carry over.
+  See the [server guide](docs/servidor.md#server-guide).
+
+**Notice.** The five risks of using Tramtai, the same ones the app and the installer show:
+
+<!-- riesgos:en -->
+1. Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.
+2. Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.
+3. If you use server mode, what you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.
+4. If you use server mode and other people use it, you answer for their data under the law that applies to you.
+5. Tramtai is free and provided as is, without warranties.
+<!-- /riesgos:en -->
 
 [**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*
 and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal

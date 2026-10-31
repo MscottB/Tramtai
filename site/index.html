@@ -418,6 +418,35 @@ tramtai servicio iniciar -d
 
 <span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
 tramtai terminal</pre>
+      <div class="terminal-capturas">
+        <figure class="captura">
+          <img class="solo-claro" lang="es" src="capturas/terminal-inicio-claro-es-1440.webp" srcset="capturas/terminal-inicio-claro-es-960.webp 960w, capturas/terminal-inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
+          <img class="solo-claro" lang="en" src="capturas/terminal-inicio-claro-en-1440.webp" srcset="capturas/terminal-inicio-claro-en-960.webp 960w, capturas/terminal-inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
+          <img class="solo-oscuro" lang="es" src="capturas/terminal-inicio-oscuro-es-1440.webp" srcset="capturas/terminal-inicio-oscuro-es-960.webp 960w, capturas/terminal-inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
+          <img class="solo-oscuro" lang="en" src="capturas/terminal-inicio-oscuro-en-1440.webp" srcset="capturas/terminal-inicio-oscuro-en-960.webp 960w, capturas/terminal-inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
+        </figure>
+        <figure class="captura">
+          <img class="solo-claro" lang="es" src="capturas/terminal-apis-claro-es-1440.webp" srcset="capturas/terminal-apis-claro-es-960.webp 960w, capturas/terminal-apis-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
+          <img class="solo-claro" lang="en" src="capturas/terminal-apis-claro-en-1440.webp" srcset="capturas/terminal-apis-claro-en-960.webp 960w, capturas/terminal-apis-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
+          <img class="solo-oscuro" lang="es" src="capturas/terminal-apis-oscuro-es-1440.webp" srcset="capturas/terminal-apis-oscuro-es-960.webp 960w, capturas/terminal-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
+          <img class="solo-oscuro" lang="en" src="capturas/terminal-apis-oscuro-en-1440.webp" srcset="capturas/terminal-apis-oscuro-en-960.webp 960w, capturas/terminal-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="servidor">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Y en tu propio servidor.</span><span lang="en">And on your own server.</span></h2>
+        <p class="suave"><span lang="es">Nuevo en la v0.58: el modo servidor instala Tramtai como servicio del sistema en Linux o Windows Server. Arranca con el equipo, sin que nadie inicie sesión, y se abre desde otros equipos solo por HTTPS, con la contraseña del administrador y, si quieres, un segundo factor.</span><span lang="en">New in v0.58: server mode installs Tramtai as a system service on Linux or Windows Server. It starts with the computer, with nobody signed in, and opens from other computers over HTTPS only, with the administrator password and, if you want, a second factor.</span></p>
+        <p class="suave"><span lang="es">Es <strong>otro entorno</strong>: tus APIs, claves y ajustes del escritorio no pasan al servidor, ni al revés, y la cabecera siempre dice en cuál estás. <a href="servidor.html">La guía del servidor</a> explica cómo instalarlo, ponerlo detrás de tu proxy y qué riesgos asumes.</span><span lang="en">It’s <strong>a separate environment</strong>: your desktop APIs, keys and settings don’t carry over to the server, or the other way around, and the header always says which one you’re in. <a href="servidor.html">The server guide</a> explains how to install it, put it behind your proxy and which risks you take on.</span></p>
+      </div>
+<pre class="codigo"><span class="c" lang="es"># Linux, desde el .tar.gz: pide aceptar los términos</span><span class="c" lang="en"># Linux, from the .tar.gz: it asks you to accept the terms</span>
+sudo ./tramtai servidor instalar
+
+<span class="c" lang="es"># La contraseña de la Web UI remota</span><span class="c" lang="en"># The remote Web UI password</span>
+sudo tramtai-servidor administrador contraseña</pre>
     </div>
   </section>
 
@@ -482,7 +511,7 @@ tramtai terminal</pre>
           <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-640.webp 640w, capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
-      <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17373, el mismo que usa la tuya si no lo cambias.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17373, the same one yours uses unless you change it.</span></p>
+      <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17388; la tuya usa el 17373 si no lo cambias, como los ejemplos de código.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17388; yours uses 17373 unless you change it, like the code examples.</span></p>
     </div>
   </section>
 
@@ -879,6 +908,25 @@ brew install tramtai</code></pre>
     </div>
   </section>
 
+  <section id="aviso">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Antes de usarlo, cinco riesgos.</span><span lang="en">Before you use it, five risks.</span></h2>
+        <p class="suave"><span lang="es">Los mismos que te enseña Tramtai antes de aceptar sus términos, en la app, la terminal y al instalar el servidor.</span><span lang="en">The same ones Tramtai shows you before you accept its terms, in the app, the terminal and when you install the server.</span></p>
+      </div>
+<!-- comun:riesgos -->
+<ol class="riesgos">
+  <li><span lang="es">Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.</span><span lang="en">Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.</span></li>
+  <li><span lang="es">Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.</span><span lang="en">Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.</span></li>
+  <li><span lang="es">Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.</span><span lang="en">If you use server mode, what you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.</span></li>
+  <li><span lang="es">Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.</span><span lang="en">If you use server mode and other people use it, you answer for their data under the law that applies to you.</span></li>
+  <li><span lang="es">Tramtai es gratuito y se entrega tal cual, sin garantías.</span><span lang="en">Tramtai is free and provided as is, without warranties.</span></li>
+</ol>
+<!-- /comun:riesgos -->
+      <p><a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Los términos de uso completos</span><span lang="en">The full terms of use</span></a></p>
+    </div>
+  </section>
+
   <section id="privacidad">
     <div class="envoltura">
       <div class="tablero">
@@ -888,7 +936,7 @@ brew install tramtai</code></pre>
           <p><span lang="es">Funciona en tu equipo y no tiene cuentas. Tus peticiones van de tu equipo al proveedor del agente que elijas, no a Tramtai.</span><span lang="en">It runs on your computer and has no accounts. Your requests go from your computer to the provider of the agent you choose, not to Tramtai.</span></p>
         </div>
         <ul>
-          <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Por defecto escucha solo en <strong>127.0.0.1</strong>; abrirlo a otros equipos es un ajuste aparte, apagado de serie. Cada API exige su propia clave.</span><span lang="en">By default it listens only on <strong>127.0.0.1</strong>; opening it to other computers is a separate setting, off out of the box. Every API requires its own key.</span></span></li>
+          <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Por defecto escucha solo en <strong>127.0.0.1</strong>; abrirlo a otros equipos es un ajuste aparte, apagado de serie, y solo arranca con HTTPS. Cada API exige su propia clave.</span><span lang="en">By default it listens only on <strong>127.0.0.1</strong>; opening it to other computers is a separate setting, off out of the box, and it only starts with HTTPS. Every API requires its own key.</span></span></li>
           <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de proveedor quedan <strong>cifradas en el almacén del sistema</strong>, no en los archivos de Tramtai. La clave de cada API y la de cada espacio solo se ven al crearlas o regenerarlas, Tramtai guarda solo su huella y no sirven para abrir la app.</span><span lang="en">Your provider keys are <strong>encrypted in the system store</strong>, not in Tramtai’s files. Each API’s key and each workspace’s key are shown only when they are created or regenerated, Tramtai stores only a hash of them and they can’t open the app.</span></span></li>
           <li><b><span lang="es">Sesiones</span><span lang="en">Sessions</span></b><span><span lang="es">Tramtai <strong>no lee las credenciales de los CLI</strong>: les pregunta con qué cuenta iniciaste sesión. Con GitHub Copilot copia a su carpeta privada qué cuenta es, sin su clave.</span><span lang="en">Tramtai <strong>doesn’t read the CLIs’ credentials</strong>: it asks them which account you signed in with. With GitHub Copilot it copies which account it is to its private folder, without its key.</span></span></li>
           <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas se guardan <strong>24 horas por defecto</strong>; lo cambias en Ajustes, donde también vacías el historial.</span><span lang="en">Responses are kept for <strong>24 hours by default</strong>; you change that in Settings, where you can also clear the history.</span></span></li>
@@ -933,6 +981,7 @@ brew install tramtai</code></pre>
       <a href="ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
       <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>
       <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
       <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>

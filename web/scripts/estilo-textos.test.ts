@@ -68,7 +68,7 @@ function separarIngles(html: string) {
 // español.
 function sitio() {
   const r = { es: [] as Texto[], en: [] as Texto[] }
-  const paginas = ['site/index.html', 'site/desarrolladores.html', 'site/404.html',
+  const paginas = ['site/index.html', 'site/desarrolladores.html', 'site/servidor.html', 'site/404.html',
     ...readdirSync(new URL('site/ayuda/', raiz)).filter((a) => a.endsWith('.html')).map((a) => 'site/ayuda/' + a)]
   for (const ruta of paginas) {
     const { en, resto } = separarIngles(leer(ruta).replace(/<(script|style|pre|code)\b[\s\S]*?<\/\1>/g, ' '))

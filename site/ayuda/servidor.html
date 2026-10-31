@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Server mode · Tramtai">Modo servidor · Tramtai</title>
+<meta name="description" content="Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/servidor.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/servidor.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Modo servidor · Tramtai">
+<meta property="og:description" content="Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../estilo.css">
+<script src="../sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+</head>
+<body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
+<article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Modo servidor</span><span lang="en">Server mode</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<header>
+  <h1><span lang="es">Modo servidor</span><span lang="en">Server mode</span></h1>
+  <p class="entradilla"><span lang="es">Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.</span><span lang="en">A system-wide Tramtai that starts with the computer, with nobody signed in, and opens from other computers over HTTPS.</span></p>
+</header>
+
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
+<ol class="pasos">
+  <li><span lang="es">Instálalo como administrador: «sudo ./tramtai servidor instalar» desde el .tar.gz de Linux, «sudo tramtai-servidor instalar» tras el .deb o el .rpm, o en una consola de administrador en Windows.</span><span lang="en">Install it as administrator: “sudo ./tramtai server install” from the Linux .tar.gz, “sudo tramtai-servidor install” after the .deb or .rpm, or in an administrator console on Windows.</span></li>
+  <li><span lang="es">Pon la contraseña del administrador con «tramtai-servidor administrador contraseña»: sin ella no se entra desde otros equipos. El TOTP, con «… administrador totp activar».</span><span lang="en">Set the administrator password with “tramtai-servidor admin password”: without it, nobody signs in from other computers. TOTP, with “… admin totp enable”.</span></li>
+  <li><span lang="es">Ábrelo a la red solo con HTTPS: detrás de un proxy (lo recomendado), con tu certificado o con Let’s Encrypt. La guía del servidor trae un ejemplo por proxy.</span><span lang="en">Open it to the network over HTTPS only: behind a proxy (recommended), with your own certificate or with Let’s Encrypt. The server guide has an example per proxy.</span></li>
+  <li><span lang="es">Guarda las claves de los agentes en el servidor con «tramtai-servidor claves guardar &lt;NOMBRE&gt;»: nunca desde la Web UI.</span><span lang="en">Store the agents’ keys on the server with “tramtai-servidor keys set &lt;NAME&gt;”: never from the Web UI.</span></li>
+</ol>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/servidor.claro.es.webp" width="736" height="292" loading="lazy" alt="Ajustes → Servidor: cómo se llega al servidor, cada dato con la orden que lo cambia"><img class="solo-claro" lang="en" src="capturas/servidor.claro.en.webp" width="736" height="292" loading="lazy" alt="Settings → Server: how the server is reached, each setting with the command that changes it"><img class="solo-oscuro" lang="es" src="capturas/servidor.oscuro.es.webp" width="736" height="292" loading="lazy" alt="Ajustes → Servidor: cómo se llega al servidor, cada dato con la orden que lo cambia"><img class="solo-oscuro" lang="en" src="capturas/servidor.oscuro.en.webp" width="736" height="292" loading="lazy" alt="Settings → Server: how the server is reached, each setting with the command that changes it"></figure>
+
+<p class="aviso"><span lang="es">Lo administras en el propio servidor con «tramtai-servidor &lt;orden&gt;» (con sudo en Linux). No tapa el tramtai de tu usuario, que es otro entorno.</span><span lang="en">You manage it on the server itself with “tramtai-servidor &lt;command&gt;” (with sudo on Linux). It doesn’t hide your user’s tramtai, which is another environment.</span></p>
+</section>
+
+<section id="s-aviso"><h2><span lang="es">Aviso</span><span lang="en">Notice</span></h2>
+<ol class="pasos">
+  <li><span lang="es">Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.</span><span lang="en">Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.</span></li>
+  <li><span lang="es">Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.</span><span lang="en">Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.</span></li>
+  <li><span lang="es">Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.</span><span lang="en">What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.</span></li>
+  <li><span lang="es">Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.</span><span lang="en">If other people use your server, you answer for their data under the law that applies to you.</span></li>
+  <li><span lang="es">Tramtai es gratuito y se entrega tal cual, sin garantías.</span><span lang="en">Tramtai is free and provided as is, without warranties.</span></li>
+</ol>
+
+<p class="aviso"><span lang="es">El texto completo de los términos: «tramtai-servidor terminos», o el enlace de Acerca de Tramtai.</span><span lang="en">The full terms: “tramtai-servidor terms”, or the link in About Tramtai.</span></p>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/entrar.claro.es.webp" width="440" height="483" loading="lazy" alt="La página de inicio de sesión del servidor: la contraseña del administrador y su código"><img class="solo-claro" lang="en" src="capturas/entrar.claro.en.webp" width="440" height="460" loading="lazy" alt="The server’s sign-in page: the administrator password and its code"><img class="solo-oscuro" lang="es" src="capturas/entrar.oscuro.es.webp" width="440" height="483" loading="lazy" alt="La página de inicio de sesión del servidor: la contraseña del administrador y su código"><img class="solo-oscuro" lang="en" src="capturas/entrar.oscuro.en.webp" width="440" height="460" loading="lazy" alt="The server’s sign-in page: the administrator password and its code"></figure>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/seguridad.claro.es.webp" width="736" height="494" loading="lazy" alt="Ajustes → Seguridad: contraseña, verificación en dos pasos, códigos de recuperación y sesiones"><img class="solo-claro" lang="en" src="capturas/seguridad.claro.en.webp" width="736" height="494" loading="lazy" alt="Settings → Security: password, two-step verification, recovery codes and sessions"><img class="solo-oscuro" lang="es" src="capturas/seguridad.oscuro.es.webp" width="736" height="494" loading="lazy" alt="Ajustes → Seguridad: contraseña, verificación en dos pasos, códigos de recuperación y sesiones"><img class="solo-oscuro" lang="en" src="capturas/seguridad.oscuro.en.webp" width="736" height="494" loading="lazy" alt="Settings → Security: password, two-step verification, recovery codes and sessions"></figure>
+</section>
+
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
+<details id="servidor-que-es"><summary><span lang="es">¿Qué es el modo servidor?</span><span lang="en">What is server mode?</span></summary><p><span lang="es">Un Tramtai del sistema, aparte del tuyo: arranca con el equipo, sin sesión, con su cuenta, sus datos y su puerto. En Linux con systemd y en Windows Server; en macOS, no.</span><span lang="en">A system-wide Tramtai, separate from yours: it starts with the computer, without a session, with its own account, data and port. On Linux with systemd and on Windows Server; not on macOS.</span> <a href="entornos.html"><span lang="es">Dos entornos</span><span lang="en">Two environments</span> →</a></p></details>
+<details id="servidor-https"><summary><span lang="es">¿Por qué no arranca con permitir_remoto por HTTP?</span><span lang="en">Why won’t it start with permitir_remoto over HTTP?</span></summary><p><span lang="es">Porque las claves y la contraseña viajarían sin cifrar. Fuera de este equipo, solo con HTTPS: un proxy, tu certificado (servicio.tls.modo: archivos) o Let’s Encrypt.</span><span lang="en">Because the keys and the password would travel unencrypted. Outside this computer, HTTPS only: a proxy, your certificate (servicio.tls.modo: archivos) or Let’s Encrypt.</span></p></details>
+<details id="servidor-proxy"><summary><span lang="es">¿Qué proxy uso?</span><span lang="en">Which proxy do I use?</span></summary><p><span lang="es">El que ya tengas: la guía trae Caddy, nginx, Apache, Traefik, HAProxy e IIS. Pon su dirección en servicio.proxy.confiables y tu dominio en servicio.dominios.</span><span lang="en">The one you already have: the guide covers Caddy, nginx, Apache, Traefik, HAProxy and IIS. Put its address in servicio.proxy.confiables and your domain in servicio.dominios.</span></p></details>
+<details id="servidor-mismo-equipo"><summary><span lang="es">¿Y desde el propio servidor?</span><span lang="en">And from the server itself?</span></summary><p><span lang="es">«tramtai-servidor abrir», la tecla W y la app entran por la entrada local. Con proxies de confianza, abrir a mano el puerto público en el servidor cuenta como entrar desde fuera.</span><span lang="en">“tramtai-servidor abrir”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside.</span></p></details>
+<details id="servidor-claves"><summary><span lang="es">¿Dónde quedan las claves de los agentes?</span><span lang="en">Where do the agents’ keys go?</span></summary><p><span lang="es">Cifradas: en Windows, en el almacén de la cuenta del servicio; en Linux, con systemd-creds. La clave del servicio, con el servidor abierto a la red, solo vale desde el propio equipo.</span><span lang="en">Encrypted: on Windows, in the service account’s store; on Linux, with systemd-creds. The service key, with the server open to the network, only works from the server itself.</span></p></details>
+<details id="servidor-agentes"><summary><span lang="es">¿Quién ejecuta los agentes?</span><span lang="en">Who runs the agents?</span></summary><p><span lang="es">El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale.</span><span lang="en">The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works.</span></p></details>
+<details id="servidor-suscripcion"><summary><span lang="es">¿Puedo usar mi suscripción en el servidor?</span><span lang="en">Can I use my subscription on the server?</span></summary><p><span lang="es">Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas).</span><span lang="en">By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas).</span></p></details>
+<details id="servidor-codex"><summary><span lang="es">¿Qué riesgo tiene Codex en el servidor?</span><span lang="en">What’s the risk with Codex on the server?</span></summary><p><span lang="es">Lee lo que lee la cuenta del servicio, claves incluidas. Da la clave del espacio solo a gente de confianza y, en las APIs ajenas, pon Modelos permitidos y respaldo sin Codex (vacía, vale cualquiera).</span><span lang="en">It reads what the service account reads, keys included. Give the workspace key only to people you trust and, in other people’s APIs, set Allowed models and fallback without Codex (empty allows any).</span></p></details>
+<details id="servidor-actualizar"><summary><span lang="es">¿Cómo lo actualizo?</span><span lang="en">How do I update it?</span></summary><p><span lang="es">«tramtai-servidor actualizar» comprueba la firma, deja terminar las peticiones y cambia el programa. Si lo instalaste con el .deb o el .rpm, actualiza con apt o dnf.</span><span lang="en">“tramtai-servidor update” checks the signature, lets requests finish and swaps the program. If you installed it with the .deb or .rpm, update with apt or dnf.</span></p></details>
+<details id="servidor-quitar"><summary><span lang="es">¿Cómo lo quito?</span><span lang="en">How do I remove it?</span></summary><p><span lang="es">«tramtai-servidor desinstalar» quita el servicio y el programa y conserva los datos; con «--borrar-datos» borra también los datos, las claves y la cuenta.</span><span lang="en">“tramtai-servidor uninstall” removes the service and the program and keeps the data; with “--delete-data” it also deletes the data, the keys and the account.</span></p></details>
+</section>
+
+<p class="aviso"><span lang="es">En la terminal: «tramtai-servidor» abre la del servidor, con la marca «Servidor». W abre su Web UI, y en Ajustes (7) están Servidor y Seguridad.</span><span lang="en">In the terminal: “tramtai-servidor” opens the server’s, with the “Server” badge. W opens its Web UI, and Settings (7) has Server and Security.</span></p>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="entornos.html"><strong><span lang="es">Dos entornos</span><span lang="en">Two environments</span></strong><span><span lang="es">Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.</span><span lang="en">Your Tramtai and the server’s share nothing: each has its own APIs, keys, CLI sessions, history and settings.</span></span></a>
+  <a class="tarjeta-tema" href="ajustes.html"><strong><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></strong><span><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Launch at sign-in, default model, files, history and updates.</span></span></a>
+  <a class="tarjeta-tema" href="claves.html"><strong><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></strong><span><span lang="es">La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.</span><span lang="en">The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.</span></span></a>
+</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+</body>
+</html>

@@ -12,6 +12,12 @@ Necesitas Tramtai en marcha con al menos un agente conectado, y la **URL** y la 
 **Mis APIs**). Los ejemplos las leen de `TRAMTAI_URL` (por defecto `http://127.0.0.1:17373`), `TRAMTAI_CLAVE` y
 `TRAMTAI_MODELO` (agente y modelo, por defecto `claude/haiku`).
 
+**Contra un servidor de Tramtai** ([modo servidor](servidor.md)), la URL es la `https://` de su dominio, por ejemplo
+`TRAMTAI_URL=https://tramtai.example.com`, y el SDK la usa igual: `base_url="https://tramtai.example.com/openai/v1"` o
+`https://tramtai.example.com/anthropic`. La clave es la de una API creada en ese servidor: las de tu Tramtai de
+escritorio no valen allí, porque son otro entorno. Si su certificado es de una CA propia, dale esa CA a tu programa
+(`SSL_CERT_FILE` en Python, `NODE_EXTRA_CA_CERTS` en Node) en vez de desactivar la verificación.
+
 **¿Qué API uso?** Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (`/openai/v1` o `/anthropic`): no cambias
 nada más. Si necesitas peticiones largas que sigues, cancelas o reintentas, la API propia (`/api/v1`). La
 [comparación](api.md#qué-url-uso) dice qué permite cada una y por qué.
@@ -144,8 +150,9 @@ app los conozca antes de enviar. Ejemplo: [curl](ejemplos/curl/limites.sh).
 
 `tramtai terminal` (o `tramtai` a secas) tiene las mismas páginas que la app: Inicio, Agentes, Probar, Mis APIs,
 Historial, Espacios, Ajustes (con las novedades y Acerca de) y Ayuda. Habla con el servicio por su API de
-administración, así que no necesita la app abierta. En un servidor o en otro equipo, entra por SSH al equipo donde corre
-Tramtai y ábrela allí: el servicio sigue escuchando solo en `127.0.0.1`.
+administración, así que no necesita la app abierta. En otro equipo, entra por SSH al equipo donde corre Tramtai y
+ábrela allí: por defecto, el servicio solo escucha en `127.0.0.1`. En el modo servidor, `sudo tramtai-servidor` abre la
+terminal del servidor (ver la [guía del servidor](servidor.md)).
 
 ```sh
 ssh tu-usuario@tu-equipo
@@ -174,5 +181,7 @@ Con `NO_COLOR` va sin color, con `TRAMTAI_ASCII=1` sin caracteres de dibujo y co
 
 **In English.** `tramtai terminal` has the app’s pages (Home to Help) and doesn’t need the app open; over SSH, open it
 on the computer where Tramtai runs. Tab opens the menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes
-back, `r` retries when the service doesn’t respond and `q` quits; in the Playground, `c` cancels a running request. The
+back, `W` opens the Web UI, `r` retries when the service doesn’t respond and `q` quits; in the Playground, `c` cancels a
+running request. Against a Tramtai server, the SDK base URL is its `https://` address, with a key created on that
+server. The
 [product page](https://mscottb.github.io/Tramtai/desarrolladores.html#terminal) has this section in English.

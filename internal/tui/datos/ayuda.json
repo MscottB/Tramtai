@@ -952,10 +952,15 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Activa el arranque con el sistema: Tramtai se abre oculto en la bandeja al iniciar sesión.",
+            "Elige cómo arranca al iniciar sesión: «La app en la bandeja» o «Solo el servicio», sin ventana. Sin iniciar sesión es el servidor («tramtai-servidor instalar»), otro entorno.",
             "Elige el modelo y el esfuerzo que se usan cuando una petición no los dice.",
             "En Historial decide cuánto se guardan las peticiones; en Archivos, prepara el conversor."
           ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Ajustes → Arranque con el sistema: no arrancar, la app en la bandeja o solo el servicio",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
         },
         {
           "tipo": "pantalla"
@@ -968,6 +973,10 @@
         {
           "tipo": "preguntas",
           "pares": [
+            [
+              "¿Qué diferencia hay entre las tres formas de arrancar?",
+              "La app en la bandeja y Solo el servicio arrancan al iniciar sesión, con tu cuenta y tus datos. El servicio del sistema arranca con el equipo y su propia cuenta: es otro entorno."
+            ],
             [
               "¿Qué pasa al actualizar?",
               "El aviso muestra lo que trae cada versión. Con el instalador de Windows se instala sola y la app se reabre con tus datos; en lo demás, el aviso trae el enlace."
@@ -1009,6 +1018,195 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        }
+      ]
+    },
+    {
+      "id": "servidor",
+      "titulo": "Modo servidor",
+      "resumen": "Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html",
+      "terminal": "En la terminal: «tramtai-servidor» abre la del servidor, con la marca «Servidor». W abre su Web UI, y en Ajustes (7) están Servidor y Seguridad.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Instálalo como administrador: «sudo ./tramtai servidor instalar» desde el .tar.gz de Linux, «sudo tramtai-servidor instalar» tras el .deb o el .rpm, o en una consola de administrador en Windows.",
+            "Pon la contraseña del administrador con «tramtai-servidor administrador contraseña»: sin ella no se entra desde otros equipos. El TOTP, con «… administrador totp activar».",
+            "Ábrelo a la red solo con HTTPS: detrás de un proxy (lo recomendado), con tu certificado o con Let’s Encrypt. La guía del servidor trae un ejemplo por proxy.",
+            "Guarda las claves de los agentes en el servidor con «tramtai-servidor claves guardar [NOMBRE]»: nunca desde la Web UI."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Ajustes → Servidor: cómo se llega al servidor, cada dato con la orden que lo cambia",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Lo administras en el propio servidor con «tramtai-servidor [orden]» (con sudo en Linux). No tapa el tramtai de tu usuario, que es otro entorno."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Aviso",
+          "lineas": [
+            "Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.",
+            "Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.",
+            "Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.",
+            "Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.",
+            "Tramtai es gratuito y se entrega tal cual, sin garantías."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "El texto completo de los términos: «tramtai-servidor terminos», o el enlace de Acerca de Tramtai."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La página de inicio de sesión del servidor: la contraseña del administrador y su código",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "web",
+          "titulo": "Ajustes → Seguridad: contraseña, verificación en dos pasos, códigos de recuperación y sesiones",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué es el modo servidor?",
+              "Un Tramtai del sistema, aparte del tuyo: arranca con el equipo, sin sesión, con su cuenta, sus datos y su puerto. En Linux con systemd y en Windows Server; en macOS, no."
+            ],
+            [
+              "¿Por qué no arranca con permitir_remoto por HTTP?",
+              "Porque las claves y la contraseña viajarían sin cifrar. Fuera de este equipo, solo con HTTPS: un proxy, tu certificado (servicio.tls.modo: archivos) o Let’s Encrypt."
+            ],
+            [
+              "¿Qué proxy uso?",
+              "El que ya tengas: la guía trae Caddy, nginx, Apache, Traefik, HAProxy e IIS. Pon su dirección en servicio.proxy.confiables y tu dominio en servicio.dominios."
+            ],
+            [
+              "¿Y desde el propio servidor?",
+              "«tramtai-servidor abrir», la tecla W y la app entran por la entrada local. Con proxies de confianza, abrir a mano el puerto público en el servidor cuenta como entrar desde fuera."
+            ],
+            [
+              "¿Dónde quedan las claves de los agentes?",
+              "Cifradas: en Windows, en el almacén de la cuenta del servicio; en Linux, con systemd-creds. La clave del servicio, con el servidor abierto a la red, solo vale desde el propio equipo."
+            ],
+            [
+              "¿Quién ejecuta los agentes?",
+              "El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale."
+            ],
+            [
+              "¿Puedo usar mi suscripción en el servidor?",
+              "Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas)."
+            ],
+            [
+              "¿Qué riesgo tiene Codex en el servidor?",
+              "Lee lo que lee la cuenta del servicio, claves incluidas. Da la clave del espacio solo a gente de confianza y, en las APIs ajenas, pon Modelos permitidos y respaldo sin Codex (vacía, vale cualquiera)."
+            ],
+            [
+              "¿Cómo lo actualizo?",
+              "«tramtai-servidor actualizar» comprueba la firma, deja terminar las peticiones y cambia el programa. Si lo instalaste con el .deb o el .rpm, actualiza con apt o dnf."
+            ],
+            [
+              "¿Cómo lo quito?",
+              "«tramtai-servidor desinstalar» quita el servicio y el programa y conserva los datos; con «--borrar-datos» borra también los datos, las claves y la cuenta."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        }
+      ]
+    },
+    {
+      "id": "entornos",
+      "titulo": "Dos entornos",
+      "resumen": "Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/entornos.html",
+      "terminal": "En la terminal: la línea de estado dice «Servidor» o «Este equipo». «tramtai» abre la tuya y «tramtai-servidor», la del servidor.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Tu Tramtai",
+            "El del servidor"
+          ],
+          "filas": [
+            [
+              "Arranca",
+              "Al iniciar sesión (la app en la bandeja o solo el servicio) o cuando lo abres",
+              "Con el equipo, sin que nadie inicie sesión"
+            ],
+            [
+              "Cuenta",
+              "La tuya",
+              "tramtai en Linux; NT SERVICE\\Tramtai en Windows"
+            ],
+            [
+              "Datos",
+              "Tu carpeta de Tramtai (en la portable, «datos-tramtai»)",
+              "/var/lib/tramtai en Linux; %ProgramData%\\Tramtai en Windows"
+            ],
+            [
+              "Claves de los agentes",
+              "El almacén cifrado de tu sesión",
+              "El de la cuenta del servicio (Windows) o systemd-creds (Linux), con la CLI"
+            ],
+            [
+              "Se administra con",
+              "«tramtai …», la app, la terminal y la Web UI",
+              "«tramtai-servidor …» como administrador, y la Web UI"
+            ],
+            [
+              "Web UI desde otro equipo",
+              "No, por defecto: escucha en 127.0.0.1",
+              "Sí, por HTTPS y con la contraseña del administrador"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Nada pasa de uno a otro: un espacio, una API o una clave del tuyo no existen en el servidor, ni al revés. Cada entorno acepta los términos por su cuenta."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La marca de la cabecera dice en qué Tramtai estás: «Servidor» o «Este equipo»",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/entornos.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Cómo sé en cuál estoy?",
+              "La cabecera de la Web UI y la línea de estado de la terminal dicen «Servidor» o «Este equipo». Acerca de enseña el entorno, la cuenta y la carpeta."
+            ],
+            [
+              "¿Puedo pasar mis APIs al servidor?",
+              "No se copian: créalas de nuevo en el servidor, con sus claves. Así una clave de tu equipo nunca abre el servidor, ni al revés."
+            ],
+            [
+              "¿Por qué me avisa de otro Tramtai, del sistema?",
+              "Porque en este equipo también corre el servicio del sistema, en otro puerto. Es otro entorno, con sus propias APIs y claves: no hace falta hacer nada."
+            ],
+            [
+              "¿Con cuál habla la CLI?",
+              "«tramtai …» con el tuyo; «tramtai-servidor …» (o «tramtai --servidor …») con el del sistema, y cada salida que cambia algo empieza por «Servidor:»."
+            ],
+            [
+              "¿Por qué me pide aceptar los términos otra vez?",
+              "Cada entorno guarda su propia aceptación: la de tu equipo no vale para el servidor, que la pide al instalarlo."
+            ]
+          ]
         }
       ]
     },
@@ -2181,10 +2379,15 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Turn on start with the system: Tramtai opens hidden in the tray when you sign in.",
+            "Choose how it starts when you sign in: “The app in the tray” or “Just the service”, with no window. Without signing in, it’s the server (“tramtai-servidor instalar”), another environment.",
             "Pick the model and effort used when a request does not say.",
             "In History decide how long requests are kept; in Files, prepare the converter."
           ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Settings → Start with the system: don’t start, the app in the tray or just the service",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
         },
         {
           "tipo": "pantalla"
@@ -2197,6 +2400,10 @@
         {
           "tipo": "preguntas",
           "pares": [
+            [
+              "What’s the difference between the three ways to start?",
+              "The app in the tray and Just the service start when you sign in, with your account and your data. The system service starts with the computer and its own account: another environment."
+            ],
             [
               "What happens when I update?",
               "The notice shows what each version brings. With the Windows installer it installs itself and the app reopens with your data; otherwise, the notice has the link."
@@ -2238,6 +2445,195 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        }
+      ]
+    },
+    {
+      "id": "servidor",
+      "titulo": "Server mode",
+      "resumen": "A system-wide Tramtai that starts with the computer, with nobody signed in, and opens from other computers over HTTPS.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html",
+      "terminal": "In the terminal: “tramtai-servidor” opens the server’s, with the “Server” badge. W opens its Web UI, and Settings (7) has Server and Security.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Install it as administrator: “sudo ./tramtai server install” from the Linux .tar.gz, “sudo tramtai-servidor install” after the .deb or .rpm, or in an administrator console on Windows.",
+            "Set the administrator password with “tramtai-servidor admin password”: without it, nobody signs in from other computers. TOTP, with “… admin totp enable”.",
+            "Open it to the network over HTTPS only: behind a proxy (recommended), with your own certificate or with Let’s Encrypt. The server guide has an example per proxy.",
+            "Store the agents’ keys on the server with “tramtai-servidor keys set [NAME]”: never from the Web UI."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Settings → Server: how the server is reached, each setting with the command that changes it",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "You manage it on the server itself with “tramtai-servidor [command]” (with sudo on Linux). It doesn’t hide your user’s tramtai, which is another environment."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Notice",
+          "lineas": [
+            "Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.",
+            "Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.",
+            "What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.",
+            "If other people use your server, you answer for their data under the law that applies to you.",
+            "Tramtai is free and provided as is, without warranties."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "The full terms: “tramtai-servidor terms”, or the link in About Tramtai."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The server’s sign-in page: the administrator password and its code",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "web",
+          "titulo": "Settings → Security: password, two-step verification, recovery codes and sessions",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "What is server mode?",
+              "A system-wide Tramtai, separate from yours: it starts with the computer, without a session, with its own account, data and port. On Linux with systemd and on Windows Server; not on macOS."
+            ],
+            [
+              "Why won’t it start with permitir_remoto over HTTP?",
+              "Because the keys and the password would travel unencrypted. Outside this computer, HTTPS only: a proxy, your certificate (servicio.tls.modo: archivos) or Let’s Encrypt."
+            ],
+            [
+              "Which proxy do I use?",
+              "The one you already have: the guide covers Caddy, nginx, Apache, Traefik, HAProxy and IIS. Put its address in servicio.proxy.confiables and your domain in servicio.dominios."
+            ],
+            [
+              "And from the server itself?",
+              "“tramtai-servidor abrir”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside."
+            ],
+            [
+              "Where do the agents’ keys go?",
+              "Encrypted: on Windows, in the service account’s store; on Linux, with systemd-creds. The service key, with the server open to the network, only works from the server itself."
+            ],
+            [
+              "Who runs the agents?",
+              "The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works."
+            ],
+            [
+              "Can I use my subscription on the server?",
+              "By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas)."
+            ],
+            [
+              "What’s the risk with Codex on the server?",
+              "It reads what the service account reads, keys included. Give the workspace key only to people you trust and, in other people’s APIs, set Allowed models and fallback without Codex (empty allows any)."
+            ],
+            [
+              "How do I update it?",
+              "“tramtai-servidor update” checks the signature, lets requests finish and swaps the program. If you installed it with the .deb or .rpm, update with apt or dnf."
+            ],
+            [
+              "How do I remove it?",
+              "“tramtai-servidor uninstall” removes the service and the program and keeps the data; with “--delete-data” it also deletes the data, the keys and the account."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
+        }
+      ]
+    },
+    {
+      "id": "entornos",
+      "titulo": "Two environments",
+      "resumen": "Your Tramtai and the server’s share nothing: each has its own APIs, keys, CLI sessions, history and settings.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/entornos.html",
+      "terminal": "In the terminal: the status line says “Server” or “This device”. “tramtai” opens yours and “tramtai-servidor”, the server’s.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Your Tramtai",
+            "The server’s"
+          ],
+          "filas": [
+            [
+              "Starts",
+              "When you sign in (the app in the tray or just the service) or when you open it",
+              "With the computer, with nobody signed in"
+            ],
+            [
+              "Account",
+              "Yours",
+              "tramtai on Linux; NT SERVICE\\Tramtai on Windows"
+            ],
+            [
+              "Data",
+              "Your Tramtai folder (in the portable copy, “datos-tramtai”)",
+              "/var/lib/tramtai on Linux; %ProgramData%\\Tramtai on Windows"
+            ],
+            [
+              "Agents’ keys",
+              "Your session’s encrypted store",
+              "The service account’s (Windows) or systemd-creds (Linux), set with the CLI"
+            ],
+            [
+              "Managed with",
+              "“tramtai …”, the app, the terminal and the Web UI",
+              "“tramtai-servidor …” as administrator, and the Web UI"
+            ],
+            [
+              "Web UI from another computer",
+              "No, by default: it listens on 127.0.0.1",
+              "Yes, over HTTPS and with the administrator password"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Nothing moves from one to the other: a workspace, API or key of yours doesn’t exist on the server, or the other way around. Each environment accepts the terms on its own."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The badge in the header says which Tramtai you’re in: “Server” or “This device”",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/entornos.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "How do I know which one I’m in?",
+              "The Web UI header and the terminal’s status line say “Server” or “This device”. About shows the environment, the account and the folder."
+            ],
+            [
+              "Can I move my APIs to the server?",
+              "They aren’t copied: create them again on the server, with their keys. That way a key from your computer never opens the server, or the other way around."
+            ],
+            [
+              "Why does it warn me about another Tramtai, a system one?",
+              "Because the system service also runs on this computer, on another port. It’s another environment, with its own APIs and keys: there’s nothing to do."
+            ],
+            [
+              "Which one does the CLI talk to?",
+              "“tramtai …” talks to yours; “tramtai-servidor …” (or “tramtai --server …”) to the system one, and every output that changes something starts with “Server:”."
+            ],
+            [
+              "Why does it ask me to accept the terms again?",
+              "Each environment keeps its own acceptance: your computer’s doesn’t count for the server, which asks for it when you install it."
+            ]
+          ]
         }
       ]
     },

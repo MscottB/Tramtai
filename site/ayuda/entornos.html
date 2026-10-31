@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Two environments · Tramtai">Dos entornos · Tramtai</title>
+<meta name="description" content="Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/entornos.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/entornos.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Dos entornos · Tramtai">
+<meta property="og:description" content="Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../estilo.css">
+<script src="../sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+</head>
+<body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
+<article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Dos entornos</span><span lang="en">Two environments</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<header>
+  <h1><span lang="es">Dos entornos</span><span lang="en">Two environments</span></h1>
+  <p class="entradilla"><span lang="es">Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.</span><span lang="en">Your Tramtai and the server’s share nothing: each has its own APIs, keys, CLI sessions, history and settings.</span></p>
+</header>
+
+<section id="s-tabla"><h2><span lang="es">De un vistazo</span><span lang="en">At a glance</span></h2>
+<div class="tabla"><table>
+  <thead><tr><th></th><th><span lang="es">Tu Tramtai</span><span lang="en">Your Tramtai</span></th><th><span lang="es">El del servidor</span><span lang="en">The server’s</span></th></tr></thead>
+  <tbody>
+    <tr><th scope="row"><span lang="es">Arranca</span><span lang="en">Starts</span></th><td><span lang="es">Al iniciar sesión (la app en la bandeja o solo el servicio) o cuando lo abres</span><span lang="en">When you sign in (the app in the tray or just the service) or when you open it</span></td><td><span lang="es">Con el equipo, sin que nadie inicie sesión</span><span lang="en">With the computer, with nobody signed in</span></td></tr>
+    <tr><th scope="row"><span lang="es">Cuenta</span><span lang="en">Account</span></th><td><span lang="es">La tuya</span><span lang="en">Yours</span></td><td><span lang="es">tramtai en Linux; NT SERVICE\Tramtai en Windows</span><span lang="en">tramtai on Linux; NT SERVICE\Tramtai on Windows</span></td></tr>
+    <tr><th scope="row"><span lang="es">Datos</span><span lang="en">Data</span></th><td><span lang="es">Tu carpeta de Tramtai (en la portable, «datos-tramtai»)</span><span lang="en">Your Tramtai folder (in the portable copy, “datos-tramtai”)</span></td><td><span lang="es">/var/lib/tramtai en Linux; %ProgramData%\Tramtai en Windows</span><span lang="en">/var/lib/tramtai on Linux; %ProgramData%\Tramtai on Windows</span></td></tr>
+    <tr><th scope="row"><span lang="es">Claves de los agentes</span><span lang="en">Agents’ keys</span></th><td><span lang="es">El almacén cifrado de tu sesión</span><span lang="en">Your session’s encrypted store</span></td><td><span lang="es">El de la cuenta del servicio (Windows) o systemd-creds (Linux), con la CLI</span><span lang="en">The service account’s (Windows) or systemd-creds (Linux), set with the CLI</span></td></tr>
+    <tr><th scope="row"><span lang="es">Se administra con</span><span lang="en">Managed with</span></th><td><span lang="es">«tramtai …», la app, la terminal y la Web UI</span><span lang="en">“tramtai …”, the app, the terminal and the Web UI</span></td><td><span lang="es">«tramtai-servidor …» como administrador, y la Web UI</span><span lang="en">“tramtai-servidor …” as administrator, and the Web UI</span></td></tr>
+    <tr><th scope="row"><span lang="es">Web UI desde otro equipo</span><span lang="en">Web UI from another computer</span></th><td><span lang="es">No, por defecto: escucha en 127.0.0.1</span><span lang="en">No, by default: it listens on 127.0.0.1</span></td><td><span lang="es">Sí, por HTTPS y con la contraseña del administrador</span><span lang="en">Yes, over HTTPS and with the administrator password</span></td></tr>
+  </tbody>
+</table></div>
+
+<p class="aviso"><span lang="es">Nada pasa de uno a otro: un espacio, una API o una clave del tuyo no existen en el servidor, ni al revés. Cada entorno acepta los términos por su cuenta.</span><span lang="en">Nothing moves from one to the other: a workspace, API or key of yours doesn’t exist on the server, or the other way around. Each environment accepts the terms on its own.</span></p>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/marca.claro.es.webp" width="720" height="61" loading="lazy" alt="La marca de la cabecera dice en qué Tramtai estás: «Servidor» o «Este equipo»"><img class="solo-claro" lang="en" src="capturas/marca.claro.en.webp" width="720" height="61" loading="lazy" alt="The badge in the header says which Tramtai you’re in: “Server” or “This device”"><img class="solo-oscuro" lang="es" src="capturas/marca.oscuro.es.webp" width="720" height="61" loading="lazy" alt="La marca de la cabecera dice en qué Tramtai estás: «Servidor» o «Este equipo»"><img class="solo-oscuro" lang="en" src="capturas/marca.oscuro.en.webp" width="720" height="61" loading="lazy" alt="The badge in the header says which Tramtai you’re in: “Server” or “This device”"></figure>
+</section>
+
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
+<details id="entorno-cual"><summary><span lang="es">¿Cómo sé en cuál estoy?</span><span lang="en">How do I know which one I’m in?</span></summary><p><span lang="es">La cabecera de la Web UI y la línea de estado de la terminal dicen «Servidor» o «Este equipo». Acerca de enseña el entorno, la cuenta y la carpeta.</span><span lang="en">The Web UI header and the terminal’s status line say “Server” or “This device”. About shows the environment, the account and the folder.</span></p></details>
+<details id="entorno-copiar"><summary><span lang="es">¿Puedo pasar mis APIs al servidor?</span><span lang="en">Can I move my APIs to the server?</span></summary><p><span lang="es">No se copian: créalas de nuevo en el servidor, con sus claves. Así una clave de tu equipo nunca abre el servidor, ni al revés.</span><span lang="en">They aren’t copied: create them again on the server, with their keys. That way a key from your computer never opens the server, or the other way around.</span></p></details>
+<details id="entorno-aviso"><summary><span lang="es">¿Por qué me avisa de otro Tramtai, del sistema?</span><span lang="en">Why does it warn me about another Tramtai, a system one?</span></summary><p><span lang="es">Porque en este equipo también corre el servicio del sistema, en otro puerto. Es otro entorno, con sus propias APIs y claves: no hace falta hacer nada.</span><span lang="en">Because the system service also runs on this computer, on another port. It’s another environment, with its own APIs and keys: there’s nothing to do.</span></p></details>
+<details id="entorno-cli"><summary><span lang="es">¿Con cuál habla la CLI?</span><span lang="en">Which one does the CLI talk to?</span></summary><p><span lang="es">«tramtai …» con el tuyo; «tramtai-servidor …» (o «tramtai --servidor …») con el del sistema, y cada salida que cambia algo empieza por «Servidor:».</span><span lang="en">“tramtai …” talks to yours; “tramtai-servidor …” (or “tramtai --server …”) to the system one, and every output that changes something starts with “Server:”.</span></p></details>
+<details id="entorno-terminos"><summary><span lang="es">¿Por qué me pide aceptar los términos otra vez?</span><span lang="en">Why does it ask me to accept the terms again?</span></summary><p><span lang="es">Cada entorno guarda su propia aceptación: la de tu equipo no vale para el servidor, que la pide al instalarlo.</span><span lang="en">Each environment keeps its own acceptance: your computer’s doesn’t count for the server, which asks for it when you install it.</span></p></details>
+</section>
+
+<p class="aviso"><span lang="es">En la terminal: la línea de estado dice «Servidor» o «Este equipo». «tramtai» abre la tuya y «tramtai-servidor», la del servidor.</span><span lang="en">In the terminal: the status line says “Server” or “This device”. “tramtai” opens yours and “tramtai-servidor”, the server’s.</span></p>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="servidor.html"><strong><span lang="es">Modo servidor</span><span lang="en">Server mode</span></strong><span><span lang="es">Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.</span><span lang="en">A system-wide Tramtai that starts with the computer, with nobody signed in, and opens from other computers over HTTPS.</span></span></a>
+  <a class="tarjeta-tema" href="ajustes.html"><strong><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></strong><span><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Launch at sign-in, default model, files, history and updates.</span></span></a>
+  <a class="tarjeta-tema" href="espacios.html"><strong><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></strong><span><span lang="es">La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.</span><span lang="en">The global one and one per project, each with its own history, APIs and settings.</span></span></a>
+</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+</body>
+</html>

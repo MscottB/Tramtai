@@ -9,7 +9,11 @@ correspondencia completa está en el [glosario](GLOSARIO.md).
 | Paquete | Responsabilidad |
 |---|---|
 | `internal/nucleo` | Tipos de dominio: `SolicitudEjecucion` (validación y huella SHA-256), `Trabajo` (modelo enviado, modelo efectivo y uso), estados y transiciones, códigos de error estables y presupuestos. No sabe de archivos ni del sistema operativo. |
-| `internal/carpetas` | La raíz de usuario (`RaizUsuario`, `DirDatos`): `%APPDATA%\tramtai` o, con `portable.txt` junto al ejecutable, `datos-tramtai` a su lado, solo para el usuario (en Windows, con su ACL). También compara rutas como el sistema (`MismaRuta`, `Dentro`, `ExpandirCasa`). |
+| `internal/carpetas` | Las tres raíces: la de usuario (`RaizUsuario`, `DirDatos`: `%APPDATA%\tramtai` o, con `portable.txt` junto al ejecutable, `datos-tramtai` a su lado, solo para el usuario; en Windows, con su ACL) y la del servidor (`RaizServidor`: `/var/lib/tramtai` o `%ProgramData%\Tramtai`), que eligen `--servidor` o `TRAMTAI_SERVIDOR=1` (`Servidor`, `UsarServidor`); `Entorno` dice cuál es (servidor, portable o escritorio). También compara rutas como el sistema (`MismaRuta`, `Dentro`, `ExpandirCasa`). |
+| `internal/servidor` | El modo servidor: instala, actualiza y quita el servicio del sistema (la unidad systemd en Linux, con su paquete `.deb`/`.rpm`; el servicio `Tramtai` con su cuenta virtual en Windows), guarda las claves del servidor (`systemd-creds` o la API de administración), aplica las reglas de exposición antes de arrancar (`ComprobarArranque`), lee las cabeceras de los proxies de confianza (`ClienteReal`, `EsHTTPS`) y pone el TLS propio y Let’s Encrypt. Ver [el servidor](#el-servidor). |
+| `internal/terminos` | La aceptación expresa de `TERMINOS.md` en `datos/terminos.json` de cada entorno (versión, fecha y cómo) y los cinco riesgos (`Riesgos`), el mismo texto que `riesgos.*` de la Web UI. |
+| `internal/totp` | El segundo factor del administrador del servidor: RFC 6238 con la biblioteca estándar. |
+| `internal/autoarranque` | El arranque al iniciar sesión, de dos maneras (`ModoApp`, la app en la bandeja, y `ModoServicio`, solo el servicio): `HKCU\…\Run`, el LaunchAgent o el `.desktop`. |
 | `internal/persistencia` | SQLite en modo WAL sin CGO (`modernc.org/sqlite`) con migraciones numeradas (`PRAGMA user_version`). Aceptación atómica, idempotencia, eventos numerados y recuperación tras reinicio. |
 | `internal/planificador` | Cola acotada, concurrencia por instancia, semáforo por adaptador, tiempos máximos, cancelación idempotente y resolución del perfil de modelo al aceptar. |
 | `internal/procesos` | Supervisión de procesos. En Windows crea el proceso suspendido, lo asigna a un Job Object con `KILL_ON_JOB_CLOSE` y lo reanuda; en Unix usa un grupo de procesos con SIGTERM y luego SIGKILL. Cancelar o agotar el tiempo termina el árbol completo; si no se confirma, devuelve `cancelacion_no_confirmada`. |
@@ -30,7 +34,7 @@ correspondencia completa está en el [glosario](GLOSARIO.md).
 | `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. La Ayuda son datos (`web/src/ayuda`): la app los muestra y `npm run sitio` genera con ellos `site/ayuda/`. |
 | `escritorio/` | Aplicación de escritorio con Wails v3 en un módulo Go aparte, para que el núcleo siga sin CGO. Es un cliente del servicio: lo inicia si hace falta y muestra la misma Web UI en su ventana. Solo usa `cliente` y `contrato`, no el servicio. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
-| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. `tramtai acceso` guarda las APIs por la API del servicio (`/api/v1/servicio/puntos`, con el token de servicio), como la terminal y la app de escritorio usan `internal/cliente`; `tramtai ejecutar` sin servicio usa su propia base, y `tramtai servicio` es el propio servicio. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
+| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. `tramtai acceso` guarda las APIs por la API del servicio (`/api/v1/servicio/puntos`, con el token de servicio), como la terminal y la app de escritorio usan `internal/cliente`; `tramtai ejecutar` sin servicio usa su propia base, y `tramtai servicio` es el propio servicio. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`, `terminos` y, en el modo servidor, `servidor` y `administrador` (los nuevos llevan su alias en inglés). Detalle en [operacion.md](operacion.md). |
 
 ## Agentes
 
@@ -109,7 +113,93 @@ intente manipular al modelo; sí que un modelo manipulado haga daño a través d
 - **Procesos:** cada CLI en un grupo que se termina entero (Job Object en Windows), sin shell, con un tope de 8 MB por
   línea de salida y sin los secretos del entorno (claves, contraseñas, URL con credenciales, `TRAMTAI_*`).
 - **Salida:** las claves de proveedor se tapan; la Web UI muestra Markdown solo como HTML limpio (DOMPurify) bajo una
-  CSP estricta; un error del CLI no puede escribir líneas falsas en el registro.
+  CSP estricta; un error del CLI no puede escribir líneas falsas en el registro. Una clave codificada (base64, por
+  ejemplo) no se reconoce: ver el riesgo de Codex en [el modelo de amenazas del servidor](#modelo-de-amenazas-del-servidor).
+
+## El servidor
+
+El modo servidor (v0.58) no cambia el servicio por dentro, solo dónde vive y quién llega a él. Guía de uso:
+[servidor.md](servidor.md).
+
+### Tercera raíz y dos entornos
+
+`internal/carpetas` suma la raíz del servidor a la de usuario y la portable: `/var/lib/tramtai` en Linux y
+`%ProgramData%\Tramtai` en Windows, con lo de siempre dentro (`config.yaml`, `datos/`, el registro y el conversor). La
+eligen `--servidor` (o `--server`) en la CLI y `TRAMTAI_SERVIDOR=1`, que ponen la unidad y el servicio. El servicio del
+sistema tiene su puerto (17373, o el siguiente libre si el del usuario lo ocupa), su descriptor y su cerrojo, así que
+convive con el Tramtai del usuario: son dos entornos que no comparten nada, y la CLI sin `--servidor` sigue hablando con
+el del usuario. La carpeta solo la usan la cuenta del servicio y los administradores: 0700 con dueño `tramtai` en Linux;
+en Windows, una DACL protegida con `SYSTEM`, `Administradores` y `NT SERVICE\Tramtai`. Lo que la CLI escribe como root
+en ella pasa por `os.Root` (sin seguir enlaces) y queda a nombre de `tramtai` al terminar cada orden.
+
+### El servicio del sistema
+
+- **Linux:** `tramtai.service` (en `/etc/systemd/system`, o en `/usr/lib/systemd/system` con el paquete y sus ajustes en
+  el drop-in `10-tramtai.conf`), con `User=tramtai`, `StateDirectory=tramtai`, `Restart=on-failure`, `KillMode=mixed` (el
+  SIGTERM va al servicio, que drena, y no a los CLI) y un plazo de parada mayor que el de drenaje. Va endurecida:
+  `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, `PrivateDevices`, escritura solo en su carpeta,
+  `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK`, `CapabilityBoundingSet=` vacío y `UMask=0077`, entre
+  otras. Sin `MemoryDenyWriteExecute`, `RestrictNamespaces`, `SystemCallFilter`, `ProcSubset=pid` ni `PrivateUsers`, que
+  rompen los CLI de los agentes (el JIT de Node de Claude Code y Copilot). `CAP_NET_BIND_SERVICE` solo con Let’s Encrypt
+  o un puerto menor de 1024. `servidor instalar` y `servidor reiniciar` la regeneran con la configuración del momento.
+- **Windows:** un servicio con `golang.org/x/sys/windows/svc`, `Tramtai` («Tramtai (servidor)»), con la cuenta virtual
+  `NT SERVICE\Tramtai`, arranque automático retrasado y reinicio si se cae (también tras un «Reiniciar», que sale con un
+  código propio distinto de cero). Detenerlo drena como `tramtai servicio detener`, y los Job Objects funcionan igual.
+- **Administración:** `tramtai-servidor <orden>` es `tramtai --servidor <orden>` con el programa del servidor
+  (`/opt/tramtai/tramtai` o `C:\Program Files\Tramtai Servidor\tramtai.exe`). Con privilegios en el servidor, la CLI no
+  ejecuta agentes ni el servicio en primer plano (`agentes`, `ejecutar` sin el servicio, `servicio iniciar`): ejecutaría
+  como root los programas de `comandos_agentes`, que la cuenta del servicio puede cambiar en `config.yaml`. Con
+  `--servidor`, nunca detiene ni sustituye un servicio del sistema de otra versión.
+- **Actualizar:** `servidor actualizar` reutiliza `internal/actualizacion` (firma ed25519 de `SHA256SUMS.txt` y suma
+  SHA-256), drena, cambia el programa dejando el anterior como `.anterior` y ejecuta el nuevo con `servidor reiniciar`
+  para regenerar la unidad. Lanzado desde otra copia, delega en el programa instalado; con el paquete, remite a apt o dnf.
+
+### Claves del servidor
+
+| Clave | Windows Server | Linux |
+|---|---|---|
+| De proveedor y token de GitHub para Copilot | Administrador de credenciales de la cuenta del servicio (DPAPI, sin sesión); la CLI se la entrega al servicio por la API de administración | `systemd-creds` (con TPM2 si lo hay) en `/etc/credstore.encrypted/tramtai.<NOMBRE>`, entregadas en `$CREDENTIALS_DIRECTORY`; sin `systemd-creds` (systemd < 250), `/etc/tramtai/claves.env` de root, con aviso |
+| Secreto TOTP del administrador (`TRAMTAI_TOTP`) | igual | igual (solo la CLI lo activa o lo quita) |
+| Contraseña del administrador y códigos de recuperación | solo su huella argon2id (m=64 MiB, t=3, p=1) en `datos/administrador` y `datos/administrador-recuperacion` | igual |
+| De los espacios y de las APIs | solo su huella `sha256:` | igual |
+| `token-servicio` | archivo en `datos/` que solo leen la cuenta del servicio y los administradores | igual (0600, dueño `tramtai`) |
+
+`internal/credenciales` en Linux lee primero `$CREDENTIALS_DIRECTORY/tramtai.<NOMBRE>` y después Secret Service y la
+variable de entorno. Ninguna clave se guarda desde la Web UI.
+
+### Modelo de amenazas del servidor
+
+- **Red:** expuesto es `servicio.host` fuera de loopback o `servicio.proxy.confiables` no vacío. `ComprobarArranque`
+  impide arrancar con un host fuera de loopback sin `permitir_remoto` o sin TLS propio, con una suscripción que no es la
+  personal (o personal sin TOTP), con Let’s Encrypt incompleto o con un certificado que no cubre `servicio.dominios`.
+  `Host` y `Origin` solo valen para loopback y `servicio.dominios`; los plazos de lectura y el tope de cabeceras son los
+  de siempre, en un constructor común del `http.Server`. TLS propio solo 1.3 (X25519MLKEM768 de Go 1.27), HSTS de un año.
+- **Proxy:** `X-Forwarded-For`, `-Proto` y `-Host` solo se creen desde `servicio.proxy.confiables` (nunca redes más
+  anchas que /8 o /32 en IPv6); la dirección del cliente es la última de `X-Forwarded-For` que no es de confianza.
+  En el oyente público, una petición desde un proxy de confianza nunca es local, aunque no traiga cabeceras; la CLI, la
+  terminal y la app usan un oyente local aparte en `127.0.0.1`. `Forwarded`, `Via` y `X-Real-Ip` desde fuera no cambian
+  nada.
+- **Inicio de sesión:** solo con TLS propio o desde un proxy de confianza con `X-Forwarded-Proto: https`; el mismo
+  mensaje para contraseña y código; 5 fallos por dirección dan 15 minutos de espera y 100 en 10 minutos, 5 minutos para
+  todos salvo las redes que entraron bien en 30 días; como mucho 2 cálculos de argon2id a la vez, dentro de los que se
+  cuenta cada fallo; TOTP sin reutilizar un paso; cookie `__Host-` con `Secure`, `HttpOnly` y `SameSite=Strict`, más
+  `X-CSRF-Token`; caducidad de 12 h sin uso; cambiar la contraseña o «Cerrar todas las sesiones» cierran también los
+  flujos SSE abiertos; cuerpos de `/ui/acceder` y `/ui/sesion` de 64 KB como mucho; sin redirecciones a URL de la
+  petición. Expuesto, el token de servicio solo vale desde este equipo (desde fuera, 403 en cualquier ruta). Las claves
+  falsas en las APIs: 30 por dirección en un minuto dan un minuto de espera (429); ese freno falla abierto si se satura,
+  porque las claves son de 256 bits.
+- **ACME:** `autocert` con TLS-ALPN-01 en el 443 (no abre el 80), `HostPolicy` limitada a `servicio.dominios` y caché en
+  `datos/acme` (0700).
+- **Suscripción remota:** solo la personal, con TOTP obligatorio, `suscripcion_simultaneas` (1 a 3) por agente en todo
+  el servidor y clave de seguridad (no desde `local.yaml` ni desde una sesión remota). Tramtai nunca guarda un token de
+  sesión de Claude: el inicio de sesión lo hace el CLI con la cuenta del servicio.
+- **Riesgo residual de Codex:** Codex corre con `-s read-only`, que lee todo lo que lee la cuenta del servicio. Quien
+  tenga un token que pueda usar Codex (el de un punto de acceso sin `modelos_permitidos`, o con Codex en ellos o en su
+  respaldo, y el token de la instancia, que vale para cualquier agente) puede pedirle que lea `$CREDENTIALS_DIRECTORY`
+  (las claves de proveedor y `TRAMTAI_TOTP`) y `datos/administrador`, y la redacción de secretos no detiene una clave
+  codificada. No hay arreglo en Tramtai sin quitarle a Codex la lectura: la guía pide dar esos tokens solo a personas de
+  confianza y, en los puntos de acceso de otros, `modelos_permitidos` sin Codex (vacío permite cualquier agente) y un
+  respaldo sin Codex, o desconectar Codex. Detalle en [revisión de seguridad](equipo/releases/v0.58-servidor/revision-seguridad.md).
 
 ## Interfaces
 
@@ -123,6 +213,8 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 La Web UI se enlaza a una instancia (un espacio de trabajo: el global o el de un proyecto) con una sesión:
 
 - **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`; en macOS, con el `so_uid` de `net.inet.tcp.pcblist_n` (la tabla que lee `netstat`). Se comprueba una vez por conexión. No se aplica si la petición trae cabeceras de proxy (`Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Real-Ip`, `Via`), ni con `servicio.permitir_remoto`, porque un proxy o túnel del mismo usuario reenviaría peticiones de otros equipos. Se desactiva con `servicio.entrada_local: false`.
+- **Contraseña del administrador (modo servidor):** desde otros equipos, por HTTPS, con TOTP opcional. Ver
+  [el servidor](#modelo-de-amenazas-del-servidor).
 - **Código de un solo uso:** la otra forma de entrar. Lo piden `tramtai abrir` o la app de escritorio con el token de servicio (un minuto de validez). Es lo que se usa cuando no se puede entrar directamente: otro usuario del equipo, `servicio.entrada_local: false` o un sistema donde no se identifica al dueño. Un código canjeado desde este equipo (loopback y sin cabeceras de proxy) abre una sesión local, como la entrada directa: solo el dueño del servicio puede pedirlo. Con el servicio expuesto en red, la Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio, y esa sesión no es local.
 - **La clave de las aplicaciones no abre la Web UI:** `POST /ui/sesion` con una clave responde 401. Quien tuviera esa clave podría, si no, crear APIs y cambiar la configuración.
 - **Por qué es seguro:** la entrada directa protege frente a otros usuarios del equipo, y eso es justo lo que se comprueba. Una página web ajena no puede aprovecharla: Host, Origin, la cookie `SameSite=Strict` y el CSRF la bloquean, y las aplicaciones siguen necesitando su clave para la API.

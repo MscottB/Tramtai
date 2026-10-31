@@ -20,6 +20,8 @@ registro` desde una consola de administrador): la línea «acceso correcto del
 administrador desde …» debe tener tu dirección y no `127.0.0.1`. Si no puedes entrar, el túnel no envía esas cabeceras
 o cambia el `Host`.
 
+Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.
+
 ## Cloudflare Tunnel
 
 `cloudflared tunnel` con un nombre público que apunte a `http://127.0.0.1:17373`.
@@ -66,6 +68,8 @@ tunnel, sign in once and check the log (`sudo tramtai-servidor log` on Linux; on
 administrator console): the line “acceso correcto del administrador
 desde …” must show your address, not `127.0.0.1`. If you can’t sign in, the tunnel isn’t sending those headers or it
 changes the `Host`.
+
+Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.
 
 ## Cloudflare Tunnel
 

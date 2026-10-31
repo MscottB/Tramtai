@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -74,6 +74,38 @@ test('no hay capturas que nadie cite y entre todas no pasan de 5 MB', () => {
   for (const a of archivos) assert.ok(todas.has(a.split('.')[0]), `${a} no la cita ningún tema`)
   const total = archivos.reduce((s, a) => s + statSync(new URL(a, carpeta)).size, 0)
   assert.ok(total <= 5 * 1024 * 1024, `las capturas pesan ${total} bytes`)
+})
+
+// v0.58: las capturas del modo servidor salen de un Tramtai en modo servidor detrás de Caddy, en contenedores.
+test('las capturas del servidor son las de Ajustes → Servidor y Seguridad, la entrada y la marca', () => {
+  assert.deepEqual(CAPTURAS.filter((c) => c.servidor).map((c) => c.id).sort(), ['entrar', 'marca', 'seguridad', 'servidor'])
+  assert.ok(CAPTURAS.some((c) => c.id === 'arranque' && !c.servidor), 'Ajustes → Arranque sale del Tramtai de escritorio')
+})
+
+// Tarea 14 de la v0.56, hecha en la v0.58: la terminal se pinta en ANSI y se convierte a HTML para la captura.
+test('ansiAHtml: un color, negrita, restablecer, 256 colores, inverso y lo que no es color', () => {
+  const tema = { fondo: '#ffffff', texto: '#0f1b1e' }
+  assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb<\x1b[0mc', tema), 'a<span style="color:#0b6e64;font-weight:bold">b&lt;</span>c')
+  assert.equal(ansiAHtml('\x1b[38;5;196mx\x1b[m', tema), '<span style="color:#ff0000">x</span>')
+  assert.equal(ansiAHtml('\x1b[7my\x1b[27mz', tema), '<span style="color:#ffffff;background:#0f1b1e">y</span>z')
+  assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\', tema), 'uv', 'sin borrados de línea ni enlaces OSC 8')
+})
+
+test('las 16 capturas de la terminal existen y pesan poco', () => {
+  const portada = new URL('../../site/capturas/', import.meta.url)
+  let total = 0
+  for (const p of TERMINAL)
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en'])
+        for (const ancho of [960, 1440]) {
+          const archivo = `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`
+          const tamano = statSync(new URL(archivo, portada), { throwIfNoEntry: false })?.size
+          assert.ok(tamano, `falta ${archivo}`)
+          assert.ok(tamano <= 150 * 1024, `${archivo} pesa ${tamano} bytes`)
+          total += tamano
+        }
+  assert.deepEqual(TERMINAL.map((p) => p.nombre), ['inicio', 'apis'])
+  assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
 })
 
 test('cada pantalla de la portada existe en WebP, en claro y oscuro, a 640, 960 y 1440 px', () => {

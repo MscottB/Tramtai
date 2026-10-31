@@ -17,7 +17,7 @@
     <!-- Con el teclado, el primer Tab ofrece saltarse la cabecera y el menú. Es un botón y no un enlace a #contenido:
          el hash es la página que se muestra. -->
     <button type="button" class="saltar" @click="enfocarContenido">{{ t('app.saltar') }}</button>
-    <q-header class="cabecera-app">
+    <q-header class="cabecera-app" data-captura="marca">
       <q-toolbar class="q-px-md" style="min-height: 60px">
         <q-btn flat dense round icon="menu" :aria-label="t('app.abrirMenu')" class="lt-md q-mr-sm" @click="menu = !menu" />
         <button type="button" class="marca-boton" :aria-label="t('app.irInicio')" @click="ir('inicio')">

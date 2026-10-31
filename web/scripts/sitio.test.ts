@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
-import { ANCLAS_VIEJAS, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, type Fuente } from './sitio.ts'
+import { ANCLAS_VIEJAS, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
 
 const fuente: Fuente = {
   temas, es, en, capturas: new Map([['inicio.claro.es.webp', { ancho: 1280, alto: 720 }]]),
@@ -65,9 +65,9 @@ test('el script de la página de paso funciona tal cual sale en ayuda.html', () 
   }
 })
 
-test('el índice de búsqueda tiene los 16 temas en los dos idiomas', () => {
+test('el índice de búsqueda tiene los 18 temas en los dos idiomas', () => {
   const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
-  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 16)
+  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 18)
 })
 
 const leer = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
@@ -89,8 +89,36 @@ test('cada #ancla interno de la portada, la guía y la Ayuda lleva a un id que e
   assert.match(todas.get('ayuda/empezar.html')!, /<section id="s-soloterminal"><h2><span lang="es">Solo con la terminal<\/span><span lang="en">Terminal only<\/span><\/h2>/)
 })
 
-test('la portada y la guía tienen al día la cabeza, la barra y el pie de sitio.ts', () => {
-  for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
+test('la portada y las guías tienen al día la cabeza, la barra, el pie y el aviso de sitio.ts', () => {
+  assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'desarrolladores.html', 'servidor.html'])
+  for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p, { es, en }), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
+})
+
+// Los cinco riesgos (spec §10) son un solo texto, riesgos.* de los catálogos: el sitio, el README y la guía del
+// servidor los toman de ahí al generar, nunca copiados a mano. Sin el modo servidor, el 3 y el 4 llevan su variante.
+test('riesgos da los cinco riesgos de los catálogos, con la variante del escritorio en el 3 y el 4', () => {
+  assert.deepEqual(riesgos(es, true), [1, 2, 3, 4, 5].map((n) => es[`riesgos.${n}` as keyof typeof es]))
+  assert.deepEqual(riesgos(en, false), [en['riesgos.1'], en['riesgos.2'], en['riesgos.3.sinServidor'], en['riesgos.4.sinServidor'], en['riesgos.5']])
+})
+
+test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en los dos idiomas', () => {
+  for (const [archivo, servidor] of [['index.html', false], ['servidor.html', true]] as const) {
+    const html = fijas.get(archivo)!
+    const zona = html.match(new RegExp(`<!-- comun:${servidor ? 'riesgos-servidor' : 'riesgos'} -->([\\s\\S]*?)<!-- /comun:`))?.[1] ?? ''
+    for (const [i, r] of riesgos(es, servidor).entries()) assert.ok(zona.includes(`<span lang="es">${escapar(r)}</span>`), `${archivo}: riesgo ${i + 1} en español`)
+    for (const [i, r] of riesgos(en, servidor).entries()) assert.ok(zona.includes(`<span lang="en">${escapar(r)}</span>`), `${archivo}: riesgo ${i + 1} en inglés`)
+    assert.match(html, /href="https:\/\/github\.com\/MscottB\/Tramtai\/blob\/main\/TERMINOS\.md"/, `${archivo}: el aviso lleva a los términos`)
+  }
+})
+
+test('el README y la guía del servidor tienen al día el aviso de riesgos.* (npm run sitio)', () => {
+  for (const [ruta, zonas] of [['../../README.md', ['riesgos:es', 'riesgos:en']], ['../../docs/servidor.md', ['riesgos-servidor:es', 'riesgos-servidor:en']]] as const) {
+    const md = readFileSync(new URL(ruta, import.meta.url), 'utf8')
+    for (const z of zonas) assert.ok(md.includes(`<!-- ${z} -->`), `${ruta}: falta la zona ${z}`)
+    assert.equal(rellenarMarkdown(md, es, en), md, `${ruta}: cd web; npm run sitio`)
+  }
+  const ejemplo = rellenarMarkdown('a\n<!-- riesgos-servidor:en -->\nviejo\n<!-- /riesgos-servidor:en -->\nb', es, en)
+  assert.equal(ejemplo, `a\n<!-- riesgos-servidor:en -->\n${riesgos(en, true).map((r, i) => `${i + 1}. ${r}`).join('\n')}\n<!-- /riesgos-servidor:en -->\nb`)
 })
 
 test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
@@ -98,7 +126,7 @@ test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
     const zona = (html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '') + (html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '')
     return [...zona.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1].replace(URL_SITIO, '').replace(/^(\.\.\/|\.\/)+/, ''))
   }
-  const esperados = ['#descargar', 'ayuda/empezar.html', '#agentes', 'ayuda/', 'desarrolladores.html', 'https://github.com/MscottB/Tramtai',
+  const esperados = ['#descargar', 'ayuda/empezar.html', '#agentes', 'ayuda/', 'desarrolladores.html', 'servidor.html', 'https://github.com/MscottB/Tramtai',
     'https://github.com/MscottB/Tramtai/releases', 'https://github.com/MscottB/Tramtai/blob/main/LICENSE.md', 'https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md']
   const casos: [string, string][] = [...fijas, ['ayuda/agentes.html', paginas.get('ayuda/agentes.html')!], ['404.html', paginas.get('404.html')!]]
   for (const [ruta, html] of casos) {
@@ -171,11 +199,11 @@ test('Empezar avisa, junto al botón de descargar, del CLI del agente y del avis
   assert.match(tras.slice(0, 1500), /Antes necesitas el CLI de al menos un agente[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
 })
 
-test('sitemap.xml lista la portada, la guía, la Ayuda y sus 16 temas', () => {
+test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 18 temas', () => {
   const urls = [...paginas.get('sitemap.xml')!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
-  for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
+  for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'servidor.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
     assert.ok(urls.includes(u), u)
-  assert.equal(urls.length, 3 + 16)
+  assert.equal(urls.length, 4 + 18)
 })
 
 test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absolutas', () => {

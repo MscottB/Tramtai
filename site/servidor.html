@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Server mode · Tramtai">Modo servidor · Tramtai</title>
+<meta name="description" content="Tramtai en un servidor Linux o Windows Server: arranca con el equipo, se abre desde otros equipos solo por HTTPS y con la contraseña del administrador, y es otro entorno, aparte del tuyo.">
+<!-- comun:cabeza -->
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/servidor.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/servidor.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Modo servidor · Tramtai">
+<meta property="og:description" content="Tramtai en un servidor Linux o Windows Server: arranca con el equipo, se abre desde otros equipos solo por HTTPS y con la contraseña del administrador, y es otro entorno, aparte del tuyo.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="estilo.css">
+<script src="sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+<!-- /comun:cabeza -->
+</head>
+<body>
+<!-- comun:cabecera -->
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="./"><img src="favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="./#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="./#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="./#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+        <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="./#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+<!-- /comun:cabecera -->
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+  <nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+    <ol>
+      <li><a href="#que-es"><span lang="es">Qué es</span><span lang="en">What it is</span></a></li>
+      <li><a href="#aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
+      <li><a href="#entornos"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+      <li><a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a></li>
+      <li><a href="#red"><span lang="es">Abrir a la red</span><span lang="en">Open to the network</span></a></li>
+      <li><a href="#administrador"><span lang="es">Administrador</span><span lang="en">Administrator</span></a></li>
+      <li><a href="#claves"><span lang="es">Claves y suscripción</span><span lang="en">Keys and subscription</span></a></li>
+      <li><a href="#actualizar"><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></a></li>
+      <li><a href="#problemas"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
+    </ol>
+  </nav>
+
+  <article class="doc">
+    <header>
+      <h1><span lang="es">Tramtai en un servidor</span><span lang="en">Tramtai on a server</span></h1>
+      <p class="suave">
+        <span lang="es">Nuevo en la v0.58: un Tramtai del sistema que arranca con el equipo, sin que nadie inicie sesión, y que puedes usar, igual que tus apps, desde otros equipos por HTTPS.</span>
+        <span lang="en">New in v0.58: a system-wide Tramtai that starts with the computer, with nobody signed in, and that you and your apps use from other computers over HTTPS.</span>
+      </p>
+    </header>
+
+    <section id="que-es">
+      <h2><span lang="es">Qué es</span><span lang="en">What it is</span></h2>
+      <div lang="es">
+        <p>El mismo Tramtai, instalado como servicio del sistema en <strong>Linux con systemd</strong> o en <strong>Windows Server</strong> (también Server Core). Tiene su propia cuenta, sin privilegios, sus datos en una carpeta del sistema y su propio puerto. macOS no tiene servicio del sistema: allí está «Solo el servicio», que arranca al iniciar sesión.</p>
+        <p>Es un <strong>servidor personal, con un solo administrador</strong>. Se abre desde otros equipos solo por HTTPS, con la contraseña del administrador y, si quieres, un segundo factor (TOTP). Varias cuentas o permisos por persona no están en esta versión.</p>
+      </div>
+      <div lang="en">
+        <p>The same Tramtai, installed as a system service on <strong>Linux with systemd</strong> or <strong>Windows Server</strong> (Server Core too). It has its own unprivileged account, its data in a system folder and its own port. macOS has no system service: there you have “Just the service”, which starts when you sign in.</p>
+        <p>It’s a <strong>personal server with a single administrator</strong>. It opens from other computers over HTTPS only, with the administrator password and, if you want, a second factor (TOTP). Several accounts or per-person permissions aren’t in this version.</p>
+      </div>
+    </section>
+
+    <section id="aviso">
+      <h2><span lang="es">Aviso</span><span lang="en">Notice</span></h2>
+      <div lang="es">
+        <p>Antes de instalarlo, el servidor te pide aceptar los términos escribiendo «acepto». Estos son los cinco riesgos que asumes:</p>
+      </div>
+      <div lang="en">
+        <p>Before installing, the server asks you to accept the terms by typing “acepto” (Spanish for “I accept”). These are the five risks you take on:</p>
+      </div>
+<!-- comun:riesgos-servidor -->
+<ol class="riesgos">
+  <li><span lang="es">Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.</span><span lang="en">Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.</span></li>
+  <li><span lang="es">Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.</span><span lang="en">Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.</span></li>
+  <li><span lang="es">Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.</span><span lang="en">What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.</span></li>
+  <li><span lang="es">Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.</span><span lang="en">If other people use your server, you answer for their data under the law that applies to you.</span></li>
+  <li><span lang="es">Tramtai es gratuito y se entrega tal cual, sin garantías.</span><span lang="en">Tramtai is free and provided as is, without warranties.</span></li>
+</ol>
+<!-- /comun:riesgos-servidor -->
+      <p><a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Los términos de uso completos</span><span lang="en">The full terms of use</span></a></p>
+    </section>
+
+    <section id="entornos">
+      <h2><span lang="es">Dos entornos</span><span lang="en">Two environments</span></h2>
+      <div lang="es">
+        <p>Tu Tramtai y el del servidor <strong>no comparten nada</strong>: cada uno tiene sus espacios, APIs, claves, sesiones de los CLI, historial y ajustes. Una API de tu equipo no existe en el servidor, ni al revés. La cabecera de la Web UI y la terminal dicen siempre en cuál estás: «Servidor» o «Este equipo».</p>
+        <div class="tabla"><table>
+          <thead><tr><th></th><th>Tu Tramtai</th><th>El del servidor</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Arranca</th><td>Al iniciar sesión, o cuando lo abres</td><td>Con el equipo, sin sesión</td></tr>
+            <tr><th scope="row">Cuenta</th><td>La tuya</td><td><code>tramtai</code> o <code>NT SERVICE\Tramtai</code></td></tr>
+            <tr><th scope="row">Datos</th><td>Tu carpeta de Tramtai</td><td><code>/var/lib/tramtai</code> o <code>%ProgramData%\Tramtai</code></td></tr>
+            <tr><th scope="row">Claves de los agentes</th><td>El almacén cifrado de tu sesión</td><td>El de la cuenta del servicio (Windows) o <code>systemd-creds</code> (Linux)</td></tr>
+            <tr><th scope="row">Se administra con</th><td><code>tramtai</code>, la app y la Web UI</td><td><code>tramtai-servidor</code> como administrador, y la Web UI</td></tr>
+            <tr><th scope="row">Web UI desde otro equipo</th><td>No, por defecto</td><td>Sí, por HTTPS y con contraseña</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div lang="en">
+        <p>Your Tramtai and the server’s <strong>share nothing</strong>: each has its own workspaces, APIs, keys, CLI sessions, history and settings. An API on your computer doesn’t exist on the server, or the other way around. The Web UI header and the terminal always say which one you’re in: “Server” or “This device”.</p>
+        <div class="tabla"><table>
+          <thead><tr><th></th><th>Your Tramtai</th><th>The server’s</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Starts</th><td>When you sign in, or when you open it</td><td>With the computer, without a session</td></tr>
+            <tr><th scope="row">Account</th><td>Yours</td><td><code>tramtai</code> or <code>NT SERVICE\Tramtai</code></td></tr>
+            <tr><th scope="row">Data</th><td>Your Tramtai folder</td><td><code>/var/lib/tramtai</code> or <code>%ProgramData%\Tramtai</code></td></tr>
+            <tr><th scope="row">Agents’ keys</th><td>Your session’s encrypted store</td><td>The service account’s store (Windows) or <code>systemd-creds</code> (Linux)</td></tr>
+            <tr><th scope="row">Managed with</th><td><code>tramtai</code>, the app and the Web UI</td><td><code>tramtai-servidor</code> as administrator, and the Web UI</td></tr>
+            <tr><th scope="row">Web UI from another computer</th><td>No, by default</td><td>Yes, over HTTPS with a password</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="instalar">
+      <h2><span lang="es">Instalar</span><span lang="en">Install</span></h2>
+      <div lang="es">
+        <p><strong>Linux.</strong> Descarga de <a href="https://github.com/MscottB/Tramtai/releases/latest">Releases</a> el <code>.tar.gz</code> de tu arquitectura (amd64 o arm64) y <code>SHA256SUMS.txt</code>, comprueba la suma e instala como root. O instala el paquete del servidor (<code>Tramtai-…-servidor-linux-….deb</code> o <code>.rpm</code>), que convive con el de escritorio, y después <code>sudo tramtai-servidor instalar</code>: el paquete por sí solo no arranca nada, porque antes tienes que aceptar los términos.</p>
+        <p><strong>Windows Server.</strong> Descomprime el <code>.zip</code> portable y, en una consola de administrador, <code>.\tramtai.exe servidor instalar</code>. Crea el servicio «Tramtai (servidor)» con su cuenta virtual y deja <code>tramtai-servidor</code> en el PATH del sistema.</p>
+        <p>Al terminar, te dice cómo seguir: la contraseña del administrador, el HTTPS (o un proxy) y las claves de los agentes. Repetir la instalación es seguro.</p>
+      </div>
+      <div lang="en">
+        <p><strong>Linux.</strong> Download your architecture’s <code>.tar.gz</code> (amd64 or arm64) and <code>SHA256SUMS.txt</code> from <a href="https://github.com/MscottB/Tramtai/releases/latest">Releases</a>, check the sum and install as root. Or install the server package (<code>Tramtai-…-servidor-linux-….deb</code> or <code>.rpm</code>), which lives next to the desktop one, and then <code>sudo tramtai-servidor install</code>: the package alone starts nothing, because you have to accept the terms first.</p>
+        <p><strong>Windows Server.</strong> Unzip the portable <code>.zip</code> and, in an administrator console, run <code>.\tramtai.exe server install</code>. It creates the “Tramtai (servidor)” service with its virtual account and puts <code>tramtai-servidor</code> on the system PATH.</p>
+        <p>When it finishes, it tells you what’s next: the administrator password, HTTPS (or a proxy) and the agents’ keys. Running the install again is safe.</p>
+      </div>
+<pre class="codigo"><code>sha256sum -c --ignore-missing SHA256SUMS.txt
+tar xzf tramtai-*-linux-amd64.tar.gz &amp;&amp; cd tramtai
+sudo ./tramtai servidor instalar
+sudo tramtai-servidor administrador contraseña</code></pre>
+    </section>
+
+    <section id="red">
+      <h2><span lang="es">Abrir a la red</span><span lang="en">Open to the network</span></h2>
+      <div lang="es">
+        <p>Al instalarlo, el servidor solo atiende a este mismo equipo. Para usarlo desde otros, <strong>siempre con HTTPS</strong>: si lo abres a la red sin él, no arranca, porque tus claves viajarían sin cifrar. Hay tres formas:</p>
+        <ul>
+          <li><strong>Detrás de un proxy (la recomendada):</strong> el que ya uses pone el HTTPS y Tramtai sigue atendiendo solo a este equipo. Hay un ejemplo listo para cada uno. Si no es uno de estos, el proxy tiene que usar TLS 1.3, enviar <code>X-Forwarded-Proto</code>, conservar el <code>Host</code> y no guardar las respuestas en búfer.</li>
+          <li><strong>Con tu certificado:</strong> Tramtai pone su propio HTTPS, solo con TLS 1.3, y vuelve a leer el certificado cuando lo renuevas.</li>
+          <li><strong>Con Let’s Encrypt:</strong> Tramtai saca y renueva el certificado solo, por el puerto 443.</li>
+        </ul>
+        <div class="tabla"><table>
+          <thead><tr><th>Proxy</th><th>Ejemplo</th><th>Comprobado</th></tr></thead>
+          <tbody>
+            <tr><td>Caddy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/caddy/Caddyfile">Caddyfile</a></td><td>En el CI, en cada cambio</td></tr>
+            <tr><td>nginx</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/nginx/tramtai.conf">tramtai.conf</a></td><td>En el CI, en cada cambio</td></tr>
+            <tr><td>Apache httpd</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/apache/tramtai.conf">tramtai.conf</a></td><td>En el CI, en cada cambio</td></tr>
+            <tr><td>Traefik</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/traefik/tramtai.yml">tramtai.yml</a></td><td>En el CI, en cada cambio</td></tr>
+            <tr><td>HAProxy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/haproxy/haproxy.cfg">haproxy.cfg</a></td><td>En el CI, en cada cambio</td></tr>
+            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Pendiente: se comprueba a mano antes de publicar</td></tr>
+          </tbody>
+        </table></div>
+        <p><strong>Túneles:</strong> Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puertos (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">cómo</a>). Con Cloudflare, el HTTPS termina en Cloudflare, que ve tus peticiones y tus claves, y corta a los 125 s una respuesta que no ha empezado: en las peticiones largas, pide la respuesta en vivo. Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.</p>
+        <p><strong>En el propio servidor:</strong> <code>tramtai-servidor abrir</code>, la tecla <kbd>W</kbd> de la terminal y la app entran directamente. Con un proxy de confianza, abrir a mano el puerto de Tramtai en el navegador del servidor cuenta como entrar desde fuera, y desde fuera no se entra sin la contraseña del administrador.</p>
+      </div>
+      <div lang="en">
+        <p>After installing, the server only serves this same computer. To use it from others, <strong>always with HTTPS</strong>: if you open it to the network without it, it won’t start, because your keys would travel unencrypted. There are three ways:</p>
+        <ul>
+          <li><strong>Behind a proxy (recommended):</strong> the one you already use provides HTTPS and Tramtai keeps serving only this computer. There’s a ready example for each. For any other proxy, it must use TLS 1.3, send <code>X-Forwarded-Proto</code>, keep the <code>Host</code> and not buffer responses.</li>
+          <li><strong>With your own certificate:</strong> Tramtai provides its own HTTPS, TLS 1.3 only, and reads the certificate again when you renew it.</li>
+          <li><strong>With Let’s Encrypt:</strong> Tramtai gets and renews the certificate itself, over port 443.</li>
+        </ul>
+        <div class="tabla"><table>
+          <thead><tr><th>Proxy</th><th>Example</th><th>Checked</th></tr></thead>
+          <tbody>
+            <tr><td>Caddy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/caddy/Caddyfile">Caddyfile</a></td><td>By CI, on every change</td></tr>
+            <tr><td>nginx</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/nginx/tramtai.conf">tramtai.conf</a></td><td>By CI, on every change</td></tr>
+            <tr><td>Apache httpd</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/apache/tramtai.conf">tramtai.conf</a></td><td>By CI, on every change</td></tr>
+            <tr><td>Traefik</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/traefik/tramtai.yml">tramtai.yml</a></td><td>By CI, on every change</td></tr>
+            <tr><td>HAProxy</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/haproxy/haproxy.cfg">haproxy.cfg</a></td><td>By CI, on every change</td></tr>
+            <tr><td>IIS</td><td><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/proxies/iis/web.config">web.config</a></td><td>Pending: checked by hand before release</td></tr>
+          </tbody>
+        </table></div>
+        <p><strong>Tunnels:</strong> Cloudflare Tunnel and Tailscale Serve or Funnel publish the server without opening ports (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">how</a>). With Cloudflare, HTTPS ends at Cloudflare, which sees your requests and your keys, and it cuts a response that hasn’t started within 125 s: for long requests, ask for the streamed response. Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.</p>
+        <p><strong>On the server itself:</strong> <code>tramtai-servidor abrir</code>, the terminal’s <kbd>W</kbd> key and the app get in directly. With a trusted proxy, opening Tramtai’s port by hand in the server’s browser counts as coming from outside, and nobody gets in from outside without the administrator password.</p>
+      </div>
+    </section>
+
+    <section id="administrador">
+      <h2><span lang="es">Administrador</span><span lang="en">Administrator</span></h2>
+      <div lang="es">
+        <p>La contraseña del administrador (12 caracteres o más) se pone en el servidor con <code>tramtai-servidor administrador contraseña</code>; de ella solo se guarda una huella. El segundo factor (TOTP), con su app de autenticación y 10 códigos de recuperación, se activa con <code>… administrador totp activar</code> o, en Windows, también en <strong>Ajustes → Seguridad</strong>. Tras 5 intentos fallidos, esa dirección espera 15 minutos, y la sesión caduca tras 12 horas sin uso.</p>
+        <p><strong>Ajustes → Servidor</strong> enseña cómo se llega al servidor (HTTPS, dominios, proxies, certificado) con la orden que cambia cada dato. No se cambia desde la Web UI: un error de red te dejaría fuera.</p>
+      </div>
+      <div lang="en">
+        <p>Set the administrator password (12 characters or more) on the server with <code>tramtai-servidor admin password</code>; only a hash of it is stored. The second factor (TOTP), with your authenticator app and 10 recovery codes, is turned on with <code>… admin totp enable</code> or, on Windows, also in <strong>Settings → Security</strong>. After 5 failed attempts, that address waits 15 minutes, and sessions expire after 12 hours idle.</p>
+        <p><strong>Settings → Server</strong> shows how the server is reached (HTTPS, domains, proxies, certificate) with the command that changes each item. It isn’t changed from the Web UI: a network mistake would lock you out.</p>
+      </div>
+    </section>
+
+    <section id="claves">
+      <h2><span lang="es">Claves y suscripción</span><span lang="en">Keys and subscription</span></h2>
+      <div lang="es">
+        <p>Las claves de los agentes se guardan cifradas, en el servidor y con la CLI (<code>tramtai-servidor claves guardar ANTHROPIC_API_KEY</code>), nunca desde la Web UI. Los CLI de los agentes tienen que estar instalados para todo el equipo, y los ejecuta el servicio con su propia cuenta.</p>
+        <p><strong>Tu suscripción:</strong> por defecto el servidor usa claves de API. Abierto a la red, solo admite tu <strong>suscripción personal</strong>: solo para ti, con TOTP y una petición a la vez (por defecto; hasta 3 con <code>suscripcion_simultaneas</code>), y el aviso «Este servidor usa tu suscripción de…» siempre a la vista. Tu proveedor puede limitar o cerrar tu cuenta igualmente (riesgo 1).</p>
+        <p class="aviso"><strong>Codex en el servidor:</strong> Codex puede leer todo lo que lee la cuenta del servicio, también las claves de los proveedores y el secreto del TOTP. Da la clave del espacio, y la de cualquier API que pueda usar Codex, solo a personas de confianza. En las APIs de otras personas, pon en <strong>Modelos permitidos</strong> solo agentes que no son Codex (vacía, deja usar cualquiera) y no pongas Codex en su respaldo, o desconecta Codex.</p>
+      </div>
+      <div lang="en">
+        <p>Agents’ keys are stored encrypted, on the server and with the CLI (<code>tramtai-servidor keys set ANTHROPIC_API_KEY</code>), never from the Web UI. The agents’ CLIs must be installed for the whole computer, and the service runs them with its own account.</p>
+        <p><strong>Your subscription:</strong> by default the server uses API keys. Open to the network, it only allows your <strong>personal subscription</strong>: just for you, with TOTP and one request at a time (by default; up to 3 with <code>suscripcion_simultaneas</code>), and the “This server uses your … subscription” notice always visible. Your provider may still limit or close your account (risk 1).</p>
+        <p class="aviso"><strong>Codex on the server:</strong> Codex can read everything the service account reads, including the provider keys and the TOTP secret. Give the workspace key, and the key of any API that can use Codex, only to people you trust. In other people’s APIs, put only agents other than Codex in <strong>Allowed models</strong> (left empty, it allows any) and keep Codex out of their fallback, or disconnect Codex.</p>
+      </div>
+    </section>
+
+    <section id="actualizar">
+      <h2><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></h2>
+      <div lang="es">
+        <p>El servidor avisa cuando hay una versión nueva. <code>tramtai-servidor actualizar</code> comprueba la firma de Tramtai, deja terminar las peticiones en curso y cambia el programa; si lo instalaste con el paquete, actualiza con <code>apt</code> o <code>dnf</code>. <code>tramtai-servidor desinstalar</code> lo quita y conserva tus datos; <code>--borrar-datos</code> borra también los datos, las claves y la cuenta.</p>
+      </div>
+      <div lang="en">
+        <p>The server tells you when there’s a new version. <code>tramtai-servidor update</code> checks Tramtai’s signature, lets running requests finish and swaps the program; if you installed the package, update with <code>apt</code> or <code>dnf</code>. <code>tramtai-servidor uninstall</code> removes it and keeps your data; <code>--delete-data</code> also deletes the data, the keys and the account.</p>
+      </div>
+    </section>
+
+    <section id="problemas">
+      <h2><span lang="es">Si algo falla</span><span lang="en">If something fails</span></h2>
+      <div lang="es">
+        <ul>
+          <li><strong>No arranca:</strong> <code>tramtai-servidor estado</code> y <code>tramtai-servidor registro</code> dicen qué regla no se cumple y qué cambiar.</li>
+          <li><strong>«Aquí no se entra con contraseña»:</strong> la conexión no llega por HTTPS, o el proxy no envía <code>X-Forwarded-Proto: https</code> o no está entre los de confianza.</li>
+          <li><strong>La CLI dice que el servidor es de otra versión:</strong> <code>tramtai-servidor actualizar</code>; la CLI nunca lo detiene por ti.</li>
+        </ul>
+        <p><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md">La guía completa del servidor</a>, con la configuración de cada caso, y la Ayuda: <a href="ayuda/servidor.html">Modo servidor</a> y <a href="ayuda/entornos.html">Dos entornos</a>.</p>
+      </div>
+      <div lang="en">
+        <ul>
+          <li><strong>It won’t start:</strong> <code>tramtai-servidor status</code> and <code>tramtai-servidor log</code> say which rule fails and what to change.</li>
+          <li><strong>“You can’t sign in with a password here”:</strong> the connection isn’t HTTPS, or the proxy doesn’t send <code>X-Forwarded-Proto: https</code> or isn’t trusted.</li>
+          <li><strong>The CLI says the server is another version:</strong> <code>tramtai-servidor update</code>; the CLI never stops it for you.</li>
+        </ul>
+        <p><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md#server-guide">The full server guide</a>, with the settings for each case, and the Help: <a href="ayuda/servidor.html">Server mode</a> and <a href="ayuda/entornos.html">Two environments</a>.</p>
+      </div>
+    </section>
+  </article>
+</main>
+
+<!-- comun:pie -->
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="./#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+<!-- /comun:pie -->
+
+</body>
+</html>

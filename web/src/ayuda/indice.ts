@@ -14,13 +14,15 @@ import { historial } from './temas/historial'
 import { ajustes } from './temas/ajustes'
 import { espacios } from './temas/espacios'
 import { claves } from './temas/claves'
+import { servidor } from './temas/servidor'
+import { entornos } from './temas/dos-entornos'
 import { problemas } from './temas/problemas'
 import { conceptos } from './temas/conceptos'
 import { preguntas } from './temas/preguntas'
 
 export const temas: Tema[] = [
   empezar, agentes, probar, conectar, archivos, json, recetas, herramientas, presupuestos, historial, espacios, claves, ajustes,
-  problemas, conceptos, preguntas,
+  servidor, entornos, problemas, conceptos, preguntas,
 ]
 
 export function temaDe(pagina: Pagina): Tema | undefined {

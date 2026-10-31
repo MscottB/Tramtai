@@ -105,5 +105,6 @@ TestClienteReal con las tres cabeceras y un caso más en TestProxyLoopbackNoEsLo
 Codex se ejecuta con `-s read-only`, que, según su documentación, lee todo lo que lee la cuenta del servicio. Tras I2,
 el token de servicio ya no sirve desde fuera, pero una clave de una API que use Codex aún puede pedirle que lea
 `$CREDENTIALS_DIRECTORY` (las claves de los proveedores y `TRAMTAI_TOTP`) y `datos/administrador`. La redacción de
-secretos de la salida no detiene una codificación como base64. Lo documentará la Tarea 19, en la guía del servidor y en
-el modelo de amenazas de `docs/arquitectura.md`.
+secretos de la salida no detiene una codificación como base64. Lo documentan la guía del servidor
+(`docs/servidor.md`, «Codex en el servidor», y la Ayuda, tema «Modo servidor») y el modelo de amenazas del servidor de
+`docs/arquitectura.md`.
