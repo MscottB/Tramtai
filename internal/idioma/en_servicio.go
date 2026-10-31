@@ -69,6 +69,7 @@ func init() {
 		"los argumentos de %s no cumplen su esquema: %s":                                                  "the arguments of %s do not match its schema: %s",
 		"tool_choice desconocido: %s":                                                                     "unknown tool_choice: %s",
 		"tool_choice solo admite auto, none, required o una función":                                      "tool_choice only accepts auto, none, required or a function",
+		"tool_choice exige una función y no hay ninguna: las demás herramientas no existen aquí":          "tool_choice requires a function and there is none: the other tool types do not exist here",
 		"herramienta de tipo %s no soportada: solo funciones":                                             "unsupported tool type %s: functions only",
 		"contenido de tipo %s no soportado: solo texto":                                                   "unsupported content type %s: text only",
 		"Idempotency-Key supera 255 caracteres":                                                           "Idempotency-Key exceeds 255 characters",

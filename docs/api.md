@@ -207,8 +207,9 @@ para cada API.
 
 ### Política de parámetros
 
-- **No soportados (error 400 `parametro_no_soportado`):** `n` mayor que 1, herramientas que no son funciones (búsqueda web, archivos, código…), `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`) se aceptan.
-- **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`… El aviso llega en la cabecera `Tramtai-Advertencia: se ignoran: …`.
+- **No soportados (error 400 `parametro_no_soportado`):** `n` mayor que 1, herramientas que no son funciones (búsqueda web, archivos, código…), `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`, `thinking` en `disabled` o `{}`) se aceptan. `thinking` en `adaptive` también, pero con aviso: pide razonar y el agente decide solo.
+- **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`, y los que Claude Code y Codex envían siempre (`context_management`, `output_config`, `prompt_cache_key`, `client_metadata`…). El aviso llega en la cabecera `Tramtai-Advertencia: se ignoran: …`.
+- **Herramientas que no son funciones en `/openai/v1/responses`:** Codex las envía siempre (`namespace`, `web_search`). Se dejan fuera con aviso (`tools[namespace]`; con `type` vacío, `tools[]`) y las funciones se respetan. Si `tool_choice` es `required` o nombra una función y no queda ninguna, da 400 `parametro_no_soportado`. En chat y en Anthropic siguen dando error.
 - **Desconocidos:** error, salvo con `compatibilidad.modo_tolerante: true`.
 - **Uso:** si el agente no informa tokens, se envían ceros con `Tramtai-Advertencia: uso_no_verificado`.
 - **Desconexión:** si el cliente se desconecta, la petición se cancela (`compatibilidad.cancelar_al_desconectar: true`). En la API nativa no.
