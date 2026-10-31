@@ -1,0 +1,20 @@
+# Mi configuración de Codex
+# mi nota: no tocar
+
+approval_policy = "on-request"   # pregunta siempre
+instructions = """
+model = "esto es texto, no una clave"
+[no_es_una_tabla]
+"""
+lista = [
+  [1, 2],
+  [3, 4],
+]
+
+[mcp_servers.x]
+command = "npx"   # mi servidor
+args = ["-y", "x"]
+
+# al final
+[profiles.rapido]
+model = "gpt-5-mini"

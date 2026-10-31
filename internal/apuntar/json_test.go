@@ -534,7 +534,7 @@ func TestRutasDeLista(t *testing.T) {
 		t.Errorf("kilo con XDG_CONFIG_HOME = %s, quería %s", got, want)
 	}
 	for _, h := range Lista() {
-		if h.EnProyecto != (h.ID == "claude-code") || h.ClaveEnArchivo != (h.ID != "claude-code") || (h.Gestionado != nil) != (h.ID == "claude-code") {
+		if h.EnProyecto != (h.ID == "claude-code") || h.ClaveEnArchivo != (h.ID == "opencode" || h.ID == "kilo") || (h.Gestionado != nil) != (h.ID == "claude-code") {
 			t.Errorf("%s: EnProyecto/ClaveEnArchivo/Gestionado mal puestos", h.ID)
 		}
 	}

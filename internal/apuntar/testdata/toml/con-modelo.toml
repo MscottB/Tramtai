@@ -1,0 +1,7 @@
+# Mi configuración de Codex
+  model = "gpt-5"   # el que uso
+model_provider = "openai"
+sandbox_mode = "workspace-write"
+
+[mcp_servers.x]
+command = "npx"
