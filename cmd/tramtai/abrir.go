@@ -19,7 +19,7 @@ import (
 
 // abrirCuandoResponda espera a que el servicio en primer plano acepte conexiones y abre la interfaz global.
 func abrirCuandoResponda(cmd *cobra.Command, enNavegador bool) {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return
 	}
@@ -42,7 +42,7 @@ func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	if err != nil {
 		return err
 	}
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
