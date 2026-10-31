@@ -635,6 +635,22 @@ func (c *Cliente) Catalogo(ctx context.Context, instancia string) ([]contrato.Mo
 	return r.Modelos, c.pedir(ctx, "GET", "/api/v1/modelos", instancia, nil, "", &r)
 }
 
+// FichaAgente es lo que la terminal necesita de la ficha de un agente (GET /api/v1/agentes, sin comprobar los CLI):
+// si el usuario lo desconectó y si se puede usar desde APIs.
+type FichaAgente struct {
+	Agente        string `json:"agente"`
+	Desconectado  bool   `json:"desconectado"`
+	PermitidoApps bool   `json:"permitido_apps"`
+}
+
+// FichasAgentes devuelve las fichas de los agentes registrados, en el orden del servicio.
+func (c *Cliente) FichasAgentes(ctx context.Context) ([]FichaAgente, error) {
+	var r struct {
+		Agentes []FichaAgente `json:"agentes"`
+	}
+	return r.Agentes, c.pedir(ctx, "GET", "/api/v1/agentes", "", nil, "", &r)
+}
+
 // Modelos devuelve los identificadores del catálogo de la instancia.
 func (c *Cliente) Modelos(ctx context.Context, instancia string) ([]string, error) {
 	lista, err := c.Catalogo(ctx, instancia)

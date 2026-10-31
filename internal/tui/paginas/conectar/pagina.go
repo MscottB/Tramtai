@@ -6,6 +6,7 @@ package conectar
 import (
 	"cmp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ type (
 		yaTenia      *contrato.EstadoClave // al crear la clave del espacio ya había una: no se tocó, y este es su estado
 		cerrarForm   bool
 		borrada      string // la API eliminada: si es la del detalle, se cierra
+		herr         bool   // fue un cambio en las herramientas: se vuelve a pedir su lista, también si falló
 		err          error
 	}
 )
@@ -79,6 +81,7 @@ const (
 const (
 	pestanaApis = iota
 	pestanaClave
+	pestanaHerramientas
 )
 
 // Pagina es la página Mis APIs.
@@ -124,6 +127,8 @@ type Pagina struct {
 	creada     bool
 
 	form *formulario
+
+	herr herramientas // la pestaña Herramientas (herramientas.go)
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
@@ -134,8 +139,8 @@ func Nueva(lengua string) pagina.Pagina {
 func (p *Pagina) Titulo() string { return datos.Texto(p.lengua, "menu.conectar") }
 func (p *Pagina) Ayuda() string  { return pagina.PaginaConectar }
 
-// EnCampo es verdadero mientras se escribe la búsqueda o hay un formulario abierto: las letras son del campo.
-func (p *Pagina) EnCampo() bool { return p.buscando || p.form != nil }
+// EnCampo es verdadero mientras se escribe la búsqueda o hay un formulario o el selector de modelo abierto: las letras son suyas.
+func (p *Pagina) EnCampo() bool { return p.buscando || p.form != nil || p.herr.sel != nil }
 
 // Pendiente avisa antes de salir si se perdería algo: una clave que no se vuelve a mostrar o un formulario a medias.
 func (p *Pagina) Pendiente() string {
@@ -165,7 +170,12 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.lista.Clave = func(x contrato.EstadoPunto) string { return x.Nombre }
 		p.lista.Fila = p.fila
 		p.visor = comp.NuevoVisor(c.Estilos)
+		p.herr.lista = comp.NuevaLista(c.Estilos, func(h contrato.EstadoHerramienta) string { return h.Nombre })
+		p.herr.lista.Clave = func(h contrato.EstadoHerramienta) string { return h.ID }
+		p.herr.lista.Fila = p.filaHerr
 	}
+	p.herr = herramientas{lista: p.herr.lista}
+	p.herr.lista.Poner(nil)
 	p.datos, p.espacio, p.resumen, p.nombre, p.estadoClave, p.errClave = contrato.ListaPuntos{}, nucleo.EstadoPresupuesto{}, contrato.ResumenInstancia{}, "", contrato.EstadoClave{}, ""
 	p.cargado, p.sinServ, p.err, p.pestana, p.ocupado, p.pend = false, false, "", pestanaApis, false, nil
 	p.filtros, p.buscando, p.entrada, p.catalogo, p.errCat = sinFiltros, false, "", nil, ""
@@ -236,10 +246,14 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		return p, p.alCargar(m)
 	case msgAccion:
 		return p, p.alAccion(m)
+	case msgHerramientas:
+		return p, p.alHerramientas(m)
+	case comp.Elegido:
+		return p, p.elegidoHerr(m.Valor)
 	case comp.Confirmado:
 		return p, p.confirmado()
 	case comp.Cancelado:
-		p.pend = nil
+		p.pend, p.herr.sel = nil, nil
 	case comp.Enviado:
 		if p.form != nil {
 			return p, p.enviar()
@@ -318,7 +332,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 			return cmd
 		}
 		// Recarga igual: un cambio de varias peticiones (g) pudo quedarse a medias, como activarGrupo en su finally.
-		return tea.Batch(comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo), p.cargar(false))
+		return tea.Batch(comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo), p.cargar(false), p.recargarHerr(m))
 	}
 	if m.yaTenia != nil { // otra vía la creó después de la última carga: regenerar dejaría fuera a las apps sin preguntar
 		p.estadoClave, p.errClave = *m.yaTenia, ""
@@ -338,7 +352,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 	if m.claveEspacio != "" {
 		p.claveEspacio, p.errClave, p.estadoClave.TieneClave = m.claveEspacio, "", true
 	}
-	cmds := []tea.Cmd{p.cargar(false)}
+	cmds := []tea.Cmd{p.cargar(false), p.recargarHerr(m)}
 	if m.exito != "" {
 		cmds = append(cmds, comp.Aviso(m.exito, comp.Exito))
 	}
@@ -397,9 +411,19 @@ func (p *Pagina) confirmado() tea.Cmd {
 		})
 	case accRegenerarEspacio:
 		return p.rotarClave(p.tx("conectar.claveRegenerada"), false)
-	case accSalirClave:
-		p.claveEspacio, p.pestana = "", pestanaApis
-		p.arriba()
+	case accSalirClave: // nombre es la pestaña a la que se iba
+		destino, _ := strconv.Atoi(nombre)
+		p.claveEspacio = ""
+		return p.irAPestana(destino)
+	case accOlvidarHerr:
+		return p.accionHerr(p.tx("herramientas.avisoOlvidada"), func(c pagina.Contexto) error {
+			return c.Cli.OlvidarHerramienta(c.Ctx, c.Instancia, nombre)
+		})
+	case accRestaurarHerr:
+		return p.accionHerr(p.tx("herramientas.avisoRestaurada"), func(c pagina.Contexto) error {
+			_, err := c.Cli.RestaurarHerramienta(c.Ctx, c.Instancia, nombre)
+			return err
+		})
 	}
 	return nil
 }
@@ -477,6 +501,8 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 			return p.preguntar(accCerrarForm, "", p.tx("cierre.titulo"), p.tx("cierre.texto"))
 		}
 		return p.form.f.Update(k)
+	case p.herr.sel != nil:
+		return p.herr.sel.Update(k)
 	case p.buscando:
 		return p.teclaBusqueda(k)
 	case p.detalle != "":
@@ -486,22 +512,45 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "esc":
 		return pagina.Atras
 	case "r":
+		if p.pestana == pestanaHerramientas {
+			return tea.Batch(p.cargar(true), p.cargarHerr())
+		}
 		return p.cargar(true)
 	case "left", "right":
-		if p.cargado {
-			destino := map[string]int{"left": pestanaApis, "right": pestanaClave}[t]
-			if p.claveEspacio != "" && p.pestana == pestanaClave && destino != p.pestana { // la clave solo se ve esta vez: se pregunta, como Esc en el detalle
-				return p.preguntar(accSalirClave, "", p.tx("cierre.claveTitulo"), p.tx("cierre.clave"))
+		destino := min(max(p.pestana+map[string]int{"left": -1, "right": 1}[t], pestanaApis), pestanaHerramientas)
+		if p.cargado && destino != p.pestana {
+			if p.claveEspacio != "" && p.pestana == pestanaClave { // la clave solo se ve esta vez: se pregunta, como Esc en el detalle
+				return p.preguntar(accSalirClave, strconv.Itoa(destino), p.tx("cierre.claveTitulo"), p.tx("cierre.clave"))
 			}
-			p.pestana = destino
-			p.arriba()
+			return p.irAPestana(destino)
 		}
 		return nil
 	}
-	if p.pestana == pestanaClave {
+	switch p.pestana {
+	case pestanaClave:
 		return p.teclaClave(t, k)
+	case pestanaHerramientas:
+		return p.teclaHerramientas(t, k)
 	}
 	return p.teclaLista(t, k)
+}
+
+// irAPestana cambia de pestaña; la de las herramientas pide su lista al entrar.
+func (p *Pagina) irAPestana(destino int) tea.Cmd {
+	p.pestana = destino
+	p.arriba()
+	if destino == pestanaHerramientas {
+		return p.cargarHerr()
+	}
+	return nil
+}
+
+// recargarHerr vuelve a pedir la lista de herramientas si el cambio fue en ellas.
+func (p *Pagina) recargarHerr(m msgAccion) tea.Cmd {
+	if m.herr {
+		return p.cargarHerr()
+	}
+	return nil
 }
 
 func (p *Pagina) teclaLista(t string, k tea.KeyPressMsg) tea.Cmd {
@@ -730,6 +779,8 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 	switch {
 	case p.form != nil:
 		return p.form.f.Teclas()
+	case p.herr.sel != nil:
+		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.buscando:
 		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.detalle != "":
@@ -741,6 +792,8 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		}
 		return append(teclas, pagina.Tecla{Tecla: "h", Accion: p.tx("puntos.verPeticiones")}, pagina.Tecla{Tecla: "p", Accion: p.tx("puntos.abrirProbar")},
 			pagina.Tecla{Tecla: "x", Accion: p.tx("comun.eliminar")})
+	case p.pestana == pestanaHerramientas:
+		return p.teclasHerr()
 	case p.pestana == pestanaClave:
 		teclas := []pagina.Tecla{{Tecla: p.flechas(), Accion: idioma.T("pestañas")}}
 		if p.claveEspacio != "" {

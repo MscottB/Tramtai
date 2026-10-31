@@ -2,11 +2,16 @@ package conectar_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -19,6 +24,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/conectar"
 	"tramtai/internal/tui/paginas/prueba"
@@ -48,6 +54,15 @@ func abiertaCon(t *testing.T, c pagina.Contexto) *prueba.App {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
+	a.EsperarCarga()
+	return a
+}
+
+// abiertaLibre es abiertaCon sin comprobar el «Cargando…» en español: para el inglés y los iconos ASCII.
+func abiertaLibre(t *testing.T, c pagina.Contexto) *prueba.App {
+	t.Helper()
+	a := prueba.Conducir(t, conectar.Nueva("es"))
+	a.Correr(a.P.Iniciar(c))
 	a.EsperarCarga()
 	return a
 }
@@ -796,5 +811,528 @@ func TestCabe(t *testing.T) {
 	a.HastaVer("Copia la clave ahora")
 	if v := a.Vista(); lipgloss.Height(v) > 17 || lipgloss.Width(v) > 60 {
 		t.Errorf("la clave recién creada a 60x17 mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
+	}
+}
+
+// herramientasFalsas hace de la API de herramientas (la verdadera escribiría en las carpetas y el almacén del usuario):
+// guarda las llamadas, cambia el estado de sus filas como el servicio y deja pasar todo lo demás al servicio de prueba.
+type herramientasFalsas struct {
+	mu       sync.Mutex
+	paso     http.Handler
+	lista    []contrato.EstadoHerramienta
+	servidor bool // contesta 409 no_disponible_en_servidor
+	fallo    bool // contesta 500
+	llamadas []string
+	activar  contrato.ActivarHerramientas // la última petición de activar
+}
+
+func filasHerramientas() []contrato.EstadoHerramienta {
+	return []contrato.EstadoHerramienta{
+		{ID: "claude-code", Nombre: "Claude Code", Estado: "activa", Modelo: "claude/sonnet", Ruta: "/casa/.claude/settings.json", HayCopia: true,
+			FechaCopia: "2026-11-05T12:00:00Z", ClaveEnArchivo: true},
+		{ID: "codex", Nombre: "Codex", Estado: "detectada", Ruta: "/casa/.codex/config.toml"},
+		{ID: "continue", Nombre: "Continue", Estado: "desactualizada", Modelo: "claude/haiku", Ruta: "/casa/.continue/config.yaml",
+			Motivo: "Tramtai usa ahora el puerto 17373 y la herramienta apunta al 17000: vuelve a activarla.", MotivoCodigo: "puerto",
+			MotivoDatos: map[string]string{"actual": "17373", "anotado": "17000"}},
+		{ID: "opencode", Nombre: "opencode", Estado: "no_detectada"},
+		{ID: "kilo", Nombre: "Kilo Code", Estado: "solo_global"},
+	}
+}
+
+// conHerramientas pone delante del servicio de prueba las herramientas falsas.
+func conHerramientas(t *testing.T) (*cliente.Cliente, string, *herramientasFalsas) {
+	t.Helper()
+	cli, id := prueba.Servicio(t)
+	destino, err := url.Parse(cli.Base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &herramientasFalsas{paso: httputil.NewSingleHostReverseProxy(destino), lista: filasHerramientas()}
+	copia := *cli
+	copia.Base = prueba.Servidor(t, h)
+	return &copia, id, h
+}
+
+func (h *herramientasFalsas) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	resto, ok := strings.CutPrefix(r.URL.Path, "/api/v1/herramientas")
+	if !ok {
+		h.paso.ServeHTTP(w, r)
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	if h.servidor || h.fallo {
+		codigo, estado := "herramienta_en_conflicto", http.StatusInternalServerError
+		if h.servidor {
+			codigo, estado = "no_disponible_en_servidor", http.StatusConflict
+		}
+		w.WriteHeader(estado)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"codigo": codigo, "mensaje": "el servicio dice no"}})
+		return
+	}
+	cambiar := func(ids []string, todas bool, f func(*contrato.EstadoHerramienta)) {
+		for i := range h.lista {
+			if todas && h.lista[i].Estado != "solo_global" && h.lista[i].Estado != "no_detectada" || slices.Contains(ids, h.lista[i].ID) {
+				f(&h.lista[i])
+			}
+		}
+	}
+	switch {
+	case resto == "/activar":
+		var p contrato.ActivarHerramientas
+		_ = json.NewDecoder(r.Body).Decode(&p)
+		h.activar = p
+		h.llamadas = append(h.llamadas, "activar")
+		cambiar(p.IDs, p.Todas, func(e *contrato.EstadoHerramienta) { e.Estado, e.Modelo = "activa", p.Modelo })
+	case resto == "/desactivar":
+		var p struct {
+			IDs   []string `json:"ids"`
+			Todas bool     `json:"todas"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&p)
+		llamada := "desactivar " + strings.Join(p.IDs, ",")
+		if p.Todas {
+			llamada = "desactivar todas"
+		}
+		h.llamadas = append(h.llamadas, llamada)
+		cambiar(p.IDs, p.Todas, func(e *contrato.EstadoHerramienta) {
+			if e.Estado == "activa" || e.Estado == "desactualizada" {
+				e.Estado = "desactivada"
+			}
+		})
+	case strings.HasSuffix(resto, "/olvidar"), strings.HasSuffix(resto, "/restaurar"):
+		accion := path.Base(resto)
+		h.llamadas = append(h.llamadas, accion+" "+path.Base(path.Dir(resto)))
+		_, _ = w.Write([]byte(`{"copia":"copia"}`))
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"herramientas": h.lista})
+}
+
+func (h *herramientasFalsas) hizo(llamada string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Contains(h.llamadas, llamada)
+}
+
+func (h *herramientasFalsas) cuantas() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.llamadas)
+}
+
+func (h *herramientasFalsas) ultimaActivacion() contrato.ActivarHerramientas {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.activar
+}
+
+func (h *herramientasFalsas) poner(f func(*herramientasFalsas)) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	f(h)
+}
+
+// enHerramientas abre Mis APIs y va a la tercera pestaña.
+func enHerramientas(t *testing.T, cli *cliente.Cliente, id string) *prueba.App {
+	t.Helper()
+	a := abierta(t, cli, id)
+	a.Pulsar("right", "right")
+	return a
+}
+
+// linea es la línea de la vista que lleva ese texto.
+func linea(v, texto string) string {
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, texto) {
+			return l
+		}
+	}
+	return ""
+}
+
+func teclasDe(a *prueba.App) string {
+	var s []string
+	for _, tk := range a.P.Teclas() {
+		s = append(s, tk.Tecla)
+	}
+	return " " + strings.Join(s, " ") + " "
+}
+
+// juntar quita los saltos de línea y los espacios repetidos: un texto largo se envuelve en la pantalla.
+func juntar(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// TestHerramientasPestana: con las flechas se llega a la tercera pestaña y se ve una fila por herramienta con su estado.
+func TestHerramientasPestana(t *testing.T) {
+	cli, id, _ := conHerramientas(t)
+	a := abierta(t, cli, id)
+	if strings.Contains(a.Vista(), "Claude Code") {
+		t.Fatalf("las herramientas no están en la primera pestaña:\n%s", a.Vista())
+	}
+	a.Pulsar("right", "right")
+	a.HastaVer("Kilo Code")
+	v := a.Vista()
+	if !strings.Contains(v, "[Herramientas]") {
+		t.Fatalf("la tercera pestaña va elegida:\n%s", v)
+	}
+	for nombre, estado := range map[string]string{"Claude Code": "Activa", "Codex": "Detectada", "Continue": "Desactualizada", "opencode": "No detectada", "Kilo Code": "Solo global"} {
+		if l := linea(v, nombre); !strings.Contains(l, estado) {
+			t.Errorf("la fila de %s dice su estado %q: %q", nombre, estado, l)
+		}
+	}
+	a.Pulsar("left")
+	if v := a.Vista(); strings.Contains(v, "Kilo Code") || !strings.Contains(v, "[Clave del espacio]") {
+		t.Fatalf("← vuelve a la pestaña del medio:\n%s", v)
+	}
+	a.Pulsar("right", "right") // no hay cuarta pestaña
+	if !strings.Contains(a.Vista(), "[Herramientas]") {
+		t.Fatalf("la última es la tercera:\n%s", a.Vista())
+	}
+}
+
+// TestHerramientasEspacioActiva: Espacio sobre Codex pide el agente y el modelo y activa solo Codex.
+func TestHerramientasEspacioActiva(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Codex")
+	a.Pulsar("down", "space")
+	v := a.Vista()
+	if !strings.Contains(v, "Activar Codex") || !strings.Contains(v, "simulado") || !a.P.EnCampo() {
+		t.Fatalf("Espacio abre el selector de modelo, con el primer agente conectado:\n%s", v)
+	}
+	if k := teclasDe(a); !strings.Contains(k, " Enter ") || !strings.Contains(k, " Esc ") {
+		t.Fatalf("el pie del selector: %q", k)
+	}
+	if av := hastaAviso(a, func() { a.Pulsar("enter") }); !strings.Contains(av.Texto, "Herramienta activada") {
+		t.Fatalf("avisa: %+v", av)
+	}
+	if p := h.ultimaActivacion(); !slices.Equal(p.IDs, []string{"codex"}) || p.Todas || p.Modelo != "simulado" {
+		t.Fatalf("activa solo Codex con el modelo elegido: %+v", p)
+	}
+	a.Hasta(func() bool { return strings.Contains(linea(a.Vista(), "Codex"), "Activa") })
+
+	// Esc cancela sin llamar al servicio.
+	a.Pulsar("t") // Continue sigue por activar
+	if !a.P.EnCampo() {
+		t.Fatalf("t pide el modelo de las que se pueden activar:\n%s", a.Vista())
+	}
+	a.Pulsar("esc")
+	if a.P.EnCampo() || h.cuantas() != 1 {
+		t.Fatalf("Esc cierra el selector sin activar nada: %v", h.llamadas)
+	}
+}
+
+// TestHerramientasComoLaWeb: los textos salen de las mismas claves herramientas.* que la Web UI, en los dos idiomas: los
+// estados, el motivo del servicio con su código y lo de las filas sin interruptor.
+func TestHerramientasComoLaWeb(t *testing.T) {
+	for _, lengua := range []string{"es", "en"} {
+		cli, id, h := conHerramientas(t)
+		h.poner(func(h *herramientasFalsas) {
+			h.lista[0].Estado, h.lista[1].Estado = "desactivada", "activa"
+			h.lista[3].Estado, h.lista[4].Estado = "no_detectada", "solo_global"
+		})
+		c := contexto(t, cli, id)
+		c.Idioma = lengua
+		a := abiertaLibre(t, c)
+		a.Pulsar("right", "right")
+		a.HastaVer(datos.Texto(lengua, "herramientas.estado.solo_global"))
+		v := a.Vista()
+		for i, estado := range []string{"desactivada", "activa", "desactualizada", "no_detectada", "solo_global"} {
+			palabra := datos.Texto(lengua, "herramientas.estado."+estado)
+			if l := linea(v, h.lista[i].Nombre); !strings.Contains(l, palabra) {
+				t.Errorf("%s: la fila de %s lleva %q: %q", lengua, h.lista[i].Nombre, palabra, l)
+			}
+		}
+		if !strings.Contains(v, "["+datos.Texto(lengua, "herramientas.titulo")+"]") {
+			t.Errorf("%s: la pestaña se llama como en la Web UI:\n%s", lengua, v)
+		}
+		a.Pulsar("down", "down")
+		motivo := datos.Textof(lengua, "herramientas.motivo.puerto", "actual", "17373", "anotado", "17000")
+		if v := a.Vista(); !strings.Contains(juntar(v), juntar(motivo)) {
+			t.Errorf("%s: el motivo sale de herramientas.motivo.<código> con sus datos (%q):\n%s", lengua, motivo, v)
+		}
+		a.Pulsar("down", "down")
+		if v := a.Vista(); !strings.Contains(juntar(v), juntar(datos.Texto(lengua, "herramientas.soloGlobal"))) {
+			t.Errorf("%s: la fila solo global dice por qué:\n%s", lengua, v)
+		}
+	}
+}
+
+// Un código de motivo que la terminal no conoce se queda con el texto del servicio, como la Web UI.
+func TestHerramientasMotivoDeRespaldo(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	h.poner(func(h *herramientasFalsas) {
+		h.lista[2].MotivoCodigo, h.lista[2].Motivo = "codigo_nuevo", "Motivo del servicio"
+	})
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Continue")
+	a.Pulsar("down", "down")
+	if v := a.Vista(); !strings.Contains(v, "Motivo del servicio") {
+		t.Fatalf("el texto del servicio:\n%s", v)
+	}
+}
+
+// Sin color y en ASCII los estados se distinguen: cada uno lleva su palabra y su propio símbolo.
+func TestHerramientasEstadosSeDistinguenEnASCII(t *testing.T) {
+	cli, id, _ := conHerramientas(t)
+	c := contexto(t, cli, id)
+	c.Estilos = &pagina.Estilos{ASCII: true, Iconos: pagina.IconosASCII}
+	a := abiertaLibre(t, c)
+	a.Pulsar("right", "right")
+	a.HastaVer("Kilo Code")
+	v := a.Vista()
+	for nombre, esperado := range map[string]string{"Claude Code": "* Activa", "Continue": "x Desactualizada", "Codex": "o Detectada"} {
+		if l := linea(v, nombre); !strings.Contains(l, esperado) {
+			t.Errorf("%s debía llevar %q: %q", nombre, esperado, l)
+		}
+	}
+	if strings.ContainsAny(v, "●○✗▸·…") {
+		t.Fatalf("en ASCII no salen los símbolos Unicode:\n%s", v)
+	}
+}
+
+// TestHerramientasDesactivar: Espacio sobre una activa la desactiva sin preguntar; T las desactiva todas.
+func TestHerramientasDesactivar(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	if av := hastaAviso(a, func() { a.Pulsar("space") }); !strings.Contains(av.Texto, "Herramienta desactivada") {
+		t.Fatalf("avisa: %+v", av)
+	}
+	if !h.hizo("desactivar claude-code") {
+		t.Fatalf("desactiva solo esa: %v", h.llamadas)
+	}
+	a.Hasta(func() bool { return strings.Contains(linea(a.Vista(), "Claude Code"), "Desactivada") })
+	hastaAviso(a, func() { a.Pulsar("T") })
+	if !h.hizo("desactivar todas") {
+		t.Fatalf("T desactiva todas: %v", h.llamadas)
+	}
+	a.Hasta(func() bool { return strings.Contains(linea(a.Vista(), "Continue"), "Desactivada") })
+	if strings.Contains(teclasDe(a), " T ") {
+		t.Fatalf("sin ninguna puesta, T no se ofrece: %q", teclasDe(a))
+	}
+	antes := h.cuantas()
+	a.Pulsar("T")
+	if h.cuantas() != antes {
+		t.Fatal("T sin nada activo no llama al servicio")
+	}
+}
+
+// TestHerramientasActivarTodas: t pide el modelo una vez para todas las que se pueden activar.
+func TestHerramientasActivarTodas(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("t")
+	if v := a.Vista(); !strings.Contains(v, "Activar todas las herramientas detectadas") {
+		t.Fatalf("t abre el selector para todas:\n%s", v)
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); !p.Todas || len(p.IDs) != 0 || p.Modelo != "simulado" {
+		t.Fatalf("activa todas: %+v", p)
+	}
+	a.Hasta(func() bool { return !strings.Contains(teclasDe(a), " t ") })
+	antes := h.cuantas()
+	a.Pulsar("t")
+	if a.P.EnCampo() || h.cuantas() != antes {
+		t.Fatal("con todas activas, t no hace nada")
+	}
+}
+
+// TestHerramientasCambiarModelo: m abre el selector para la herramienta puesta y la vuelve a activar con el modelo elegido.
+func TestHerramientasCambiarModelo(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "m")
+	if a.P.EnCampo() {
+		t.Fatal("m no vale en una detectada: no tiene modelo que cambiar")
+	}
+	a.Pulsar("up", "m")
+	if v := a.Vista(); !strings.Contains(v, "Cambiar el modelo de Claude Code") {
+		t.Fatalf("m abre el selector:\n%s", v)
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); !slices.Equal(p.IDs, []string{"claude-code"}) || p.Todas || p.Modelo == "" {
+		t.Fatalf("la vuelve a activar con el modelo: %+v", p)
+	}
+}
+
+// Enter sobre una desactualizada la vuelve a activar con su modelo, sin preguntar.
+func TestHerramientasVolverAActivar(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "down")
+	if !strings.Contains(teclasDe(a), " Enter ") {
+		t.Fatalf("en la desactualizada, Enter vuelve a activar: %q", teclasDe(a))
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); !slices.Equal(p.IDs, []string{"continue"}) || p.Modelo != "claude/haiku" {
+		t.Fatalf("con su modelo: %+v", p)
+	}
+}
+
+// TestHerramientasRestaurar: R pide confirmación con la fecha de la copia, y solo si hay copia. r sigue siendo refrescar.
+func TestHerramientasRestaurar(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	q, ok := pregunta(a.Pulsar("R"))
+	if !ok || !strings.Contains(q.Texto, "Restaurar la copia de Claude Code") || !strings.Contains(q.Texto, "según la copia del 5/11/2026") {
+		t.Fatalf("R pregunta, con la fecha de la copia: %+v", q)
+	}
+	a.Entregar(comp.Cancelado{})
+	if h.cuantas() != 0 {
+		t.Fatal("cancelar no restaura")
+	}
+	a.Pulsar("R")
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); !strings.Contains(av.Texto, "Archivo restaurado") {
+		t.Fatalf("avisa: %+v", av)
+	}
+	if !h.hizo("restaurar claude-code") {
+		t.Fatalf("restaura esa: %v", h.llamadas)
+	}
+	a.Pulsar("down")
+	if _, ok := pregunta(a.Pulsar("R")); ok {
+		t.Fatal("sin copia, R no pregunta")
+	}
+
+	// Sin fecha, el texto no la dice; y r refresca la lista, no restaura.
+	h.poner(func(h *herramientasFalsas) { h.lista[0].FechaCopia = "" })
+	a.Pulsar("up", "r")
+	a.EsperarCarga()
+	if h.hizo("restaurar") {
+		t.Fatal("r no restaura")
+	}
+	if q, ok := pregunta(a.Pulsar("R")); !ok || strings.Contains(q.Texto, "según la copia") {
+		t.Fatalf("sin fecha no se inventa una: %q", q.Texto)
+	}
+}
+
+// TestHerramientasOlvidar: o pregunta y olvida la herramienta; en una que no está puesta ni desactivada no hace nada.
+func TestHerramientasOlvidar(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down")
+	if _, ok := pregunta(a.Pulsar("o")); ok {
+		t.Fatal("una detectada no tiene qué olvidar")
+	}
+	a.Pulsar("up")
+	q, ok := pregunta(a.Pulsar("o"))
+	if !ok || !strings.Contains(q.Texto, "Olvidar Claude Code") {
+		t.Fatalf("o pregunta: %+v", q)
+	}
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); !strings.Contains(av.Texto, "Herramienta olvidada") {
+		t.Fatalf("avisa: %+v", av)
+	}
+	if !h.hizo("olvidar claude-code") {
+		t.Fatalf("olvida esa: %v", h.llamadas)
+	}
+}
+
+// Las filas sin interruptor (no detectada, solo global) no cambian.
+func TestHerramientasSinInterruptor(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "down")
+	for _, bajar := range []int{1, 1} { // opencode, Kilo Code
+		a.Pulsar(slices.Repeat([]string{"down"}, bajar)...)
+		if strings.Contains(teclasDe(a), " Espacio ") {
+			t.Fatalf("sin interruptor no se ofrece Espacio: %q", teclasDe(a))
+		}
+		a.Pulsar("space")
+		if a.P.EnCampo() || h.cuantas() != 0 {
+			t.Fatal("Espacio no hace nada en una fila sin interruptor")
+		}
+	}
+	if v := a.Vista(); !strings.Contains(juntar(v), "Solo desde el espacio global") {
+		t.Fatalf("la solo global dice por qué:\n%s", v)
+	}
+}
+
+// En el modo servidor la pestaña dice que no está disponible y no ofrece nada.
+func TestHerramientasEnElServidor(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	h.poner(func(h *herramientasFalsas) { h.servidor = true })
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("No disponible en el servidor")
+	v := a.Vista()
+	if strings.Contains(v, "Claude Code") || strings.Contains(v, "el servicio dice no") || !strings.Contains(juntar(v), "no escribe en la cuenta del servicio") {
+		t.Fatalf("modo servidor:\n%s", v)
+	}
+	if k := teclasDe(a); strings.Contains(k, " Espacio ") || strings.Contains(k, " t ") {
+		t.Fatalf("sin herramientas no hay teclas de ellas: %q", k)
+	}
+}
+
+// Un fallo de la carga sin lista a la vista ocupa su sitio con cómo reintentar; r lo reintenta; sin ninguna herramienta
+// detectada se dice y se explica qué hacer.
+func TestHerramientasErrorYVacio(t *testing.T) {
+	cli, id, h := conHerramientas(t)
+	h.poner(func(h *herramientasFalsas) { h.fallo = true })
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("No se pudo cargar")
+	if v := a.Vista(); !strings.Contains(v, "el servicio dice no") || !strings.Contains(v, "r Reintentar") {
+		t.Fatalf("el error del servicio y cómo reintentar:\n%s", v)
+	}
+	h.poner(func(h *herramientasFalsas) {
+		h.fallo = false
+		for i := range h.lista {
+			h.lista[i].Estado = "no_detectada"
+		}
+	})
+	a.Pulsar("r")
+	a.HastaVer("No encontramos ninguna herramienta compatible")
+	if v := a.Vista(); !strings.Contains(juntar(v), "Instala Claude Code") {
+		t.Fatalf("explica qué hacer:\n%s", v)
+	}
+}
+
+// TestHerramientasTeclas: las teclas de la pestaña van en el pie según la fila, y r sigue refrescando.
+func TestHerramientasTeclas(t *testing.T) {
+	cli, id, _ := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	for _, k := range []string{"Espacio", "t", "T", "m", "o", "R", "r"} {
+		if !strings.Contains(teclasDe(a), " "+k+" ") {
+			t.Errorf("en una activa con copia falta %q: %q", k, teclasDe(a))
+		}
+	}
+	a.Pulsar("down")
+	for _, k := range []string{"m", "o", "R"} {
+		if strings.Contains(teclasDe(a), " "+k+" ") {
+			t.Errorf("en una detectada sin copia sobra %q: %q", k, teclasDe(a))
+		}
+	}
+	for _, tk := range a.P.Teclas() {
+		if tk.Tecla == "Espacio" && tk.Accion != "Usar con Tramtai" {
+			t.Errorf("Espacio es el interruptor: %+v", tk)
+		}
+	}
+}
+
+// TestHerramientasCabe: la pestaña y el selector caben en el área de 60×17 y en una ventana más estrecha.
+func TestHerramientasCabe(t *testing.T) {
+	cli, id, _ := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	for _, tam := range [][2]int{{60, 17}, {40, 10}} {
+		a.Entregar(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+		for _, donde := range []string{"lista", "motivo", "selector"} {
+			switch donde {
+			case "motivo":
+				a.Pulsar("down", "down")
+			case "selector":
+				a.Pulsar("space")
+			}
+			if v := a.Vista(); lipgloss.Height(v) > tam[1] || lipgloss.Width(v) > tam[0] {
+				t.Errorf("%s a %dx%d mide %dx%d:\n%s", donde, tam[0], tam[1], lipgloss.Width(v), lipgloss.Height(v), v)
+			}
+		}
+		a.Pulsar("esc", "home")
 	}
 }
