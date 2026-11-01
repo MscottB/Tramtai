@@ -259,7 +259,7 @@
       "pagina": "conectar",
       "resumen": "Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
-      "terminal": "En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio.",
+      "terminal": "En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio y a Herramientas (tema «Conectar tus herramientas»).",
       "bloques": [
         {
           "tipo": "web",
@@ -408,7 +408,7 @@
       "titulo": "Conectar tus herramientas",
       "resumen": "Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
-      "terminal": "En la terminal: en Mis APIs (4), ← → lleva a Herramientas. Espacio activa o desactiva, t y T hacen todas, m cambia el modelo, R restaura la copia, o olvida y r refresca.",
+      "terminal": "En la terminal: Mis APIs (4), ← → a Herramientas. Espacio activa o desactiva; Enter reactiva una desactualizada; t activa todas y T las desactiva; m cambia el modelo; R restaura; o olvida; r refresca.",
       "bloques": [
         {
           "tipo": "tabla",
@@ -447,7 +447,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Cada herramienta usa su propia API de Mis APIs, en el grupo «Herramientas», con su id como nombre y limitada al modelo que elegiste. Su clave solo vale en las URL de esa API."
+            "Cada herramienta usa su propia API (grupo «Herramientas», su id de nombre), limitada al modelo elegido y con una clave que solo vale allí. Por ejemplo, /p/claude-code/anthropic o /p/codex/openai/v1."
           ]
         },
         {
@@ -499,14 +499,14 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Una fila «Desactualizada» pasa si se borró o detuvo su API, si cambió el puerto de Tramtai o su carpeta, si falta su clave en el almacén o si se editó a mano lo que escribió Tramtai."
+            "«Desactualizada» pasa si se borró o detuvo su API, cambió el puerto, Tramtai se movió o actualizó (la orden de la clave ya no existe), falta la clave, se editó a mano o activas el HTTPS propio."
           ]
         },
         {
           "tipo": "pasos",
           "titulo": "Dejarlas como estaban",
           "lineas": [
-            "«Desactivar» quita solo lo que puso Tramtai y devuelve los valores de antes; lo que cambiaste después se queda. Detiene la API y guarda la clave, así que volver a activar es inmediato.",
+            "Con el interruptor «Usar con Tramtai» (o «Desactivar todas») se quita solo lo que puso Tramtai y vuelven los valores de antes; lo que cambiaste se queda. La API se detiene y la clave se guarda.",
             "«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.",
             "«Restaurar la copia» repone el archivo entero, con la fecha de la copia. Es el último recurso: pierdes lo que cambiaste desde entonces, y pide confirmación."
           ]
@@ -515,6 +515,12 @@
           "tipo": "texto",
           "lineas": [
             "Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos, con permisos solo para ti. Guarda las 3 últimas de cada herramienta."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "«Restaurar la copia» usa la de la activación actual; las otras (hasta 3) quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar."
           ]
         },
         {
@@ -566,7 +572,7 @@
             ],
             [
               "¿Para qué sirve «tramtai herramientas clave»?",
-              "Es la orden con la que Claude Code y Codex piden su clave. Solo responde si la herramienta está activa y escribe la clave y nada más. No hace falta que la ejecutes tú."
+              "La usan Claude Code y Codex para pedir su clave. Responde mientras Tramtai la guarda (activa o desactivada, no tras «Olvidar») y escribe solo la clave; desactivada, su API detenida no la acepta."
             ],
             [
               "¿Qué órdenes tiene la CLI?",
@@ -1871,7 +1877,7 @@
       "pagina": "conectar",
       "resumen": "Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
-      "terminal": "In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.",
+      "terminal": "In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key and to Tools (topic “Connect your tools”).",
       "bloques": [
         {
           "tipo": "web",
@@ -2020,7 +2026,7 @@
       "titulo": "Connect your tools",
       "resumen": "Point Claude Code, Codex, Continue, opencode and Kilo at Tramtai from My APIs, and put them back as they were whenever you want.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
-      "terminal": "In the terminal: in My APIs (4), ← → goes to Tools. Space turns a tool on or off, t and T do all, m changes the model, R restores the copy, o forgets and r refreshes.",
+      "terminal": "In the terminal: My APIs (4), ← → to Tools. Space turns on or off; Enter turns on again an out-of-date tool; t turns on all and T turns them off; m changes model; R restores; o forgets; r refreshes.",
       "bloques": [
         {
           "tipo": "tabla",
@@ -2059,7 +2065,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Each tool uses its own API in My APIs, in the “Herramientas” group, named after its id and limited to the model you chose. Its key only works at that API’s URLs."
+            "Each tool uses its own API (“Herramientas” group, its id as name), limited to the chosen model, with a key that only works there. For example, /p/claude-code/anthropic or /p/codex/openai/v1."
           ]
         },
         {
@@ -2111,14 +2117,14 @@
         {
           "tipo": "texto",
           "lineas": [
-            "An “Out of date” row happens if its API was deleted or stopped, if Tramtai’s port or folder changed, if its key is missing from the store, or if what Tramtai wrote was edited by hand."
+            "It is “Out of date” if its API was deleted or stopped, the port changed, Tramtai moved or updated (key command gone), its key is missing, it was edited by hand or you turn on Tramtai’s own HTTPS."
           ]
         },
         {
           "tipo": "pasos",
           "titulo": "Put them back as they were",
           "lineas": [
-            "“Turn off” removes only what Tramtai added and brings back the earlier values; what you changed afterwards stays. It stops the API and keeps the key, so turning on again is instant.",
+            "The “Use with Tramtai” switch (or “Turn off all”) removes only what Tramtai added and brings back the earlier values; what you changed stays. The API stops and the key is kept.",
             "“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.",
             "“Restore the copy” puts back the whole file, as of the copy’s date. It is the last resort: you lose what you changed since then, and it asks you to confirm."
           ]
@@ -2127,6 +2133,12 @@
           "tipo": "texto",
           "lineas": [
             "Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder, readable only by you. It keeps the last 3 copies of each tool."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "“Restore the copy” uses the one from the current activation; the others (up to 3) stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered."
           ]
         },
         {
@@ -2178,7 +2190,7 @@
             ],
             [
               "What is “tramtai herramientas clave” for?",
-              "It is the command Claude Code and Codex use to ask for their key. It only responds if the tool is on, and it prints the key and nothing else. You do not need to run it yourself."
+              "Claude Code and Codex use it to ask for their key. It responds while Tramtai keeps the key (on or turned off, not after “Forget”) and prints only the key; turned off, its stopped API rejects it."
             ],
             [
               "Which commands does the CLI have?",
