@@ -644,11 +644,11 @@ type FichaAgente struct {
 }
 
 // FichasAgentes devuelve las fichas de los agentes registrados, en el orden del servicio.
-func (c *Cliente) FichasAgentes(ctx context.Context) ([]FichaAgente, error) {
+func (c *Cliente) FichasAgentes(ctx context.Context, instancia string) ([]FichaAgente, error) {
 	var r struct {
 		Agentes []FichaAgente `json:"agentes"`
 	}
-	return r.Agentes, c.pedir(ctx, "GET", "/api/v1/agentes", "", nil, "", &r)
+	return r.Agentes, c.pedir(ctx, "GET", "/api/v1/agentes", instancia, nil, "", &r)
 }
 
 // Modelos devuelve los identificadores del catálogo de la instancia.

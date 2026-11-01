@@ -262,6 +262,9 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if p.form != nil {
 			return p, p.form.f.Update(m)
 		}
+		if p.herr.sel != nil { // el selector de modelo filtra con lo pegado
+			return p, p.herr.sel.Update(m)
+		}
 		if p.buscando {
 			p.entrada += strings.Join(strings.Fields(m.Content), " ")
 			p.lista.Buscar(p.entrada)

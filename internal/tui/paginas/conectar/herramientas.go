@@ -41,9 +41,8 @@ type herramientas struct {
 
 // quienModelo es a quién se aplica el modelo que se está eligiendo.
 type quienModelo struct {
-	ids       []string
-	todas     bool
-	cambiando bool // ya está puesta: solo cambia de modelo
+	ids   []string
+	todas bool
 }
 
 // msgHerramientas trae la lista de herramientas del espacio y las fichas de los agentes.
@@ -81,7 +80,7 @@ func (p *Pagina) cargarHerr() tea.Cmd {
 	return func() tea.Msg {
 		m.filas, m.err = c.Cli.Herramientas(c.Ctx, c.Instancia)
 		if m.err == nil {
-			m.fichas, _ = c.Cli.FichasAgentes(c.Ctx) // sin fichas no se filtra ni se preselecciona: el servicio elige
+			m.fichas, _ = c.Cli.FichasAgentes(c.Ctx, c.Instancia) // sin fichas no se filtra ni se preselecciona: el servicio elige
 		}
 		return m
 	}
@@ -157,7 +156,7 @@ func (p *Pagina) teclaHerramientas(t string, k tea.KeyPressMsg) tea.Cmd {
 	case t == "T" && libre && slices.ContainsFunc(h.filas, estaPuesta):
 		return p.desactivarHerr(nil, true)
 	case t == "m" && hay && libre && estaPuesta(fila):
-		return p.pedirModelo(quienModelo{ids: []string{fila.ID}, cambiando: true}, p.tx("herramientas.cambiarTitulo", "nombre", fila.Nombre), fila.Modelo)
+		return p.pedirModelo(quienModelo{ids: []string{fila.ID}}, p.tx("herramientas.cambiarTitulo", "nombre", fila.Nombre), fila.Modelo)
 	case t == "o" && hay && libre && (estaPuesta(fila) || fila.Estado == "desactivada"):
 		return p.preguntar(accOlvidarHerr, fila.ID, p.tx("herramientas.olvidarTitulo", "nombre", fila.Nombre), p.tx("herramientas.olvidarTexto"))
 	case t == "R" && hay && libre && fila.HayCopia:
@@ -190,6 +189,7 @@ func (p *Pagina) pedirModelo(q quienModelo, titulo, actual string) tea.Cmd {
 		return comp.Aviso(p.tx("herramientas.sinAgentes"), comp.Fallo)
 	}
 	s := comp.NuevoSelector(p.estilos, titulo, items)
+	s.Texto = p.tx("herramientas.modeloTexto")
 	if actual == "" {
 		actual = p.modeloInicial(items)
 	}

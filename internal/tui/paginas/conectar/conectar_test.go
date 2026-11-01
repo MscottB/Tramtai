@@ -13,10 +13,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
@@ -843,6 +845,12 @@ func filasHerramientas() []contrato.EstadoHerramienta {
 func conHerramientas(t *testing.T) (*cliente.Cliente, string, *herramientasFalsas) {
 	t.Helper()
 	cli, id := prueba.Servicio(t)
+	return conHerramientasDe(t, cli, id)
+}
+
+// conHerramientasDe es conHerramientas delante de un servicio que ya está en marcha.
+func conHerramientasDe(t *testing.T, cli *cliente.Cliente, id string) (*cliente.Cliente, string, *herramientasFalsas) {
+	t.Helper()
 	destino, err := url.Parse(cli.Base)
 	if err != nil {
 		t.Fatal(err)
@@ -904,6 +912,10 @@ func (h *herramientasFalsas) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(resto, "/olvidar"), strings.HasSuffix(resto, "/restaurar"):
 		accion := path.Base(resto)
 		h.llamadas = append(h.llamadas, accion+" "+path.Base(path.Dir(resto)))
+		if accion == "olvidar" { // como el servicio: 204 sin cuerpo
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		_, _ = w.Write([]byte(`{"copia":"copia"}`))
 		return
 	}
@@ -1176,6 +1188,9 @@ func TestHerramientasVolverAActivar(t *testing.T) {
 
 // TestHerramientasRestaurar: R pide confirmación con la fecha de la copia, y solo si hay copia. r sigue siendo refrescar.
 func TestHerramientasRestaurar(t *testing.T) {
+	antes := time.Local
+	time.Local = time.UTC // la fecha de la copia se enseña en hora local: así el día es el mismo en cualquier huso
+	t.Cleanup(func() { time.Local = antes })
 	cli, id, h := conHerramientas(t)
 	a := enHerramientas(t, cli, id)
 	a.HastaVer("Claude Code")
@@ -1334,5 +1349,65 @@ func TestHerramientasCabe(t *testing.T) {
 			}
 		}
 		a.Pulsar("esc", "home")
+	}
+}
+
+// El selector solo ofrece los agentes que valen en APIs y marca el primero conectado: antigravity (sin su prueba de
+// seguridad) no se ofrece, y un agente desconectado se ofrece pero no se marca.
+func TestHerramientasModeloSoloDeAgentesQueValen(t *testing.T) {
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": prueba.Detectado{}, "antigravity": prueba.Detectado{}})
+	cli, id, h := conHerramientasDe(t, cli, id)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "space")
+	v := a.Vista()
+	if strings.Contains(v, "antigravity") || !strings.Contains(v, "claude") || !strings.Contains(v, "simulado") {
+		t.Fatalf("antigravity no vale en APIs y no se ofrece:\n%s", v)
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); p.Modelo != "claude" {
+		t.Fatalf("el primer agente conectado y permitido va marcado: %+v", p)
+	}
+
+	if err := cli.ConectarAgente(context.Background(), "claude", false); err != nil {
+		t.Fatal(err)
+	}
+	a.Pulsar("r")
+	a.EsperarCarga()
+	a.Pulsar("t")
+	if v := a.Vista(); !strings.Contains(v, "claude") {
+		t.Fatalf("el desconectado se sigue ofreciendo, como en la Web UI:\n%s", v)
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); p.Modelo != "simulado" {
+		t.Fatalf("un agente desconectado no se marca: %+v", p)
+	}
+}
+
+// Lo pegado filtra el selector de modelo, como lo escrito.
+func TestHerramientasModeloFiltraLoPegado(t *testing.T) {
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": prueba.Detectado{}})
+	cli, id, h := conHerramientasDe(t, cli, id)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "space")
+	a.Pegar("simu")
+	if v := a.Vista(); strings.Contains(v, "claude") || !strings.Contains(v, "simulado") {
+		t.Fatalf("lo pegado filtra:\n%s", v)
+	}
+	hastaAviso(a, func() { a.Pulsar("enter") })
+	if p := h.ultimaActivacion(); p.Modelo != "simulado" {
+		t.Fatalf("elige el filtrado: %+v", p)
+	}
+}
+
+// El selector explica qué se elige, con el texto de la Web UI.
+func TestHerramientasSelectorExplica(t *testing.T) {
+	cli, id, _ := conHerramientas(t)
+	a := enHerramientas(t, cli, id)
+	a.HastaVer("Claude Code")
+	a.Pulsar("down", "space")
+	if v := juntar(a.Vista()); !strings.Contains(v, "Elige el agente y el modelo que usará") {
+		t.Fatalf("falta la explicación del selector:\n%s", a.Vista())
 	}
 }
