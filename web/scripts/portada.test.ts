@@ -20,9 +20,156 @@ const seccion = (id: string) => {
   }
   return ''
 }
-const asi = seccion('capturas')
-const demo = seccion('demo')
+// v0.59: «La app» lleva las cinco capturas y, justo después, el recorrido guiado (#demo, dentro de la sección).
+const app = seccion('app')
+const corte = app.indexOf('<div id="demo"')
+const asi = corte < 0 ? app : app.slice(0, corte)
+const demo = corte < 0 ? '' : app.slice(corte)
 const pasos = pasosBienvenida()
+
+// v0.59 (spec §1): la portada pasa de 14 secciones a diez, en este orden.
+test('la portada tiene diez secciones, en su orden', () => {
+  const ids = [...html.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids, ['portada', 'por-que', 'como', 'app', 'terminal', 'servidor', 'agentes', 'funciones', 'privacidad', 'descargar'])
+})
+
+test('la barra lleva a Cómo funciona, Terminal, Servidor, Agentes, Ayuda y Desarrolladores', () => {
+  const nav = html.match(/<nav aria-label="Secciones"[\s\S]*?<\/nav>/)?.[0] ?? ''
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#como', '#terminal', '#servidor', '#agentes', 'ayuda/', 'desarrolladores.html'])
+  for (const t of ['Cómo funciona', 'How it works', 'Terminal', 'Servidor', 'Server', 'Agentes', 'Agents']) assert.ok(nav.includes(`>${t}<`), t)
+})
+
+test('bajo los botones de la portada, tres accesos: Escritorio, Terminal y Servidor', () => {
+  const portada = seccion('portada')
+  const accesos = portada.match(/<nav class="accesos"[\s\S]*?<\/nav>/)?.[0] ?? ''
+  assert.ok(portada.indexOf('class="accesos"') > portada.indexOf('class="acciones"'), 'van después de los botones')
+  assert.deepEqual([...accesos.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#app', '#terminal', '#servidor'])
+  for (const t of ['Escritorio', 'Desktop', 'Terminal', 'Servidor', 'Server']) assert.ok(accesos.includes(`>${t}<`), t)
+  assert.match(css, /\.accesos a \{[^}]*min-height: 44px/)
+})
+
+// v0.59 (spec §4): la franja de cuatro cifras del producto y la línea de seis paradas, en lugar de los seis motivos.
+const porQue = seccion('por-que')
+test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular', () => {
+  const cifras = porQue.match(/<li class="cifra">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(cifras.length, 4)
+  assert.deepEqual(cifras.map((c) => c.match(/<span class="cifra-numero">(\d+)<\/span>/)?.[1]), ['4', '3', '0', '2'])
+  for (const c of cifras) assert.match(c, /lang="es"[\s\S]*lang="en"/)
+  for (const t of ['agentes desde tus apps', 'OpenAI, Anthropic y la propia', 'telemetría y ningún servidor nuestro', 'cambios en tu app: la URL y la clave'])
+    assert.ok(porQue.includes(t), t)
+  const regla = css.match(/\.cifra-numero \{[^}]*\}/)?.[0] ?? ''
+  assert.match(regla, /var\(--titulo\)/)
+  assert.match(regla, /font-variant-numeric: tabular-nums/)
+})
+
+const VENTAJAS = [
+  ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
+  ['Sin tocar tu código', 'con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.'],
+  ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
+  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
+  ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
+  ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
+]
+test('la línea de ventajas: seis paradas con el texto de la spec, en los dos idiomas y en el acento', () => {
+  const paradas = porQue.match(/<li class="parada parada-ventaja">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(paradas.length, 6)
+  paradas.forEach((p, i) => {
+    assert.match(p, /lang="es"[\s\S]*lang="en"/)
+    assert.ok(p.includes(`<h3 class="parada-titulo"><span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
+    // Bajo su título, la frase empieza en mayúscula.
+    const frase = VENTAJAS[i][1][0].toUpperCase() + VENTAJAS[i][1].slice(1)
+    assert.ok(p.includes(`<p class="parada-texto"><span lang="es">${frase}</span>`), frase)
+    // «Unas 25 palabras» como mucho (spec §4), también en inglés.
+    assert.ok(frase.split(/\s+/).length <= 25, `25 palabras como mucho: ${frase}`)
+    const ingles = p.match(/<p class="parada-texto">[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
+    assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
+  })
+  // Dos listas de tres, independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
+  const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
+  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [3, 3])
+  assert.match(listas[1], /^<ol class="ventajas-linea" start="4">/)
+  // Las paradas son las del plano (.parada): una sola estación y la vía de 3 px de las secuencias, en el acento; el color
+  // de línea es de los agentes (M4).
+  assert.doesNotMatch(css, /\.parada-ventaja/)
+  assert.match(css, /\n\.parada::after \{[^}]*width: 3px; background: var\(--acento\)/)
+  assert.match(css, /\.metro--plano \.parada:not\(:last-child\)::after \{[^}]*height: 3px/)
+  const reglas = css.slice(css.indexOf('.ventajas'), css.indexOf('/* Pares'))
+  assert.doesNotMatch(reglas, COLORES_LINEA)
+  // En el móvil la vía sigue de la tercera a la cuarta; desde 901 px, dos columnas (mismo corte que .como y .par: 900).
+  assert.match(reglas, /@media \(max-width: 900px\) \{[^@]*\.ventajas-linea:first-child > \.parada:last-child::after \{ content: ''; \}/)
+  assert.match(reglas, /@media \(min-width: 901px\) \{[^@]*\.ventajas \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.cifras \{ grid-template-columns: repeat\(2/)
+  assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.tablero, \.como, \.par, \.par\.invertido, \.conexiones \{/)
+})
+
+test('los seis motivos ya no están, ni su CSS', () => {
+  assert.doesNotMatch(html, /class="motivos?"/)
+  assert.doesNotMatch(css, /\.motivo/)
+})
+
+// v0.59 (spec §1, §3): «Cómo funciona» enseña el código con pestañas y el paso 3 cuenta lo de las herramientas.
+const como = seccion('como')
+test('«Cómo funciona» tiene pestañas OpenAI, Anthropic y curl, con su panel cada una', () => {
+  const listas = como.match(/<div class="pestanas-lista" role="tablist"[\s\S]*?<\/div>/g) ?? []
+  assert.equal(listas.length, 1)
+  const pestanas = listas[0].match(/<button type="button" role="tab"[^>]*>[^<]*<\/button>/g) ?? []
+  assert.deepEqual(pestanas.map((p) => p.replace(/<[^>]+>/g, '')), ['OpenAI', 'Anthropic', 'curl'])
+  for (const p of pestanas) {
+    const panel = p.match(/aria-controls="([^"]+)"/)?.[1] ?? ''
+    assert.match(como, new RegExp(`<pre class="codigo" id="${panel}" aria-labelledby="${p.match(/id="([^"]+)"/)?.[1]}"`), panel)
+  }
+  // Sin JavaScript no hay pestañas que no hagan nada: la lista espera oculta y se ve el primer ejemplo.
+  assert.match(listas[0], /role="tablist"[^>]* hidden>/)
+  // Revisión de la Tarea 14 (I1): el display: flex de la lista no le gana a [hidden].
+  assert.match(css, /\.pestanas-lista\[hidden\] \{ display: none; \}/)
+  assert.equal((como.match(/<pre class="codigo"[^>]* hidden>/g) ?? []).length, 2)
+  assert.match(como, /data-pestanas/)
+  assert.match(js, /lista\.hidden = false/)
+  assert.match(js, /setAttribute\('role', 'tabpanel'\)/)
+  // M6: al cargar no se guarda nada; solo la pestaña que elige la persona.
+  assert.match(js, /if \(guardar\) try \{ localStorage\.setItem\(clave, lenguaje\)/)
+  assert.match(js, /elegir\(b\.dataset\.lenguaje, null, true\)/)
+  assert.doesNotMatch(js, /elegir\(guardado \|\| '[^']+', [^)]*true\)/)
+  // M5: el ejemplo de la pestaña de entrada no repite el de la primera escena de la cabecera.
+  const openai = (como.match(/<pre class="codigo" id="como-openai-panel"[\s\S]*?<\/pre>/)?.[0] ?? '').replace(/<[^>]+>/g, '')
+  assert.ok(openai, 'falta el panel de OpenAI')
+  assert.doesNotMatch(openai, /Resume este contrato/)
+  assert.match(openai, /stream=True/)
+})
+
+test('el paso 3 de «Cómo funciona» dice que Tramtai apunta tus herramientas y lleva a su Ayuda', () => {
+  const paso = como.match(/<li>[\s\S]*?<\/li>/g)?.[2] ?? ''
+  for (const t of ['Claude Code', 'Codex', 'Continue', 'opencode', 'copia de su configuración', 'interruptor', 'Herramientas', 'Tools', 'switch'])
+    assert.ok(paso.includes(t), t)
+  assert.match(paso, /href="ayuda\/conectar-herramientas\.html"/)
+})
+
+// v0.59: las capturas de «La app» van en los dos idiomas, cada una con su pareja (lang y srcset), como la terminal.
+test('cada captura de «La app» tiene su pareja en el otro idioma, con lang y srcset', () => {
+  const imgs = asi.match(/<img [^>]*>/g) ?? []
+  assert.equal(imgs.length, 20, 'cinco pantallas, en claro y oscuro y en los dos idiomas')
+  for (const img of imgs) {
+    const m = img.match(/class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp"/)
+    assert.ok(m, img.slice(0, 120))
+    const [, tema, idioma, nombre] = m
+    const base = `capturas/${nombre}-${tema}-${idioma}`
+    assert.ok(img.includes(`srcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1440.webp 1440w"`), `${base}: srcset`)
+    assert.doesNotMatch(img, /data-alt-en/, 'el alt va en el idioma de la imagen')
+    const otro = idioma === 'es' ? 'en' : 'es'
+    assert.ok(imgs.some((i) => i.includes(`class="solo-${tema}" lang="${otro}" src="capturas/${nombre}-${tema}-${otro}-1440.webp"`)), `${base}: falta su pareja`)
+  }
+})
+
+// Las secciones que se juntaron (spec §1): «Conecta estos agentes» dentro de Agentes, los riesgos con la Privacidad y el
+// cierre con Descargar. Un enlace guardado a un ancla de antes llega a su sección nueva.
+test('Agentes, Privacidad y Descargar absorben las franjas de antes, y las anclas viejas llevan a su sección', () => {
+  assert.match(seccion('agentes'), /Conecta estos agentes[\s\S]*Desde tus apps y SDK/)
+  assert.match(seccion('privacidad'), /class="tablero"[\s\S]*<!-- comun:riesgos -->/)
+  assert.match(seccion('descargar'), /Gratis para uso personal y no comercial/)
+  assert.doesNotMatch(html, /href="#(pagas|capturas|aviso)"/)
+  assert.match(js, /pagas: 'por-que', capturas: 'app', aviso: 'privacidad'/)
+  assert.match(js, /window\.addEventListener\('hashchange', llevar\)/, 'también con la página abierta (M2)')
+})
 const datos = html.match(/<script type="application\/json" id="ejemplos-mapa">([\s\S]*?)<\/script>/)
 
 test('la portada tiene cuatro ejemplos del recorrido, en los dos idiomas', () => {
@@ -75,7 +222,7 @@ test('la cabecera tiene cuatro pestañas con nombre y un panel con el código de
   assert.ok(inicio >= 0, 'falta el panel de la escena')
   const panel = html.slice(inicio)
   assert.match(panel.slice(0, 4000), /id="codigo-mapa-1"/, 'sin JavaScript se ve el código de la primera escena')
-  assert.match(html, /<pre class="codigo[^"]*" id="codigo-como"/, '«Tres paradas» tiene su ejemplo fijo')
+  assert.match(html, /<pre class="codigo[^"]*" id="como-anthropic-panel"/, '«Tres paradas» tiene sus ejemplos')
   assert.match(html, /class="mapa-pausa"/)
 })
 test('las pestañas se manejan con las flechas y paran la rotación', () => {
@@ -109,15 +256,9 @@ test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la 
   assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
 })
 
-// v0.56: la spec de la portada recupera los motivos (sustituye a la auditoría 001, 53). Cada uno cuenta el beneficio en
-// una línea; el detalle queda en Funciones.
-const pagas = seccion('pagas')
-test('«Los agentes que ya pagas» va justo después de la cabecera, antes de los agentes', () => {
-  assert.ok(pagas, 'falta <section id="pagas">')
-  assert.ok(html.indexOf('id="pagas"') < html.indexOf('Conecta estos agentes'))
-  assert.ok(html.indexOf('id="pagas"') < html.indexOf('id="como"'))
-})
-test('«Los agentes que ya pagas» dibuja el antes y el después, con texto visible', () => {
+// «Por qué Tramtai» (v0.59) conserva el antes y el después de «Los agentes que ya pagas» (v0.56).
+const pagas = porQue
+test('«Por qué Tramtai» dibuja el antes y el después, con texto visible', () => {
   const figuras = pagas.match(/<figure class="pagas-diagrama[^"]*">[\s\S]*?<\/figure>/g) ?? []
   assert.equal(figuras.length, 2)
   for (const f of figuras) { assert.match(f, /<svg[^>]*role="img"/); assert.match(f, /<figcaption>[\s\S]*lang="es"[\s\S]*lang="en"/) }
@@ -126,23 +267,16 @@ test('«Los agentes que ya pagas» dibuja el antes y el después, con texto visi
   assert.match(pagas, /Una URL local y los agentes que ya tienes/)
   assert.match(pagas, /One local URL and the agents you already have/)
 })
-test('los seis motivos, en los dos idiomas y sin promesas absolutas', () => {
-  const motivos = pagas.match(/<li class="motivo">[\s\S]*?<\/li>/g) ?? []
-  assert.equal(motivos.length, 6)
-  for (const t of ['Lo que ya pagas', 'En tu equipo', 'Compatible', 'Respaldo', 'Por proyecto', 'Bajo control']) assert.match(pagas, new RegExp(t))
-  for (const m of motivos) assert.match(m, /lang="es"[\s\S]*lang="en"/)
-  assert.doesNotMatch(pagas, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
-  // Revisión final (I2): para tus apps, la clave de API; la suscripción, solo para tu uso personal (TERMINOS.md §4).
-  assert.match(motivos[0], /Para tus apps, la clave de API de cada agente; tu suscripción[^<]*, solo para tu uso personal/)
-  assert.match(motivos[0], /For your apps, each agent’s API key; your [^<]*subscription, only for your personal use/)
+test('la suscripción, solo para tu uso personal, y sin promesas absolutas fuera de la línea (I2, M7)', () => {
+  // Revisión final (I2): la suscripción, solo para tu uso personal (TERMINOS.md §4), también en inglés.
+  assert.match(pagas, /<span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription\. No new accounts\.<\/span>/)
   assert.doesNotMatch(pagas, /la suscripción o la clave que ya tienes|the subscription or key you already have/)
-  // Revisión final (I3): los motivos cuentan el beneficio con palabras propias, sin copiar las capturas, la privacidad ni
-  // el plano.
-  for (const copia of ['no tiene servidor propio', 'su historial, sus APIs y sus ajustes', 'el siguiente de tu lista', 'mapa en vivo'])
-    assert.ok(!motivos.join('').includes(copia), `un motivo repite «${copia}»`)
-  // Revisión final (M7, M8): Tramtai sí está en medio del dibujo, pero no hay nube; y «herramientas» son las tools.
+  // «Siempre encendida» habla del servidor (spec §4); el resto no promete de más.
+  const sinLinea = pagas.replace(/<div class="ventajas">[\s\S]*?<\/div>/, '')
+  assert.ok(sinLinea.length < pagas.length, 'falta la línea de ventajas')
+  assert.doesNotMatch(sinLinea, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+  // Revisión final (M7): Tramtai sí está en medio del dibujo, pero no hay nube.
   assert.doesNotMatch(pagas, /Sin servidores intermedios|No middle servers/)
-  assert.match(pagas, /llamadas a herramientas/)
 })
 test('los tres dibujos llaman igual a los tres orígenes (revisión final, M8)', () => {
   assert.doesNotMatch(html, /Tus automatizaciones|Your automations/)
@@ -153,8 +287,7 @@ const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
 
 test('el color de cada agente solo marca a su agente: mapa, diagrama «Con Tramtai», fichas y tarjetas de Agentes (52)', () => {
   assert.doesNotMatch(html, /class="linea"/)
-  const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section class="conexiones">[\s\S]*?<\/section>/, '')
-    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
+  const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
   assert.doesNotMatch(sinAgentes, COLORES_LINEA)
 })
 
@@ -168,10 +301,14 @@ test('Antigravity va como vía muerta en el mapa y el titular cuenta cuatro agen
 })
 
 test('el hero tiene un titular, dos frases y ninguna pastilla, rejilla ni brillo de fondo (56, 57, 59)', () => {
-  const portada = html.match(/<section class="portada">[\s\S]*?<div class="mapa"/)?.[0] ?? ''
+  const portada = html.match(/<section id="portada" class="portada">[\s\S]*?<div class="mapa"/)?.[0] ?? ''
+  assert.ok(portada, 'falta <section id="portada">')
   assert.doesNotMatch(portada, /class="chapa"/)
   const entrada = (html.match(/<p class="entrada">\s*<span lang="es">([^<]*)<\/span>/)?.[1] ?? '').split('. ')
   assert.equal(entrada.length, 2, entrada.join(' | '))
+  // Con el SDK cambian la URL y la clave, como dice la cifra de «Por qué Tramtai» (revisión de la Tarea 14, ronda 2).
+  assert.match(portada, /solo cambias la URL y la clave\.<\/span>/)
+  assert.match(portada, /you only change the URL and the key\.<\/span>/)
   assert.doesNotMatch(css, /\.portada::before|repeating-linear-gradient|radial-gradient/)
 })
 
@@ -195,6 +332,7 @@ test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no t
   for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.mapa-pestana', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
+  assert.match(css, /#demo \{[^}]*scroll-margin-top: 72px/, 'tampoco tapa el recorrido guiado, que va dentro de «La app»')
 })
 
 test('el foco se ve: sin recortes en ES/EN y en verde claro dentro del código (20)', () => {
@@ -224,9 +362,11 @@ test('los comentarios del código salen en el idioma de la página y Copiar copi
 
 test('el código del panel de la cabecera salta de línea y «Tres paradas» enseña otro ejemplo', () => {
   assert.match(css, /\.mapa-codigos > \.codigo \{[^}]*white-space: pre-wrap; overflow-wrap: anywhere/, 'sin desplazamiento horizontal en el panel')
-  const pre = (id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}">([\\s\\S]*?)</pre>`))?.[1] ?? ''
-  assert.match(pre('codigo-como'), /anthropic/)
-  assert.notEqual(pre('codigo-como'), pre('codigo-mapa-1'))
+  const pre = (id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}"[^>]*>([\\s\\S]*?)</pre>`))?.[1] ?? ''
+  assert.match(pre('como-anthropic-panel'), /anthropic/)
+  assert.match(pre('como-openai-panel').replace(/<[^>]+>/g, ''), /from openai import OpenAI/)
+  assert.match(pre('como-curl-panel'), /^curl /m)
+  for (const id of ['como-openai-panel', 'como-anthropic-panel', 'como-curl-panel']) assert.notEqual(pre(id), pre('codigo-mapa-1'), id)
 })
 
 test('los diagramas comparan sin Tramtai y con Tramtai', () => {
@@ -265,20 +405,19 @@ test('«Así se ve» dice que las capturas tienen datos de ejemplo y aclara su p
 
 test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () => {
   const imgs = (asi.match(/<img [^>]*src="capturas\/[^>]*>/g) ?? [])
-  assert.equal(imgs.length, 10, 'cinco pantallas, en claro y oscuro')
+  assert.equal(imgs.length, 20, 'cinco pantallas, en claro y oscuro y en los dos idiomas')
   for (const img of imgs) {
-    assert.match(img, /src="capturas\/[a-z-]+-(claro|oscuro)-1440\.webp"/)
+    assert.match(img, /src="capturas\/[a-z-]+-(claro|oscuro)-(es|en)-1440\.webp"/)
     assert.match(img, /width="1440" height="900"/)
-    assert.match(img, /srcset="capturas\/[a-z-]+-(claro|oscuro)-640\.webp 640w, capturas\/[a-z-]+-(claro|oscuro)-960\.webp 960w, capturas\/[a-z-]+-(claro|oscuro)-1440\.webp 1440w"/)
+    assert.match(img, /srcset="capturas\/[a-z-]+-(claro|oscuro)-(es|en)-640\.webp 640w, capturas\/[a-z-]+-(claro|oscuro)-(es|en)-960\.webp 960w, capturas\/[a-z-]+-(claro|oscuro)-(es|en)-1440\.webp 1440w"/)
     // Las dos columnas de un par (1fr y 1.6fr en 1120 px) dejan la captura en 630 px: el navegador elige la de 640.
     assert.match(img, /sizes="\(max-width: 900px\) 100vw, 630px"/)
     assert.match(img, /loading="lazy"/, 'ninguna está en la primera pantalla')
   }
 })
 
-// v0.59: cada captura de la app y del servidor existe en español e inglés. Las referencias del HTML (lang y srcset) las
-// cambia la Tarea 14; hasta entonces solo se mira el disco. Las del servidor (entrar y Inicio con la cabecera «Servidor») van
-// a 1440 y 960 px.
+// v0.59: cada captura de la app y del servidor existe en español e inglés (las del HTML, en la prueba de las parejas). Las
+// del servidor (entrar y Inicio con la cabecera «Servidor») van a 1440 y 960 px.
 test('cada captura de la app y del servidor tiene su versión es y en en disco', () => {
   const archivos = readdirSync(new URL('../../site/capturas/', import.meta.url))
   const pedidas = [
@@ -304,7 +443,7 @@ const carpeta = new URL('../../site/capturas/', import.meta.url)
 const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
 
 test('la demo es una figura por paso de la bienvenida, cada una con su captura en claro y oscuro y en los dos idiomas', () => {
-  assert.ok(demo, 'falta <section id="demo">')
+  assert.ok(demo, 'falta <div id="demo"> en «La app»')
   assert.equal(figuras.length, pasos.length, 'una figura por paso')
   figuras.forEach((figura, i) => {
     const n = i + 1
@@ -498,9 +637,9 @@ test('la portada presenta el modo servidor, que es otro entorno, y el aviso con 
   const servidor = seccion('servidor')
   for (const t of ['Nuevo en la v0.58', 'New in v0.58', 'otro entorno', 'separate environment', 'HTTPS', 'href="servidor.html"'])
     assert.ok(servidor.includes(t), `falta «${t}»`)
-  const aviso = seccion('aviso')
+  const aviso = seccion('privacidad').match(/<ol class="riesgos">[\s\S]*?<\/ol>/)?.[0] ?? ''
   assert.equal((aviso.match(/<li>/g) ?? []).length, 5, 'los cinco riesgos')
-  assert.match(aviso, /<!-- comun:riesgos -->/, 'el aviso sale de riesgos.* (npm run sitio)')
+  assert.match(seccion('privacidad'), /<!-- comun:riesgos -->/, 'el aviso sale de riesgos.* (npm run sitio)')
 })
 
 test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {

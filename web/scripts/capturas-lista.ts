@@ -3,7 +3,7 @@ import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { pasosBienvenida } from '../src/recorrido.ts'
 
 // CAPTURAS son las zonas de la app que muestra la Ayuda: cada una es el elemento [data-captura=<id>] de esa página.
-// PORTADA son las pantallas completas de la página del producto (site/capturas/<nombre>-<claro|oscuro>-<640|960|1440>.webp).
+// PORTADA son las pantallas completas de la página del producto (site/capturas/<nombre>-<claro|oscuro>-<es|en>-<640|960|1440>.webp).
 // guardado son valores de localStorage que la página necesita (la pestaña de Ajustes donde está la zona). servidor dice
 // que sale del Tramtai en modo servidor (en contenedores, detrás de Caddy); cabecera, que la zona es la cabecera fija;
 // ancho, el de la ventana si no es el de siempre (1280).

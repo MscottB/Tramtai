@@ -201,10 +201,14 @@ test('las 16 capturas de la terminal de la portada actual existen y pesan poco',
   assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
 })
 
-test('cada pantalla de la portada existe en WebP, en claro y oscuro, a 640, 960 y 1440 px', () => {
+test('cada pantalla de la portada existe en WebP, en claro y oscuro, en los dos idiomas, a 640, 960 y 1440 px', () => {
   const portada = readdirSync(new URL('../../site/capturas/', import.meta.url))
   assert.ok(!portada.some((a) => a.endsWith('.png')), 'quedan capturas en PNG')
   for (const p of PORTADA)
     for (const tema of ['claro', 'oscuro'])
-      for (const ancho of [640, 960, 1440]) assert.ok(portada.includes(`${p.nombre}-${tema}-${ancho}.webp`), `${p.nombre}-${tema}-${ancho}.webp`)
+      for (const ancho of [640, 960, 1440]) {
+        for (const idioma of ['es', 'en']) assert.ok(portada.includes(`${p.nombre}-${tema}-${idioma}-${ancho}.webp`), `${p.nombre}-${tema}-${idioma}-${ancho}.webp`)
+        // v0.59: las de antes, sin idioma, ya no las usa la portada.
+        assert.ok(!portada.includes(`${p.nombre}-${tema}-${ancho}.webp`), `sobra ${p.nombre}-${tema}-${ancho}.webp`)
+      }
 })

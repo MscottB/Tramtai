@@ -96,7 +96,7 @@ const ICONO_TEMA = {
 const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const soloLectores = (es: string, en: string) => `<span lang="es" class="solo-lectores">${es}</span><span lang="en" class="solo-lectores">${en}</span>`
 
-// cabecera es el enlace para saltar al contenido y la barra: las mismas cinco secciones, idioma, tema y Descargar. En
+// cabecera es el enlace para saltar al contenido y la barra: las mismas seis entradas, idioma, tema y Descargar. En
 // pantallas medianas y pequeñas las secciones, el idioma y el tema van juntos en el panel del menú (#menu), así cada
 // control cabe con 44 px. Desde la portada, sus secciones son anclas de la misma página.
 export function cabecera(rel: string, actual: Actual): string {
@@ -112,8 +112,9 @@ export function cabecera(rel: string, actual: Actual): string {
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
         <a href="${raiz}#como">${bilingue('Cómo funciona', 'How it works')}</a>
+        <a href="${raiz}#terminal">Terminal</a>
+        <a href="${raiz}#servidor">${bilingue('Servidor', 'Server')}</a>
         <a href="${raiz}#agentes">${bilingue('Agentes', 'Agents')}</a>
-        <a href="${raiz}#funciones">${bilingue('Funciones', 'Features')}</a>
         <a href="${rel}ayuda/"${marca('ayuda')}>${bilingue('Ayuda', 'Help')}</a>
         <a href="${rel}desarrolladores.html"${marca('desarrolladores')}>${bilingue('Desarrolladores', 'Developers')}</a>
       </nav>
