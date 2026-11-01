@@ -26,6 +26,7 @@
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
         <q-tab name="apis" icon="o_hub" :label="t('puntos.pestana', { n: puntos.length })" />
         <q-tab name="principal" icon="o_cable" :label="$q.screen.xs ? t('puntos.principal') : t('conectar.directa', { nombre: sesion?.nombre ?? '' })" />
+        <q-tab name="herramientas" icon="o_extension" :label="t('herramientas.titulo')" />
       </q-tabs>
       <q-separator />
       <q-tab-panels v-model="pestana" animated keep-alive>
@@ -75,6 +76,9 @@
         </q-card-section>
       </template>
         </q-tab-panel>
+        <q-tab-panel name="herramientas" class="q-pa-none">
+          <Herramientas :opciones="opciones" @cambio="cargarPuntos" />
+        </q-tab-panel>
       </q-tab-panels>
     </q-card>
 
@@ -93,6 +97,7 @@ import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import GuiaUrls from '../componentes/GuiaUrls.vue'
 import DetalleApi from '../componentes/accesos/DetalleApi.vue'
 import FormularioApi from '../componentes/accesos/FormularioApi.vue'
+import Herramientas from '../componentes/accesos/Herramientas.vue'
 import ClaveEspacio from '../componentes/accesos/ClaveEspacio.vue'
 import ListaApis from '../componentes/accesos/ListaApis.vue'
 import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
@@ -144,8 +149,8 @@ function usarApiPropia() {
 }
 const filtroGrupo = ref<string | null>(null) // null: todos; '': sin grupo
 
-// pestana es la pestaña abierta: las APIs por aplicación o la clave del espacio; se recuerda en este navegador.
-const pestana = ref<'apis' | 'principal'>(leer('tramtai.pestanaApis', 'apis'))
+// pestana es la pestaña abierta: las APIs por aplicación, la clave del espacio o las herramientas; se recuerda en este navegador.
+const pestana = ref<'apis' | 'principal' | 'herramientas'>(leer('tramtai.pestanaApis', 'apis'))
 watch(pestana, (v) => guardar('tramtai.pestanaApis', v))
 // gruposLista son los grupos que muestra la lista con sus filtros; si aún no se abrió su pestaña, todos los grupos.
 const gruposLista = ref<string[]>()

@@ -136,6 +136,17 @@ export const CLAVES_APIS: string[] = [
   'presupuesto.reiniciarEspacio', 'presupuesto.reiniciarEspacioTexto', 'presupuesto.reiniciado', 'presupuesto.espacio',
   'presupuesto.espacioTexto', 'presupuesto.editorTexto',
   'cierre.titulo', 'cierre.texto', 'cierre.claveTitulo', 'cierre.clave',
+  // La pestaña Herramientas: los estados, los avisos y los diálogos. Las etiquetas de lectura de pantalla de la Web UI
+  // (interruptorDe, acciones) no pasan.
+  'herramientas.titulo', 'herramientas.texto', 'herramientas.activar', 'herramientas.activarTodas', 'herramientas.desactivarTodas',
+  'herramientas.refrescar', 'herramientas.estado.no_detectada', 'herramientas.estado.detectada', 'herramientas.estado.activa',
+  'herramientas.estado.desactivada', 'herramientas.estado.desactualizada', 'herramientas.estado.solo_global', 'herramientas.interruptor',
+  'herramientas.modelo', 'herramientas.soloGlobal', 'herramientas.noDetectadaFila', 'herramientas.claveEnArchivo', 'herramientas.volverAActivar',
+  'herramientas.cambiarModelo', 'herramientas.olvidar', 'herramientas.restaurar', 'herramientas.activarTitulo', 'herramientas.activarTodasTitulo',
+  'herramientas.cambiarTitulo', 'herramientas.modeloTexto', 'herramientas.modeloEtiqueta', 'herramientas.sinAgentes', 'herramientas.olvidarTitulo',
+  'herramientas.olvidarTexto', 'herramientas.restaurarTitulo', 'herramientas.restaurarTexto', 'herramientas.restaurarTextoSinFecha', 'herramientas.avisoActivada',
+  'herramientas.avisoDesactivada', 'herramientas.avisoOlvidada', 'herramientas.avisoRestaurada', 'herramientas.vacio', 'herramientas.vacioTexto',
+  'herramientas.servidor', 'herramientas.servidorTexto',
 ]
 
 // CLAVES_ESPACIOS son los textos de Espacios que la terminal repite tal cual: estados, etiquetas, acciones y sus

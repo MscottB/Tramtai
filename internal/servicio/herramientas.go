@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
@@ -434,13 +435,13 @@ func (s *Servicio) restaurarHerramienta(h apuntar.Herramienta) (string, error) {
 func (s *Servicio) estadoHerramienta(inst *Instancia, h apuntar.Herramienta) (e contrato.EstadoHerramienta) {
 	e = contrato.EstadoHerramienta{ID: h.ID, Nombre: h.Nombre, ClaveEnArchivo: h.ClaveEnArchivo, Gestionado: h.Gestionado != nil && h.Gestionado()}
 	defer func() {
-		if motivo := s.sinHTTPPropio(); motivo != "" {
+		if texto := s.sinHTTPPropio(); texto != "" {
 			if e.Estado == "activa" {
 				e.Estado = "desactualizada"
 			}
-			e.Motivo = motivo
+			ponerMotivo(&e, motivo{"sin_https_propio", nil, texto})
 		} else if e.Gestionado && e.Motivo == "" {
-			e.Motivo = idioma.T("una política de la organización manda sobre su configuración: puede que no use lo que escriba Tramtai")
+			ponerMotivo(&e, motivo{"gestionado", nil, idioma.T("una política de la organización manda sobre su configuración: puede que no use lo que escriba Tramtai")})
 		}
 	}()
 	alcance, proyecto, soloGlobal := alcanceDe(inst, h)
@@ -449,20 +450,26 @@ func (s *Servicio) estadoHerramienta(inst *Instancia, h apuntar.Herramienta) (e 
 	}
 	e.Ruta, _ = h.Ruta(alcance, proyecto)
 	if soloGlobal {
-		e.Estado, e.Motivo = "solo_global", idioma.T("solo se activa desde el espacio global")
+		e.Estado = "solo_global"
+		ponerMotivo(&e, motivo{"solo_global", nil, idioma.T("solo se activa desde el espacio global")})
 		return e
 	}
 	a, activa, err := apuntar.Leer(s.opc.Datos, h.ID)
 	if err != nil {
-		e.Estado, e.Motivo = "desactualizada", err.Error()
+		e.Estado = "desactualizada"
+		ponerMotivo(&e, motivo{"anotacion_ilegible", map[string]string{"detalle": err.Error()}, err.Error()})
 		return e
 	}
 	if activa {
 		e.Estado, e.Modelo, e.HayCopia = "activa", a.Modelo, !a.NoExistia
-		if motivo := s.motivoDesactualizada(h, a); motivo != "" {
-			e.Estado, e.Motivo = "desactualizada", motivo
+		if e.HayCopia {
+			e.FechaCopia = a.Fecha.UTC().Format(time.RFC3339)
+		}
+		if m := s.motivoDesactualizada(h, a); m.codigo != "" {
+			e.Estado = "desactualizada"
+			ponerMotivo(&e, m)
 		} else if !mismaRuta(a.Ruta, e.Ruta) {
-			e.Motivo = idioma.Tf("activada en otro archivo: %s", a.Ruta)
+			ponerMotivo(&e, motivo{"otro_archivo", map[string]string{"ruta": a.Ruta}, idioma.Tf("activada en otro archivo: %s", a.Ruta)})
 		}
 		e.Ruta = a.Ruta
 		return e
@@ -480,34 +487,51 @@ func (s *Servicio) estadoHerramienta(inst *Instancia, h apuntar.Herramienta) (e 
 	if h.Previa != nil {
 		_, err := os.Stat(e.Ruta)
 		if err := h.Previa(e.Ruta, err == nil); err != nil {
-			e.Motivo = err.Error()
+			codigo := "previa"
+			if errors.Is(err, apuntar.ErrContinueJSON) {
+				codigo = "continue_json"
+			}
+			ponerMotivo(&e, motivo{codigo, nil, err.Error()})
 		}
 	}
 	return e
 }
 
+// motivo es por qué una herramienta no va: un código que la Web UI traduce a su idioma (con los datos que lleva el texto) y
+// el texto en el idioma del servicio, que sirve a la CLI y a la terminal y de respaldo si la Web UI no conoce el código.
+type motivo struct {
+	codigo string
+	datos  map[string]string
+	texto  string
+}
+
+func ponerMotivo(e *contrato.EstadoHerramienta, m motivo) {
+	e.Motivo, e.MotivoCodigo, e.MotivoDatos = m.texto, m.codigo, m.datos
+}
+
 // motivoDesactualizada dice por qué una activación ya no funciona ("" si funciona).
-func (s *Servicio) motivoDesactualizada(h apuntar.Herramienta, a apuntar.Anotacion) string {
+func (s *Servicio) motivoDesactualizada(h apuntar.Herramienta, a apuntar.Anotacion) motivo {
 	switch p, puerto := apiHerramienta(a.API), s.puertoActual(); {
 	case p == nil:
-		return idioma.Tf("la API %s ya no existe: vuelve a activarla", a.API)
+		return motivo{"api_no_existe", map[string]string{"api": a.API}, idioma.Tf("la API %s ya no existe: vuelve a activarla", a.API)}
 	case !p.EstaActivo():
-		return idioma.Tf("la API %s está detenida en Mis APIs", a.API)
+		return motivo{"api_detenida", map[string]string{"api": a.API}, idioma.Tf("la API %s está detenida en Mis APIs", a.API)}
 	case a.Puerto != puerto:
-		return idioma.Tf("Tramtai usa ahora el puerto %d y la herramienta apunta al %d: vuelve a activarla", puerto, a.Puerto)
+		return motivo{"puerto", map[string]string{"actual": strconv.Itoa(puerto), "anotado": strconv.Itoa(a.Puerto)},
+			idioma.Tf("Tramtai usa ahora el puerto %d y la herramienta apunta al %d: vuelve a activarla", puerto, a.Puerto)}
 	}
 	if a.Orden != "" {
 		if _, err := os.Stat(a.Orden); err != nil {
-			return idioma.Tf("ya no existe %s, el Tramtai que da la clave: vuelve a activarla", a.Orden)
+			return motivo{"orden_no_existe", map[string]string{"ruta": a.Orden}, idioma.Tf("ya no existe %s, el Tramtai que da la clave: vuelve a activarla", a.Orden)}
 		}
 	}
 	if !h.ClaveEnArchivo {
 		if clave, _ := s.leerClave(NombreClaveHerramienta(h.ID)); clave == "" {
-			return idioma.T("su clave ya no está en el almacén del sistema: vuelve a activarla")
+			return motivo{"clave_no_almacen", nil, idioma.T("su clave ya no está en el almacén del sistema: vuelve a activarla")}
 		}
 	}
 	if actual, _ := os.ReadFile(a.Ruta); !h.Formato.Contiene(actual, a) {
-		return idioma.Tf("se cambió a mano lo que escribió Tramtai en %s", a.Ruta)
+		return motivo{"editada_a_mano", map[string]string{"ruta": a.Ruta}, idioma.Tf("se cambió a mano lo que escribió Tramtai en %s", a.Ruta)}
 	}
-	return ""
+	return motivo{}
 }
