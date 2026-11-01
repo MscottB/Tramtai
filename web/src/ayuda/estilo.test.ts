@@ -104,7 +104,7 @@ test('relacionados, errores e ids son válidos', () => {
   const ids = temas.map((t) => t.id)
   assert.equal(new Set(ids).size, ids.length, 'ids de tema repetidos')
   for (const tema of temas) {
-    assert.match(tema.id, /^[a-z]+$/)
+    assert.match(tema.id, /^[a-z]+(-[a-z]+)*$/)
     for (const b of tema.bloques)
       if (b.tipo === 'errores' && problemas)
         for (const c of b.codigos) assert.ok(problemas.CODIGOS_ERROR.includes(c), `${tema.id}: error ${c} desconocido`)
@@ -125,8 +125,8 @@ test('Servidor tiene el aviso con riesgos.1 a riesgos.5, Dos entornos su tabla y
   }
 })
 
-test('están los 18 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 18)
+test('están los 19 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 19)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 
