@@ -13,6 +13,7 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   { id: 'receta', pagina: 'ejecutar' },
   { id: 'mis-apis', pagina: 'conectar' },
   { id: 'presupuesto', pagina: 'conectar' },
+  { id: 'herramientas', pagina: 'conectar', guardado: { 'tramtai.pestanaApis': 'herramientas' } },
   { id: 'historial', pagina: 'historial' },
   { id: 'conversor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'tramtai' } },
   { id: 'actualizaciones', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'tramtai' } },
@@ -24,6 +25,12 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   { id: 'servidor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'servidor' }, servidor: true },
   { id: 'seguridad', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'seguridad' }, servidor: true },
 ]
+
+// POR_SACAR son las capturas de la Ayuda que un tema ya cita y todavía no se han sacado, con el motivo: mientras tanto el tema sale
+// sin imagen (la Web UI y el sitio la omiten). Al sacarla (npm run capturas) la entrada sobra y la prueba lo avisa.
+export const POR_SACAR: Record<string, string> = {
+  herramientas: 'v0.59: la saca la Tarea 13 del plan, con la copia de prueba y sus dos peticiones reales a claude/haiku, que se avisan antes',
+}
 
 // TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal-<nombre>-<claro|oscuro>-<es|en>-
 // <960|1440>.webp), con las teclas que llevan a ella desde Inicio.

@@ -65,9 +65,9 @@ test('el script de la página de paso funciona tal cual sale en ayuda.html', () 
   }
 })
 
-test('el índice de búsqueda tiene los 18 temas en los dos idiomas', () => {
+test('el índice de búsqueda tiene los 19 temas en los dos idiomas', () => {
   const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
-  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 18)
+  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 19)
 })
 
 const leer = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
@@ -199,11 +199,11 @@ test('Empezar avisa, junto al botón de descargar, del CLI del agente y del avis
   assert.match(tras.slice(0, 1500), /Antes necesitas el CLI de al menos un agente[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
 })
 
-test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 18 temas', () => {
+test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 19 temas', () => {
   const urls = [...paginas.get('sitemap.xml')!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
   for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'servidor.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
     assert.ok(urls.includes(u), u)
-  assert.equal(urls.length, 4 + 18)
+  assert.equal(urls.length, 4 + 19)
 })
 
 test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absolutas', () => {

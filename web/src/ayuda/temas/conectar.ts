@@ -26,7 +26,7 @@ export const conectar: Tema = {
   terminal: 'ayuda.conectar.terminal',
   paginaApp: 'conectar',
   conDiagrama: true,
-  relacionados: ['archivos', 'herramientas', 'presupuestos', 'claves'],
+  relacionados: ['conectar-herramientas', 'archivos', 'herramientas', 'presupuestos', 'claves'],
   bloques: [
     {
       tipo: 'diagrama',

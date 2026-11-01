@@ -404,6 +404,187 @@
       ]
     },
     {
+      "id": "conectar-herramientas",
+      "titulo": "Conectar tus herramientas",
+      "resumen": "Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
+      "terminal": "En la terminal: en Mis APIs (4), ← → lleva a Herramientas. Espacio activa o desactiva, t y T hacen todas, m cambia el modelo, R restaura la copia, o olvida y r refresca.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Archivo que toca",
+            "Dónde queda la clave"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "settings.json de ~/.claude (o de CLAUDE_CONFIG_DIR); en un proyecto, .claude/settings.local.json, nunca settings.json",
+              "En el almacén cifrado del sistema: Claude Code la pide con «tramtai herramientas clave claude-code»"
+            ],
+            [
+              "Codex",
+              "config.toml de ~/.codex (o de CODEX_HOME): model, model_provider y un proveedor tramtai, en bloques con marcas de Tramtai",
+              "En el almacén cifrado del sistema: Codex la pide con «tramtai herramientas clave codex»"
+            ],
+            [
+              "Continue",
+              "config.yaml de ~/.continue: un modelo llamado Tramtai",
+              "En su archivo, con permisos solo para ti"
+            ],
+            [
+              "opencode",
+              "opencode.json (o opencode.jsonc) de ~/.config/opencode: un proveedor llamado tramtai",
+              "En su archivo, con permisos solo para ti"
+            ],
+            [
+              "Kilo Code",
+              "kilo.jsonc de ~/.config/kilo: un proveedor llamado tramtai",
+              "En su archivo, con permisos solo para ti"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Cada herramienta usa su propia API de Mis APIs, en el grupo «Herramientas», con su id como nombre y limitada al modelo que elegiste. Su clave solo vale en las URL de esa API."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Mis APIs abre la pestaña «Herramientas»: una fila por herramienta, con su estado, su modelo y el archivo que toca.",
+            "Activa una con su interruptor y elige el agente y el modelo. «Activar todas» lo hace con todas las detectadas, con un solo modelo.",
+            "Tramtai crea su API, guarda una copia del archivo y escribe solo lo suyo. Si la herramienta estaba abierta, ábrela de nuevo.",
+            "Para dejarla como estaba, apaga el interruptor: Tramtai quita lo suyo y respeta lo que cambiaste después."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La pestaña Herramientas de Mis APIs, con cada herramienta y su estado",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Qué significa"
+          ],
+          "filas": [
+            [
+              "No detectada",
+              "No hay rastro de ella en este equipo: ni su programa ni su carpeta de configuración."
+            ],
+            [
+              "Detectada",
+              "Está instalada y todavía no apunta a Tramtai."
+            ],
+            [
+              "Activa",
+              "Su archivo apunta a Tramtai y conserva lo que escribió Tramtai."
+            ],
+            [
+              "Desactivada",
+              "Estuvo activa: su archivo está como estaba y su API sigue en Mis APIs, detenida."
+            ],
+            [
+              "Desactualizada",
+              "Estuvo activa pero ya no funciona. La fila dice por qué y «Volver a activar» lo arregla."
+            ],
+            [
+              "Solo global",
+              "Desde el espacio de un proyecto solo Claude Code tiene archivo propio: las demás se activan desde el espacio global."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Una fila «Desactualizada» pasa si se borró o detuvo su API, si cambió el puerto de Tramtai o su carpeta, si falta su clave en el almacén o si se editó a mano lo que escribió Tramtai."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Dejarlas como estaban",
+          "lineas": [
+            "«Desactivar» quita solo lo que puso Tramtai y devuelve los valores de antes; lo que cambiaste después se queda. Detiene la API y guarda la clave, así que volver a activar es inmediato.",
+            "«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.",
+            "«Restaurar la copia» repone el archivo entero, con la fecha de la copia. Es el último recurso: pierdes lo que cambiaste desde entonces, y pide confirmación."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos, con permisos solo para ti. Guarda las 3 últimas de cada herramienta."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Si sincronizas ~/.claude, ~/.codex o tus dotfiles, esa configuración llega a equipos sin Tramtai y la herramienta no conectaría: desactívala antes o deja el archivo fuera."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Si tu empresa gestiona Claude Code con ajustes de organización, mandan sobre los tuyos: la fila lo avisa, pero Tramtai no puede cambiarlos."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Por qué la clave de Continue, opencode y Kilo va en su archivo?",
+              "Porque no saben pedirla con una orden, como Claude Code y Codex. Tramtai la escribe en su archivo, con permisos solo para ti; es la de su API, que no vale en ningún otro sitio."
+            ],
+            [
+              "¿Por qué no puedo activar una herramienta?",
+              "La fila lo dice. No se ofrecen en el modo servidor ni con el HTTPS propio de Tramtai, y el agente debe valer para apps. Si está activa en otro espacio, desactívala allí antes."
+            ],
+            [
+              "¿Puedo activar una herramienta solo en un proyecto?",
+              "Solo Claude Code, desde el espacio del proyecto: escribe en .claude/settings.local.json y nunca en settings.json, que se comparte por git. Las demás, desde el espacio global."
+            ],
+            [
+              "¿Por qué Tramtai me pide pasar Continue a config.yaml?",
+              "Continue lee config.yaml si existe y, si no, config.json. Con solo config.json, crear el YAML dejaría tu JSON sin uso: pásalo a config.yaml y vuelve a activarla."
+            ],
+            [
+              "¿Qué hago si dice que ya hay un proveedor «tramtai» en config.toml?",
+              "Esa tabla no la escribió Tramtai, o quedó una antigua tras editar el archivo a mano. Renómbrala o bórrala. Un model o model_provider en varias líneas tampoco vale: déjalo en una."
+            ],
+            [
+              "¿Y si cambio el modelo de Codex con /model?",
+              "Esa línea pasa a ser tuya: al desactivar, Tramtai no la devuelve a como estaba. Si quieres otro modelo, cámbialo en config.toml."
+            ],
+            [
+              "¿Y si edito a mano el archivo de una herramienta?",
+              "Desactivar solo quita lo que sigue como Tramtai lo escribió y deja lo demás. Si cambias lo suyo, la fila pasa a «Desactualizada». Un archivo ilegible no se toca: la fila dice qué hacer."
+            ],
+            [
+              "¿Y si ya tengo una API con el nombre de la herramienta?",
+              "Tramtai no la toca y no activa la herramienta: cámbiale el nombre en Mis APIs y vuelve a activarla."
+            ],
+            [
+              "¿Para qué sirve «tramtai herramientas clave»?",
+              "Es la orden con la que Claude Code y Codex piden su clave. Solo responde si la herramienta está activa y escribe la clave y nada más. No hace falta que la ejecutes tú."
+            ],
+            [
+              "¿Qué órdenes tiene la CLI?",
+              "tramtai herramientas (o tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) y clave (key)."
+            ],
+            [
+              "¿Cómo activo o desactivo varias a la vez?",
+              "Con varios ids o con --todas (--all), por ejemplo «tramtai herramientas activar --todas». activar acepta --modelo (--model) con agente/modelo, como claude/sonnet."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        }
+      ]
+    },
+    {
       "id": "archivos",
       "titulo": "Archivos",
       "resumen": "Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.",
@@ -1831,6 +2012,187 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        }
+      ]
+    },
+    {
+      "id": "conectar-herramientas",
+      "titulo": "Connect your tools",
+      "resumen": "Point Claude Code, Codex, Continue, opencode and Kilo at Tramtai from My APIs, and put them back as they were whenever you want.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
+      "terminal": "In the terminal: in My APIs (4), ← → goes to Tools. Space turns a tool on or off, t and T do all, m changes the model, R restores the copy, o forgets and r refreshes.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "File it changes",
+            "Where the key goes"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json",
+              "In the encrypted system store: Claude Code asks for it with “tramtai herramientas clave claude-code”"
+            ],
+            [
+              "Codex",
+              "config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers",
+              "In the encrypted system store: Codex asks for it with “tramtai herramientas clave codex”"
+            ],
+            [
+              "Continue",
+              "config.yaml in ~/.continue: a model named Tramtai",
+              "In its file, readable only by you"
+            ],
+            [
+              "opencode",
+              "opencode.json (or opencode.jsonc) in ~/.config/opencode: a provider named tramtai",
+              "In its file, readable only by you"
+            ],
+            [
+              "Kilo Code",
+              "kilo.jsonc in ~/.config/kilo: a provider named tramtai",
+              "In its file, readable only by you"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Each tool uses its own API in My APIs, in the “Herramientas” group, named after its id and limited to the model you chose. Its key only works at that API’s URLs."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In My APIs open the “Tools” tab: one row per tool, with its state, its model and the file it changes.",
+            "Turn one on with its switch and pick the agent and model. “Turn on all” does it for every detected tool, with a single model.",
+            "Tramtai creates its API, saves a copy of the file and writes only its own part. If the tool was open, open it again.",
+            "To put it back as it was, turn the switch off: Tramtai removes its part and keeps what you changed afterwards."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The Tools tab in My APIs, with each tool and its state",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "What it means"
+          ],
+          "filas": [
+            [
+              "Not detected",
+              "There is no trace of it on this computer: neither its program nor its configuration folder."
+            ],
+            [
+              "Detected",
+              "It is installed and does not point at Tramtai yet."
+            ],
+            [
+              "Active",
+              "Its file points at Tramtai and still has what Tramtai wrote."
+            ],
+            [
+              "Turned off",
+              "It was on: its file is as it was and its API is still in My APIs, stopped."
+            ],
+            [
+              "Out of date",
+              "It was on but no longer works. The row says why, and “Turn on again” fixes it."
+            ],
+            [
+              "Global only",
+              "From a project workspace only Claude Code has its own file: turn the others on from the global workspace."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "An “Out of date” row happens if its API was deleted or stopped, if Tramtai’s port or folder changed, if its key is missing from the store, or if what Tramtai wrote was edited by hand."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Put them back as they were",
+          "lineas": [
+            "“Turn off” removes only what Tramtai added and brings back the earlier values; what you changed afterwards stays. It stops the API and keeps the key, so turning on again is instant.",
+            "“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.",
+            "“Restore the copy” puts back the whole file, as of the copy’s date. It is the last resort: you lose what you changed since then, and it asks you to confirm."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder, readable only by you. It keeps the last 3 copies of each tool."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "If you sync ~/.claude, ~/.codex or your dotfiles, that configuration reaches computers without Tramtai and the tool could not connect: turn it off first or leave the file out."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "If your company manages Claude Code with organization settings, they override yours: the row warns you, but Tramtai cannot change them."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Why do the keys of Continue, opencode and Kilo go in their file?",
+              "Because they cannot ask for it with a command, as Claude Code and Codex can. Tramtai writes it in their file, readable only by you; it is the key of their own API, which works nowhere else."
+            ],
+            [
+              "Why can’t I turn a tool on?",
+              "The row says why. Tools are not offered in server mode or with Tramtai’s own HTTPS, and the agent must be allowed for apps. If it is on in another workspace, turn it off there first."
+            ],
+            [
+              "Can I turn a tool on for just one project?",
+              "Only Claude Code, from the project workspace: it writes to .claude/settings.local.json and never to settings.json, which is shared through git. The others, from the global workspace."
+            ],
+            [
+              "Why does Tramtai ask me to move Continue to config.yaml?",
+              "Continue reads config.yaml if it exists and config.json if not. With only config.json, creating the YAML would leave your JSON unused: move it to config.yaml and turn the tool on again."
+            ],
+            [
+              "What if it says config.toml already has a “tramtai” provider?",
+              "Tramtai did not write that table, or an old one was left after editing the file by hand. Rename or delete it. A model or model_provider on several lines does not work either: put it on one line."
+            ],
+            [
+              "What if I change Codex’s model with /model?",
+              "That line becomes yours: when you turn the tool off, Tramtai does not put it back as it was. If you want another model, change it in config.toml."
+            ],
+            [
+              "What if I edit a tool’s file by hand?",
+              "Turning off removes only what is still as Tramtai wrote it and leaves the rest. If you change its part, the row becomes “Out of date”. An unreadable file is not touched: the row says what to do."
+            ],
+            [
+              "What if I already have an API with the tool’s name?",
+              "Tramtai does not touch it and does not turn the tool on: rename it in My APIs and turn the tool on again."
+            ],
+            [
+              "What is “tramtai herramientas clave” for?",
+              "It is the command Claude Code and Codex use to ask for their key. It only responds if the tool is on, and it prints the key and nothing else. You do not need to run it yourself."
+            ],
+            [
+              "Which commands does the CLI have?",
+              "tramtai herramientas (or tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) and clave (key)."
+            ],
+            [
+              "How do I turn several on or off at once?",
+              "Pass several ids or --todas (--all), for example “tramtai herramientas activar --todas”. activar takes --modelo (--model) with agent/model, such as claude/sonnet."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
         }
       ]
     },

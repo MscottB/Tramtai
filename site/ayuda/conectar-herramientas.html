@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Connect your tools · Tramtai">Conectar tus herramientas · Tramtai</title>
+<meta name="description" content="Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Conectar tus herramientas · Tramtai">
+<meta property="og:description" content="Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../estilo.css">
+<script src="../sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+</head>
+<body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-deshacer"><span lang="es">Dejarlas como estaban</span><span lang="en">Put them back as they were</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
+<article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<header>
+  <h1><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></h1>
+  <p class="entradilla"><span lang="es">Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.</span><span lang="en">Point Claude Code, Codex, Continue, opencode and Kilo at Tramtai from My APIs, and put them back as they were whenever you want.</span></p>
+</header>
+
+<section id="s-tabla"><h2><span lang="es">De un vistazo</span><span lang="en">At a glance</span></h2>
+<div class="tabla"><table>
+  <thead><tr><th></th><th><span lang="es">Archivo que toca</span><span lang="en">File it changes</span></th><th><span lang="es">Dónde queda la clave</span><span lang="en">Where the key goes</span></th></tr></thead>
+  <tbody>
+    <tr><th scope="row"><span lang="es">Claude Code</span><span lang="en">Claude Code</span></th><td><span lang="es">settings.json de ~/.claude (o de CLAUDE_CONFIG_DIR); en un proyecto, .claude/settings.local.json, nunca settings.json</span><span lang="en">settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json</span></td><td><span lang="es">En el almacén cifrado del sistema: Claude Code la pide con «tramtai herramientas clave claude-code»</span><span lang="en">In the encrypted system store: Claude Code asks for it with “tramtai herramientas clave claude-code”</span></td></tr>
+    <tr><th scope="row"><span lang="es">Codex</span><span lang="en">Codex</span></th><td><span lang="es">config.toml de ~/.codex (o de CODEX_HOME): model, model_provider y un proveedor tramtai, en bloques con marcas de Tramtai</span><span lang="en">config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers</span></td><td><span lang="es">En el almacén cifrado del sistema: Codex la pide con «tramtai herramientas clave codex»</span><span lang="en">In the encrypted system store: Codex asks for it with “tramtai herramientas clave codex”</span></td></tr>
+    <tr><th scope="row"><span lang="es">Continue</span><span lang="en">Continue</span></th><td><span lang="es">config.yaml de ~/.continue: un modelo llamado Tramtai</span><span lang="en">config.yaml in ~/.continue: a model named Tramtai</span></td><td><span lang="es">En su archivo, con permisos solo para ti</span><span lang="en">In its file, readable only by you</span></td></tr>
+    <tr><th scope="row"><span lang="es">opencode</span><span lang="en">opencode</span></th><td><span lang="es">opencode.json (o opencode.jsonc) de ~/.config/opencode: un proveedor llamado tramtai</span><span lang="en">opencode.json (or opencode.jsonc) in ~/.config/opencode: a provider named tramtai</span></td><td><span lang="es">En su archivo, con permisos solo para ti</span><span lang="en">In its file, readable only by you</span></td></tr>
+    <tr><th scope="row"><span lang="es">Kilo Code</span><span lang="en">Kilo Code</span></th><td><span lang="es">kilo.jsonc de ~/.config/kilo: un proveedor llamado tramtai</span><span lang="en">kilo.jsonc in ~/.config/kilo: a provider named tramtai</span></td><td><span lang="es">En su archivo, con permisos solo para ti</span><span lang="en">In its file, readable only by you</span></td></tr>
+  </tbody>
+</table></div>
+
+<p class="aviso"><span lang="es">Cada herramienta usa su propia API de Mis APIs, en el grupo «Herramientas», con su id como nombre y limitada al modelo que elegiste. Su clave solo vale en las URL de esa API.</span><span lang="en">Each tool uses its own API in My APIs, in the “Herramientas” group, named after its id and limited to the model you chose. Its key only works at that API’s URLs.</span></p>
+</section>
+
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
+<ol class="pasos">
+  <li><span lang="es">En Mis APIs abre la pestaña «Herramientas»: una fila por herramienta, con su estado, su modelo y el archivo que toca.</span><span lang="en">In My APIs open the “Tools” tab: one row per tool, with its state, its model and the file it changes.</span></li>
+  <li><span lang="es">Activa una con su interruptor y elige el agente y el modelo. «Activar todas» lo hace con todas las detectadas, con un solo modelo.</span><span lang="en">Turn one on with its switch and pick the agent and model. “Turn on all” does it for every detected tool, with a single model.</span></li>
+  <li><span lang="es">Tramtai crea su API, guarda una copia del archivo y escribe solo lo suyo. Si la herramienta estaba abierta, ábrela de nuevo.</span><span lang="en">Tramtai creates its API, saves a copy of the file and writes only its own part. If the tool was open, open it again.</span></li>
+  <li><span lang="es">Para dejarla como estaba, apaga el interruptor: Tramtai quita lo suyo y respeta lo que cambiaste después.</span><span lang="en">To put it back as it was, turn the switch off: Tramtai removes its part and keeps what you changed afterwards.</span></li>
+</ol>
+
+<div class="tabla"><table>
+  <thead><tr><th></th><th><span lang="es">Qué significa</span><span lang="en">What it means</span></th></tr></thead>
+  <tbody>
+    <tr><th scope="row"><span lang="es">No detectada</span><span lang="en">Not detected</span></th><td><span lang="es">No hay rastro de ella en este equipo: ni su programa ni su carpeta de configuración.</span><span lang="en">There is no trace of it on this computer: neither its program nor its configuration folder.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Detectada</span><span lang="en">Detected</span></th><td><span lang="es">Está instalada y todavía no apunta a Tramtai.</span><span lang="en">It is installed and does not point at Tramtai yet.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Activa</span><span lang="en">Active</span></th><td><span lang="es">Su archivo apunta a Tramtai y conserva lo que escribió Tramtai.</span><span lang="en">Its file points at Tramtai and still has what Tramtai wrote.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Desactivada</span><span lang="en">Turned off</span></th><td><span lang="es">Estuvo activa: su archivo está como estaba y su API sigue en Mis APIs, detenida.</span><span lang="en">It was on: its file is as it was and its API is still in My APIs, stopped.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Desactualizada</span><span lang="en">Out of date</span></th><td><span lang="es">Estuvo activa pero ya no funciona. La fila dice por qué y «Volver a activar» lo arregla.</span><span lang="en">It was on but no longer works. The row says why, and “Turn on again” fixes it.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Solo global</span><span lang="en">Global only</span></th><td><span lang="es">Desde el espacio de un proyecto solo Claude Code tiene archivo propio: las demás se activan desde el espacio global.</span><span lang="en">From a project workspace only Claude Code has its own file: turn the others on from the global workspace.</span></td></tr>
+  </tbody>
+</table></div>
+
+<p class="aviso"><span lang="es">Una fila «Desactualizada» pasa si se borró o detuvo su API, si cambió el puerto de Tramtai o su carpeta, si falta su clave en el almacén o si se editó a mano lo que escribió Tramtai.</span><span lang="en">An “Out of date” row happens if its API was deleted or stopped, if Tramtai’s port or folder changed, if its key is missing from the store, or if what Tramtai wrote was edited by hand.</span></p>
+</section>
+
+<section id="s-deshacer"><h2><span lang="es">Dejarlas como estaban</span><span lang="en">Put them back as they were</span></h2>
+<ol class="pasos">
+  <li><span lang="es">«Desactivar» quita solo lo que puso Tramtai y devuelve los valores de antes; lo que cambiaste después se queda. Detiene la API y guarda la clave, así que volver a activar es inmediato.</span><span lang="en">“Turn off” removes only what Tramtai added and brings back the earlier values; what you changed afterwards stays. It stops the API and keeps the key, so turning on again is instant.</span></li>
+  <li><span lang="es">«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.</span><span lang="en">“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.</span></li>
+  <li><span lang="es">«Restaurar la copia» repone el archivo entero, con la fecha de la copia. Es el último recurso: pierdes lo que cambiaste desde entonces, y pide confirmación.</span><span lang="en">“Restore the copy” puts back the whole file, as of the copy’s date. It is the last resort: you lose what you changed since then, and it asks you to confirm.</span></li>
+</ol>
+
+<p class="aviso"><span lang="es">Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos, con permisos solo para ti. Guarda las 3 últimas de cada herramienta.</span><span lang="en">Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder, readable only by you. It keeps the last 3 copies of each tool.</span></p>
+
+<p class="aviso"><span lang="es">Si sincronizas ~/.claude, ~/.codex o tus dotfiles, esa configuración llega a equipos sin Tramtai y la herramienta no conectaría: desactívala antes o deja el archivo fuera.</span><span lang="en">If you sync ~/.claude, ~/.codex or your dotfiles, that configuration reaches computers without Tramtai and the tool could not connect: turn it off first or leave the file out.</span></p>
+
+<p class="aviso"><span lang="es">Si tu empresa gestiona Claude Code con ajustes de organización, mandan sobre los tuyos: la fila lo avisa, pero Tramtai no puede cambiarlos.</span><span lang="en">If your company manages Claude Code with organization settings, they override yours: the row warns you, but Tramtai cannot change them.</span></p>
+</section>
+
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
+<details id="clave-en-archivo"><summary><span lang="es">¿Por qué la clave de Continue, opencode y Kilo va en su archivo?</span><span lang="en">Why do the keys of Continue, opencode and Kilo go in their file?</span></summary><p><span lang="es">Porque no saben pedirla con una orden, como Claude Code y Codex. Tramtai la escribe en su archivo, con permisos solo para ti; es la de su API, que no vale en ningún otro sitio.</span><span lang="en">Because they cannot ask for it with a command, as Claude Code and Codex can. Tramtai writes it in their file, readable only by you; it is the key of their own API, which works nowhere else.</span></p></details>
+<details id="herramienta-no-activa"><summary><span lang="es">¿Por qué no puedo activar una herramienta?</span><span lang="en">Why can’t I turn a tool on?</span></summary><p><span lang="es">La fila lo dice. No se ofrecen en el modo servidor ni con el HTTPS propio de Tramtai, y el agente debe valer para apps. Si está activa en otro espacio, desactívala allí antes.</span><span lang="en">The row says why. Tools are not offered in server mode or with Tramtai’s own HTTPS, and the agent must be allowed for apps. If it is on in another workspace, turn it off there first.</span></p></details>
+<details id="herramienta-solo-proyecto"><summary><span lang="es">¿Puedo activar una herramienta solo en un proyecto?</span><span lang="en">Can I turn a tool on for just one project?</span></summary><p><span lang="es">Solo Claude Code, desde el espacio del proyecto: escribe en .claude/settings.local.json y nunca en settings.json, que se comparte por git. Las demás, desde el espacio global.</span><span lang="en">Only Claude Code, from the project workspace: it writes to .claude/settings.local.json and never to settings.json, which is shared through git. The others, from the global workspace.</span></p></details>
+<details id="continue-config-json"><summary><span lang="es">¿Por qué Tramtai me pide pasar Continue a config.yaml?</span><span lang="en">Why does Tramtai ask me to move Continue to config.yaml?</span></summary><p><span lang="es">Continue lee config.yaml si existe y, si no, config.json. Con solo config.json, crear el YAML dejaría tu JSON sin uso: pásalo a config.yaml y vuelve a activarla.</span><span lang="en">Continue reads config.yaml if it exists and config.json if not. With only config.json, creating the YAML would leave your JSON unused: move it to config.yaml and turn the tool on again.</span></p></details>
+<details id="codex-proveedor-ajeno"><summary><span lang="es">¿Qué hago si dice que ya hay un proveedor «tramtai» en config.toml?</span><span lang="en">What if it says config.toml already has a “tramtai” provider?</span></summary><p><span lang="es">Esa tabla no la escribió Tramtai, o quedó una antigua tras editar el archivo a mano. Renómbrala o bórrala. Un model o model_provider en varias líneas tampoco vale: déjalo en una.</span><span lang="en">Tramtai did not write that table, or an old one was left after editing the file by hand. Rename or delete it. A model or model_provider on several lines does not work either: put it on one line.</span></p></details>
+<details id="codex-cambiar-modelo"><summary><span lang="es">¿Y si cambio el modelo de Codex con /model?</span><span lang="en">What if I change Codex’s model with /model?</span></summary><p><span lang="es">Esa línea pasa a ser tuya: al desactivar, Tramtai no la devuelve a como estaba. Si quieres otro modelo, cámbialo en config.toml.</span><span lang="en">That line becomes yours: when you turn the tool off, Tramtai does not put it back as it was. If you want another model, change it in config.toml.</span></p></details>
+<details id="herramienta-editada-a-mano"><summary><span lang="es">¿Y si edito a mano el archivo de una herramienta?</span><span lang="en">What if I edit a tool’s file by hand?</span></summary><p><span lang="es">Desactivar solo quita lo que sigue como Tramtai lo escribió y deja lo demás. Si cambias lo suyo, la fila pasa a «Desactualizada». Un archivo ilegible no se toca: la fila dice qué hacer.</span><span lang="en">Turning off removes only what is still as Tramtai wrote it and leaves the rest. If you change its part, the row becomes “Out of date”. An unreadable file is not touched: the row says what to do.</span></p></details>
+<details id="herramienta-api-mismo-nombre"><summary><span lang="es">¿Y si ya tengo una API con el nombre de la herramienta?</span><span lang="en">What if I already have an API with the tool’s name?</span></summary><p><span lang="es">Tramtai no la toca y no activa la herramienta: cámbiale el nombre en Mis APIs y vuelve a activarla.</span><span lang="en">Tramtai does not touch it and does not turn the tool on: rename it in My APIs and turn the tool on again.</span></p></details>
+<details id="herramientas-orden-clave"><summary><span lang="es">¿Para qué sirve «tramtai herramientas clave»?</span><span lang="en">What is “tramtai herramientas clave” for?</span></summary><p><span lang="es">Es la orden con la que Claude Code y Codex piden su clave. Solo responde si la herramienta está activa y escribe la clave y nada más. No hace falta que la ejecutes tú.</span><span lang="en">It is the command Claude Code and Codex use to ask for their key. It only responds if the tool is on, and it prints the key and nothing else. You do not need to run it yourself.</span></p></details>
+<details id="herramientas-cli"><summary><span lang="es">¿Qué órdenes tiene la CLI?</span><span lang="en">Which commands does the CLI have?</span></summary><p><span lang="es">tramtai herramientas (o tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) y clave (key).</span><span lang="en">tramtai herramientas (or tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) and clave (key).</span></p></details>
+<details id="herramientas-varias"><summary><span lang="es">¿Cómo activo o desactivo varias a la vez?</span><span lang="en">How do I turn several on or off at once?</span></summary><p><span lang="es">Con varios ids o con --todas (--all), por ejemplo «tramtai herramientas activar --todas». activar acepta --modelo (--model) con agente/modelo, como claude/sonnet.</span><span lang="en">Pass several ids or --todas (--all), for example “tramtai herramientas activar --todas”. activar takes --modelo (--model) with agent/model, such as claude/sonnet.</span></p></details>
+</section>
+
+<p class="aviso"><span lang="es">En la terminal: en Mis APIs (4), ← → lleva a Herramientas. Espacio activa o desactiva, t y T hacen todas, m cambia el modelo, R restaura la copia, o olvida y r refresca.</span><span lang="en">In the terminal: in My APIs (4), ← → goes to Tools. Space turns a tool on or off, t and T do all, m changes the model, R restores the copy, o forgets and r refreshes.</span></p>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="claves.html"><strong><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></strong><span><span lang="es">La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.</span><span lang="en">The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.</span></span></a>
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+</body>
+</html>

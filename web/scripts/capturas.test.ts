@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -28,7 +28,15 @@ test('el script saca una captura por cada ancla de los recorridos, en la página
 })
 
 test('cada captura citada existe en claro y oscuro y en los dos idiomas', () => {
-  for (const id of citadas) for (const v of variantes(id)) assert.ok(archivos.includes(v), v)
+  for (const id of citadas) for (const v of variantes(id)) if (!(id in POR_SACAR)) assert.ok(archivos.includes(v), v)
+})
+
+test('POR_SACAR solo lista capturas citadas que aún no existen, y dice por qué', () => {
+  for (const [id, motivo] of Object.entries(POR_SACAR)) {
+    assert.ok(citadas.has(id), `${id} no la cita ningún tema`)
+    assert.ok(motivo.length >= 20, `${id}: falta el motivo`)
+    for (const v of variantes(id)) assert.ok(!archivos.includes(v), `sobra ${v}: ${id} ya está sacada, quítala de POR_SACAR`)
+  }
 })
 
 test('cada ancla de cada recorrido tiene sus 4 capturas, salvo las excepciones explicadas', () => {

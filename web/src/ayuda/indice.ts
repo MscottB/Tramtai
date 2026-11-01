@@ -5,6 +5,7 @@ import { empezar } from './temas/empezar'
 import { agentes } from './temas/agentes'
 import { probar } from './temas/probar'
 import { conectar } from './temas/conectar'
+import { conectarHerramientas } from './temas/conectar-herramientas'
 import { archivos } from './temas/archivos'
 import { json } from './temas/json'
 import { recetas } from './temas/recetas'
@@ -21,7 +22,7 @@ import { conceptos } from './temas/conceptos'
 import { preguntas } from './temas/preguntas'
 
 export const temas: Tema[] = [
-  empezar, agentes, probar, conectar, archivos, json, recetas, herramientas, presupuestos, historial, espacios, claves, ajustes,
+  empezar, agentes, probar, conectar, conectarHerramientas, archivos, json, recetas, herramientas, presupuestos, historial, espacios, claves, ajustes,
   servidor, entornos, problemas, conceptos, preguntas,
 ]
 
