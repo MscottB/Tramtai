@@ -221,7 +221,7 @@ const ayudaEs = {
   'ayuda.conectarHerramientas.des2': '«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.',
   'ayuda.conectarHerramientas.des3': '«Restaurar la copia» repone el archivo entero, con la fecha de la copia. Es el último recurso: pierdes lo que cambiaste desde entonces, y pide confirmación.',
   'ayuda.conectarHerramientas.copias': 'Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos, con permisos solo para ti. Guarda las 3 últimas de cada herramienta.',
-  'ayuda.conectarHerramientas.copiasRestaurar': '«Restaurar la copia» usa la de la activación actual; las otras (hasta 3) quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar.',
+  'ayuda.conectarHerramientas.copiasRestaurar': '«Restaurar la copia» usa la de esta activación; las otras, 2 como mucho, quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar.',
   'ayuda.conectarHerramientas.sincronizar': 'Si sincronizas ~/.claude, ~/.codex o tus dotfiles, esa configuración llega a equipos sin Tramtai y la herramienta no conectaría: desactívala antes o deja el archivo fuera.',
   'ayuda.conectarHerramientas.gestionada': 'Si tu empresa gestiona Claude Code con ajustes de organización, mandan sobre los tuyos: la fila lo avisa, pero Tramtai no puede cambiarlos.',
   'ayuda.conectarHerramientas.pArchivo': '¿Por qué la clave de Continue, opencode y Kilo va en su archivo?',

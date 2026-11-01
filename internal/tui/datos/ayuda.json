@@ -520,7 +520,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "«Restaurar la copia» usa la de la activación actual; las otras (hasta 3) quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar."
+            "«Restaurar la copia» usa la de esta activación; las otras, 2 como mucho, quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar."
           ]
         },
         {
@@ -2138,7 +2138,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "“Restore the copy” uses the one from the current activation; the others (up to 3) stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered."
+            "“Restore the copy” uses the one from this activation; the others, at most 2, stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered."
           ]
         },
         {

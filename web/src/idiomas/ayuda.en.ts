@@ -223,7 +223,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.conectarHerramientas.des2': '“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.',
   'ayuda.conectarHerramientas.des3': '“Restore the copy” puts back the whole file, as of the copy’s date. It is the last resort: you lose what you changed since then, and it asks you to confirm.',
   'ayuda.conectarHerramientas.copias': 'Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder, readable only by you. It keeps the last 3 copies of each tool.',
-  'ayuda.conectarHerramientas.copiasRestaurar': '“Restore the copy” uses the one from the current activation; the others (up to 3) stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered.',
+  'ayuda.conectarHerramientas.copiasRestaurar': '“Restore the copy” uses the one from this activation; the others, at most 2, stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered.',
   'ayuda.conectarHerramientas.sincronizar': 'If you sync ~/.claude, ~/.codex or your dotfiles, that configuration reaches computers without Tramtai and the tool could not connect: turn it off first or leave the file out.',
   'ayuda.conectarHerramientas.gestionada': 'If your company manages Claude Code with organization settings, they override yours: the row warns you, but Tramtai cannot change them.',
   'ayuda.conectarHerramientas.pArchivo': 'Why do the keys of Continue, opencode and Kilo go in their file?',
