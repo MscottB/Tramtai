@@ -1,6 +1,6 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
-// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal y la demo de
-// la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio puerto (PUERTO_CAPTURAS; la
+// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal, en HTML
+// (terminal.json), y la demo de la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio puerto (PUERTO_CAPTURAS; la
 // nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia): no toca la instalación de
 // quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y
 // Seguridad, la entrada y la marca) salen de un Tramtai en modo servidor detrás de Caddy, en contenedores (Docker), con
@@ -12,7 +12,7 @@
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -167,51 +167,38 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
   console.log(`${c.id}.${tema}.${idioma}.webp`)
 }
 
-// reducir pasa una captura WebP (en base64) a otro ancho en un lienzo de la página: un segundo recorte con scale < 1
-// salía a veces en mosaico.
-const reducir = (evaluar, webp, ancho, alto) => evaluar(`(async () => {
-  const img = new Image(); img.src = 'data:image/webp;base64,${webp}'; await img.decode()
-  const lienzo = Object.assign(document.createElement('canvas'), { width: ${ancho}, height: ${alto} }), g = lienzo.getContext('2d')
-  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, ${ancho}, ${alto})
-  return lienzo.toDataURL('image/webp', 0.8).split(',')[1]
-})()`)
-
-// COLORES_TERMINAL son el fondo y la tinta de la terminal en cada tema (los de docs/diseno/DESIGN.md).
-const COLORES_TERMINAL = { claro: { fondo: '#ffffff', texto: '#0f1b1e' }, oscuro: { fondo: '#0a1116', texto: '#e5edf0' } }
-
-// capturasTerminal saca site/capturas/terminal-*: compila internal/tui/captura junto a la copia portable (portable.txt,
-// así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 112×32, la convierte a HTML con
-// ansiAHtml y la saca a 1440 y a 960 px. La ruta del proyecto de ejemplo se cambia por la de siempre.
-async function capturasTerminal({ enviar, evaluar }, ejemplo) {
+// capturasTerminal saca site/capturas/terminal.json: compila internal/tui/captura junto a la copia portable (portable.txt,
+// así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 100×28 en español y en inglés, solo
+// en el tema oscuro (las clases t-<token> valen para los dos temas, ver ansiAHtml) y guarda su HTML:
+// {"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}. La ruta del proyecto de ejemplo se cambia por la de siempre.
+// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…» o si el Historial no tiene peticiones.
+function capturasTerminal(ejemplo) {
   const programa = join(temporal, process.platform === 'win32' ? 'captura.exe' : 'captura')
   execFileSync('go', ['build', '-o', programa, './internal/tui/captura'], { cwd: raiz, stdio: 'inherit' })
-  for (const p of TERMINAL)
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en']) {
-        // Sin NO_COLOR ni ASCII; TERM_PROGRAM dice que la salida acaba en un HTML con UTF-8, no en una consola antigua.
-        const entorno = { ...process.env, TRAMTAI_IDIOMA: idioma, TERM_PROGRAM: 'tramtai-capturas' }
-        delete entorno.NO_COLOR
-        delete entorno.TRAMTAI_ASCII
-        const ansi = execFileSync(programa, [tema, idioma, '112', '32', ...p.teclas], { cwd: temporal, env: entorno, encoding: 'utf8', maxBuffer: 16 << 20 })
-          .replaceAll(ejemplo, 'C:\\Proyectos\\mi-app')
-        if (privada.test(ansi)) throw new Error(`terminal ${p.nombre}: la captura muestra una ruta real`)
-        const { fondo, texto } = COLORES_TERMINAL[tema]
-        const html = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:${fondo}}
-pre{display:inline-block;margin:0;padding:20px 24px;font:22px/1.25 'Cascadia Mono',Consolas,'DejaVu Sans Mono',monospace;color:${texto};background:${fondo}}</style>
-<pre>${ansiAHtml(ansi, COLORES_TERMINAL[tema])}</pre>`
-        await enviar('Emulation.setDeviceMetricsOverride', { width: 1600, height: 1200, deviceScaleFactor: 1, mobile: false })
-        await enviar('Page.navigate', { url: 'data:text/html;charset=utf-8,' + encodeURIComponent(html) })
-        await hasta(() => evaluar('document.readyState === "complete" && document.fonts.status === "loaded"'), 20, `la terminal ${p.nombre}`)
-        await esperar(200)
-        const b = await evaluar(`(() => { const r = document.querySelector('pre').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
-        const alto = Math.round((b.h * 1440) / b.w)
-        const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, clip: { x: b.x, y: b.y, width: b.w, height: b.h, scale: 1440 / b.w } })
-        const reducida = await reducir(evaluar, data, 960, Math.round((alto * 960) / 1440))
-        for (const [ancho, webp] of [[1440, data], [960, reducida]]) {
-          writeFileSync(join(destinoPortada, `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(webp, 'base64'))
-          console.log(`site/capturas/terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp (${ancho}×${Math.round((alto * ancho) / 1440)})`)
-        }
-      }
+  const textos = JSON.parse(readFileSync(join(raiz, 'internal', 'tui', 'datos', 'textos.json'), 'utf8'))
+  const terminal = {}
+  for (const idioma of ['es', 'en']) {
+    terminal[idioma] = {}
+    for (const p of TERMINAL) {
+      // Sin NO_COLOR ni ASCII; TERM_PROGRAM dice que la salida acaba en un HTML con UTF-8, no en una consola antigua.
+      const entorno = { ...process.env, TRAMTAI_IDIOMA: idioma, TERM_PROGRAM: 'tramtai-capturas' }
+      delete entorno.NO_COLOR
+      delete entorno.TRAMTAI_ASCII
+      const ansi = execFileSync(programa, ['oscuro', idioma, '100', '28', ...p.teclas], { cwd: temporal, env: entorno, encoding: 'utf8', maxBuffer: 16 << 20 })
+        .replaceAll(ejemplo, 'C:\\Proyectos\\mi-app')
+      if (privada.test(ansi)) throw new Error(`terminal ${p.nombre} (${idioma}): la captura muestra una ruta real`)
+      const html = ansiAHtml(ansi)
+      const plano = html.replace(/<[^>]+>/g, '')
+      const comprobando = textos[idioma]['inicio.comprobando']
+      if (plano.includes(comprobando)) throw new Error(`terminal ${p.nombre} (${idioma}): quedó en «${comprobando}»`)
+      if (p.nombre === 'historial' && plano.includes(textos[idioma]['historial.vacio']))
+        throw new Error(`terminal historial (${idioma}): sin peticiones; ¿respondió ${modelo}?`)
+      terminal[idioma][p.nombre] = html
+      console.log(`terminal ${idioma} ${p.nombre}: ${html.length} bytes`)
+    }
+  }
+  writeFileSync(join(destinoPortada, 'terminal.json'), JSON.stringify(terminal, null, 1) + '\n')
+  console.log('site/capturas/terminal.json')
 }
 
 // totp da el código de 6 dígitos de un secreto en un instante (RFC 6238: SHA-1, pasos de 30 s), como la app de
@@ -400,8 +387,8 @@ try {
       for (const idioma of ['es', 'en']) await capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma)
 
   // La terminal de la portada: cada página que pinta internal/tui/captura (compilado junto a la copia portable, así
-  // habla con su servicio), convertida a HTML con ansiAHtml y sacada como una captura más.
-  if (completa || soloTerminal) await capturasTerminal({ enviar, evaluar }, ejemplo)
+  // habla con su servicio), convertida a HTML con ansiAHtml y guardada en site/capturas/terminal.json.
+  if (completa || soloTerminal) capturasTerminal(ejemplo)
 
   // Un recorrido señala un elemento con el anillo de driver.js (.driver-active-element, ver estilos.css): se carga cada
   // página una vez por tema e idioma y se recorta cada ancla con 16 px de margen. Las de app.* (el selector de espacio

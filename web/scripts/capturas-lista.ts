@@ -32,64 +32,69 @@ export const POR_SACAR: Record<string, string> = {
   herramientas: 'v0.59: la saca la Tarea 13 del plan, con la copia de prueba y sus dos peticiones reales a claude/haiku, que se avisan antes',
 }
 
-// TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal-<nombre>-<claro|oscuro>-<es|en>-
-// <960|1440>.webp), con las teclas que llevan a ella desde Inicio.
-export const TERMINAL: { nombre: string; teclas: string[] }[] = [
+// TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal.json), con las teclas que llevan a ella
+// desde Inicio. Agentes no está: enseñaría los CLI reales del equipo que saca la captura.
+export const TERMINAL: { nombre: 'inicio' | 'apis' | 'historial'; teclas: string[] }[] = [
   { nombre: 'inicio', teclas: [] },
   { nombre: 'apis', teclas: ['4'] },
+  { nombre: 'historial', teclas: ['5'] },
 ]
 
-// ANSI16 son los 16 colores básicos (los de la paleta de Windows Terminal); 256 sigue la tabla de xterm.
-const ANSI16 = ['#0c0c0c', '#c50f1f', '#13a10e', '#c19c00', '#0037da', '#881798', '#3a96dd', '#cccccc',
-  '#767676', '#e74856', '#16c60c', '#f9f1a5', '#3b78ff', '#b4009e', '#61d6d6', '#f2f2f2']
-const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
-function color256(n: number): string {
-  if (n < 16) return ANSI16[n]
-  if (n >= 232) { const v = 8 + (n - 232) * 10; return hex(v, v, v) }
-  const c = n - 16, nivel = (x: number) => (x ? 55 + x * 40 : 0)
-  return hex(nivel(Math.floor(c / 36)), nivel(Math.floor(c / 6) % 6), nivel(c % 6))
+// TOKENS_TERMINAL traduce cada color que pinta la TUI (internal/tui/tema.go, la paleta clara y la oscura de
+// docs/diseno/DESIGN.md) al token de DESIGN.md: por eso un solo HTML sirve en los dos temas del sitio. Cada token lleva su
+// color de día y el de noche; velo es el fondo de la fila elegida.
+export const TOKENS_TERMINAL: Record<string, string> = {
+  '#0b6e64': 'acento', '#2dd4bf': 'acento', '#0f1b1e': 'texto', '#e5edf0': 'texto', '#55666a': 'suave', '#93a5ac': 'suave',
+  '#166534': 'ok', '#4ade80': 'ok', '#b42525': 'error', '#f87171': 'error', '#854d0e': 'aviso', '#fbbf24': 'aviso',
+  '#c4561d': 'claude', '#f28a4f': 'claude', '#2563eb': 'codex', '#5b8def': 'codex', '#1f883d': 'copilot', '#3fb950': 'copilot',
+  '#7c3aed': 'gemini', '#a78bfa': 'gemini', '#db2777': 'antigravity', '#f472b6': 'antigravity', '#d3e5e3': 'velo', '#113838': 'velo',
 }
 
-// ansiAHtml convierte lo que pinta la terminal (SGR: negrita, tenue, cursiva, subrayado, inverso y color de 16, 256 y
-// 24 bits) en HTML con estilos en línea, para sacarle una captura en el navegador. Lo demás (mover el cursor, borrar,
-// enlaces OSC 8) se quita. tema da los colores por defecto, que el inverso intercambia.
-export function ansiAHtml(ansi: string, tema: { fondo: string; texto: string }): string {
+// ansiAHtml convierte lo que pinta la terminal en HTML para la portada: cada trozo con el mismo estilo es un
+// <span class="…"> con t-<token> (tinta), tf-<token> (fondo), t-b (negrita) y t-d (tenue); la hoja del sitio da a cada
+// clase el valor de su tema. Solo entiende lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y
+// tenue. Un color sin token, o cualquier otro estilo (16 y 256 colores, inverso, subrayado…), lanza un error: así no se
+// cuela un color suelto ni un estilo que se pierde sin avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
+export function ansiAHtml(ansi: string): string {
   const limpio = ansi.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '').replace(/\x1b\[[0-9;?]*[A-Za-ln-z]/g, '')
-  let e = { fg: '', bg: '', negrita: false, tenue: false, cursiva: false, subrayado: false, inverso: false }
-  const inicial = { ...e }
-  let html = ''
+  const vacio = { fg: '', bg: '', negrita: false, tenue: false }
+  let e = { ...vacio }
+  let html = '', clase = '', texto = ''
+  const volcar = () => {
+    if (texto) html += clase ? `<span class="${clase}">${texto}</span>` : texto
+    texto = ''
+  }
+  const token = (hex: string) => {
+    const t = TOKENS_TERMINAL[hex]
+    if (!t) throw new Error(`ansiAHtml: el color ${hex} no tiene token en TOKENS_TERMINAL`)
+    return t
+  }
   for (const trozo of limpio.split(/(\x1b\[[0-9;]*m)/)) {
     const sgr = trozo.match(/^\x1b\[([0-9;]*)m$/)
     if (!sgr) {
       if (!trozo) continue
-      const texto = trozo.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      let fg = e.fg, bg = e.bg
-      if (e.inverso) [fg, bg] = [bg || tema.fondo, fg || tema.texto]
-      const estilo = [fg && `color:${fg}`, bg && `background:${bg}`, e.negrita && 'font-weight:bold', e.tenue && 'opacity:.65',
-        e.cursiva && 'font-style:italic', e.subrayado && 'text-decoration:underline'].filter(Boolean).join(';')
-      html += estilo ? `<span style="${estilo}">${texto}</span>` : texto
+      const nueva = [e.fg && 't-' + e.fg, e.bg && 'tf-' + e.bg, e.negrita && 't-b', e.tenue && 't-d'].filter(Boolean).join(' ')
+      if (nueva !== clase) { volcar(); clase = nueva }
+      texto += trozo.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       continue
     }
     const p = sgr[1] === '' ? [0] : sgr[1].split(';').map(Number)
     for (let i = 0; i < p.length; i++) {
       const n = p[i]
-      if (n === 0) e = { ...inicial }
+      if (n === 0) e = { ...vacio }
       else if (n === 1) e.negrita = true
       else if (n === 2) e.tenue = true
       else if (n === 22) e.negrita = e.tenue = false
-      else if (n === 3 || n === 23) e.cursiva = n === 3
-      else if (n === 4 || n === 24) e.subrayado = n === 4
-      else if (n === 7 || n === 27) e.inverso = n === 7
       else if (n === 39) e.fg = ''
       else if (n === 49) e.bg = ''
-      else if ((n === 38 || n === 48) && p[i + 1] === 5) { e[n === 38 ? 'fg' : 'bg'] = color256(p[i + 2]); i += 2 }
-      else if ((n === 38 || n === 48) && p[i + 1] === 2) { e[n === 38 ? 'fg' : 'bg'] = hex(p[i + 2], p[i + 3], p[i + 4]); i += 4 }
-      else if (n >= 30 && n <= 37) e.fg = ANSI16[n - 30]
-      else if (n >= 90 && n <= 97) e.fg = ANSI16[n - 82]
-      else if (n >= 40 && n <= 47) e.bg = ANSI16[n - 40]
-      else if (n >= 100 && n <= 107) e.bg = ANSI16[n - 92]
+      else if ((n === 38 || n === 48) && p[i + 1] === 2) {
+        const [r, g, b] = p.slice(i + 2, i + 5)
+        e[n === 38 ? 'fg' : 'bg'] = token('#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join(''))
+        i += 4
+      } else throw new Error(`ansiAHtml: el estilo SGR ${n} no se sabe pintar`)
     }
   }
+  volcar()
   return html
 }
 

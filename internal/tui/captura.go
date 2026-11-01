@@ -18,7 +18,7 @@ type pulso struct{}
 
 // Captura pinta la terminal como la vería alguien, para las capturas de la portada (internal/tui/captura, que lanza
 // web/scripts/capturas.mjs): con el cliente dado, en ese idioma y tema, de ancho×alto, tras pulsar las teclas desde
-// Inicio. Tras abrir y tras cada tecla espera a que la vista se asiente (sin «Cargando…» y sin cambiar durante medio
+// Inicio. Tras abrir y tras cada tecla espera a que la vista se asiente (sin «Cargando…» ni «Comprobando…» y sin cambiar durante medio
 // segundo, o como mucho espera) y devuelve lo que se ve, con sus estilos ANSI.
 func Captura(o Opciones, cli *cliente.Cliente, lengua string, oscuro bool, ancho, alto int, teclas []string, espera time.Duration) (string, error) {
 	m := nuevoEn(o, lengua)
@@ -33,14 +33,14 @@ func Captura(o Opciones, cli *cliente.Cliente, lengua string, oscuro bool, ancho
 	}
 	p := tea.NewProgram(m, tea.WithInput(nil), tea.WithOutput(io.Discard), tea.WithoutRenderer(), tea.WithoutSignalHandler(),
 		tea.WithWindowSize(ancho, alto), tea.WithFilter(filtro))
-	cargando := datos.Texto(lengua, "comun.cargando")
+	cargando, comprobando := datos.Texto(lengua, "comun.cargando"), datos.Texto(lengua, "inicio.comprobando")
 	asentar := func() {
 		anterior, iguales := "", 0
 		for limite := time.Now().Add(espera); time.Now().Before(limite) && iguales < 5; {
 			time.Sleep(100 * time.Millisecond)
 			p.Send(pulso{})
 			actual := vista.Load().(string)
-			if actual != "" && actual == anterior && !strings.Contains(actual, cargando) {
+			if actual != "" && actual == anterior && !strings.Contains(actual, cargando) && !strings.Contains(actual, comprobando) {
 				iguales++
 			} else {
 				anterior, iguales = actual, 0
