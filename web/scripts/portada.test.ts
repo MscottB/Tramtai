@@ -64,7 +64,7 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
 
 const VENTAJAS = [
   ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
-  ['Sin tocar tu código', 'si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL y la clave. Y a Claude Code, Codex, Continue y opencode los apunta Tramtai por ti.'],
+  ['Sin tocar tu código', 'con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.'],
   ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
   ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
   ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
@@ -79,8 +79,10 @@ test('la línea de ventajas: seis paradas con el texto de la spec, en los dos id
     // Bajo su título, la frase empieza en mayúscula.
     const frase = VENTAJAS[i][1][0].toUpperCase() + VENTAJAS[i][1].slice(1)
     assert.ok(p.includes(`<p class="parada-texto"><span lang="es">${frase}</span>`), frase)
-    // «Unas 25 palabras» (spec §4); la parada 2 llega a 31 con «la URL y la clave» (revisión de la Tarea 14, B).
-    assert.ok(frase.split(/\s+/).length <= 32, `unas 25 palabras como mucho: ${frase}`)
+    // «Unas 25 palabras» como mucho (spec §4), también en inglés.
+    assert.ok(frase.split(/\s+/).length <= 25, `25 palabras como mucho: ${frase}`)
+    const ingles = p.match(/<p class="parada-texto">[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
+    assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
   })
   // Dos listas de tres, independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
   const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
@@ -304,6 +306,9 @@ test('el hero tiene un titular, dos frases y ninguna pastilla, rejilla ni brillo
   assert.doesNotMatch(portada, /class="chapa"/)
   const entrada = (html.match(/<p class="entrada">\s*<span lang="es">([^<]*)<\/span>/)?.[1] ?? '').split('. ')
   assert.equal(entrada.length, 2, entrada.join(' | '))
+  // Con el SDK cambian la URL y la clave, como dice la cifra de «Por qué Tramtai» (revisión de la Tarea 14, ronda 2).
+  assert.match(portada, /solo cambias la URL y la clave\.<\/span>/)
+  assert.match(portada, /you only change the URL and the key\.<\/span>/)
   assert.doesNotMatch(css, /\.portada::before|repeating-linear-gradient|radial-gradient/)
 })
 
