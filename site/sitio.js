@@ -35,6 +35,16 @@
   });
 })();
 
+// Anclas de la portada de antes de la v0.59: un enlace guardado a #pagas, #capturas o #aviso llega a su sección nueva.
+// Solo si el ancla vieja ya no existe en la página (servidor.html tiene su propio #aviso).
+(function () {
+  var nuevas = { pagas: 'por-que', capturas: 'app', aviso: 'privacidad' };
+  var vieja = location.hash.slice(1);
+  if (!Object.prototype.hasOwnProperty.call(nuevas, vieja) || document.getElementById(vieja)) return;
+  var destino = document.getElementById(nuevas[vieja]);
+  if (destino) { history.replaceState(null, '', '#' + nuevas[vieja]); destino.scrollIntoView(); }
+})();
+
 // Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
 (function () {
   var botones = document.querySelectorAll('button[data-tema]'); // <html> también lleva data-tema
@@ -163,8 +173,8 @@
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
-  // La Ayuda tiene otros lenguajes que la guía: cada una recuerda el suyo.
-  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
+  // La Ayuda y la portada tienen otras pestañas que la guía: cada una recuerda la suya.
+  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : document.querySelector('.portada') ? 'tramtai.lenguaje-portada' : 'tramtai.lenguaje';
   function elegir(lenguaje, foco) {
     grupos.forEach(function (g) {
       var botones = g.querySelectorAll('[role="tab"]');
@@ -181,7 +191,11 @@
   }
   grupos.forEach(function (g) {
     var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
+    // En la portada, sin JavaScript, las pestañas esperan ocultas y se ve el primer ejemplo: aquí se encienden.
+    var lista = g.querySelector('[role="tablist"]');
+    lista.hidden = false;
     botones.forEach(function (b, i) {
+      document.getElementById(b.getAttribute('aria-controls')).setAttribute('role', 'tabpanel');
       b.addEventListener('click', function () { elegir(b.dataset.lenguaje); });
       b.addEventListener('keydown', function (e) {
         var siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: botones.length - 1 }[e.key];
