@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -170,6 +172,14 @@ type Servicio struct {
 
 	local    net.Listener // con TLS propio: el oyente HTTP de 127.0.0.1 para los clientes de este equipo; nil sin TLS
 	localSrv *http.Server
+
+	// Herramientas (herramientas.go): el almacén de credenciales del sistema y el ejecutable de la orden que da la
+	// clave; las pruebas los sustituyen. muHerramientas hace de una en una las activaciones (API, clave y archivo).
+	guardarClave   func(nombre, valor string) error
+	leerClave      func(nombre string) (string, error)
+	borrarClave    func(nombre string) error
+	ejecutable     func() (string, error)
+	muHerramientas sync.Mutex
 }
 
 // apertura es una instancia que se está abriendo: quien la pida a la vez espera a listo y recibe la misma.
@@ -205,7 +215,8 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}, frenos: nuevosFrenos(), claves: nuevoContador(30, time.Minute, time.Minute),
-		lineaAdministrador: leerAdministrador(opc.Datos)}
+		lineaAdministrador: leerAdministrador(opc.Datos),
+		guardarClave:       credenciales.Guardar, leerClave: credenciales.Leer, borrarClave: credenciales.Borrar, ejecutable: os.Executable}
 	s.finGeneracion, s.cerrarGeneracion = context.WithCancel(context.Background())
 	s.buscar.Store(opc.BuscarActualizaciones)
 	s.actualizaciones.Consultar = opc.ConsultarVersion

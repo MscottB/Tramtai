@@ -439,5 +439,25 @@ func init() {
 		"se admite de 1 a 3": "from 1 to 3",
 		"la autenticación de los agentes del servidor solo se cambia desde el propio servidor (tramtai-servidor agentes suscripcion)":                                    "the server agents’ authentication can only be changed on the server itself (tramtai-servidor agents subscription)",
 		"el servidor está abierto a la red: la suscripción de %s solo se activa como personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)": "the server is open to the network: the %s subscription can only be enabled as personal, with its conditions (tramtai-servidor agents subscription %s --personal)",
+
+		// Herramientas (internal/servicio/herramientas.go)
+		"las herramientas no están disponibles en el modo servidor: apúntalas desde el equipo de cada persona": "tools are not available in server mode: point them from each person’s computer",
+		"herramienta desconocida: %s": "unknown tool: %s",
+		"%s: su archivo cambió mientras Tramtai lo escribía: vuelve a intentarlo":                               "%s: its file changed while Tramtai was writing it: try again",
+		"indica las herramientas o todas, no ambas":                                                             "name the tools or all of them, not both",
+		"no hay ningún agente conectado: conecta uno en Agentes o elige el modelo":                              "no agent is connected: connect one in Agents or choose the model",
+		"solo se activa desde el espacio global":                                                                "it can only be enabled from the global workspace",
+		"ya hay una API %s que no es de Herramientas: cámbiale el nombre en Mis APIs":                           "there is already an API %s that is not in Tools: rename it in My APIs",
+		"no está activada: no hay nada que restaurar":                                                           "it is not enabled: there is nothing to restore",
+		"una política de la organización manda sobre su configuración: puede que no use lo que escriba Tramtai": "an organization policy controls its settings: it may not use what Tramtai writes",
+		"activada en otro archivo: %s":                                                                          "enabled in another file: %s",
+		"la API %s ya no existe: vuelve a activarla":                                                            "the %s API no longer exists: enable it again",
+		"la API %s está detenida en Mis APIs":                                                                   "the %s API is stopped in My APIs",
+		"Tramtai usa ahora el puerto %d y la herramienta apunta al %d: vuelve a activarla":                      "Tramtai now uses port %d and the tool points to %d: enable it again",
+		"ya no existe %s, el Tramtai que da la clave: vuelve a activarla":                                       "%s, the Tramtai that gives the key, no longer exists: enable it again",
+		"su clave ya no está en el almacén del sistema: vuelve a activarla":                                     "its key is no longer in the system credential store: enable it again",
+		"con HTTPS propio activado, las herramientas no pueden usar Tramtai en este equipo: desactiva el HTTPS propio o pon Tramtai detrás de un proxy": "with Tramtai’s own HTTPS turned on, tools can’t use Tramtai on this computer: turn off its own HTTPS or put Tramtai behind a proxy",
+		"Tramtai la olvidó, pero no pudo quitar lo suyo de %s: %s":                                                                                      "Tramtai forgot it, but could not remove its settings from %s: %s",
+		"se cambió a mano lo que escribió Tramtai en %s":                                                                                                "what Tramtai wrote in %s was changed by hand",
 	})
 }

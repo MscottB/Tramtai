@@ -131,6 +131,31 @@ type EstadoClave struct {
 	Archivo  string `json:"archivo,omitempty"`
 }
 
+// EstadoHerramienta es una herramienta de terceros (Claude Code, Codex…) vista desde un espacio: GET /api/v1/herramientas.
+type EstadoHerramienta struct {
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+	// Estado: no_detectada, detectada, activa, desactivada, desactualizada o solo_global (desde un proyecto, la que
+	// solo tiene archivo global).
+	Estado string `json:"estado"`
+	Modelo string `json:"modelo,omitempty"`
+	Ruta   string `json:"ruta,omitempty"` // el archivo que toca (o tocaría) Tramtai
+	// Motivo explica lo que no va: por qué está desactualizada, qué impide activarla, si está activa en otro archivo o
+	// si la gestiona una política de la organización.
+	Motivo         string `json:"motivo,omitempty"`
+	ClaveEnArchivo bool   `json:"clave_en_archivo"`
+	Gestionado     bool   `json:"gestionado"`
+	HayCopia       bool   `json:"hay_copia"` // hay copia del archivo de antes de activarla: Restaurar tiene a qué volver
+}
+
+// ActivarHerramientas es el cuerpo de POST /api/v1/herramientas/activar: los ids o todas las detectadas, con el modelo
+// agente/modelo (vacío: el primer agente conectado con su modelo por defecto).
+type ActivarHerramientas struct {
+	IDs    []string `json:"ids,omitempty"`
+	Todas  bool     `json:"todas,omitempty"`
+	Modelo string   `json:"modelo,omitempty"`
+}
+
 // EntradaConfiguracion es una fila de la configuración efectiva de una instancia.
 type EntradaConfiguracion struct {
 	Clave  string `json:"clave"`
