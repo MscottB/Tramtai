@@ -1,10 +1,10 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
-// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal, en HTML
-// (terminal.json), y la demo de la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio puerto (PUERTO_CAPTURAS; la
-// nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia): no toca la instalación de
-// quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y
-// Seguridad, la entrada y la marca) salen de un Tramtai en modo servidor detrás de Caddy, en contenedores (Docker), con
-// su propio puerto; sin Docker se avisa y se saltan. Se corre en el equipo de desarrollo, con un agente ya conectado
+// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal en HTML
+// (terminal.json) y la demo de la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio
+// puerto (PUERTO_CAPTURAS; la nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia):
+// no toca la instalación de quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y Seguridad, la
+// entrada y la marca) salen de un Tramtai en modo servidor detrás de Caddy, en contenedores (Docker), con su propio
+// puerto; sin Docker se avisa y se saltan. Se corre en el equipo de desarrollo, con un agente ya conectado
 // (para el Historial):
 //   cd web; npm run build; npm run capturas
 //   (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida, -- --terminal, -- --servidor o -- --sitio)
@@ -171,11 +171,13 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
 // así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 100×28 en español y en inglés, solo
 // en el tema oscuro (las clases t-<token> valen para los dos temas, ver ansiAHtml) y guarda su HTML:
 // {"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}. La ruta del proyecto de ejemplo se cambia por la de siempre.
-// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…» o si el Historial no tiene peticiones.
+// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…» o con peticiones en curso, o si el Historial
+// no tiene peticiones.
 function capturasTerminal(ejemplo) {
   const programa = join(temporal, process.platform === 'win32' ? 'captura.exe' : 'captura')
   execFileSync('go', ['build', '-o', programa, './internal/tui/captura'], { cwd: raiz, stdio: 'inherit' })
   const textos = JSON.parse(readFileSync(join(raiz, 'internal', 'tui', 'datos', 'textos.json'), 'utf8'))
+  const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const terminal = {}
   for (const idioma of ['es', 'en']) {
     terminal[idioma] = {}
@@ -191,6 +193,9 @@ function capturasTerminal(ejemplo) {
       const plano = html.replace(/<[^>]+>/g, '')
       const comprobando = textos[idioma]['inicio.comprobando']
       if (plano.includes(comprobando)) throw new Error(`terminal ${p.nombre} (${idioma}): quedó en «${comprobando}»`)
+      // La red de Inicio dice «N peticiones en curso.» mientras hay alguna: la pantalla cambiaría a los pocos segundos.
+      const enCurso = new RegExp(`${escapar(textos[idioma]['vivo.enCurso']).replace('\\{n\\}', '\\d+')}|${escapar(textos[idioma]['vivo.enCursoUno'])}`)
+      if (enCurso.test(plano)) throw new Error(`terminal ${p.nombre} (${idioma}): con peticiones en curso`)
       if (p.nombre === 'historial' && plano.includes(textos[idioma]['historial.vacio']))
         throw new Error(`terminal historial (${idioma}): sin peticiones; ¿respondió ${modelo}?`)
       terminal[idioma][p.nombre] = html

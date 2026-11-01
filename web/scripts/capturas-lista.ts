@@ -50,9 +50,14 @@ export const TOKENS_TERMINAL: Record<string, string> = {
   '#7c3aed': 'gemini', '#a78bfa': 'gemini', '#db2777': 'antigravity', '#f472b6': 'antigravity', '#d3e5e3': 'velo', '#113838': 'velo',
 }
 
+// GLIFOS son los símbolos que Cascadia Mono no trae todos (flechas, formas geométricas y dingbats: ← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗…):
+// con la fuente de reserva miden distinto de una celda y descuadrarían la línea. ansiAHtml envuelve cada uno en su
+// <span class="g"> (la hoja le da el ancho de una celda). El trazo de cajas (│) y el sombreado (░) sí están en la fuente.
+const GLIFOS = /[←-⇿■-➿]/u
+
 // ansiAHtml convierte lo que pinta la terminal en HTML para la portada: cada trozo con el mismo estilo es un
 // <span class="…"> con t-<token> (tinta), tf-<token> (fondo), t-b (negrita) y t-d (tenue); la hoja del sitio da a cada
-// clase el valor de su tema. Solo entiende lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y
+// clase el valor de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y
 // tenue. Un color sin token, o cualquier otro estilo (16 y 256 colores, inverso, subrayado…), lanza un error: así no se
 // cuela un color suelto ni un estilo que se pierde sin avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
 export function ansiAHtml(ansi: string): string {
@@ -75,7 +80,10 @@ export function ansiAHtml(ansi: string): string {
       if (!trozo) continue
       const nueva = [e.fg && 't-' + e.fg, e.bg && 'tf-' + e.bg, e.negrita && 't-b', e.tenue && 't-d'].filter(Boolean).join(' ')
       if (nueva !== clase) { volcar(); clase = nueva }
-      texto += trozo.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      for (const c of trozo) {
+        if (GLIFOS.test(c)) { volcar(); html += `<span class="${clase ? clase + ' g' : 'g'}">${c}</span>` }
+        else texto += c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c
+      }
       continue
     }
     const p = sgr[1] === '' ? [0] : sgr[1].split(';').map(Number)

@@ -106,6 +106,15 @@ test('ansiAHtml junta lo contiguo con las mismas clases y quita lo que no es est
   assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\'), 'uv', 'sin borrados de línea ni enlaces OSC 8')
 })
 
+test('ansiAHtml envuelve cada glifo que Cascadia no trae (✗, flechas, formas) en su span g y deja │ y ░', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;248;113;113m✗ x'), '<span class="t-error g">✗</span><span class="t-error"> x</span>')
+  assert.equal(ansiAHtml('a ✓ b'), 'a <span class="g">✓</span> b')
+  assert.equal(ansiAHtml('↑↓'), '<span class="g">↑</span><span class="g">↓</span>', 'cada glifo en el suyo: ocupa una celda')
+  assert.equal(ansiAHtml('\x1b[1;38;2;11;110;100m▸ 1\x1b[m'), '<span class="t-acento t-b g">▸</span><span class="t-acento t-b"> 1</span>')
+  assert.equal(ansiAHtml('│░·'), '│░·')
+  for (const g of ['←', '⇿', '■', '▸', '▾', '○', '●', '✓', '✗', '➿']) assert.equal(ansiAHtml(g), `<span class="g">${g}</span>`, g)
+})
+
 test('ansiAHtml escapa <, & y >', () => {
   assert.equal(ansiAHtml('\x1b[38;2;248;113;113m<a & b>'), '<span class="t-error">&lt;a &amp; b&gt;</span>')
   assert.equal(ansiAHtml('<b>&amp;'), '&lt;b&gt;&amp;amp;')
@@ -135,7 +144,7 @@ test('TERMINAL: Inicio, Mis APIs e Historial, con las teclas de la TUI', () => {
 test('terminal.json trae las seis pantallas completas, con clases de token, sin rutas del equipo y la fuente pesa poco', () => {
   const t = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
   assert.deepEqual(Object.keys(t), ['es', 'en'])
-  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 't-d'])
+  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 't-d', 'g'])
   const privada = rutaPrivada(['C:\\Users\\Administrator', 'C:\\Users\\Administrator\\AppData', '/home/runner', '/tmp/x'])
   for (const idioma of ['es', 'en']) {
     assert.deepEqual(Object.keys(t[idioma]), TERMINAL.map((p) => p.nombre))
@@ -145,6 +154,8 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(html.length < 12 * 1024, `${donde} pesa ${html.length} bytes`)
       assert.ok(!/style=|color:/.test(html), `${donde}: ni estilos en línea ni colores fijos`)
       assert.ok(!/Comprobando…|Checking…/.test(html), `${donde}: quedó comprobando`)
+      assert.ok(!/\d+ peticiones en curso|1 petición en curso|requests? in progress/.test(html), `${donde}: con peticiones en curso`)
+      assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
       assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
       for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
     }

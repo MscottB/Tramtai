@@ -104,10 +104,13 @@ desde los mismos datos.
   Inicio, Mis APIs e Historial (`TERMINAL` en `capturas-lista.ts`) a 100×28, en español y en inglés, y guarda su HTML en
   `site/capturas/terminal.json` (`{"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}`). Hace dos peticiones reales
   a `claude/haiku` con la suscripción de quien la corre (para que el Historial tenga entradas) y se para si una pantalla
-  muestra una ruta del equipo, si quedó en «Comprobando…» o si el Historial está vacío. `ansiAHtml` escribe clases, no
-  colores: `t-<token>` (tinta), `tf-<token>` (fondo), `t-b` (negrita) y `t-d` (tenue), con los tokens de `DESIGN.md`
-  (`TOKENS_TERMINAL`); la TUI usa exactamente la paleta de cada tema, así que un solo HTML por página e idioma sirve en
-  los dos. Un color sin token hace fallar la captura. `terminal.json` no lo regenera el CI (necesita peticiones reales):
+  muestra una ruta del equipo, si quedó en «Comprobando…» o con «N peticiones en curso», o si el Historial está vacío
+  (`tui.Captura` no da por asentada una vista así: espera). `ansiAHtml` escribe clases, no colores: `t-<token>` (tinta),
+  `tf-<token>` (fondo), `t-b` (negrita) y `t-d` (tenue), con los tokens de `DESIGN.md` (`TOKENS_TERMINAL`); la TUI usa
+  exactamente la paleta de cada tema, así que un solo HTML por página e idioma sirve en los dos. Un color sin token hace
+  fallar la captura. Cada flecha, forma o símbolo que Cascadia Mono no trae entero (`← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗`, el rango
+  `U+2190–21FF` y `U+25A0–27BF`) va en su propio `<span class="g">`, que la hoja del sitio pone a una celda de ancho
+  (`.g { display: inline-block; width: 1ch; text-align: center }`) para que las columnas no se descuadren. `terminal.json` no lo regenera el CI (necesita peticiones reales):
   se guarda en el repositorio, como las capturas.
 - **Fuente de la terminal:** `site/cascadia.woff2` es un subconjunto de Cascadia Mono (OFL-1.1, licencia en
   `site/CASCADIA-OFL.txt`) con las letras que salen en `terminal.json` y el ASCII imprimible, de 60 KB como máximo. Se
@@ -120,7 +123,8 @@ desde los mismos datos.
   uv tool run --from "fonttools[woff]" pyftsubset CascadiaMono.ttf --flavor=woff2 --text-file=caracteres.txt --output-file=site/cascadia.woff2
   ```
 
-  Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo.
+  Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo; por eso
+  los glifos van en `span.g` (arriba).
 
 ### Recorridos: cómo añadir un paso o un ancla
 
