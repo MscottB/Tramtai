@@ -184,25 +184,24 @@ section { padding: 72px 0; }
 .cifra + .cifra { border-left: 1px solid var(--borde); }
 .cifra-numero { font: 700 2.75rem/1 var(--titulo); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--acento); }
 .cifra-texto { color: var(--texto-suave); font-size: .95rem; line-height: 1.4; }
-@media (max-width: 899px) {
+@media (max-width: 900px) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cifra:nth-child(3) { border-left: 0; }
   .cifra:nth-child(n+3) { border-top: 1px solid var(--borde); }
 }
-/* La línea de ventajas: la vía y las estaciones del sitio, en el acento (el color de línea es de los agentes). Vía de
-   4 px y estación de 20 px con aro de 4 px, rellena del fondo de la banda para que la vía pase por detrás. En el móvil,
-   una sola línea de seis; desde 900 px, dos líneas de tres, lado a lado. */
-.ventajas { list-style: none; margin: 48px 0 0; padding: 0; display: grid; gap: 0 48px; }
-.parada-ventaja { position: relative; padding: 0 0 28px 40px; }
-.parada-ventaja:last-child { padding-bottom: 0; }
-.parada-ventaja::before { content: ''; position: absolute; z-index: 1; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%; border: 4px solid var(--acento); background: var(--superficie-suave); box-sizing: border-box; }
-.parada-ventaja:not(:last-child)::after { content: ''; position: absolute; left: 8px; top: 11px; bottom: -11px; width: 4px; background: var(--acento); }
-.parada-ventaja h3 { font-size: 1.1rem; margin-bottom: 6px; }
-.parada-ventaja p { color: var(--texto-suave); font-size: .95rem; max-width: 40em; }
-@media (min-width: 900px) {
-  .ventajas { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); grid-auto-flow: column; }
-  .parada-ventaja:nth-child(3) { padding-bottom: 0; }
-  .parada-ventaja:nth-child(3)::after { display: none; }
+/* La línea de ventajas: las paradas del plano de Funciones (.parada, en el acento: el color de línea es de los agentes).
+   Son dos listas de tres. En el móvil se leen como una sola línea de seis: la vía sigue de la tercera a la cuarta. Desde
+   901 px van lado a lado, cada una con sus paradas a su ritmo. */
+.ventajas { margin: 48px 0 0; display: grid; gap: 0 48px; }
+.ventajas-linea { list-style: none; margin: 0; padding: 0; }
+.ventajas .parada-titulo::before { background: var(--superficie-suave); }
+.ventajas .parada-texto { max-width: 40em; }
+@media (max-width: 900px) {
+  .ventajas-linea:first-child > .parada:last-child { padding-bottom: 24px; }
+  .ventajas-linea:first-child > .parada:last-child::after { content: ''; }
+}
+@media (min-width: 901px) {
+  .ventajas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */
@@ -229,8 +228,10 @@ section { padding: 72px 0; }
 .metro-linea ol { list-style: none; margin: 0; padding: 0; }
 .parada { position: relative; padding: 0 0 24px 40px; }
 .parada:last-child { padding-bottom: 0; }
-.parada:not(:last-child)::after { content: ''; position: absolute; left: 8.5px; top: 11px; bottom: -11px; width: 5px; background: var(--acento); }
-.parada h4 { font-size: 1.05rem; margin-bottom: 6px; }
+/* La vía de 3 px (DESIGN.md: 3 px para secuencias, 4 px solo para las líneas de agente), centrada en la estación. */
+.parada::after { content: none; position: absolute; left: 9.5px; top: 11px; bottom: -11px; width: 3px; background: var(--acento); }
+.parada:not(:last-child)::after { content: ''; }
+.parada h3, .parada h4 { font-size: 1.05rem; margin-bottom: 6px; }
 .parada-boton { font: inherit; letter-spacing: inherit; color: var(--texto); background: none; border: 0; padding: 0; text-align: left; }
 .parada-titulo::before { content: ''; position: absolute; z-index: 1; pointer-events: none; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 5px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
 .parada-texto { color: var(--texto-suave); font-size: .95rem; }
@@ -239,7 +240,7 @@ section { padding: 72px 0; }
 .metro--plano .metro-linea h3 { margin: 0; }
 .metro--plano ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .metro--plano .parada { padding: 0 8px; text-align: center; }
-.metro--plano .parada:not(:last-child)::after { left: 50%; top: 8.5px; bottom: auto; width: 100%; height: 5px; }
+.metro--plano .parada:not(:last-child)::after { left: 50%; top: 9.5px; bottom: auto; width: 100%; height: 3px; }
 .metro--plano .parada h4 { margin: 0; }
 .metro--plano .parada-boton { display: block; width: 100%; min-height: 44px; padding: 30px 8px 6px; border-radius: 8px; font-size: .95rem; font-weight: 600; color: var(--texto-suave); text-align: center; cursor: pointer; }
 .metro--plano .parada-titulo::before { left: 50%; margin-left: -11px; }
@@ -379,6 +380,8 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .doc .codigo { margin-top: 0; position: relative; padding-top: 56px; }
 .pestanas { margin: 0 0 18px; }
 .pestanas-lista { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+/* Sin JavaScript las pestañas de la portada esperan ocultas: display: flex no debe ganarle a [hidden]. */
+.pestanas-lista[hidden] { display: none; }
 .pestanas-lista button { font: 600 .88rem var(--fuente); color: var(--texto-suave); background: transparent; border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 .pestanas-lista button[aria-selected="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
 .pestanas .codigo { margin-bottom: 0; }

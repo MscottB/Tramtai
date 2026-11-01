@@ -36,13 +36,18 @@
 })();
 
 // Anclas de la portada de antes de la v0.59: un enlace guardado a #pagas, #capturas o #aviso llega a su sección nueva.
-// Solo si el ancla vieja ya no existe en la página (servidor.html tiene su propio #aviso).
+// Solo si el ancla vieja ya no existe en la página (servidor.html tiene su propio #aviso). Al cargar y al cambiar el ancla
+// con la página abierta.
 (function () {
   var nuevas = { pagas: 'por-que', capturas: 'app', aviso: 'privacidad' };
-  var vieja = location.hash.slice(1);
-  if (!Object.prototype.hasOwnProperty.call(nuevas, vieja) || document.getElementById(vieja)) return;
-  var destino = document.getElementById(nuevas[vieja]);
-  if (destino) { history.replaceState(null, '', '#' + nuevas[vieja]); destino.scrollIntoView(); }
+  function llevar() {
+    var vieja = location.hash.slice(1);
+    if (!Object.prototype.hasOwnProperty.call(nuevas, vieja) || document.getElementById(vieja)) return;
+    var destino = document.getElementById(nuevas[vieja]);
+    if (destino) { history.replaceState(null, '', '#' + nuevas[vieja]); destino.scrollIntoView(); }
+  }
+  llevar();
+  window.addEventListener('hashchange', llevar);
 })();
 
 // Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
@@ -175,7 +180,8 @@
   if (!grupos.length) return;
   // La Ayuda y la portada tienen otras pestañas que la guía: cada una recuerda la suya.
   var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : document.querySelector('.portada') ? 'tramtai.lenguaje-portada' : 'tramtai.lenguaje';
-  function elegir(lenguaje, foco) {
+  // elegir enseña la pestaña; solo se recuerda la que elige la persona (guardar), no la de por defecto al cargar.
+  function elegir(lenguaje, foco, guardar) {
     grupos.forEach(function (g) {
       var botones = g.querySelectorAll('[role="tab"]');
       var hay = Array.prototype.some.call(botones, function (b) { return b.dataset.lenguaje === lenguaje; });
@@ -187,7 +193,7 @@
         if (activo && foco === g) b.focus();
       });
     });
-    try { localStorage.setItem(clave, lenguaje); } catch (e) {}
+    if (guardar) try { localStorage.setItem(clave, lenguaje); } catch (e) {}
   }
   grupos.forEach(function (g) {
     var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
@@ -196,18 +202,20 @@
     lista.hidden = false;
     botones.forEach(function (b, i) {
       document.getElementById(b.getAttribute('aria-controls')).setAttribute('role', 'tabpanel');
-      b.addEventListener('click', function () { elegir(b.dataset.lenguaje); });
+      b.addEventListener('click', function () { elegir(b.dataset.lenguaje, null, true); });
       b.addEventListener('keydown', function (e) {
         var siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: botones.length - 1 }[e.key];
         if (siguiente === undefined) return;
         e.preventDefault();
-        elegir(botones[(siguiente + botones.length) % botones.length].dataset.lenguaje, g);
+        elegir(botones[(siguiente + botones.length) % botones.length].dataset.lenguaje, g, true);
       });
     });
   });
   var guardado = null;
   try { guardado = localStorage.getItem(clave); } catch (e) {}
-  elegir(guardado || 'python'); // sin JavaScript se ven todos los paneles, cada uno con su enlace a GitHub
+  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en la portada). Sin JavaScript se ven
+  // todos los paneles de la guía, cada uno con su enlace a GitHub.
+  elegir(guardado || 'python');
   document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
     fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
       if (!r.ok) throw r;

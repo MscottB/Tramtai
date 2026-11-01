@@ -53,9 +53,9 @@ const porQue = seccion('por-que')
 test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular', () => {
   const cifras = porQue.match(/<li class="cifra">[\s\S]*?<\/li>/g) ?? []
   assert.equal(cifras.length, 4)
-  assert.deepEqual(cifras.map((c) => c.match(/<span class="cifra-numero">(\d+)<\/span>/)?.[1]), ['4', '3', '0', '1'])
+  assert.deepEqual(cifras.map((c) => c.match(/<span class="cifra-numero">(\d+)<\/span>/)?.[1]), ['4', '3', '0', '2'])
   for (const c of cifras) assert.match(c, /lang="es"[\s\S]*lang="en"/)
-  for (const t of ['agentes desde tus apps', 'OpenAI, Anthropic y la propia', 'telemetría y ningún servidor nuestro', 'cambio en tu app: la URL'])
+  for (const t of ['agentes desde tus apps', 'OpenAI, Anthropic y la propia', 'telemetría y ningún servidor nuestro', 'cambios en tu app: la URL y la clave'])
     assert.ok(porQue.includes(t), t)
   const regla = css.match(/\.cifra-numero \{[^}]*\}/)?.[0] ?? ''
   assert.match(regla, /var\(--titulo\)/)
@@ -64,28 +64,40 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
 
 const VENTAJAS = [
   ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
-  ['Sin tocar tu código', 'si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL. Y a Claude Code, Codex, Continue y opencode los apunta Tramtai por ti.'],
+  ['Sin tocar tu código', 'si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL y la clave. Y a Claude Code, Codex, Continue y opencode los apunta Tramtai por ti.'],
   ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
-  ['Todo queda en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
+  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
   ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
   ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
 ]
 test('la línea de ventajas: seis paradas con el texto de la spec, en los dos idiomas y en el acento', () => {
-  const paradas = porQue.match(/<li class="parada-ventaja">[\s\S]*?<\/li>/g) ?? []
+  const paradas = porQue.match(/<li class="parada parada-ventaja">[\s\S]*?<\/li>/g) ?? []
   assert.equal(paradas.length, 6)
   paradas.forEach((p, i) => {
     assert.match(p, /lang="es"[\s\S]*lang="en"/)
-    assert.ok(p.includes(`<span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
+    assert.ok(p.includes(`<h3 class="parada-titulo"><span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
     // Bajo su título, la frase empieza en mayúscula.
     const frase = VENTAJAS[i][1][0].toUpperCase() + VENTAJAS[i][1].slice(1)
-    assert.ok(p.includes(`<p><span lang="es">${frase}</span>`), frase)
-    assert.ok(frase.split(/\s+/).length <= 30, `unas 25 palabras como mucho: ${frase}`)
+    assert.ok(p.includes(`<p class="parada-texto"><span lang="es">${frase}</span>`), frase)
+    // «Unas 25 palabras» (spec §4); la parada 2 llega a 31 con «la URL y la clave» (revisión de la Tarea 14, B).
+    assert.ok(frase.split(/\s+/).length <= 32, `unas 25 palabras como mucho: ${frase}`)
   })
-  // El color de línea es de los agentes: la línea de ventajas va en el acento, en dos columnas desde 900 px.
+  // Dos listas de tres, independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
+  const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
+  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [3, 3])
+  assert.match(listas[1], /^<ol class="ventajas-linea" start="4">/)
+  // Las paradas son las del plano (.parada): una sola estación y la vía de 3 px de las secuencias, en el acento; el color
+  // de línea es de los agentes (M4).
+  assert.doesNotMatch(css, /\.parada-ventaja/)
+  assert.match(css, /\n\.parada::after \{[^}]*width: 3px; background: var\(--acento\)/)
+  assert.match(css, /\.metro--plano \.parada:not\(:last-child\)::after \{[^}]*height: 3px/)
   const reglas = css.slice(css.indexOf('.ventajas'), css.indexOf('/* Pares'))
   assert.doesNotMatch(reglas, COLORES_LINEA)
-  assert.match(reglas, /var\(--acento\)/)
-  assert.match(reglas, /@media \(min-width: 900px\) \{[^@]*\.ventajas \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  // En el móvil la vía sigue de la tercera a la cuarta; desde 901 px, dos columnas (mismo corte que .como y .par: 900).
+  assert.match(reglas, /@media \(max-width: 900px\) \{[^@]*\.ventajas-linea:first-child > \.parada:last-child::after \{ content: ''; \}/)
+  assert.match(reglas, /@media \(min-width: 901px\) \{[^@]*\.ventajas \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.cifras \{ grid-template-columns: repeat\(2/)
+  assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.tablero, \.como, \.par, \.par\.invertido, \.conexiones \{/)
 })
 
 test('los seis motivos ya no están, ni su CSS', () => {
@@ -106,10 +118,21 @@ test('«Cómo funciona» tiene pestañas OpenAI, Anthropic y curl, con su panel 
   }
   // Sin JavaScript no hay pestañas que no hagan nada: la lista espera oculta y se ve el primer ejemplo.
   assert.match(listas[0], /role="tablist"[^>]* hidden>/)
+  // Revisión de la Tarea 14 (I1): el display: flex de la lista no le gana a [hidden].
+  assert.match(css, /\.pestanas-lista\[hidden\] \{ display: none; \}/)
   assert.equal((como.match(/<pre class="codigo"[^>]* hidden>/g) ?? []).length, 2)
   assert.match(como, /data-pestanas/)
   assert.match(js, /lista\.hidden = false/)
   assert.match(js, /setAttribute\('role', 'tabpanel'\)/)
+  // M6: al cargar no se guarda nada; solo la pestaña que elige la persona.
+  assert.match(js, /if \(guardar\) try \{ localStorage\.setItem\(clave, lenguaje\)/)
+  assert.match(js, /elegir\(b\.dataset\.lenguaje, null, true\)/)
+  assert.doesNotMatch(js, /elegir\(guardado \|\| '[^']+', [^)]*true\)/)
+  // M5: el ejemplo de la pestaña de entrada no repite el de la primera escena de la cabecera.
+  const openai = (como.match(/<pre class="codigo" id="como-openai-panel"[\s\S]*?<\/pre>/)?.[0] ?? '').replace(/<[^>]+>/g, '')
+  assert.ok(openai, 'falta el panel de OpenAI')
+  assert.doesNotMatch(openai, /Resume este contrato/)
+  assert.match(openai, /stream=True/)
 })
 
 test('el paso 3 de «Cómo funciona» dice que Tramtai apunta tus herramientas y lleva a su Ayuda', () => {
@@ -143,6 +166,7 @@ test('Agentes, Privacidad y Descargar absorben las franjas de antes, y las ancla
   assert.match(seccion('descargar'), /Gratis para uso personal y no comercial/)
   assert.doesNotMatch(html, /href="#(pagas|capturas|aviso)"/)
   assert.match(js, /pagas: 'por-que', capturas: 'app', aviso: 'privacidad'/)
+  assert.match(js, /window\.addEventListener\('hashchange', llevar\)/, 'también con la página abierta (M2)')
 })
 const datos = html.match(/<script type="application\/json" id="ejemplos-mapa">([\s\S]*?)<\/script>/)
 
@@ -246,7 +270,8 @@ test('la suscripción, solo para tu uso personal, y sin promesas absolutas fuera
   assert.match(pagas, /<span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription\. No new accounts\.<\/span>/)
   assert.doesNotMatch(pagas, /la suscripción o la clave que ya tienes|the subscription or key you already have/)
   // «Siempre encendida» habla del servidor (spec §4); el resto no promete de más.
-  const sinLinea = pagas.replace(/<ol class="ventajas">[\s\S]*?<\/ol>/, '')
+  const sinLinea = pagas.replace(/<div class="ventajas">[\s\S]*?<\/div>/, '')
+  assert.ok(sinLinea.length < pagas.length, 'falta la línea de ventajas')
   assert.doesNotMatch(sinLinea, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
   // Revisión final (M7): Tramtai sí está en medio del dibujo, pero no hay nube.
   assert.doesNotMatch(pagas, /Sin servidores intermedios|No middle servers/)

@@ -328,35 +328,39 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <li class="cifra"><span class="cifra-numero">4</span><span class="cifra-texto"><span lang="es">agentes desde tus apps</span><span lang="en">agents from your apps</span></span></li>
         <li class="cifra"><span class="cifra-numero">3</span><span class="cifra-texto"><span lang="es">APIs: OpenAI, Anthropic y la propia</span><span lang="en">APIs: OpenAI, Anthropic and the native one</span></span></li>
         <li class="cifra"><span class="cifra-numero">0</span><span class="cifra-texto"><span lang="es">telemetría y ningún servidor nuestro</span><span lang="en">telemetry and no server of ours</span></span></li>
-        <li class="cifra"><span class="cifra-numero">1</span><span class="cifra-texto"><span lang="es">cambio en tu app: la URL</span><span lang="en">change in your app: the URL</span></span></li>
+        <li class="cifra"><span class="cifra-numero">2</span><span class="cifra-texto"><span lang="es">cambios en tu app: la URL y la clave</span><span lang="en">changes in your app: the URL and the key</span></span></li>
       </ul>
-      <!-- La línea de ventajas: una vía con seis estaciones en el acento; desde 900 px, dos vías de tres, lado a lado. -->
-      <ol class="ventajas">
-        <li class="parada-ventaja">
-          <h3><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
-          <p><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
+      <!-- La línea de ventajas: una vía con seis estaciones en el acento. Son dos listas de tres: en el móvil se leen como una sola línea de seis y, desde 901 px, van lado a lado, cada una con sus paradas a su ritmo. -->
+      <div class="ventajas">
+      <ol class="ventajas-linea">
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
+          <p class="parada-texto"><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
         </li>
-        <li class="parada-ventaja">
-          <h3><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
-          <p><span lang="es">Si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL. Y a Claude Code, Codex, Continue y opencode los apunta Tramtai por ti.</span><span lang="en">If your app uses the OpenAI or Anthropic SDK, you change the URL. And Tramtai points Claude Code, Codex, Continue and opencode at itself for you.</span></p>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
+          <p class="parada-texto"><span lang="es">Si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL y la clave. Y a Claude Code, Codex, Continue y opencode los apunta Tramtai por ti.</span><span lang="en">If your app uses the OpenAI or Anthropic SDK, you change the URL and the key. And Tramtai points Claude Code, Codex, Continue and opencode at itself for you.</span></p>
         </li>
-        <li class="parada-ventaja">
-          <h3><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
-          <p><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
-        </li>
-        <li class="parada-ventaja">
-          <h3><span lang="es">Todo queda en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
-          <p><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store.</span></p>
-        </li>
-        <li class="parada-ventaja">
-          <h3><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
-          <p><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
-        </li>
-        <li class="parada-ventaja">
-          <h3><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
-          <p><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH or always on, on your server.</span></p>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
+          <p class="parada-texto"><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
         </li>
       </ol>
+      <ol class="ventajas-linea" start="4">
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
+          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
+          <p class="parada-texto"><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
+          <p class="parada-texto"><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH, or always on your server.</span></p>
+        </li>
+      </ol>
+      </div>
     </div>
   </section>
 
@@ -390,11 +394,13 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
 cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
 
-respuesta = cliente.chat.completions.create(
-    model=<span class="s">"claude/sonnet"</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+<span class="c" lang="es"># La respuesta llega en vivo, trozo a trozo</span><span class="c" lang="en"># The response arrives live, chunk by chunk</span>
+flujo = cliente.chat.completions.create(
+    model=<span class="s">"claude/sonnet"</span>, stream=<span class="k">True</span>,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Explica este error en dos frases"</span>}],
 )
-<span class="k">print</span>(respuesta.choices[0].message.content)</pre>
+<span class="k">for</span> trozo <span class="k">in</span> flujo:
+    <span class="k">print</span>(trozo.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
 <pre class="codigo" id="como-anthropic-panel" aria-labelledby="como-anthropic" tabindex="0" hidden><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
