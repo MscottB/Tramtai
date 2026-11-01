@@ -189,10 +189,17 @@ func (p *Pagina) lineas() []string {
 	l = append(l, "")
 	filas, resto := visibles(p.red, maximoVisibles)
 	cabecera := e.Grupo.Render(p.tx("inicio.red"))
-	if n := len(filas) + resto; n == 1 {
+	// Las que ya llegaron siguen a la vista unos segundos (vivo.go) pero no están en curso.
+	enCurso := 0
+	for _, tr := range p.red {
+		if tr.Terminado.IsZero() {
+			enCurso++
+		}
+	}
+	if enCurso == 1 {
 		cabecera += e.Tenue.Render(" " + e.Iconos.Separador + " " + p.tx("vivo.enCursoUno"))
-	} else if n > 1 {
-		cabecera += e.Tenue.Render(" " + e.Iconos.Separador + " " + p.tx("vivo.enCurso", "n", strconv.Itoa(n)))
+	} else if enCurso > 1 {
+		cabecera += e.Tenue.Render(" " + e.Iconos.Separador + " " + p.tx("vivo.enCurso", "n", strconv.Itoa(enCurso)))
 	}
 	l = append(l, cabecera)
 	if len(filas) == 0 {

@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -90,19 +90,105 @@ test('las capturas del servidor son las de Ajustes → Servidor y Seguridad, la 
   assert.ok(CAPTURAS.some((c) => c.id === 'arranque' && !c.servidor), 'Ajustes → Arranque sale del Tramtai de escritorio')
 })
 
-// Tarea 14 de la v0.56, hecha en la v0.58: la terminal se pinta en ANSI y se convierte a HTML para la captura.
-test('ansiAHtml: un color, negrita, restablecer, 256 colores, inverso y lo que no es color', () => {
-  const tema = { fondo: '#ffffff', texto: '#0f1b1e' }
-  assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb<\x1b[0mc', tema), 'a<span style="color:#0b6e64;font-weight:bold">b&lt;</span>c')
-  assert.equal(ansiAHtml('\x1b[38;5;196mx\x1b[m', tema), '<span style="color:#ff0000">x</span>')
-  assert.equal(ansiAHtml('\x1b[7my\x1b[27mz', tema), '<span style="color:#ffffff;background:#0f1b1e">y</span>z')
-  assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\', tema), 'uv', 'sin borrados de línea ni enlaces OSC 8')
+// v0.59: la terminal de la portada es texto real. ansiAHtml no escribe colores: escribe la clase del token de DESIGN.md
+// (t-<token> para la tinta, tf-<token> para el fondo), y la hoja del sitio le da el valor del tema.
+test('ansiAHtml: el mismo token en el tema claro y en el oscuro, negrita, tenue, fondo y restablecer', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;45;212;191mX'), '<span class="t-acento">X</span>')
+  assert.equal(ansiAHtml('\x1b[38;2;11;110;100mX'), '<span class="t-acento">X</span>')
+  assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb\x1b[0mc'), 'a<span class="t-acento t-b">b</span>c')
+  assert.equal(ansiAHtml('\x1b[2;38;2;147;165;172mx\x1b[22m y'), '<span class="t-suave t-d">x</span><span class="t-suave"> y</span>')
+  assert.equal(ansiAHtml('\x1b[48;2;17;56;56m\x1b[38;2;229;237;240mx\x1b[49m\x1b[39my'), '<span class="t-texto tf-velo">x</span>y')
+  assert.equal(ansiAHtml('\x1b[1mn\x1b[m'), '<span class="t-b">n</span>')
 })
 
-test('las 16 capturas de la terminal existen y pesan poco', () => {
+test('ansiAHtml junta lo contiguo con las mismas clases y quita lo que no es estilo', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;74;222;128ma\x1b[38;2;74;222;128mb'), '<span class="t-ok">ab</span>')
+  assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\'), 'uv', 'sin borrados de línea ni enlaces OSC 8')
+})
+
+test('ansiAHtml envuelve cada glifo que Cascadia no trae (✗, flechas, formas) en su span g y deja │ y ░', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;248;113;113m✗ x'), '<span class="t-error g">✗</span><span class="t-error"> x</span>')
+  assert.equal(ansiAHtml('a ✓ b'), 'a <span class="g">✓</span> b')
+  assert.equal(ansiAHtml('↑↓'), '<span class="g">↑</span><span class="g">↓</span>', 'cada glifo en el suyo: ocupa una celda')
+  assert.equal(ansiAHtml('\x1b[1;38;2;11;110;100m▸ 1\x1b[m'), '<span class="t-acento t-b g">▸</span><span class="t-acento t-b"> 1</span>')
+  assert.equal(ansiAHtml('│░·'), '│░·')
+  for (const g of ['←', '⇿', '■', '▸', '▾', '○', '●', '✓', '✗', '➿']) assert.equal(ansiAHtml(g), `<span class="g">${g}</span>`, g)
+})
+
+test('ansiAHtml escapa <, & y >', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;248;113;113m<a & b>'), '<span class="t-error">&lt;a &amp; b&gt;</span>')
+  assert.equal(ansiAHtml('<b>&amp;'), '&lt;b&gt;&amp;amp;')
+})
+
+test('ansiAHtml falla con un color sin token y con un estilo que no sabe pintar', () => {
+  assert.throws(() => ansiAHtml('\x1b[38;2;18;52;86mX'), /#123456/)
+  assert.throws(() => ansiAHtml('\x1b[48;2;18;52;86mX'), /#123456/)
+  assert.throws(() => ansiAHtml('\x1b[31mX'), /31/, 'los 16 colores no tienen token')
+  assert.throws(() => ansiAHtml('\x1b[38;5;196mX'), /38/, 'ni los 256')
+  assert.throws(() => ansiAHtml('\x1b[7mX'), /7/, 'ni el inverso')
+})
+
+test('TOKENS_TERMINAL: los 24 colores de la TUI, dos por token (día y noche), todos en minúsculas', () => {
+  const colores = Object.keys(TOKENS_TERMINAL)
+  assert.equal(colores.length, 24)
+  assert.ok(colores.every((c) => /^#[0-9a-f]{6}$/.test(c)), 'hex en minúsculas')
+  const porToken = Object.groupBy(colores, (c) => TOKENS_TERMINAL[c])
+  assert.deepEqual(Object.keys(porToken).sort(), ['acento', 'aviso', 'antigravity', 'claude', 'codex', 'copilot', 'error', 'gemini', 'ok', 'suave', 'texto', 'velo'].sort())
+  for (const [token, hexes] of Object.entries(porToken)) assert.equal(hexes?.length, 2, `${token}: un color de día y uno de noche`)
+})
+
+test('TERMINAL: Inicio, Mis APIs e Historial, con las teclas de la TUI', () => {
+  assert.deepEqual(TERMINAL, [{ nombre: 'inicio', teclas: [] }, { nombre: 'apis', teclas: ['4'] }, { nombre: 'historial', teclas: ['5'] }])
+})
+
+test('redEnMovimiento: peticiones en curso y filas ya terminadas, en los dos idiomas; no el contador, el Historial ni lo en ejecución', () => {
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  const casos: Record<string, { si: string[]; no: string[] }> = {
+    es: { si: ['Tu red · 2 peticiones en curso.', 'Tu red · 1 petición en curso.', '✓ Clave del espacio  Claude         terminada     9 s', '✗ api  Claude  falló  3 s', '○ api  Claude  cancelada  1 s'],
+      no: ['Tu red', '● e En curso     en cola o ejecutándose ahora   0', '● api  Claude  en ejecución  0 s', '▸ ✓ Completado   Di «hola»   hace 25 s'] },
+    en: { si: ['Your network · 2 requests in progress.', 'Your network · 1 request in progress.', '✓ Workspace key  Claude  finished  9 s', '✗ api  Claude  failed  3 s', '○ api  Claude  canceled  1 s'],
+      no: ['Your network', '● e In progress   queued or running now   0', '● api  Claude  running  0 s', '▸ ✓ Completed    Di «hola»   34 s ago'] },
+  }
+  for (const [idioma, { si, no }] of Object.entries(casos)) {
+    const re = redEnMovimiento(textos[idioma])
+    for (const s of si) assert.match(s, re, `${idioma}: ${s}`)
+    for (const s of no) assert.doesNotMatch(s, re, `${idioma}: ${s}`)
+  }
+})
+
+test('terminal.json trae las seis pantallas completas, con clases de token, sin rutas del equipo y la fuente pesa poco', () => {
+  const t = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  assert.deepEqual(Object.keys(t), ['es', 'en'])
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 't-d', 'g'])
+  const privada = rutaPrivada(['C:\\Users\\Administrator', 'C:\\Users\\Administrator\\AppData', '/home/runner', '/tmp/x'])
+  for (const idioma of ['es', 'en']) {
+    assert.deepEqual(Object.keys(t[idioma]), TERMINAL.map((p) => p.nombre))
+    for (const [pagina, html] of Object.entries(t[idioma])) {
+      const donde = `${idioma}/${pagina}`
+      assert.equal(html.replace(/<[^>]+>/g, '').split('\n').length, 28, `${donde}: 28 filas`)
+      assert.ok(html.length < 12 * 1024, `${donde} pesa ${html.length} bytes`)
+      assert.ok(!/style=|color:/.test(html), `${donde}: ni estilos en línea ni colores fijos`)
+      assert.ok(!/Comprobando…|Checking…/.test(html), `${donde}: quedó comprobando`)
+      assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), redEnMovimiento(textos[idioma]), `${donde}: la red sigue en movimiento`)
+      assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
+      assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
+      for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
+    }
+    assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
+    // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
+    const red = textos[idioma]['inicio.redTexto'].slice(0, 20)
+    assert.ok(t[idioma].inicio.replace(/<[^>]+>/g, '').includes(red), `${idioma}/inicio: la red no está vacía (falta «${red}»)`)
+  }
+  assert.ok(statSync(new URL('../../site/cascadia.woff2', import.meta.url)).size <= 60 * 1024, 'cascadia.woff2 pasa de 60 KB')
+  assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)
+})
+
+// Hasta la Tarea 15, que borra estas imágenes, la portada todavía las usa: Inicio y Mis APIs.
+test('las 16 capturas de la terminal de la portada actual existen y pesan poco', () => {
   const portada = new URL('../../site/capturas/', import.meta.url)
   let total = 0
-  for (const p of TERMINAL)
+  for (const p of TERMINAL.filter((p) => p.nombre !== 'historial'))
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
         for (const ancho of [960, 1440]) {
@@ -112,7 +198,6 @@ test('las 16 capturas de la terminal existen y pesan poco', () => {
           assert.ok(tamano <= 150 * 1024, `${archivo} pesa ${tamano} bytes`)
           total += tamano
         }
-  assert.deepEqual(TERMINAL.map((p) => p.nombre), ['inicio', 'apis'])
   assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
 })
 

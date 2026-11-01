@@ -263,6 +263,36 @@ func TestRedComoMucho12(t *testing.T) {
 	}
 }
 
+// TestCabeceraDeLaRedCuentaLasQueSiguenEnCurso: una petición que ya llegó sigue a la vista 2 s, pero no está en curso: la
+// cabecera de la red cuenta solo las que siguen, y sin ninguna no dice nada (como el contador «En curso»).
+func TestCabeceraDeLaRedCuentaLasQueSiguenEnCurso(t *testing.T) {
+	ahora := time.Now()
+	ejecutando := trabajo(contrato.EventoTrabajo{ID: "a", Estado: "ejecutando", Etapa: "ejecucion", Agente: "claude", API: "api-a", Creado: ahora})
+	terminada := trabajo(contrato.EventoTrabajo{ID: "b", Estado: "completado", Etapa: "llegada", Agente: "claude", API: "api-b", Creado: ahora})
+	red := func(eventos ...[]byte) string {
+		cli, id := prueba.Servicio(t)
+		f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+			func(ctx context.Context, al func(string, []byte) error) error {
+				for _, e := range eventos {
+					_ = al("trabajo", e)
+				}
+				foto(al)
+				return esperarFin(ctx, al)
+			},
+		}}
+		a, _ := abrir(t, alto(t, cli, id, 40), f)
+		a.HastaVer("terminada")
+		return a.Vista()
+	}
+	if v := red(ejecutando, terminada); !strings.Contains(v, "Tu red · 1 petición en curso.") {
+		t.Errorf("una sigue en curso y otra ya llegó:\n%s", v)
+	}
+	v := red(terminada)
+	if strings.Contains(v, "en curso.") || !strings.Contains(v, "api-b") {
+		t.Errorf("sin ninguna en curso, la cabecera no cuenta la que ya llegó:\n%s", v)
+	}
+}
+
 // TestRedReconecta: si el flujo se corta, la página vuelve a conectar con las esperas de vivo.ts (1 s, 2 s…), un flujo
 // mudo (ErrSinActividad) cuenta como cortado, y la foto del flujo nuevo quita lo que ya no existe.
 func TestRedReconecta(t *testing.T) {

@@ -100,6 +100,33 @@ desde los mismos datos.
   por paso de `pasosBienvenida()`). Solo usa los datos de demostración y no pide nada a ningún agente; si cambia la
   bienvenida o una pantalla que sale en ella, se rehace. `portada.test.ts` exige una figura por paso en `site/index.html`,
   150 KB como máximo por imagen de 1440 y 6 MB en total; el carrusel es `.demo` en `sitio.js`.
+- **La terminal de la portada es texto:** `npm run capturas -- --terminal` (también sale en la corrida completa) pinta
+  Inicio, Mis APIs e Historial (`TERMINAL` en `capturas-lista.ts`) a 100×28, en español y en inglés, y guarda su HTML en
+  `site/capturas/terminal.json` (`{"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}`). Hace dos peticiones reales
+  a `claude/haiku` con la suscripción de quien la corre (para que el Historial tenga entradas) y se para si una pantalla
+  muestra una ruta del equipo, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento («N peticiones en
+  curso» o filas ya terminadas como «terminada 9 s», que Inicio deja a la vista unos segundos antes de quitarlas) o si
+  el Historial está vacío. `tui.Captura` no da por asentada una vista así: espera a que la red quede vacía.
+  `ansiAHtml` escribe clases, no colores: `t-<token>` (tinta), `tf-<token>` (fondo), `t-b` (negrita) y `t-d` (tenue), con
+  los tokens de `DESIGN.md` (`TOKENS_TERMINAL`); la TUI usa exactamente la paleta de cada tema, así que un solo HTML por
+  página e idioma sirve en los dos. Un color sin token hace fallar la captura.
+  Cada flecha, forma o símbolo que Cascadia Mono no trae entero (`← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗`, los rangos `U+2190–21FF` y
+  `U+25A0–27BF`) va en su propio `<span class="g">`. La regla `.g { display: inline-block; width: 1ch; text-align: center }`
+  la define la hoja del sitio (tarea 15), para que las columnas no se descuadren.
+  `terminal.json` no lo regenera el CI (necesita peticiones reales): se guarda en el repositorio, como las capturas.
+- **Fuente de la terminal:** `site/cascadia.woff2` es un subconjunto de Cascadia Mono (OFL-1.1, licencia en
+  `site/CASCADIA-OFL.txt`) con las letras que salen en `terminal.json` y el ASCII imprimible, de 60 KB como máximo. Se
+  rehace cuando `terminal.json` trae letras nuevas. `CascadiaMono.ttf` sale de `ttf/` en el
+  [lanzamiento oficial](https://github.com/microsoft/cascadia-code/releases) (`CascadiaCode-<versión>.zip`, la 2407.24
+  al hacerlo), en una carpeta aparte y sin guardarla en el repositorio. `caracteres.txt` es cada carácter distinto del
+  texto de `terminal.json` (sin las etiquetas ni `&lt;`, `&gt;` y `&amp;`) más los 95 de `0x20` a `0x7e`:
+
+  ```
+  uv tool run --from "fonttools[woff]" pyftsubset CascadiaMono.ttf --flavor=woff2 --text-file=caracteres.txt --output-file=site/cascadia.woff2
+  ```
+
+  Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo; por eso
+  los glifos van en `span.g` (arriba).
 
 ### Recorridos: cómo añadir un paso o un ancla
 
