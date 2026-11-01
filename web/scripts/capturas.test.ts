@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -141,9 +141,25 @@ test('TERMINAL: Inicio, Mis APIs e Historial, con las teclas de la TUI', () => {
   assert.deepEqual(TERMINAL, [{ nombre: 'inicio', teclas: [] }, { nombre: 'apis', teclas: ['4'] }, { nombre: 'historial', teclas: ['5'] }])
 })
 
+test('redEnMovimiento: peticiones en curso y filas ya terminadas, en los dos idiomas; no el contador, el Historial ni lo en ejecución', () => {
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  const casos: Record<string, { si: string[]; no: string[] }> = {
+    es: { si: ['Tu red · 2 peticiones en curso.', 'Tu red · 1 petición en curso.', '✓ Clave del espacio  Claude         terminada     9 s', '✗ api  Claude  falló  3 s', '○ api  Claude  cancelada  1 s'],
+      no: ['Tu red', '● e En curso     en cola o ejecutándose ahora   0', '● api  Claude  en ejecución  0 s', '▸ ✓ Completado   Di «hola»   hace 25 s'] },
+    en: { si: ['Your network · 2 requests in progress.', 'Your network · 1 request in progress.', '✓ Workspace key  Claude  finished  9 s', '✗ api  Claude  failed  3 s', '○ api  Claude  canceled  1 s'],
+      no: ['Your network', '● e In progress   queued or running now   0', '● api  Claude  running  0 s', '▸ ✓ Completed    Di «hola»   34 s ago'] },
+  }
+  for (const [idioma, { si, no }] of Object.entries(casos)) {
+    const re = redEnMovimiento(textos[idioma])
+    for (const s of si) assert.match(s, re, `${idioma}: ${s}`)
+    for (const s of no) assert.doesNotMatch(s, re, `${idioma}: ${s}`)
+  }
+})
+
 test('terminal.json trae las seis pantallas completas, con clases de token, sin rutas del equipo y la fuente pesa poco', () => {
   const t = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
   assert.deepEqual(Object.keys(t), ['es', 'en'])
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
   const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 't-d', 'g'])
   const privada = rutaPrivada(['C:\\Users\\Administrator', 'C:\\Users\\Administrator\\AppData', '/home/runner', '/tmp/x'])
   for (const idioma of ['es', 'en']) {
@@ -154,12 +170,15 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(html.length < 12 * 1024, `${donde} pesa ${html.length} bytes`)
       assert.ok(!/style=|color:/.test(html), `${donde}: ni estilos en línea ni colores fijos`)
       assert.ok(!/Comprobando…|Checking…/.test(html), `${donde}: quedó comprobando`)
-      assert.ok(!/\d+ peticiones en curso|1 petición en curso|requests? in progress/.test(html), `${donde}: con peticiones en curso`)
+      assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), redEnMovimiento(textos[idioma]), `${donde}: la red sigue en movimiento`)
       assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
       assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
       for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
     }
     assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
+    // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
+    const red = textos[idioma]['inicio.redTexto'].slice(0, 20)
+    assert.ok(t[idioma].inicio.replace(/<[^>]+>/g, '').includes(red), `${idioma}/inicio: la red no está vacía (falta «${red}»)`)
   }
   assert.ok(statSync(new URL('../../site/cascadia.woff2', import.meta.url)).size <= 60 * 1024, 'cascadia.woff2 pasa de 60 KB')
   assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)

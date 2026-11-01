@@ -55,11 +55,23 @@ export const TOKENS_TERMINAL: Record<string, string> = {
 // <span class="g"> (la hoja le da el ancho de una celda). El trazo de cajas (│) y el sombreado (░) sí están en la fuente.
 const GLIFOS = /[←-⇿■-➿]/u
 
+// redEnMovimiento reconoce, con los textos de la terminal en un idioma (internal/tui/datos/textos.json), lo que dice la
+// red de Inicio mientras todavía cambia: la cabecera con peticiones en curso («2 peticiones en curso.») y las filas que
+// ya terminaron, fallaron o se cancelaron («terminada 9 s») y siguen a la vista unos segundos. Una captura con eso
+// enseñaría una pantalla que cambia a los pocos segundos. Es el equivalente de redEnMovimiento en internal/tui/captura.go.
+export function redEnMovimiento(t: Record<string, string>): RegExp {
+  const q = (clave: string) => t[clave].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const con = (clave: string, marca: string) => q(clave).replace(`\\{${marca}\\}`, '\\d+')
+  const etapas = ['vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada'].map(q).join('|')
+  return new RegExp(`${con('vivo.enCurso', 'n')}|${q('vivo.enCursoUno')}|(?:${etapas})\\s+${con('vivo.hace', 's')}`)
+}
+
 // ansiAHtml convierte lo que pinta la terminal en HTML para la portada: cada trozo con el mismo estilo es un
 // <span class="…"> con t-<token> (tinta), tf-<token> (fondo), t-b (negrita) y t-d (tenue); la hoja del sitio da a cada
-// clase el valor de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y
-// tenue. Un color sin token, o cualquier otro estilo (16 y 256 colores, inverso, subrayado…), lanza un error: así no se
-// cuela un color suelto ni un estilo que se pierde sin avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
+// clase el valor de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende
+// lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y tenue. Un color sin token, o cualquier
+// otro estilo (16 y 256 colores, inverso, subrayado…), lanza un error: así no se cuela un color suelto ni un estilo que
+// se pierde sin avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
 export function ansiAHtml(ansi: string): string {
   const limpio = ansi.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '').replace(/\x1b\[[0-9;?]*[A-Za-ln-z]/g, '')
   const vacio = { fg: '', bg: '', negrita: false, tenue: false }

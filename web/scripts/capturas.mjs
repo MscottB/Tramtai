@@ -19,7 +19,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import en from '../src/idiomas/en.ts'
 import es from '../src/idiomas/es.ts'
-import { ANCHO_AYUDA, ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA, TERMINAL, ansiAHtml, rutaPrivada } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA, TERMINAL, ansiAHtml, redEnMovimiento, rutaPrivada } from './capturas-lista.ts'
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url))
 const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta.url))
@@ -167,17 +167,16 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
   console.log(`${c.id}.${tema}.${idioma}.webp`)
 }
 
-// capturasTerminal saca site/capturas/terminal.json: compila internal/tui/captura junto a la copia portable (portable.txt,
-// así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 100×28 en español y en inglés, solo
-// en el tema oscuro (las clases t-<token> valen para los dos temas, ver ansiAHtml) y guarda su HTML:
+// capturasTerminal saca site/capturas/terminal.json: compila internal/tui/captura junto a la copia portable
+// (portable.txt, así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 100×28 en español y
+// en inglés, solo en el tema oscuro (las clases t-<token> valen para los dos temas, ver ansiAHtml) y guarda su HTML:
 // {"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}. La ruta del proyecto de ejemplo se cambia por la de siempre.
-// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…» o con peticiones en curso, o si el Historial
-// no tiene peticiones.
+// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento
+// (peticiones en curso o filas ya terminadas que se van) o si el Historial no tiene peticiones.
 function capturasTerminal(ejemplo) {
   const programa = join(temporal, process.platform === 'win32' ? 'captura.exe' : 'captura')
   execFileSync('go', ['build', '-o', programa, './internal/tui/captura'], { cwd: raiz, stdio: 'inherit' })
   const textos = JSON.parse(readFileSync(join(raiz, 'internal', 'tui', 'datos', 'textos.json'), 'utf8'))
-  const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const terminal = {}
   for (const idioma of ['es', 'en']) {
     terminal[idioma] = {}
@@ -186,20 +185,22 @@ function capturasTerminal(ejemplo) {
       const entorno = { ...process.env, TRAMTAI_IDIOMA: idioma, TERM_PROGRAM: 'tramtai-capturas' }
       delete entorno.NO_COLOR
       delete entorno.TRAMTAI_ASCII
+      const inicio = Date.now()
       const ansi = execFileSync(programa, ['oscuro', idioma, '100', '28', ...p.teclas], { cwd: temporal, env: entorno, encoding: 'utf8', maxBuffer: 16 << 20 })
         .replaceAll(ejemplo, 'C:\\Proyectos\\mi-app')
+      const segundos = ((Date.now() - inicio) / 1000).toFixed(1)
       if (privada.test(ansi)) throw new Error(`terminal ${p.nombre} (${idioma}): la captura muestra una ruta real`)
       const html = ansiAHtml(ansi)
       const plano = html.replace(/<[^>]+>/g, '')
       const comprobando = textos[idioma]['inicio.comprobando']
       if (plano.includes(comprobando)) throw new Error(`terminal ${p.nombre} (${idioma}): quedó en «${comprobando}»`)
-      // La red de Inicio dice «N peticiones en curso.» mientras hay alguna: la pantalla cambiaría a los pocos segundos.
-      const enCurso = new RegExp(`${escapar(textos[idioma]['vivo.enCurso']).replace('\\{n\\}', '\\d+')}|${escapar(textos[idioma]['vivo.enCursoUno'])}`)
-      if (enCurso.test(plano)) throw new Error(`terminal ${p.nombre} (${idioma}): con peticiones en curso`)
+      // La red de Inicio con peticiones en curso o con filas que se van («terminada 9 s») cambiaría a los pocos segundos.
+      const movimiento = plano.match(redEnMovimiento(textos[idioma]))
+      if (movimiento) throw new Error(`terminal ${p.nombre} (${idioma}): la red sigue en movimiento («${movimiento[0]}»)`)
       if (p.nombre === 'historial' && plano.includes(textos[idioma]['historial.vacio']))
         throw new Error(`terminal historial (${idioma}): sin peticiones; ¿respondió ${modelo}?`)
       terminal[idioma][p.nombre] = html
-      console.log(`terminal ${idioma} ${p.nombre}: ${html.length} bytes`)
+      console.log(`terminal ${idioma} ${p.nombre}: ${html.length} bytes, ${segundos} s hasta asentarse`)
     }
   }
   writeFileSync(join(destinoPortada, 'terminal.json'), JSON.stringify(terminal, null, 1) + '\n')
