@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,6 +49,10 @@ func correrAislado(m *testing.M) int {
 	}
 	// Sin descriptor ni token en ella, conectar() no tiene a quién llamar. Las pruebas la sustituyen y la restauran.
 	dirDatos = func() (string, error) { return datos, nil }
+	// Ninguna prueba lee el almacén de claves del equipo: las que necesitan una clave ponen la suya y la restauran.
+	leerClave = func(nombre string) (string, error) {
+		return "", errors.New("la prueba leyó el almacén real de claves (" + nombre + "): sustituye leerClave")
+	}
 	// La raíz se calcula una vez por proceso: se fija aquí, como la del usuario y en la carpeta temporal, para que no la
 	// fije la primera prueba que pase por ella (una con TRAMTAI_SERVIDOR=1 la dejaría como la del servidor para todas).
 	if _, err := carpetas.RaizUsuario(); err != nil {

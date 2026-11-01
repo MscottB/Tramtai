@@ -45,7 +45,7 @@ func escribirEspacios(w io.Writer, lista []contrato.Espacio) {
 		}
 		fmt.Fprintf(t, "%s\t%s\t%s\t%d\t%d\t%s\n", e.Nombre, e.ID, estado, e.APIs, e.Peticiones, e.Ruta)
 		if e.UltimoError != "" {
-			fmt.Fprintf(t, "  ↳ %s\t\t\t\t\t\n", e.UltimoError)
+			fmt.Fprintf(t, "\t\t\t\t\t↳ %s\n", e.UltimoError) // en la última columna, sin cerrar con tabulador: no ensancha ninguna
 		}
 	}
 	t.Flush()
