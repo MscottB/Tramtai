@@ -230,6 +230,29 @@ func terminado(t *testing.T, cli *Cliente, inst, id string) {
 
 // Las herramientas por el cliente, con Continue (su clave va en su archivo: el almacén del sistema no se toca) y sus
 // carpetas en temporales.
+// FichasAgentes trae, en el orden del servicio, si cada agente está desconectado y si vale en APIs.
+func TestClienteFichasAgentes(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	fichas, err := cli.FichasAgentes(ctx, "global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.IndexFunc(fichas, func(f FichaAgente) bool { return f.Agente == "simulado" })
+	if i < 0 || fichas[i].Desconectado || !fichas[i].PermitidoApps {
+		t.Fatalf("el agente simulado, conectado y permitido en APIs: %+v", fichas)
+	}
+	if err := cli.ConectarAgente(ctx, "simulado", false); err != nil {
+		t.Fatal(err)
+	}
+	if fichas, err = cli.FichasAgentes(ctx, "global"); err != nil || !fichas[i].Desconectado {
+		t.Fatalf("desconectado: %+v %v", fichas, err)
+	}
+}
+
 func TestClienteHerramientas(t *testing.T) {
 	casa := t.TempDir()
 	for _, v := range []string{"HOME", "USERPROFILE", "APPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME"} {
