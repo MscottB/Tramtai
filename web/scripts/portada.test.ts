@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { pasosBienvenida } from '../src/recorrido.ts'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
+import { PORTADA } from './capturas-lista.ts'
 
 const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
 // seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
@@ -273,6 +274,21 @@ test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () 
     assert.match(img, /sizes="\(max-width: 900px\) 100vw, 630px"/)
     assert.match(img, /loading="lazy"/, 'ninguna está en la primera pantalla')
   }
+})
+
+// v0.59: cada captura de la app y del servidor existe en español e inglés. Las referencias del HTML (lang y srcset) las
+// cambia la Tarea 14; hasta entonces solo se mira el disco. Las del servidor (entrar y Inicio con la cabecera «Servidor») van
+// a 1440 y 960 px.
+test('cada captura de la app y del servidor tiene su versión es y en en disco', () => {
+  const archivos = readdirSync(new URL('../../site/capturas/', import.meta.url))
+  const pedidas = [
+    ...PORTADA.map((p) => ({ nombre: p.nombre, anchos: [1440, 960, 640] })),
+    ...['servidor-entrar', 'servidor-inicio'].map((nombre) => ({ nombre, anchos: [1440, 960] })),
+  ]
+  for (const { nombre, anchos } of pedidas)
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en'])
+        for (const ancho of anchos) assert.ok(archivos.includes(`${nombre}-${tema}-${idioma}-${ancho}.webp`), `falta ${nombre}-${tema}-${idioma}-${ancho}.webp`)
 })
 
 test('la portada cuenta el mapa en vivo y no habla de la «API principal»', () => {

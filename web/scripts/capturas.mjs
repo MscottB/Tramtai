@@ -1,5 +1,5 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
-// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal en HTML
+// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas en español e inglés, la terminal en HTML
 // (terminal.json) y la demo de la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio
 // puerto (PUERTO_CAPTURAS; la nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia):
 // no toca la instalación de quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y Seguridad, la
@@ -137,7 +137,7 @@ function crearAbrir(enviar, evaluar, base) {
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
     // La pestaña de Ajustes que dejó una captura no debe pasar a la siguiente: cada una trae la suya en `guardado`.
-    await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes')`)
+    await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes'); localStorage.removeItem('tramtai.pestanaApis')`)
     // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
     await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}'); localStorage.setItem('tramtai.bienvenida', 'descartada')`)
     for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
@@ -165,6 +165,19 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
     clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: Math.min(1, ANCHO_AYUDA / r.w) } })
   writeFileSync(join(destinoAyuda, `${c.id}.${tema}.${idioma}.webp`), Buffer.from(data, 'base64'))
   console.log(`${c.id}.${tema}.${idioma}.webp`)
+}
+
+// portada guarda la pantalla de 1440×900 que está abierta como site/capturas/<nombre>-<tema>-<idioma>-<ancho>.webp, a cada
+// ancho (reducida desde la de 1440), tras comprobar que no enseña una ruta real.
+async function portada({ enviar, evaluar }, nombre, tema, idioma, anchos) {
+  const vista = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
+  if (privada.test(vista)) throw new Error(`${nombre}: la captura muestra una ruta real: ${vista.slice(0, 200)}`)
+  for (const ancho of anchos) {
+    const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
+      clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
+    writeFileSync(join(destinoPortada, `${nombre}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(data, 'base64'))
+    console.log(`site/capturas/${nombre}-${tema}-${idioma}-${ancho}.webp`)
+  }
 }
 
 // capturasTerminal saca site/capturas/terminal.json: compila internal/tui/captura junto a la copia portable
@@ -252,7 +265,7 @@ async function capturasServidor() {
     // la contraseña. El servicio corre con su cuenta (como root no arranca) y el secreto TOTP le llega como se lo daría
     // systemd: en $CREDENTIALS_DIRECTORY/tramtai.TRAMTAI_TOTP (el contenedor no tiene systemd).
     enTramtai('useradd', '--system', '--home', '/var/lib/tramtai', '--shell', '/usr/sbin/nologin', 'tramtai')
-    enTramtai('sh', '-c', `mkdir -p /var/lib/tramtai && printf 'servicio:\\n  host: 127.0.0.1\\n  dominios: [tramtai.example.com]\\n  proxy:\\n    confiables: [127.0.0.1/32]\\n' >/var/lib/tramtai/config.yaml`)
+    enTramtai('sh', '-c', `mkdir -p /var/lib/tramtai && printf 'servicio:\\n  host: 127.0.0.1\\n  dominios: [tramtai.example.com]\\n  proxy:\\n    confiables: [127.0.0.1/32]\\nconversion:\\n  preparar_al_iniciar: false\\n' >/var/lib/tramtai/config.yaml`)
     enTramtai('sh', '-c', `mkdir -p /run/credenciales && printf %s ${base32(secreto)} >/run/credenciales/tramtai.TRAMTAI_TOTP && chown -R tramtai /run/credenciales && chmod -R go= /run/credenciales`)
     enTramtai('/opt/tramtai/tramtai', 'terminos', 'aceptar')
     compose(['exec', '-T', 'tramtai', '/opt/tramtai/tramtai', 'administrador', 'contraseña'], { input: `${contrasena}\n${contrasena}\n` })
@@ -270,6 +283,13 @@ async function capturasServidor() {
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
         for (const c of deServidor.filter((x) => x.id === 'entrar')) await capturarZona(nav, c, tema, idioma)
+    // Para el sitio: la página de entrada (contraseña y código) entera, a 1440 y 960 px.
+    if (completa || soloServidor)
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await nav.abrir('inicio', tema, idioma, '[data-captura="entrar"]', 1440, 900)
+          await portada(s, 'servidor-entrar', tema, idioma, [1440, 960])
+        }
     await nav.abrir('inicio', 'claro', 'es', '[data-captura="entrar"]', 1280, 900)
     const estado = await s.evaluar(`fetch('/ui/acceder', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contrasena: ${JSON.stringify(contrasena)}, codigo: ${JSON.stringify(totp(secreto))} }) }).then((r) => r.status)`)
@@ -278,6 +298,15 @@ async function capturasServidor() {
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
         for (const c of deServidor.filter((x) => x.id !== 'entrar')) await capturarZona(nav, c, tema, idioma)
+    // Para el sitio: Inicio ya dentro, con la cabecera «Servidor», a 1440 y 960 px.
+    if (completa || soloServidor)
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await nav.abrir('inicio', tema, idioma, '.pagina', 1440, 900)
+          // El contenedor de prueba no trae el conversor de archivos (un servidor instalado sí): su aviso no sale.
+          await s.evaluar(`(() => { const e = document.createElement('style'); e.textContent = '.aviso-conversor{display:none!important}'; document.head.append(e) })()`)
+          await portada(s, 'servidor-inicio', tema, idioma, [1440, 960])
+        }
 
     // El diálogo de Seguridad: «Crear códigos nuevos» pide la contraseña y, con TOTP, un código (de otro paso: uno ya
     // usado no vale), y da los códigos nuevos.
@@ -383,9 +412,11 @@ try {
     await pedir('/ui/sesion', { instancia: 'global' }, p.csrf)
   })()`)
 
-  // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica.
+  // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica, ni su carpeta
+  // personal (Ajustes de las herramientas enseña dónde está el archivo de cada una: C:\Users\<usuario>\.claude\…).
   const ocultarRuta = () => evaluar(`(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
-    while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
+    while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app')
+      .replaceAll(${JSON.stringify(homedir())}, 'C:\\\\Users\\\\ana').replaceAll(${JSON.stringify(homedir().replaceAll('\\', '/'))}, 'C:/Users/ana') })()`)
 
   mkdirSync(destinoAyuda, { recursive: true })
   for (const c of CAPTURAS.filter((x) => !x.servidor && (completa || x.id === solo)))
@@ -455,19 +486,13 @@ try {
 
   if (completa)
     for (const p of PORTADA)
-      for (const tema of ['claro', 'oscuro']) {
-        await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
-        await ocultarRuta()
-        const vista = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
-        if (privada.test(vista)) throw new Error(`${p.nombre}: la captura muestra una ruta real: ${vista.slice(0, 200)}`)
-        // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
-        for (const ancho of [1440, 960, 640]) {
-          const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
-            clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
-          writeFileSync(join(destinoPortada, `${p.nombre}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
-          console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await abrir(p.pagina, tema, idioma, '.pagina', 1440, 900)
+          await ocultarRuta()
+          // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
+          await portada({ enviar, evaluar }, p.nombre, tema, idioma, [1440, 960, 640])
         }
-      }
   // zonaDelPaso es lo que señala el paso (.driver-active-element) con 32 px por lado, agrandado a 16:10 alrededor de su
   // centro (de 720 px de ancho a `maximo`) y encajado en la pantalla de 1440×900. El tope de 820 es lo que mide la imagen
   // en la portada: cada paso se ve a 1× o más. Un ancla más ancha (el mapa) se recorta desde su borde izquierdo, donde van
