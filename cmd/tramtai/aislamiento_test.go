@@ -89,9 +89,10 @@ func TestAdministradorEnServidorHablaConElServicio(t *testing.T) {
 	}
 }
 
-// dentroDeTemporal dice si ruta cuelga de la carpeta temporal, con o sin enlaces ni nombres cortos (ADMINI~1) resueltos.
+// dentroDeTemporal dice si ruta cuelga de la carpeta temporal de las pruebas (raizPruebas, no de toda la temporal del
+// equipo), con o sin enlaces ni nombres cortos (ADMINI~1) resueltos.
 func dentroDeTemporal(ruta string) bool {
-	bases, rutas := []string{os.TempDir()}, []string{ruta}
+	bases, rutas := []string{raizPruebas}, []string{ruta}
 	if real, err := filepath.EvalSymlinks(bases[0]); err == nil {
 		bases = append(bases, real)
 	}
