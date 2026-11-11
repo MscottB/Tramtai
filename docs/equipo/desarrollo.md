@@ -241,7 +241,7 @@ de esas herramientas.
 | `POST /api/v1/herramientas/<id>/olvidar` | Desactiva y borra la clave del almacén y la anotación (204) |
 | `POST /api/v1/herramientas/<id>/restaurar` | Repone la copia entera del archivo; responde `{copia}` |
 
-Todas devuelven la lista al día, salvo olvidar. `tramtai herramientas clave <id>` no pasa por el servicio: lee el
+Activar y desactivar devuelven la lista al día como `{"herramientas":[…]}`, igual que el `GET`. `tramtai herramientas clave <id>` no pasa por el servicio: lee el
 almacén (`servicio.NombreClaveHerramienta`) y escribe solo la clave. Los tipos de la API salen de `internal/contrato`
 (`go generate ./internal/contrato`).
 
