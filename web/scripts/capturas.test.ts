@@ -174,6 +174,10 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
       assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
       for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
+      // Sobre el velo (la fila elegida) solo va la tinta del texto: los colores de agente no llegan a 4,5:1 encima.
+      for (const [, lista] of html.matchAll(/class="([^"]*\btf-velo\b[^"]*)"/g)) assert.match(lista, /\bt-texto\b/, `${donde}: ${lista}`)
+      // Solo <span class="…">: va tal cual a la portada, así que ninguna otra etiqueta se cuela.
+      assert.ok(!html.replace(/<span class="[^"<>]*">|<\/span>/g, '').includes('<'), `${donde}: una etiqueta que no es <span class>`)
     }
     assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
     // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.

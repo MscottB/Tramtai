@@ -624,8 +624,14 @@ test('la terminal de la portada son seis pantallas de texto de terminal.json, si
   const datos = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
   assert.equal((zona.match(/<pre class="pantalla"/g) ?? []).length, 6, '3 páginas × 2 idiomas')
   for (const idioma of ['es', 'en'])
-    for (const p of ['inicio', 'apis', 'historial'])
-      assert.ok(zona.includes(`<pre class="pantalla" lang="${idioma}">${datos[idioma][p]}</pre>`), `${p}, ${idioma}`)
+    for (const p of ['inicio', 'apis', 'historial']) {
+      const fin = zona.indexOf(`">${datos[idioma][p]}</pre>`)
+      assert.ok(fin > 0, `${p}, ${idioma}`)
+      // role="img" con su texto: el lector de pantalla oye qué enseña la página, no 28 filas de columnas.
+      const pre = zona.slice(zona.lastIndexOf('<pre ', fin), fin + 2)
+      assert.match(pre, new RegExp(`^<pre class="pantalla" lang="${idioma}" role="img" aria-label="${idioma === 'es' ? 'La terminal en' : 'The terminal on'} [^"]+">$`), `${p}, ${idioma}`)
+    }
+  assert.equal(new Set(zona.match(/aria-label="The terminal[^"]+"|aria-label="La terminal[^"]+"/g)).size, 6, 'un texto por página e idioma')
   assert.doesNotMatch(terminal, /style=/)
   assert.doesNotMatch(terminal, /<img /)
   assert.doesNotMatch(css, /\.terminal-capturas/)
@@ -659,8 +665,8 @@ test('la ventana de la terminal tiene semáforo, rótulo y tres pestañas; sin J
 
 test('debajo de la ventana: el pie de figura, la leyenda de teclas, el enlace a la Ayuda y los dos comandos por idioma', () => {
   const pie = terminal.match(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/)?.[0] ?? ''
-  assert.match(pie, /lang="es">[^<]*datos de ejemplo/)
-  assert.match(pie, /lang="en">[^<]*sample data/)
+  assert.match(pie, /lang="es">[^<]*datos de ejemplo y en el puerto 17388; la tuya usa el 17373/)
+  assert.match(pie, /lang="en">[^<]*sample data and on port 17388; yours uses 17373/)
   const leyenda = terminal.match(/<ul class="teclas">[\s\S]*?<\/ul>/)?.[0] ?? ''
   for (const [k, es, en] of [['Tab', 'menú', 'menu'], ['7', 'páginas', 'pages'], ['?', 'ayuda', 'help'], ['Esc', 'volver', 'back'], ['q', 'salir', 'quit']])
     assert.match(leyenda, new RegExp(`<kbd>${k.replace('?', '\\?')}</kbd> <span lang="es">${es}</span><span lang="en">${en}</span>`), k)
@@ -675,10 +681,20 @@ test('debajo de la ventana: el pie de figura, la leyenda de teclas, el enlace a 
 test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia autoalojada y los glifos en su celda', () => {
   const pares = new Map<string, string[]>()
   for (const [hex, token] of Object.entries(TOKENS_TERMINAL)) pares.set(token, [...(pares.get(token) ?? []), hex])
+  // Claude de día va en el tono de su chapa, #ba521c (DESIGN.md, Excepciones): #c4561d se queda en 4,47:1.
+  pares.set('claude', ['#ba521c', pares.get('claude')![1]])
   for (const [token, [dia, noche]] of pares) {
     const regla = token === 'velo' ? `.tf-velo { background: light-dark(${dia}, ${noche}); }` : `.t-${token} { color: light-dark(${dia}, ${noche}); }`
     assert.ok(css.includes(regla), regla)
   }
+  // Cada tinta llega a 4,5:1 sobre el fondo de la ventana en los dos temas. Sobre el velo solo va la tinta del texto
+  // (capturas.test.ts lo comprueba en terminal.json).
+  const fondo = css.match(/\.ventana-terminal \{[^}]*background: light-dark\((#\w{6}), (#\w{6})\)/)?.slice(1) ?? []
+  assert.equal(fondo.length, 2)
+  const luz = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
+  const contraste = (a: string, b: string) => { const [x, y] = [luz(a), luz(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+  for (const [token, colores] of pares) if (token !== 'velo') colores.forEach((c, i) => assert.ok(contraste(c, fondo[i]) >= 4.5, `${token} ${i ? 'de noche' : 'de día'}: ${contraste(c, fondo[i]).toFixed(2)}:1`))
+  assert.ok(contraste('#0f1b1e', pares.get('velo')![0]) >= 4.5 && contraste('#e5edf0', pares.get('velo')![1]) >= 4.5, 'texto sobre el velo')
   assert.ok(css.includes('.t-b { font-weight: 700; }'))
   assert.match(css, /\.t-d \{ opacity: [\d.]+; \}/)
   assert.ok(css.includes('.g { display: inline-block; width: 1ch; text-align: center; }'))

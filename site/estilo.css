@@ -161,7 +161,8 @@ section { padding: 72px 0; }
 .t-ok { color: light-dark(#166534, #4ade80); }
 .t-error { color: light-dark(#b42525, #f87171); }
 .t-aviso { color: light-dark(#854d0e, #fbbf24); }
-.t-claude { color: light-dark(#c4561d, #f28a4f); }
+/* Claude de día va en el tono de su chapa (DESIGN.md, Excepciones): #c4561d da 4,47:1 sobre blanco. */
+.t-claude { color: light-dark(#ba521c, #f28a4f); }
 .t-codex { color: light-dark(#2563eb, #5b8def); }
 .t-copilot { color: light-dark(#1f883d, #3fb950); }
 .t-gemini { color: light-dark(#7c3aed, #a78bfa); }

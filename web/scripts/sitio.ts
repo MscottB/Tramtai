@@ -164,11 +164,15 @@ function desescapar(s: string): string {
 // Terminal son las pantallas de la terminal de la portada (site/capturas/terminal.json, de capturas --terminal): el HTML
 // de cada página en cada idioma, con clases t-<token> que la hoja pinta según el tema.
 export type Terminal = Record<'es' | 'en', Record<'inicio' | 'apis' | 'historial', string>>
-// PANTALLAS son sus pestañas, con la tecla que lleva a cada página en la TUI.
+// PANTALLAS son sus pestañas, con la tecla que lleva a cada página en la TUI y lo que oye un lector de pantalla (cada
+// pantalla es role="img": su texto sigue seleccionable, pero 28 filas de columnas no se leen bien en voz alta).
 const PANTALLAS = [
-  { nombre: 'inicio', tecla: '1', es: 'Inicio', en: 'Home' },
-  { nombre: 'apis', tecla: '4', es: 'Mis APIs', en: 'My APIs' },
-  { nombre: 'historial', tecla: '5', es: 'Historial', en: 'History' },
+  { nombre: 'inicio', tecla: '1', es: 'Inicio', en: 'Home',
+    alt: { es: 'La terminal en Inicio: el estado del servicio, la red, las salidas de los últimos 7 días y los primeros pasos', en: 'The terminal on Home: the service status, the network, the last 7 days of departures and getting started' } },
+  { nombre: 'apis', tecla: '4', es: 'Mis APIs', en: 'My APIs',
+    alt: { es: 'La terminal en Mis APIs: las APIs por aplicación, en sus grupos, con su estado y su consumo', en: 'The terminal on My APIs: the per-app APIs, in their groups, with their status and usage' } },
+  { nombre: 'historial', tecla: '5', es: 'Historial', en: 'History',
+    alt: { es: 'La terminal en Historial: las peticiones recientes, con su estado, y los filtros', en: 'The terminal on History: the recent requests, with their status, and the filters' } },
 ] as const
 
 // ventanaTerminal es la ventana de la portada (comun:terminal): semáforo, pestañas, rótulo y un panel por página con sus
@@ -178,8 +182,8 @@ function ventanaTerminal(t: Terminal): string {
   const pestanas = PANTALLAS.map((p, i) => `<button type="button" role="tab" id="terminal-${p.nombre}" aria-controls="terminal-${p.nombre}-panel" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tecla="${p.tecla}">${p.tecla} ${bilingue(p.es, p.en)}</button>`)
   const paneles = PANTALLAS.map((p, i) => {
     const panel = `<div class="ventana-pantalla" id="terminal-${p.nombre}-panel" aria-labelledby="terminal-${p.nombre}" tabindex="0">
-<pre class="pantalla" lang="es">${t.es[p.nombre]}</pre>
-<pre class="pantalla" lang="en">${t.en[p.nombre]}</pre>
+<pre class="pantalla" lang="es" role="img" aria-label="${escapar(p.alt.es)}">${t.es[p.nombre]}</pre>
+<pre class="pantalla" lang="en" role="img" aria-label="${escapar(p.alt.en)}">${t.en[p.nombre]}</pre>
 </div>`
     return i === 0 ? panel : `<details class="ventana-mas">\n<summary>${p.tecla} ${bilingue(p.es, p.en)}</summary>\n${panel}\n</details>`
   })
