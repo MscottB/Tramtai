@@ -16,6 +16,6 @@ func init() {
 		"ya hay un modelo «Tramtai» en config.yaml que no es de Tramtai: renómbralo o quítalo":    "config.yaml already has a “Tramtai” model that is not Tramtai’s: rename or remove it",
 		"«models» de config.yaml está escrito entre corchetes: pásalo a una lista con guiones":    "“models” in config.yaml is written in square brackets: change it to a dash list",
 		"Continue usa config.json en esta carpeta: pásalo a config.yaml antes de activarlo":       "Continue uses config.json in this folder: convert it to config.yaml before turning it on",
-		"la anotación tiene datos de más tras el objeto":                                          "the record has extra data after the object",
+		"la anotación tiene datos de más tras el objeto":                                          "Tramtai’s note has extra data after the object",
 	})
 }

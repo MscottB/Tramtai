@@ -1149,6 +1149,7 @@ const es = {
   'herramientas.motivo.sin_https_propio': 'Con HTTPS propio activado, las herramientas no pueden usar Tramtai en este equipo: desactiva el HTTPS propio o pon Tramtai detrás de un proxy.',
   'herramientas.motivo.api_no_existe': 'La API {api} ya no existe: vuelve a activarla.',
   'herramientas.motivo.api_detenida': 'La API {api} está detenida en Mis APIs.',
+  'herramientas.motivo.modelo_no_permitido': 'La API {api} ya no permite {modelo}, el modelo de la herramienta: vuelve a activarla.',
   'herramientas.motivo.puerto': 'Tramtai usa ahora el puerto {actual} y la herramienta apunta al {anotado}: vuelve a activarla.',
   'herramientas.motivo.orden_no_existe': 'Ya no existe {ruta}, el Tramtai que da la clave: vuelve a activarla.',
   'herramientas.motivo.clave_no_almacen': 'Su clave ya no está en el almacén del sistema: vuelve a activarla.',

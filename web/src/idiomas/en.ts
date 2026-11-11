@@ -1138,6 +1138,7 @@ const en: Textos = {
   'herramientas.motivo.sin_https_propio': 'With your own HTTPS turned on, tools can’t use Tramtai on this computer: turn off your own HTTPS or put Tramtai behind a proxy.',
   'herramientas.motivo.api_no_existe': 'The API {api} no longer exists: turn the tool on again.',
   'herramientas.motivo.api_detenida': 'The API {api} is stopped in My APIs.',
+  'herramientas.motivo.modelo_no_permitido': 'The API {api} no longer allows {modelo}, the tool’s model: turn the tool on again.',
   'herramientas.motivo.puerto': 'Tramtai now uses port {actual} and the tool points to {anotado}: turn it on again.',
   'herramientas.motivo.orden_no_existe': '{ruta}, the Tramtai that provides the key, no longer exists: turn the tool on again.',
   'herramientas.motivo.clave_no_almacen': 'Its key is no longer in the system store: turn the tool on again.',

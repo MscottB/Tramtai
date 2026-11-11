@@ -499,7 +499,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "«Desactualizada» pasa si se borró o detuvo su API, cambió el puerto, Tramtai se movió o actualizó (la orden de la clave ya no existe), falta la clave, se editó a mano o activas el HTTPS propio."
+            "«Desactualizada» pasa si su API se borró, se detuvo o no admite su modelo, cambió el puerto, Tramtai se movió o actualizó, falta la clave, se editó a mano o activas el HTTPS propio."
           ]
         },
         {
@@ -2117,7 +2117,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "It is “Out of date” if its API was deleted or stopped, the port changed, Tramtai moved or updated (key command gone), its key is missing, it was edited by hand or you turn on Tramtai’s own HTTPS."
+            "It is “Out of date” if its API was deleted, stopped or no longer allows its model, the port changed, Tramtai moved or updated, its key is missing, it was edited by hand or you turn on your own HTTPS."
           ]
         },
         {

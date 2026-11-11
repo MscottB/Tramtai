@@ -217,7 +217,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.conectarHerramientas.desactivada': 'It was on: its file is as it was and its API is still in My APIs, stopped.',
   'ayuda.conectarHerramientas.desactualizada': 'It was on but no longer works. The row says why, and “Turn on again” fixes it.',
   'ayuda.conectarHerramientas.soloGlobal': 'From a project workspace only Claude Code has its own file: turn the others on from the global workspace.',
-  'ayuda.conectarHerramientas.motivos': 'It is “Out of date” if its API was deleted or stopped, the port changed, Tramtai moved or updated (key command gone), its key is missing, it was edited by hand or you turn on Tramtai’s own HTTPS.',
+  'ayuda.conectarHerramientas.motivos': 'It is “Out of date” if its API was deleted, stopped or no longer allows its model, the port changed, Tramtai moved or updated, its key is missing, it was edited by hand or you turn on your own HTTPS.',
   'ayuda.conectarHerramientas.deshacer': 'Put them back as they were',
   'ayuda.conectarHerramientas.des1': 'The “Use with Tramtai” switch (or “Turn off all”) removes only what Tramtai added and brings back the earlier values; what you changed stays. The API stops and the key is kept.',
   'ayuda.conectarHerramientas.des2': '“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.',

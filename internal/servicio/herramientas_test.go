@@ -434,6 +434,22 @@ func TestDesactualizada(t *testing.T) {
 	comprobar("el usuario lo cambió", "config.toml", "editada_a_mano")
 	os.WriteFile(toml, original, 0o600)
 
+	permitir := func(modelos ...string) {
+		t.Helper()
+		if err := editarAPIs(func(l []ConfigPunto) ([]ConfigPunto, error) {
+			l[slices.IndexFunc(l, func(c ConfigPunto) bool { return c.Nombre == "codex" })].ModelosPermitidos = modelos
+			return l, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	permitir("claude/sonnet")
+	comprobar("su modelo ya no está permitido en la API", "claude/haiku", "modelo_no_permitido")
+	permitir()
+	if e := p.estados(t, "global")["codex"]; e.Estado != "activa" {
+		t.Fatalf("una API sin lista de modelos los permite todos: %+v", e)
+	}
+
 	if r, cuerpo := pedir(t, p.ts.URL, "DELETE", "/api/v1/puntos/codex", p.s.tokenAdmin, "", "Tramtai-Instancia", "global"); r.StatusCode != 204 {
 		t.Fatalf("borrar la API: %d %s", r.StatusCode, cuerpo)
 	}

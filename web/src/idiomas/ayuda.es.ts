@@ -215,7 +215,7 @@ const ayudaEs = {
   'ayuda.conectarHerramientas.desactivada': 'Estuvo activa: su archivo está como estaba y su API sigue en Mis APIs, detenida.',
   'ayuda.conectarHerramientas.desactualizada': 'Estuvo activa pero ya no funciona. La fila dice por qué y «Volver a activar» lo arregla.',
   'ayuda.conectarHerramientas.soloGlobal': 'Desde el espacio de un proyecto solo Claude Code tiene archivo propio: las demás se activan desde el espacio global.',
-  'ayuda.conectarHerramientas.motivos': '«Desactualizada» pasa si se borró o detuvo su API, cambió el puerto, Tramtai se movió o actualizó (la orden de la clave ya no existe), falta la clave, se editó a mano o activas el HTTPS propio.',
+  'ayuda.conectarHerramientas.motivos': '«Desactualizada» pasa si su API se borró, se detuvo o no admite su modelo, cambió el puerto, Tramtai se movió o actualizó, falta la clave, se editó a mano o activas el HTTPS propio.',
   'ayuda.conectarHerramientas.deshacer': 'Dejarlas como estaban',
   'ayuda.conectarHerramientas.des1': 'Con el interruptor «Usar con Tramtai» (o «Desactivar todas») se quita solo lo que puso Tramtai y vuelven los valores de antes; lo que cambiaste se queda. La API se detiene y la clave se guarda.',
   'ayuda.conectarHerramientas.des2': '«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.',

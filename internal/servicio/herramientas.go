@@ -546,6 +546,9 @@ func (s *Servicio) motivoDesactualizada(h apuntar.Herramienta, a apuntar.Anotaci
 		return motivo{"api_no_existe", map[string]string{"api": a.API}, idioma.Tf("la API %s ya no existe: vuelve a activarla", a.API)}
 	case !p.EstaActivo():
 		return motivo{"api_detenida", map[string]string{"api": a.API}, idioma.Tf("la API %s está detenida en Mis APIs", a.API)}
+	case len(p.ModelosPermitidos) > 0 && !api.PermitidoRespaldo(p.ModelosPermitidos, a.Modelo):
+		return motivo{"modelo_no_permitido", map[string]string{"api": a.API, "modelo": a.Modelo},
+			idioma.Tf("la API %s ya no permite %s, el modelo de la herramienta: vuelve a activarla", a.API, a.Modelo)}
 	case a.Puerto != puerto:
 		return motivo{"puerto", map[string]string{"actual": strconv.Itoa(puerto), "anotado": strconv.Itoa(a.Puerto)},
 			idioma.Tf("Tramtai usa ahora el puerto %d y la herramienta apunta al %d: vuelve a activarla", puerto, a.Puerto)}
