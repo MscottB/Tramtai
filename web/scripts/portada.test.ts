@@ -834,3 +834,16 @@ test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew
   }
   assert.ok(![html, es['ayuda.empezar.rTerminal'], en['ayuda.empezar.rTerminal']].some((x) => x.includes('mscottb/tramtai/tramtai')))
 })
+
+// Las órdenes y los ejemplos de código siguen el idioma elegido: lo que se ve (y se copia) en inglés no trae texto en
+// español conocido. Los campos de la API propia (mensajes, rol, contenido…) son su contrato y se quedan.
+test('los bloques de código en inglés no traen texto en español', () => {
+  const servidor = readFileSync(new URL('../../site/servidor.html', import.meta.url), 'utf8')
+  const espanol = /\b(?:cliente|respuesta|flujo|trozo|tu-clave|Resume|Traduce|Explica|Saca las|acta\.pdf|instalar|administrador|iniciar)\b|contraseña/
+  const bloques = [...html.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g), ...servidor.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g)].map((m) => m[0])
+  assert.ok(bloques.length >= 15, `${bloques.length} bloques`)
+  for (const b of bloques) {
+    const ingles = b.replace(/<span[^>]*\blang="es"[^>]*>[^<]*<\/span>/g, '').replace(/<[^>]+>/g, '')
+    assert.doesNotMatch(ingles, espanol, ingles.slice(0, 120))
+  }
+})

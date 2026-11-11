@@ -195,34 +195,34 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <pre class="codigo" id="codigo-mapa-1"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.chat.completions.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.chat.completions.create(
     model=<span class="s">"claude/haiku"</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"</span>}],
 )</pre>
 <pre class="codigo" id="codigo-mapa-2" hidden><span class="c" lang="es"># 1. Sube el PDF</span><span class="c" lang="en"># 1. Upload the PDF</span>
-curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -F archivo=@acta.pdf
+curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -F archivo=@<span lang="es">acta.pdf</span><span lang="en">minutes.pdf</span>
 
 <span class="c" lang="es"># 2. Pide la respuesta con forma</span><span class="c" lang="en"># 2. Ask for a shaped answer</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -d <span class="s">'{
   "agente": "codex", "cargas": ["carga_…"],
-  "mensajes": [{"rol": "usuario", "contenido": "Saca las fechas y los nombres de esta acta"}],
+  "mensajes": [{"rol": "usuario", "contenido": "<span lang="es">Saca las fechas y los nombres de esta acta</span><span lang="en">Get the dates and names from these minutes</span>"}],
   "salida": {"formato": "json", "esquema": {"type": "object",
-    "properties": {"fechas": {"type": "array"}, "nombres": {"type": "array"}}}}
+    "properties": {"<span lang="es">fechas</span><span lang="en">dates</span>": {"type": "array"}, "<span lang="es">nombres</span><span lang="en">names</span>": {"type": "array"}}}}
 }'</span></pre>
 <pre class="codigo" id="codigo-mapa-3" hidden><span class="k">import</span> anthropic
 
-cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.messages.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.messages.create(
     model=<span class="s">"copilot"</span>, max_tokens=1024,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Traduce este texto al inglés"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Traduce este texto al inglés</span><span lang="en">Translate this text into English</span>"</span>}],
 )</pre>
 <pre class="codigo" id="codigo-mapa-4" hidden><span class="c" lang="es"># Primero Claude; si falla antes de responder, Codex</span><span class="c" lang="en"># Claude first; if it fails before answering, Codex</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -d <span class="s">'{
   "agente": "claude", "respaldo": ["codex"],
-  "mensajes": [{"rol": "usuario", "contenido": "Resume este contrato en tres puntos"}]
+  "mensajes": [{"rol": "usuario", "contenido": "<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"}]
 }'</span></pre>
             </div>
           </div>
@@ -392,29 +392,29 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
 <pre class="codigo" id="como-openai-panel" aria-labelledby="como-openai" tabindex="0"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
 <span class="c" lang="es"># La respuesta llega en vivo, trozo a trozo</span><span class="c" lang="en"># The response arrives live, chunk by chunk</span>
-flujo = cliente.chat.completions.create(
+<span lang="es">flujo</span><span lang="en">stream</span> = <span lang="es">cliente</span><span lang="en">client</span>.chat.completions.create(
     model=<span class="s">"claude/sonnet"</span>, stream=<span class="k">True</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Explica este error en dos frases"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Explica este error en dos frases</span><span lang="en">Explain this error in two sentences</span>"</span>}],
 )
-<span class="k">for</span> trozo <span class="k">in</span> flujo:
-    <span class="k">print</span>(trozo.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
+<span class="k">for</span> <span lang="es">trozo</span><span lang="en">chunk</span> <span class="k">in</span> <span lang="es">flujo</span><span lang="en">stream</span>:
+    <span class="k">print</span>(<span lang="es">trozo</span><span lang="en">chunk</span>.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
 <pre class="codigo" id="como-anthropic-panel" aria-labelledby="como-anthropic" tabindex="0" hidden><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.messages.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.messages.create(
     model=<span class="s">"claude/haiku"</span>, max_tokens=1024,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"</span>}],
 )
-<span class="k">print</span>(respuesta.content[0].text)</pre>
+<span class="k">print</span>(<span lang="es">respuesta</span><span lang="en">response</span>.content[0].text)</pre>
 <pre class="codigo" id="como-curl-panel" aria-labelledby="como-curl" tabindex="0" hidden><span class="c" lang="es"># La misma petición por la URL compatible con OpenAI</span><span class="c" lang="en"># The same request through the OpenAI-compatible URL</span>
 curl http://127.0.0.1:17373/openai/v1/chat/completions \
-  -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -H <span class="s">"Content-Type: application/json"</span> \
-  -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "Resume este contrato en tres puntos"}]}'</span></pre>
+  -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"}]}'</span></pre>
         </div>
       </div>
     </div>
