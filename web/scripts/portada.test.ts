@@ -64,9 +64,9 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
 
 const VENTAJAS = [
   ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
-  ['Sin tocar tu código', 'con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.'],
+  ['Sin tocar tu código', 'con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.'],
   ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
-  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
+  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.'],
   ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
   ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
 ]
