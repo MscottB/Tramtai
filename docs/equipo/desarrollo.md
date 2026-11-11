@@ -127,6 +127,11 @@ desde los mismos datos.
 
   Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo; por eso
   los glifos van en `span.g` (arriba).
+- **La ventana en `site/index.html`:** no se escribe a mano. `npm run sitio` rellena la zona `<!-- comun:terminal -->`
+  (`ventanaTerminal` en `web/scripts/sitio.ts`) con el semáforo, las pestañas «1 Inicio · 4 Mis APIs · 5 Historial», el
+  rótulo y un panel por página e idioma tomado de `terminal.json`; el CI falla si lo guardado no coincide. Los colores
+  `.t-*`, `.tf-velo`, `.g` y la fuente `Tramtai Mono` están en `site/estilo.css`, y el tema de la ventana sigue el del
+  sitio (`light-dark()`). Si `terminal.json` cambia, se regenera el HTML (`npm run sitio`) y, si trae letras nuevas, la fuente.
 
 ### Recorridos: cómo añadir un paso o un ancla
 
@@ -218,6 +223,66 @@ Codex, GitHub Copilot `auto` y Gemini si hay `GEMINI_API_KEY`); salta los que fa
 (Copilot Free gasta un crédito por petición). Su resultado es la tabla «Qué agentes las atienden» de
 [la guía del desarrollador](../desarrolladores.md).
 
+### Herramientas de terceros: `internal/apuntar`
+
+`tramtai herramientas` (CLI), la pestaña Herramientas de Mis APIs y la de la terminal apuntan Claude Code, Codex,
+Continue, opencode y Kilo Code a Tramtai. Las tres interfaces usan las mismas rutas del servicio
+(`internal/servicio/herramientas.go`), y estas llaman a `internal/apuntar`, que es el único código que toca los archivos
+de esas herramientas.
+
+**Rutas** (`/api/v1/herramientas`, las que lee la Web UI y la terminal; en el modo servidor responden
+`409 no_disponible_en_servidor`):
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/v1/herramientas` | Lista de `contrato.EstadoHerramienta`: estado, modelo, archivo, motivo (`motivo_codigo` + `motivo_datos`, y `motivo` de respaldo), `clave_en_archivo`, `gestionado`, `hay_copia` |
+| `POST /api/v1/herramientas/activar` | `{ids|todas, modelo}`: crea o reanuda la API de cada herramienta y escribe su archivo |
+| `POST /api/v1/herramientas/desactivar` | `{ids|todas}`: quita lo de Tramtai y detiene su API |
+| `POST /api/v1/herramientas/<id>/olvidar` | Desactiva y borra la clave del almacén y la anotación (204) |
+| `POST /api/v1/herramientas/<id>/restaurar` | Repone la copia entera del archivo; responde `{copia}` |
+
+Todas devuelven la lista al día, salvo olvidar. `tramtai herramientas clave <id>` no pasa por el servicio: lee el
+almacén (`servicio.NombreClaveHerramienta`) y escribe solo la clave. Los tipos de la API salen de `internal/contrato`
+(`go generate ./internal/contrato`).
+
+**Qué hace el núcleo** (`apuntar.go`, `anotacion.go`): para activar relee el archivo, guarda la copia entera
+(`datos/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, 0600, las 3 más recientes por herramienta), pide al `Formato`
+el archivo nuevo, comprueba que su huella no cambió desde que lo leyó (si cambió, reintenta una vez y, si no, devuelve
+`ErrCambioMientras`), lo escribe con `configuracion.EscribirAtomico` y por último anota en
+`datos/herramientas/<id>.json` lo escrito y lo que había (`Escrito`, `Previos`). La anotación nunca lleva secretos: para
+una clave en un archivo guarda `sha256:<hex>`. Si la herramienta ya está activa en otra ruta devuelve
+`ErrOtraActivacion`: quien llama la quita antes. `Quitar` deshace solo lo que sigue siendo de Tramtai; `Restaurar` repone
+la copia.
+
+**El contrato `Formato`** (una implementación por tipo de archivo: `json.go` para JSON/JSONC con `hujson`, `toml.go`,
+`yaml.go`; no leen ni escriben en disco):
+
+- `Aplicar(actual, Valores)` devuelve el archivo con Tramtai puesto, lo escrito y lo que había en esas claves (las claves
+  de `previos` son un subconjunto de las de `escrito`);
+- `Quitar(actual, Anotacion)` lo devuelve sin lo de Tramtai y dice si ya no queda nada más;
+- `Contiene(actual, Anotacion)` dice si sigue lo que se escribió (compara huellas en las claves).
+
+Conservan lo que no es suyo: comentarios y orden en JSON/JSONC; en TOML y YAML, un bloque entre `# >>> tramtai` y
+`# <<< tramtai` (o el modelo `name: Tramtai` de Continue) sin reescribir el resto. Rechazan un archivo roto con
+`ErrArchivoIlegible` sin tocarlo.
+
+**Añadir una herramienta:**
+
+1. Una entrada en `apuntar.Lista()` con su `ID` (también el nombre de su API: `^[a-z0-9][a-z0-9_-]{0,39}$`), el nombre de
+   la UI, `Programa` (para detectarla en el PATH), `Ruta(alcance, proyecto)`, `EnProyecto` si admite un archivo de
+   proyecto, `ClaveEnArchivo` y, si hace falta, `Gestionado` o `Previa` (algo que impida activar, antes de escribir nada).
+2. Su `Formato`, o uno de los existentes si el archivo es del mismo tipo (opencode y Kilo comparten `OpenCode()`), con
+   archivos de ejemplo en `testdata/<formato>/`: las pruebas comprueban que se conservan los comentarios, que se deshace
+   con los valores previos, que se respeta lo que el usuario cambió después y que un archivo roto no se toca.
+3. Si la clave no va en el archivo, la herramienta tiene que poder pedirla a una orden (`tramtai herramientas clave <id>`):
+   añade `TRAMTAI_HERRAMIENTA_<ID>` a `credenciales.Internos` y la orden a `Valores.Orden`. Rutas con `%` se rechazan
+   porque `cmd.exe` las expandiría.
+4. Los textos van por `idioma.T` con su inglés en `internal/idioma/en_apuntar.go`, y los de la Web UI en `es.ts` y
+   `en.ts` (`herramientas.*`); la terminal los recibe con `npm run ayuda-terminal`.
+5. El tema de Ayuda `conectar-herramientas` y la prueba con el programa real (la comprobación al estilo M0 de
+   `docs/equipo/releases/v0.59-herramientas-y-sitio/m0.md`, con `HOME`, `CLAUDE_CONFIG_DIR` y `CODEX_HOME` temporales y
+   nunca el Tramtai instalado ni el puerto 17373).
+
 ### Ejemplos de la guía
 
 `go test -tags ejemplos -run TestEjemplos -v ./internal/api/` ejecuta `docs/ejemplos` contra un agente simulado (el
@@ -238,6 +303,7 @@ internal/credenciales/ claves de proveedor en el almacén del sistema (Windows, 
 internal/documentos/   cargas, formatos admitidos, conversión con markitdown y preparación del conversor
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
+internal/apuntar/      apunta Claude Code, Codex, Continue y opencode/Kilo a Tramtai: copias, anotación y un Formato por tipo de archivo
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
 internal/configuracion/ configuración por capas y perfiles; edición de config.yaml y local.yaml y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)
