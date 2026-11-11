@@ -221,6 +221,10 @@ func (formatoCodex) Aplicar(actual []byte, v Valores) ([]byte, map[string]any, m
 			if !unaLinea(ls[i], k, u.contenido[k]) {
 				return nil, nil, nil, errClaveVariasLineas
 			}
+			if k == "model_provider" && u.contenido[k] == "tramtai" { // sin su proveedor (ya se comprobó): resto de Tramtai, no del usuario
+				ls[i] = ""
+				continue
+			}
 			previos[k], ls[i] = u.contenido[k], prefijoComentado+ls[i]
 		}
 	}
@@ -279,7 +283,9 @@ func proveedorEscrito(e map[string]any) map[string]any {
 }
 
 func (formatoCodex) Quitar(actual []byte, a Anotacion) ([]byte, bool, error) {
-	conBOM, _, ls, sinFinal := abrirTOML(actual, true)
+	// sin Escrito (una anotación dañada) no se sabe qué es de Tramtai: valen las marcas, y se quitan los bloques enteros
+	sinEscrito := len(a.Escrito) == 0
+	conBOM, _, ls, sinFinal := abrirTOML(actual, !sinEscrito)
 	u, err := ubicar(ls)
 	if err != nil {
 		return nil, false, err
@@ -326,6 +332,7 @@ func (formatoCodex) Quitar(actual []byte, a Anotacion) ([]byte, bool, error) {
 		}
 		if m := claveDeLinea.FindStringSubmatch(resto); m != nil {
 			_, eraSuya := a.Previos[m[1]]
+			eraSuya = eraSuya || sinEscrito // la línea la apartó Tramtai: es del usuario
 			otra, hayOtra := u.claves[m[1]] // si el usuario conserva la suya, descomentar la dejaría repetida
 			if eraSuya && (!hayOtra || quitar[otra]) {
 				ls[i] = resto
