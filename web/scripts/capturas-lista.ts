@@ -38,6 +38,13 @@ export const TERMINAL: { nombre: 'inicio' | 'apis' | 'historial'; teclas: string
   { nombre: 'historial', teclas: ['5'] },
 ]
 
+// PETICIONES son las peticiones de ejemplo que llenan el Historial, en el idioma de cada captura (las del inglés no
+// deben enseñar texto en español, ni al revés).
+export const PETICIONES: Record<'es' | 'en', string[]> = {
+  es: ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.'],
+  en: ['Summarize in one line: Tramtai puts AI agents behind an API.', 'Say hello in three languages.'],
+}
+
 // TOKENS_TERMINAL traduce cada color que pinta la TUI (internal/tui/tema.go, la paleta clara y la oscura de
 // docs/diseno/DESIGN.md) al token de DESIGN.md: por eso un solo HTML sirve en los dos temas del sitio. Cada token lleva su
 // color de día y el de noche; velo es el fondo de la fila elegida.

@@ -87,7 +87,7 @@ desde los mismos datos.
   texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 5 MB en total (las de los pasos de los recorridos, `recorrido-<ancla>`, incluidas).
 - **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/` y la página de paso `site/ayuda.html`; el CI lo regenera y
   falla si lo guardado no coincide.
-- **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`) compila Tramtai en `bin/`, la arranca
+- **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`, varios separados por comas) compila Tramtai en `bin/`, la arranca
   portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
   inglés, el elemento de cada paso de los recorridos con su anillo (`-- --recorridos` saca solo esas; una ancla que la demo no muestra va en `SIN_CAPTURA`, con su motivo) y las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
   `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda. Las de la Ayuda
@@ -103,7 +103,8 @@ desde los mismos datos.
 - **La terminal de la portada es texto:** `npm run capturas -- --terminal` (también sale en la corrida completa) pinta
   Inicio, Mis APIs e Historial (`TERMINAL` en `capturas-lista.ts`) a 100×28, en español y en inglés, y guarda su HTML en
   `site/capturas/terminal.json` (`{"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}`). Hace dos peticiones reales
-  a `claude/haiku` con la suscripción de quien la corre (para que el Historial tenga entradas) y se para si una pantalla
+  por idioma a `claude/haiku` con la suscripción de quien la corre (para que el Historial tenga entradas en el idioma de
+  la captura: `PETICIONES` en `capturas-lista.ts`; antes de las del inglés vacía el Historial) y se para si una pantalla
   muestra una ruta del equipo, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento («N peticiones en
   curso» o filas ya terminadas como «terminada 9 s», que Inicio deja a la vista unos segundos antes de quitarlas) o si
   el Historial está vacío. `tui.Captura` no da por asentada una vista así: espera a que la red quede vacía.

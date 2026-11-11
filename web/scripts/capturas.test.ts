@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PETICIONES, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -181,6 +181,11 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(!html.replace(/<span class="[^"<>]*">|<\/span>/g, '').includes('<'), `${donde}: una etiqueta que no es <span class>`)
     }
     assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
+    // Las peticiones del Historial están en el idioma de la captura (PETICIONES), nunca en el otro.
+    const historial = t[idioma].historial.replace(/<[^>]+>/g, '')
+    const otro = idioma === 'es' ? 'en' : 'es'
+    for (const p of PETICIONES[idioma]) assert.ok(historial.includes(p.slice(0, 12)), `${idioma}/historial: falta «${p}»`)
+    for (const p of PETICIONES[otro]) assert.ok(!historial.includes(p.slice(0, 12)), `${idioma}/historial: sale «${p}»`)
     // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
     const red = textos[idioma]['inicio.redTexto'].slice(0, 20)
     assert.ok(t[idioma].inicio.replace(/<[^>]+>/g, '').includes(red), `${idioma}/inicio: la red no está vacía (falta «${red}»)`)
