@@ -211,6 +211,13 @@ func TestEscribirAtomicoServidorSinEnlaces(t *testing.T) {
 	}
 
 	t.Setenv("TRAMTAI_SERVIDOR", "")
+	// Un proceso con sandbox (el Bash de un agente en Windows) no puede crear archivos nuevos a través de un punto de
+	// unión (ERROR_FILE_EXISTS con CREATE_NEW, también con Win32 a pelo): no es un fallo de EscribirAtomico.
+	if sonda, err := os.OpenFile(filepath.Join(raiz, "otra", "sonda.tmp"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600); err != nil {
+		t.Skipf("este entorno no crea archivos nuevos a través de un punto de unión: %v", err)
+	} else {
+		_ = sonda.Close()
+	}
 	if err := EscribirAtomico(filepath.Join(raiz, "otra", "y.json"), []byte("{}"), 0o600); err != nil {
 		t.Fatalf("fuera del modo servidor se escribe como siempre: %v", err)
 	}
