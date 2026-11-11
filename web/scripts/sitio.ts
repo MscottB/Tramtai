@@ -161,15 +161,48 @@ function desescapar(s: string): string {
   return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 }
 
+// Terminal son las pantallas de la terminal de la portada (site/capturas/terminal.json, de capturas --terminal): el HTML
+// de cada página en cada idioma, con clases t-<token> que la hoja pinta según el tema.
+export type Terminal = Record<'es' | 'en', Record<'inicio' | 'apis' | 'historial', string>>
+// PANTALLAS son sus pestañas, con la tecla que lleva a cada página en la TUI.
+const PANTALLAS = [
+  { nombre: 'inicio', tecla: '1', es: 'Inicio', en: 'Home' },
+  { nombre: 'apis', tecla: '4', es: 'Mis APIs', en: 'My APIs' },
+  { nombre: 'historial', tecla: '5', es: 'Historial', en: 'History' },
+] as const
+
+// ventanaTerminal es la ventana de la portada (comun:terminal): semáforo, pestañas, rótulo y un panel por página con sus
+// dos idiomas. Sin JavaScript las pestañas esperan ocultas, Inicio se ve y las otras quedan en <details>; sitio.js las
+// saca de ahí al encender las pestañas.
+function ventanaTerminal(t: Terminal): string {
+  const pestanas = PANTALLAS.map((p, i) => `<button type="button" role="tab" id="terminal-${p.nombre}" aria-controls="terminal-${p.nombre}-panel" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tecla="${p.tecla}">${p.tecla} ${bilingue(p.es, p.en)}</button>`)
+  const paneles = PANTALLAS.map((p, i) => {
+    const panel = `<div class="ventana-pantalla" id="terminal-${p.nombre}-panel" aria-labelledby="terminal-${p.nombre}" tabindex="0">
+<pre class="pantalla" lang="es">${t.es[p.nombre]}</pre>
+<pre class="pantalla" lang="en">${t.en[p.nombre]}</pre>
+</div>`
+    return i === 0 ? panel : `<details class="ventana-mas">\n<summary>${p.tecla} ${bilingue(p.es, p.en)}</summary>\n${panel}\n</details>`
+  })
+  return `<div class="ventana-terminal">
+<div class="ventana-barra">
+<span class="ventana-semaforo" aria-hidden="true"><span></span><span></span><span></span></span>
+<div class="pestanas-lista" role="tablist" aria-label="Páginas de la terminal" data-aria-en="Terminal pages" hidden>${pestanas.join('')}</div>
+<span class="ventana-rotulo">tramtai terminal · ssh</span>
+</div>
+${paneles.join('\n')}
+</div>`
+}
+
 // rellenar pone al día las zonas comunes (<!-- comun:x --> … <!-- /comun:x -->) de una página escrita a mano, con su
-// título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor) solo va donde la página lo
-// pide, con los textos de los catálogos.
-export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos }): string {
+// título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor) y la terminal
+// (comun:terminal) solo van donde la página los pide, con los textos de los catálogos y las pantallas de terminal.json.
+export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos; terminal?: Terminal }): string {
   const titulo = desescapar(html.match(/<title[^>]*>([^<]*)<\/title>/)?.[1] ?? 'Tramtai')
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)">/)?.[1] ?? '')
   const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel) }
   const opcionales: Record<string, string> = {
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
+    ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
   }
   for (const [zona, contenido] of [...Object.entries(zonas), ...Object.entries(opcionales)]) {
     const re = new RegExp(`<!-- comun:${zona} -->[\\s\\S]*?<!-- /comun:${zona} -->`)

@@ -21,9 +21,8 @@ var (
 // neutrosSitio son nombres que se escriben igual en los dos idiomas: valen en una línea en inglés sin alias.
 var neutrosSitio = map[string]bool{"terminal": true, "token": true, "totp": true, "version": true}
 
-// ordenesNuevasSitio son las líneas que enseñará el sitio nuevo (Tareas 15 y 16), todas en inglés.
+// ordenesNuevasSitio son las líneas que enseñará el sitio nuevo (Tarea 16), todas en inglés.
 var ordenesNuevasSitio = []string{
-	"tramtai service start -d",
 	"sudo ./tramtai server install",
 	"sudo tramtai-servidor admin password",
 	`.\tramtai.exe server install`,
@@ -256,7 +255,7 @@ func TestComandosDelSitioExisten(t *testing.T) {
 		}
 	}
 	for _, o := range ordenesNuevasSitio {
-		lineas = append(lineas, linea{"Tareas 15 y 16", o, true})
+		lineas = append(lineas, linea{"Tarea 16", o, true})
 	}
 	revisadas := 0
 	for _, l := range lineas {
@@ -269,7 +268,7 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
-	// Hoy son 10 (4 nuevas y 6 de los <pre>): perder los bloques de index.html o servidor.html baja de aquí.
+	// Hoy son 10 (3 nuevas y 7 de los <pre>): perder los bloques de index.html o servidor.html baja de aquí.
 	if revisadas < 10 {
 		t.Errorf("solo se revisaron %d órdenes (mínimo 10): ¿cambió el marcado de los <pre>?", revisadas)
 	}

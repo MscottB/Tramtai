@@ -184,23 +184,6 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
   assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)
 })
 
-// Hasta la Tarea 15, que borra estas imágenes, la portada todavía las usa: Inicio y Mis APIs.
-test('las 16 capturas de la terminal de la portada actual existen y pesan poco', () => {
-  const portada = new URL('../../site/capturas/', import.meta.url)
-  let total = 0
-  for (const p of TERMINAL.filter((p) => p.nombre !== 'historial'))
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en'])
-        for (const ancho of [960, 1440]) {
-          const archivo = `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`
-          const tamano = statSync(new URL(archivo, portada), { throwIfNoEntry: false })?.size
-          assert.ok(tamano, `falta ${archivo}`)
-          assert.ok(tamano <= 150 * 1024, `${archivo} pesa ${tamano} bytes`)
-          total += tamano
-        }
-  assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
-})
-
 test('cada pantalla de la portada existe en WebP, en claro y oscuro, en los dos idiomas, a 640, 960 y 1440 px', () => {
   const portada = readdirSync(new URL('../../site/capturas/', import.meta.url))
   assert.ok(!portada.some((a) => a.endsWith('.png')), 'quedan capturas en PNG')

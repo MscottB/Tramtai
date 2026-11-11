@@ -23,10 +23,12 @@ function ejemplosDe(b, lengua) {
 
 const archivos = generar({ temas, es, en, ejemplos: ejemplosDe,
   capturas: new Map(capturas.map((a) => [a, medidas(readFileSync(new URL(a, origen)))])) })
-// La portada y las guías son escritas a mano: solo se les ponen al día la cabeza, la barra, el pie y el aviso.
+// La portada y las guías son escritas a mano: solo se les ponen al día la cabeza, la barra, el pie, el aviso y, en la
+// portada, la terminal (las pantallas de capturas --terminal).
+const terminal = JSON.parse(readFileSync(new URL('capturas/terminal.json', sitio), 'utf8'))
 for (const p of PAGINAS_FIJAS) {
   const ruta = new URL(p.archivo, sitio)
-  writeFileSync(ruta, rellenar(readFileSync(ruta, 'utf8'), p, { es, en }))
+  writeFileSync(ruta, rellenar(readFileSync(ruta, 'utf8'), p, { es, en, terminal }))
 }
 // El aviso de los cinco riesgos del README y de la guía del servidor sale de los mismos textos (riesgos.*).
 for (const md of ['../../README.md', '../../docs/servidor.md']) {

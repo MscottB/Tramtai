@@ -91,7 +91,8 @@ test('cada #ancla interno de la portada, la guía y la Ayuda lleva a un id que e
 
 test('la portada y las guías tienen al día la cabeza, la barra, el pie y el aviso de sitio.ts', () => {
   assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'desarrolladores.html', 'servidor.html'])
-  for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p, { es, en }), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
+  const terminal = JSON.parse(leer('capturas/terminal.json'))
+  for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p, { es, en, terminal }), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
 })
 
 // Los cinco riesgos (spec §10) son un solo texto, riesgos.* de los catálogos: el sitio, el README y la guía del
