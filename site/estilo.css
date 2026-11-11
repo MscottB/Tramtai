@@ -490,7 +490,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .ciclo li { counter-increment: paso; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
 .ciclo li::before { content: counter(paso); display: block; font: 700 .8rem var(--titulo); color: var(--acento); margin-bottom: 4px; }
 @media (max-width: 900px) { .ciclo { grid-template-columns: 1fr; } }
-.doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; overflow-wrap: anywhere; }
+.doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
 .tabla { overflow-x: auto; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; }
 .doc table { width: 100%; border-collapse: collapse; font-size: .93rem; }
 .doc th, .doc td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--borde); vertical-align: top; }

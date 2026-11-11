@@ -192,12 +192,12 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <li>
               <h3><span lang="es">Instala en Linux</span><span lang="en">Install on Linux</span></h3>
               <p class="suave"><span lang="es">Descarga el <code>.tar.gz</code> de tu arquitectura y, como root, instala; antes te pide aceptar los términos. Con la suma o con el paquete, en <a href="#instalar">Instalar</a>.</span><span lang="en">Download your architecture’s <code>.tar.gz</code> and install as root; first it asks you to accept the terms. With the checksum or the package, in <a href="#instalar">Install</a>.</span></p>
-<pre class="codigo"><span lang="es">sudo ./tramtai servidor instalar</span><span lang="en">sudo ./tramtai server install</span></pre>
+<pre class="codigo" tabindex="0"><span lang="es">sudo ./tramtai servidor instalar</span><span lang="en">sudo ./tramtai server install</span></pre>
             </li>
             <li>
               <h3><span lang="es">Pon la contraseña</span><span lang="en">Set the password</span></h3>
               <p class="suave"><span lang="es">La del administrador, de 12 caracteres o más. Después, si quieres, el TOTP.</span><span lang="en">The administrator’s, 12 characters or more. Then, if you want, TOTP.</span></p>
-<pre class="codigo"><span lang="es">sudo tramtai-servidor administrador contraseña</span><span lang="en">sudo tramtai-servidor admin password</span></pre>
+<pre class="codigo" tabindex="0"><span lang="es">sudo tramtai-servidor administrador contraseña</span><span lang="en">sudo tramtai-servidor admin password</span></pre>
             </li>
             <li>
               <h3><span lang="es">Ponle HTTPS o tu proxy</span><span lang="en">Add HTTPS or your proxy</span></h3>
@@ -210,16 +210,16 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <li>
               <h3><span lang="es">Instala en Windows Server</span><span lang="en">Install on Windows Server</span></h3>
               <p class="suave"><span lang="es">Descomprime el <code>.zip</code> portable y, en una consola de administrador, instala; antes te pide aceptar los términos.</span><span lang="en">Unzip the portable <code>.zip</code> and, in an administrator console, install; first it asks you to accept the terms.</span></p>
-<pre class="codigo"><span lang="es">.\tramtai.exe servidor instalar</span><span lang="en">.\tramtai.exe server install</span></pre>
+<pre class="codigo" tabindex="0"><span lang="es">.\tramtai.exe servidor instalar</span><span lang="en">.\tramtai.exe server install</span></pre>
             </li>
             <li>
               <h3><span lang="es">Pon la contraseña</span><span lang="en">Set the password</span></h3>
-              <p class="suave"><span lang="es">La del administrador, de 12 caracteres o más, en la misma consola. Después, si quieres, el TOTP.</span><span lang="en">The administrator’s, 12 characters or more, in the same console. Then, if you want, TOTP.</span></p>
-<pre class="codigo"><span lang="es">tramtai-servidor administrador contraseña</span><span lang="en">tramtai-servidor admin password</span></pre>
+              <p class="suave"><span lang="es">La del administrador, de 12 caracteres o más, en una consola de administrador nueva: la de antes aún no ve el PATH. Después, si quieres, el TOTP.</span><span lang="en">The administrator’s, 12 characters or more, in a new administrator console: the previous one doesn’t see the PATH yet. Then, if you want, TOTP.</span></p>
+<pre class="codigo" tabindex="0"><span lang="es">tramtai-servidor administrador contraseña</span><span lang="en">tramtai-servidor admin password</span></pre>
             </li>
             <li>
               <h3><span lang="es">Ponle HTTPS o tu proxy</span><span lang="en">Add HTTPS or your proxy</span></h3>
-              <p class="suave"><span lang="es">Solo así se abre a otros equipos: detrás de IIS u otro proxy, con su ejemplo, o con tu certificado o Let’s Encrypt. Cómo, en <a href="#red">Abrir a la red</a>.</span><span lang="en">Only then does it open to other computers: behind IIS or another proxy, with its example, or with your own certificate or Let’s Encrypt. How, in <a href="#red">Open to the network</a>.</span></p>
+              <p class="suave"><span lang="es">Solo así se abre a otros equipos: detrás de tu proxy, con su ejemplo (el de IIS, sin comprobar a mano todavía), o con tu certificado o Let’s Encrypt. Cómo, en <a href="#red">Abrir a la red</a>.</span><span lang="en">Only then does it open to other computers: behind your proxy, with its example (the IIS one, not yet checked by hand), or with your own certificate or Let’s Encrypt. How, in <a href="#red">Open to the network</a>.</span></p>
             </li>
           </ol>
         </div>
@@ -389,7 +389,7 @@ tar xzf tramtai-*-linux-amd64.tar.gz &amp;&amp; cd tramtai
         </table></div>
         <p><strong>Tunnels:</strong> Cloudflare Tunnel and Tailscale Serve or Funnel publish the server without opening ports (<a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor/tuneles.md">how</a>). With Cloudflare, HTTPS ends at Cloudflare, which sees your requests and your keys, and it cuts a response that hasn’t started within 125 s: for long requests, ask for the streamed response. Cloudflare Tunnel and Tailscale Serve: not yet checked by hand.</p>
         <p><strong>On your local network:</strong> there’s no plain HTTP either. Tailscale Serve, Caddy with its internal CA, a certificate from your own CA (for example, with mkcert) or an SSH tunnel, in <a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md#local-network-homelab">Local network (homelab)</a>.</p>
-        <p><strong>On the server itself:</strong> <code>tramtai-servidor abrir</code>, the terminal’s <kbd>W</kbd> key and the app get in directly. With a trusted proxy, opening Tramtai’s port by hand in the server’s browser counts as coming from outside, and nobody gets in from outside without the administrator password.</p>
+        <p><strong>On the server itself:</strong> <code>tramtai-servidor open</code>, the terminal’s <kbd>W</kbd> key and the app get in directly. With a trusted proxy, opening Tramtai’s port by hand in the server’s browser counts as coming from outside, and nobody gets in from outside without the administrator password.</p>
       </div>
     </section>
 

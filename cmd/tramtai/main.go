@@ -240,7 +240,7 @@ func comandoVersion() *cobra.Command {
 // servicio si hace falta y abre el navegador ya dentro.
 func comandoAbrir() *cobra.Command {
 	var enNavegador bool
-	abrir := &cobra.Command{Use: "abrir", Short: idioma.T("Abre Tramtai en la app de escritorio o en el navegador (inicia el servicio si hace falta)"), Args: cobra.NoArgs,
+	abrir := &cobra.Command{Use: "abrir", Aliases: []string{"open"}, Short: idioma.T("Abre Tramtai en la app de escritorio o en el navegador (inicia el servicio si hace falta)"), Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ambito := "global"
 			if raizProyecto() != "" {
