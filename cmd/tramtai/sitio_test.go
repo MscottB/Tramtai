@@ -171,12 +171,17 @@ func sinOpciones(cmd *cobra.Command, args []string) ([]string, error) {
 		}
 		nombre, _, conValor := strings.Cut(strings.TrimLeft(a, "-"), "=")
 		var existe, pideValor bool
-		if strings.HasPrefix(a, "--") {
+		switch {
+		case nombre == "":
+		case strings.HasPrefix(a, "--"):
 			if f := cmd.Flags().Lookup(nombre); f != nil {
 				existe, pideValor = true, f.NoOptDefVal == ""
 			}
-		} else if f := cmd.Flags().ShorthandLookup(nombre[:1]); f != nil {
-			existe, pideValor = true, f.NoOptDefVal == ""
+		default:
+			if f := cmd.Flags().ShorthandLookup(nombre[:1]); f != nil {
+				existe, pideValor = true, f.NoOptDefVal == ""
+				conValor = conValor || len(nombre) > 1 // -n50: el valor va pegado
+			}
 		}
 		switch {
 		case !existe:
@@ -228,6 +233,33 @@ func comprobarOrdenSitio(raiz *cobra.Command, args []string, servidor, ingles bo
 }
 
 // TestOrdenesDelSitioIdioma: una línea en inglés no pasa con un nombre en español, ni siquiera el que cobra acepta.
+func TestSinOpciones(t *testing.T) {
+	cmd := &cobra.Command{Use: "prueba"}
+	cmd.Flags().IntP("numero", "n", 0, "")
+	cmd.Flags().StringP("modelo", "m", "", "")
+	cmd.Flags().BoolP("todas", "t", false, "")
+	for _, c := range []struct {
+		args, quiere []string
+	}{
+		{[]string{"a", "-n", "50", "b"}, []string{"a", "b"}},
+		{[]string{"a", "-n50", "b"}, []string{"a", "b"}}, // valor pegado: b no es el valor
+		{[]string{"-n=50", "a"}, []string{"a"}},
+		{[]string{"--modelo", "x", "a"}, []string{"a"}},
+		{[]string{"--modelo=x", "a"}, []string{"a"}},
+		{[]string{"-t", "a"}, []string{"a"}}, // booleana: no se come a
+		{[]string{"-", "a"}, []string{"-", "a"}},
+	} {
+		if got, err := sinOpciones(cmd, c.args); err != nil || !slices.Equal(got, c.quiere) {
+			t.Errorf("%q -> %q, %v; quería %q", c.args, got, err, c.quiere)
+		}
+	}
+	for _, args := range [][]string{{"-=x"}, {"--=x"}, {"-z"}, {"--otra"}, {"-m"}} {
+		if _, err := sinOpciones(cmd, args); err == nil {
+			t.Errorf("%q debería ser un error", args)
+		}
+	}
+}
+
 func TestOrdenesDelSitioIdioma(t *testing.T) {
 	raiz := nuevaRaiz()
 	for _, c := range []struct {
