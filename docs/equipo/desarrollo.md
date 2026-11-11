@@ -246,7 +246,9 @@ almacén (`servicio.NombreClaveHerramienta`) y escribe solo la clave. Los tipos 
 (`go generate ./internal/contrato`).
 
 **Qué hace el núcleo** (`apuntar.go`, `anotacion.go`): para activar relee el archivo, guarda la copia entera
-(`datos/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, 0600, las 3 más recientes por herramienta), pide al `Formato`
+(`datos/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, 0600, las 3 más recientes por herramienta; la hora del nombre
+va en UTC para que el orden por nombre sea estable y sin saltos de horario, y la Web UI y la terminal enseñan la fecha de
+la copia en hora local), pide al `Formato`
 el archivo nuevo, comprueba que su huella no cambió desde que lo leyó (si cambió, reintenta una vez y, si no, devuelve
 `ErrCambioMientras`), lo escribe con `configuracion.EscribirAtomico` y por último anota en
 `datos/herramientas/<id>.json` lo escrito y lo que había (`Escrito`, `Previos`). La anotación nunca lleva secretos: para
