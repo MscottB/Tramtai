@@ -446,6 +446,38 @@ func TestJSONConFinesDeLineaCRLF(t *testing.T) {
 	}
 }
 
+// Un comentario de bloque en la línea de la llave de cierre sigue ahí tras activar y desactivar.
+func TestComentarioDeBloqueAntesDeLaLlave(t *testing.T) {
+	for _, original := range []string{
+		"{\n  \"env\": {\n    \"OTRA\": \"1\" /* mío */\n  }\n}\n",
+		"{\n  \"includeCoAuthoredBy\": false /* mío */\n}\n",
+		"{\n  \"env\": {\n    \"OTRA\": \"1\"\n  /* mío */ }\n}\n",
+	} {
+		nuevo, escrito, previos, err := ClaudeCode().Aplicar([]byte(original), valoresClaude())
+		if err != nil {
+			t.Fatal(err)
+		}
+		quitado, _, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+		if err != nil || string(quitado) != original {
+			t.Errorf("%q\ntras activar: %s\ntras quitar (err %v): %s", original, nuevo, err, quitado)
+		}
+	}
+}
+
+// Límite conocido (podar): un objeto que ya estaba vacío antes de activar no sobrevive a desactivar; el archivo dice lo
+// mismo para Claude Code.
+func TestEnvVacioNoSobreviveADesactivar(t *testing.T) {
+	original := []byte(`{"env": {}, "includeCoAuthoredBy": false}`)
+	nuevo, escrito, previos, err := ClaudeCode().Aplicar(original, valoresClaude())
+	if err != nil {
+		t.Fatal(err)
+	}
+	quitado, vacio, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+	if err != nil || vacio || !reflect.DeepEqual(comoMapa(t, quitado), map[string]any{"includeCoAuthoredBy": false}) {
+		t.Errorf("tras quitar (err %v, vacío %v): %s", err, vacio, quitado)
+	}
+}
+
 func TestOrdenEnLineaCmd(t *testing.T) {
 	for _, c := range []struct{ parte, quiere string }{
 		{`C:\Tramtai\tramtai.exe`, `C:\Tramtai\tramtai.exe`},

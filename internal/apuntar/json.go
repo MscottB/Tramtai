@@ -181,13 +181,14 @@ func (d *documento) quitar(ruta []string) error {
 	return nil
 }
 
-// conSangrado deja el espacio en blanco que sigue al último salto de línea de extra (o uno nuevo, si no hay) como indent.
+// conSangrado deja el espacio en blanco que sigue al último salto de línea de extra (o uno nuevo, si no hay) como indent;
+// un comentario en esa última línea (`/* mío */ }`) se queda detrás del sangrado.
 func conSangrado(extra []byte, eol, indent string) []byte {
 	i := bytes.LastIndexByte(extra, '\n')
 	if i < 0 {
 		return append(bytes.Clone(extra), eol+indent...)
 	}
-	return append(bytes.Clone(extra[:i+1]), indent...)
+	return slices.Concat(extra[:i+1], []byte(indent), bytes.TrimLeft(extra[i+1:], " \t"))
 }
 
 // anadir pone el valor en la ruta. Si la clave es nueva y el archivo está en varias líneas, la deja con su línea y su
