@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -227,6 +228,66 @@ func TestAplicarEnOtraRutaEsError(t *testing.T) {
 	}
 }
 
+func TestAplicarMismaRutaConOtrasMayusculas(t *testing.T) {
+	if runtime.GOOS == "linux" {
+		t.Skip("en Linux las mayúsculas distinguen rutas")
+	}
+	datos, ruta, h := preparar(t, &formatoPrueba{})
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", Valores{}); err != nil {
+		t.Fatal(err)
+	}
+	otra := filepath.Join(filepath.Dir(ruta), strings.ToUpper(filepath.Base(ruta)))
+	h.Ruta = func(Alcance, string) (string, error) { return otra, nil }
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", Valores{Modelo: "otro"}); err != nil {
+		t.Fatalf("es el mismo archivo: %v", err)
+	}
+}
+
+func TestQuitarBorraLaCarpetaQueCreo(t *testing.T) {
+	datos, ruta, h := preparar(t, &formatoPrueba{})
+	ruta = filepath.Join(filepath.Dir(ruta), "sub", "settings.json") // dos carpetas que no existen
+	h.Ruta = func(Alcance, string) (string, error) { return ruta, nil }
+	a, err := Aplicar(datos, h, AlcanceGlobal, "", Valores{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Quitar(datos, h, a); err != nil {
+		t.Fatal(err)
+	}
+	creada := filepath.Dir(filepath.Dir(ruta))
+	if _, err := os.Stat(creada); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("las carpetas que creó Tramtai se borran: %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(creada)); err != nil {
+		t.Errorf("la que ya existía se queda: %v", err)
+	}
+
+	// Con algo más dentro, la carpeta se queda.
+	a, err = Aplicar(datos, h, AlcanceGlobal, "", Valores{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(creada, "otro.txt"), []byte("x"), 0o600)
+	if err := Quitar(datos, h, a); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(creada, "otro.txt")); err != nil {
+		t.Errorf("lo del usuario se queda: %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(ruta)); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("la carpeta vacía se borra: %v", err)
+	}
+}
+
+func TestLeerRechazaDatosDeMas(t *testing.T) {
+	datos := t.TempDir()
+	os.MkdirAll(carpetaTramtai(datos), 0o700)
+	os.WriteFile(rutaAnotacion(datos, "prueba"), []byte(`{"id":"prueba"} {"id":"otra"}`), 0o600)
+	if _, hay, err := Leer(datos, "prueba"); err == nil || hay {
+		t.Fatalf("una anotación con datos de más no se acepta: %v %v", hay, err)
+	}
+}
+
 func TestLeerConservaLosEnteros(t *testing.T) {
 	datos, _, h := preparar(t, &formatoPrueba{escrito: map[string]any{"puerto": 9007199254740993}})
 	if _, err := Aplicar(datos, h, AlcanceGlobal, "", Valores{}); err != nil {
@@ -380,7 +441,7 @@ func TestCambioDespuesDeLaCopiaDeshaceTodo(t *testing.T) {
 			t.Errorf("la anotación debe ser la anterior: %+v", leida)
 		}
 	})
-	t.Run("el archivo no se puede escribir", func(t *testing.T) {
+	t.Run("el archivo pasa a ser una carpeta", func(t *testing.T) {
 		datos, ruta, h := preparar(t, &formatoPrueba{})
 		os.MkdirAll(filepath.Dir(ruta), 0o755)
 		os.WriteFile(ruta, []byte(`{"a":1}`), 0o644)
@@ -396,6 +457,24 @@ func TestCambioDespuesDeLaCopiaDeshaceTodo(t *testing.T) {
 		}
 		if _, hay, _ := Leer(datos, h.ID); hay {
 			t.Error("no debe quedar anotación")
+		}
+	})
+	t.Run("al quitar", func(t *testing.T) { // la relectura justo antes de pisar, después de calcular lo nuevo
+		datos, ruta, h := preparar(t, &formatoPrueba{})
+		antesDeEscribir = func() {}
+		a, err := Aplicar(datos, h, AlcanceGlobal, "", Valores{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		antesDeEscribir = func() { os.WriteFile(ruta, []byte(`{"otro":1}`), 0o644) }
+		if err := Quitar(datos, h, a); !errors.Is(err, ErrCambioMientras) {
+			t.Fatalf("err = %v", err)
+		}
+		if got := leerTexto(t, ruta); got != `{"otro":1}` {
+			t.Errorf("no se pisa lo del otro: %q", got)
+		}
+		if _, hay, _ := Leer(datos, h.ID); !hay {
+			t.Error("la anotación sigue: no se quitó nada")
 		}
 	})
 }

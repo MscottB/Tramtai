@@ -6,8 +6,6 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,6 +14,7 @@ import (
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/apuntar"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
@@ -35,15 +34,6 @@ var errSinAPI = errors.New("sin API")
 // NombreClaveHerramienta es el nombre de la clave de la herramienta en el almacén: TRAMTAI_HERRAMIENTA_CLAUDE_CODE.
 func NombreClaveHerramienta(id string) string {
 	return "TRAMTAI_HERRAMIENTA_" + strings.ToUpper(strings.ReplaceAll(id, "-", "_"))
-}
-
-// mismaRuta compara dos rutas de archivo como lo hace el sistema: en Windows, sin distinguir mayúsculas.
-func mismaRuta(a, b string) bool {
-	a, b = filepath.Clean(a), filepath.Clean(b)
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(a, b)
-	}
-	return a == b
 }
 
 func (s *Servicio) puertoActual() int {
@@ -161,7 +151,7 @@ func (s *Servicio) deEsteEspacio(inst *Instancia, h apuntar.Herramienta) bool {
 	}
 	ruta, err := h.Ruta(alcance, proyecto)
 	a, activa, errLeer := apuntar.Leer(s.opc.Datos, h.ID)
-	return err == nil && errLeer == nil && (!activa || mismaRuta(a.Ruta, ruta))
+	return err == nil && errLeer == nil && (!activa || carpetas.MismaRuta(a.Ruta, ruta))
 }
 
 // elegirHerramientas son las de ids o, con todas, las que cumplen incluir.
@@ -252,7 +242,7 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 	// Antes de crear la API: un rechazo no deja nada a medias. Aplicar lo vuelve a comprobar.
 	if a, activa, err := apuntar.Leer(s.opc.Datos, h.ID); err != nil {
 		return err
-	} else if activa && !mismaRuta(a.Ruta, ruta) {
+	} else if activa && !carpetas.MismaRuta(a.Ruta, ruta) {
 		return fmt.Errorf("%w (%s)", apuntar.ErrOtraActivacion, a.Ruta)
 	}
 	if h.Previa != nil {
@@ -508,7 +498,7 @@ func (s *Servicio) estadoHerramienta(inst *Instancia, h apuntar.Herramienta) (e 
 		if m := s.motivoDesactualizada(h, a); m.codigo != "" {
 			e.Estado = "desactualizada"
 			ponerMotivo(&e, m)
-		} else if !mismaRuta(a.Ruta, e.Ruta) {
+		} else if !carpetas.MismaRuta(a.Ruta, e.Ruta) {
 			ponerMotivo(&e, motivo{"otro_archivo", map[string]string{"ruta": a.Ruta}, idioma.Tf("activada en otro archivo: %s", a.Ruta)})
 		}
 		e.Ruta = a.Ruta

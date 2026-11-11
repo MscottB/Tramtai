@@ -14,6 +14,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/apuntar"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/planificador"
@@ -359,7 +360,7 @@ func TestDesdeProyectoSoloClaudeCode(t *testing.T) {
 	}
 	e := p.activar(t, pry.ID, `{"ids":["claude-code"],"modelo":"claude/haiku"}`)["claude-code"]
 	local := filepath.Join(p.proyecto, ".claude", "settings.local.json")
-	if e.Estado != "activa" || !mismaRuta(e.Ruta, local) {
+	if e.Estado != "activa" || !carpetas.MismaRuta(e.Ruta, local) {
 		t.Fatalf("claude code desde el proyecto: %+v", e)
 	}
 	if datos, err := os.ReadFile(local); err != nil || !strings.Contains(string(datos), "/p/claude-code/anthropic") {
