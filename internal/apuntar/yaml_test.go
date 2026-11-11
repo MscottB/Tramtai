@@ -430,6 +430,34 @@ func TestContinueNoUsaConfigJSON(t *testing.T) {
 	}
 }
 
+// Un modelo del usuario que acaba en un texto de bloque (| o >) con líneas que parecen comentarios: son del texto, y el
+// modelo de Tramtai va detrás de ellas; el comentario sin sangrar del final es de lo que sigue.
+func TestContinueModeloQueAcabaEnBloque(t *testing.T) {
+	for _, estilo := range []string{"|", ">"} {
+		original := "models:\n  - name: Mío\n    provider: anthropic\n    model: x\n    systemMessage: " + estilo + "\n" +
+			"      # esto es del texto\n      sigue\n\n      # y esto\n# de lo que sigue\ncontext: []\n"
+		nuevo, a := aplicarContinue(t, original)
+		if m := modelosContinue(t, nuevo); len(m) != 2 || !strings.Contains(m[0]["systemMessage"].(string), "# y esto") {
+			t.Fatalf("%s: el texto del usuario cambió:\n%s", estilo, nuevo)
+		}
+		if i, j := strings.Index(nuevo, "# y esto"), strings.Index(nuevo, "- name: Tramtai"); i < 0 || j < i || j > strings.Index(nuevo, "# de lo que sigue") {
+			t.Fatalf("%s: el modelo de Tramtai va tras el texto y antes del comentario de lo que sigue:\n%s", estilo, nuevo)
+		}
+		if quitado, _, err := Continue().Quitar([]byte(nuevo), a); err != nil || string(quitado) != original {
+			t.Errorf("%s: Quitar = %q, %v", estilo, quitado, err)
+		}
+	}
+}
+
+// Un comentario que el usuario pone en la línea «models:» que escribió Tramtai se queda al quitar el último modelo.
+func TestContinueComentarioEnLaLineaModels(t *testing.T) {
+	nuevo, a := aplicarContinue(t, "name: Mío\n")
+	con := strings.Replace(nuevo, "models:\n", "models: # mis modelos\n", 1)
+	if quitado, _, err := Continue().Quitar([]byte(con), a); err != nil || string(quitado) != "name: Mío\n# mis modelos\n" {
+		t.Errorf("Quitar = %q, %v", quitado, err)
+	}
+}
+
 func TestContinueComentarioTrasSuModelo(t *testing.T) {
 	original := datosYAML(t, "config.yaml")
 	nuevo, a := aplicarContinue(t, original)
