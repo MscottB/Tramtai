@@ -3,6 +3,7 @@ package servicio
 import (
 	"crypto/tls"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -254,24 +255,75 @@ func TestOlvidarBorraClave(t *testing.T) {
 // Una activación que falla deja la API, su clave y el almacén como estaban: una reactivación fallida no detiene una
 // herramienta que funcionaba ni invalida su clave, y una primera activación fallida no deja API ni clave.
 func TestActivacionFallidaNoDejaNadaAMedias(t *testing.T) {
-	t.Run("reactivación", func(t *testing.T) {
+	// reactivarFallida activa Codex con claude/haiku, deja que estropear haga fallar la reactivación con claude/sonnet y
+	// comprueba que la API, la huella y la clave siguen como estaban. Devuelve la respuesta del fallo.
+	reactivarFallida := func(t *testing.T, estropear func(*pruebaHerramientas)) (*pruebaHerramientas, *http.Response, string) {
+		t.Helper()
 		p := entornoHerramientas(t, nil, "codex")
 		p.s.ActivarGlobal()
 		p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
 		clave := p.almacen["TRAMTAI_HERRAMIENTA_CODEX"]
 		huella, _ := os.ReadFile(RutaTokenPunto(p.s.opc.Datos, "codex"))
-		os.WriteFile(filepath.Join(p.casa, "codex", "config.toml"), []byte("[[[ no es toml\n"), 0o600)
-		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"],"modelo":"claude/sonnet"}`); r.StatusCode == 200 {
-			t.Fatalf("con el archivo ilegible no se activa: %s", cuerpo)
+		estropear(p)
+		r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"],"modelo":"claude/sonnet"}`)
+		if r.StatusCode == 200 {
+			t.Fatalf("no se activa: %s", cuerpo)
 		}
 		if api := apiGlobal(t, "codex"); api == nil || !api.EstaActivo() || !slices.Equal(api.ModelosPermitidos, []string{"claude/haiku"}) {
 			t.Fatalf("la API sigue en marcha con su modelo: %+v", api)
 		}
-		if ahora, _ := os.ReadFile(RutaTokenPunto(p.s.opc.Datos, "codex")); p.almacen["TRAMTAI_HERRAMIENTA_CODEX"] != clave || string(ahora) != string(huella) {
-			t.Fatalf("la clave anterior sigue en el almacén y en su huella: %v", p.almacen)
+		if ahora, _ := os.ReadFile(RutaTokenPunto(p.s.opc.Datos, "codex")); string(ahora) != string(huella) {
+			t.Fatal("la huella anterior sigue en su sitio")
 		}
 		if r, cuerpo := pedir(t, p.ts.URL, "GET", "/p/codex/openai/v1/models", clave, ""); r.StatusCode != 200 {
 			t.Fatalf("la clave anterior sigue valiendo: %d %s", r.StatusCode, cuerpo)
+		}
+		return p, r, cuerpo
+	}
+	tomlRoto := func(p *pruebaHerramientas) {
+		os.WriteFile(filepath.Join(p.casa, "codex", "config.toml"), []byte("[[[ no es toml\n"), 0o600)
+	}
+	t.Run("reactivación", func(t *testing.T) {
+		if p, _, _ := reactivarFallida(t, tomlRoto); len(p.almacen) != 1 || p.almacen["TRAMTAI_HERRAMIENTA_CODEX"] == "" {
+			t.Fatalf("la clave anterior sigue en el almacén: %v", p.almacen)
+		}
+	})
+	t.Run("clave que no se lee", func(t *testing.T) {
+		var antes map[string]string
+		p, _, _ := reactivarFallida(t, func(p *pruebaHerramientas) {
+			antes = maps.Clone(p.almacen)
+			p.s.leerClave = func(string) (string, error) { return "", os.ErrPermission }
+		})
+		if !maps.Equal(p.almacen, antes) {
+			t.Fatalf("sin tocar nada, ni la clave del almacén: %v", p.almacen)
+		}
+	})
+	t.Run("deshacer que falla", func(t *testing.T) {
+		var original struct {
+			Error struct{ Codigo, Mensaje string }
+		}
+		var estado int
+		_, r, cuerpo := reactivarFallida(t, func(p *pruebaHerramientas) {
+			tomlRoto(p)
+			// sin el gancho, el error de la activación tal cual
+			r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"],"modelo":"claude/sonnet"}`)
+			estado = r.StatusCode
+			json.Unmarshal([]byte(cuerpo), &original)
+			llamadas, guardar := 0, p.s.guardarClave
+			p.s.guardarClave = func(nombre, valor string) error { // guarda la clave nueva y no deja volver a la anterior
+				if llamadas++; llamadas == 2 {
+					return os.ErrPermission
+				}
+				return guardar(nombre, valor)
+			}
+		})
+		var aviso struct {
+			Error struct{ Codigo, Mensaje string }
+		}
+		json.Unmarshal([]byte(cuerpo), &aviso)
+		if original.Error.Mensaje == "" || r.StatusCode != estado || aviso.Error.Codigo != original.Error.Codigo ||
+			!strings.HasPrefix(aviso.Error.Mensaje, original.Error.Mensaje+"; y no pudo dejarla como estaba: ") {
+			t.Fatalf("el error original con su código, y detrás lo que quedó a medias: %d %s (antes %d %+v)", r.StatusCode, cuerpo, estado, original)
 		}
 	})
 	sinRastro := func(t *testing.T, p *pruebaHerramientas) {

@@ -110,7 +110,11 @@ func buscarHerramienta(id string) (apuntar.Herramienta, error) {
 
 // errorHerramienta da a un error de internal/apuntar su código y el nombre de la herramienta.
 func errorHerramienta(h apuntar.Herramienta, err error) error {
+	var m *errAMedias
 	switch {
+	case errors.As(err, &m): // el código y el texto del error original, y detrás lo que quedó a medias
+		e := errorHerramienta(h, m.err)
+		return nucleo.NuevoError(nucleo.CodigoDe(e), idioma.Tf("%s; y no pudo dejarla como estaba: %s", nucleo.MensajeDe(e), nucleo.MensajeDe(m.deshacer)))
 	case errors.Is(err, apuntar.ErrCambioMientras):
 		return nucleo.NuevoError(nucleo.CodigoHerramientaEnConflicto, idioma.Tf("%s: su archivo cambió mientras Tramtai lo escribía: vuelve a intentarlo", h.Nombre))
 	case errors.Is(err, apuntar.ErrOtraActivacion):
@@ -256,36 +260,48 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 		instancia = inst.ID
 	}
 	// Lo que se cambia a continuación, tal como está, para dejarlo igual si la activación falla: una reactivación fallida
-	// no detiene una herramienta que funcionaba ni invalida su clave; una primera no deja API ni clave.
-	apiAntes, rutaHuella, nombreClave := apiHerramienta(h.ID), RutaTokenPunto(s.opc.Datos, h.ID), NombreClaveHerramienta(h.ID)
+	// no detiene una herramienta que funcionaba ni invalida su clave; una primera no deja API ni clave. Sin poder leerlo
+	// no se toca nada: deshacer borraría la clave o la huella que no supo leer.
+	rutaHuella, nombreClave := RutaTokenPunto(s.opc.Datos, h.ID), NombreClaveHerramienta(h.ID)
 	huellaAntes, errHuella := os.ReadFile(rutaHuella)
+	if errHuella != nil && !errors.Is(errHuella, fs.ErrNotExist) {
+		return errHuella
+	}
 	claveAntes := ""
 	if !h.ClaveEnArchivo {
-		claveAntes, _ = s.leerClave(nombreClave)
-	}
-	deshacer := func() { // de mejor esfuerzo: el error que importa es el de la activación
-		_ = volverAPI(h.ID, apiAntes)
-		if errHuella == nil {
-			_ = configuracion.EscribirAtomico(rutaHuella, huellaAntes, 0o600)
-		} else if errors.Is(errHuella, fs.ErrNotExist) {
-			_ = os.Remove(rutaHuella)
-		}
-		if h.ClaveEnArchivo {
-			return
-		}
-		if claveAntes != "" {
-			_ = s.guardarClave(nombreClave, claveAntes)
-		} else {
-			_ = s.borrarClave(nombreClave)
+		if claveAntes, err = s.leerClave(nombreClave); err != nil {
+			return err
 		}
 	}
-	if err := prepararAPI(instancia, h.ID, modelo); err != nil {
+	apiAntes, err := prepararAPI(instancia, h.ID, modelo)
+	if err != nil {
 		return err
+	}
+	deshacer := func() error {
+		var errs []error
+		anotar := func(err error) {
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		anotar(volverAPI(h.ID, apiAntes))
+		if errHuella == nil {
+			anotar(configuracion.EscribirAtomico(rutaHuella, huellaAntes, 0o600))
+		} else if err := os.Remove(rutaHuella); !errors.Is(err, fs.ErrNotExist) {
+			anotar(err)
+		}
+		switch {
+		case h.ClaveEnArchivo:
+		case claveAntes != "":
+			anotar(s.guardarClave(nombreClave, claveAntes))
+		default:
+			anotar(s.borrarClave(nombreClave))
+		}
+		return unirErrores(errs)
 	}
 	clave, err := NuevaClave(rutaHuella)
 	if err != nil {
-		deshacer()
-		return err
+		return aMedias(err, deshacer())
 	}
 	puerto := s.puertoActual() // sin HTTPS propio (sinHTTPPropio): el puerto principal habla HTTP en 127.0.0.1
 	base := "http://127.0.0.1:" + strconv.Itoa(puerto) + "/p/" + h.ID
@@ -298,16 +314,28 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 			err = s.guardarClave(nombreClave, clave)
 		}
 		if err != nil {
-			deshacer()
-			return err
+			return aMedias(err, deshacer())
 		}
 		v.Orden = []string{exe, "herramientas", "clave", h.ID}
 	}
 	if _, err := apuntar.Aplicar(s.opc.Datos, h, alcance, proyecto, v); err != nil {
-		deshacer()
-		return err
+		return aMedias(err, deshacer())
 	}
 	return nil
+}
+
+// errAMedias es el error de una activación que además no pudo dejar la herramienta como estaba.
+type errAMedias struct{ err, deshacer error }
+
+func (e *errAMedias) Error() string { return e.err.Error() + "; " + e.deshacer.Error() }
+func (e *errAMedias) Unwrap() error { return e.err }
+
+// aMedias es err, con lo que no se pudo deshacer si algo falló al deshacer.
+func aMedias(err, errDeshacer error) error {
+	if errDeshacer == nil {
+		return err
+	}
+	return &errAMedias{err, errDeshacer}
 }
 
 // volverAPI deja la API de la herramienta como estaba antes de prepararAPI (antes nil: no existía, se quita).
@@ -337,8 +365,9 @@ func editarAPIs(f func([]ConfigPunto) ([]ConfigPunto, error)) error {
 
 // prepararAPI crea la API de la herramienta o la reanuda con el modelo y el espacio nuevos. Una API con ese nombre que no
 // es de Herramientas es del usuario: no se toca.
-func prepararAPI(instancia, id, modelo string) error {
-	return editarAPIs(func(lista []ConfigPunto) ([]ConfigPunto, error) {
+// Devuelve la API tal como estaba (nil si no existía), leída en la misma edición.
+func prepararAPI(instancia, id, modelo string) (antes *ConfigPunto, err error) {
+	err = editarAPIs(func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		i := slices.IndexFunc(lista, func(c ConfigPunto) bool { return c.Nombre == id })
 		if i < 0 {
 			return append(lista, ConfigPunto{Nombre: id, Grupo: grupoHerramientas, Instancia: instancia,
@@ -347,9 +376,12 @@ func prepararAPI(instancia, id, modelo string) error {
 		if lista[i].Grupo != grupoHerramientas {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("ya hay una API %s que no es de Herramientas: cámbiale el nombre en Mis APIs", id))
 		}
+		copia := lista[i]
+		antes = &copia
 		lista[i].Activo, lista[i].Instancia, lista[i].ModelosPermitidos = nil, instancia, []string{modelo}
 		return lista, nil
 	})
+	return antes, err
 }
 
 // apiHerramienta es la API de la herramienta (nil si no está o no es de Herramientas).

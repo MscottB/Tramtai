@@ -460,6 +460,7 @@ func init() {
 		"con HTTPS propio activado, las herramientas no pueden usar Tramtai en este equipo: desactiva el HTTPS propio o pon Tramtai detrás de un proxy": "with Tramtai’s own HTTPS turned on, tools can’t use Tramtai on this computer: turn off its own HTTPS or put Tramtai behind a proxy",
 		"Tramtai la olvidó, pero no pudo quitar lo suyo de %s: %s":                                                                                      "Tramtai forgot it, but could not remove its settings from %s: %s",
 		"Tramtai la olvidó, pero no pudo leer lo que anotó de ella para quitarlo de su archivo: %s":                                                     "Tramtai forgot it, but could not read its notes on the tool to remove its settings from the file: %s",
+		"%s; y no pudo dejarla como estaba: %s":                                                                                                         "%s; and could not leave it as it was: %s",
 		"se cambió a mano lo que escribió Tramtai en %s":                                                                                                "what Tramtai wrote in %s was changed by hand",
 	})
 }
