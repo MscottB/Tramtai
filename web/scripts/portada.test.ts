@@ -127,7 +127,7 @@ test('«Cómo funciona» tiene pestañas OpenAI, Anthropic y curl, con su panel 
   assert.match(js, /lista\.hidden = false/)
   assert.match(js, /setAttribute\('role', 'tabpanel'\)/)
   // M6: al cargar no se guarda nada; solo la pestaña que elige la persona.
-  assert.match(js, /if \(guardar\) try \{ localStorage\.setItem\(clave, lenguaje\)/)
+  assert.match(js, /if \(guardar\) try \{ localStorage\.setItem\(nombre \? 'tramtai\.' \+ nombre : clave, lenguaje\)/)
   assert.match(js, /elegir\(b\.dataset\.lenguaje, null, true\)/)
   assert.doesNotMatch(js, /elegir\(guardado \|\| '[^']+', [^)]*true\)/)
   // M5: el ejemplo de la pestaña de entrada no repite el de la primera escena de la cabecera.
@@ -285,9 +285,10 @@ test('los tres dibujos llaman igual a los tres orígenes (revisión final, M8)',
 const css = readFileSync(new URL('../../site/estilo.css', import.meta.url), 'utf8')
 const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
 
-test('el color de cada agente solo marca a su agente: mapa, diagrama «Con Tramtai», fichas y tarjetas de Agentes (52)', () => {
+test('el color de cada agente solo marca a su agente: mapas, diagrama «Con Tramtai», fichas y tarjetas de Agentes (52)', () => {
   assert.doesNotMatch(html, /class="linea"/)
   const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
+    .replace(/<figure class="mapa-servidor">[\s\S]*?<\/figure>/, '')
   assert.doesNotMatch(sinAgentes, COLORES_LINEA)
 })
 
@@ -707,13 +708,66 @@ test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia au
   assert.match(css, /\.pantalla \{[^}]*clamp\(11px,/)
 })
 
-test('la portada presenta el modo servidor, que es otro entorno, y el aviso con los cinco riesgos', () => {
-  const servidor = seccion('servidor')
-  for (const t of ['Nuevo en la v0.58', 'New in v0.58', 'otro entorno', 'separate environment', 'HTTPS', 'href="servidor.html"'])
-    assert.ok(servidor.includes(t), `falta «${t}»`)
+// v0.59 (spec §6): «Tu servidor» separa escritorio y servidor con una frase, el mapa (tus equipos → HTTPS → Tramtai en tu
+// servidor → agentes), cuatro virtudes, dos tarjetas y las pestañas Linux · Windows Server con sus órdenes por idioma.
+const servidor = seccion('servidor')
+test('«Tu servidor» tiene la frase, el mapa con su texto por idioma, las cuatro virtudes y las dos tarjetas', () => {
+  assert.ok(servidor.includes('<span lang="es">El escritorio es para ti; el servidor, para tu casa o tu oficina, encendido aunque nadie inicie sesión.</span>'))
+  const mapa = servidor.match(/<figure class="mapa-servidor">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  const svgs = mapa.match(/<svg [^>]*>/g) ?? []
+  assert.equal(svgs.length, 2, 'el ancho y el alto (móvil)')
+  for (const s of svgs) assert.match(s, /role="img" aria-label="[^"]+" data-aria-en="[^"]+"/)
+  for (const t of ['portátil', 'móvil', 'scripts', 'en tu servidor']) assert.match(mapa, new RegExp(`<tspan lang="es">[^<]*${t}[^<]*</tspan><tspan lang="en">`), t)
+  // El tramo HTTPS va en el acento; los colores de línea, solo en las líneas de los agentes.
+  assert.match(mapa, /class="tramo-https"[^>]*stroke="var\(--acento\)"/)
+  assert.match(mapa, />HTTPS</)
+  for (const [, cuerpo] of mapa.matchAll(/<(?:path|line|circle)\b([^>]*var\(--(?:claude|codex|copilot|gemini)\)[^>]*)>/g)) assert.match(cuerpo, /data-agente/, cuerpo)
+  const virtudes = servidor.match(/<li class="virtud">[\s\S]*?<\/li>/g) ?? []
+  assert.deepEqual(virtudes.map((v) => v.match(/<h3><span lang="es">([^<]+)<\/span>/)?.[1]), ['Arranca con el equipo', 'Solo por HTTPS', 'Contraseña y TOTP', 'Detrás de tu proxy'])
+  for (const v of virtudes) assert.match(v, /<p class="suave"><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/p>/)
+  const tarjetas = servidor.match(/<article class="tarjeta">[\s\S]*?<\/article>/g) ?? []
+  assert.equal(tarjetas.length, 2)
+  assert.match(tarjetas[0], /<h3><span lang="es">El escritorio, si…<\/span><span lang="en">The desktop, if…<\/span><\/h3>/)
+  assert.match(tarjetas[1], /<h3><span lang="es">El servidor, si…<\/span><span lang="en">The server, if…<\/span><\/h3>/)
+  // Sin prometer de más (auditoría 2026-10-22): un solo administrador, sin cuentas para varias personas.
+  assert.match(tarjetas[1], /un solo administrador/)
+  assert.match(tarjetas[1], /one administrator/)
+})
+
+test('«Tu servidor» tiene pestañas Linux y Windows Server con la orden de instalar y la de la contraseña en cada idioma', () => {
+  const grupo = servidor.match(/<div class="pestanas" data-pestanas="sistema">[\s\S]*?<\/pre>\s*<\/div>/)?.[0] ?? ''
+  const lista = grupo.match(/<div class="pestanas-lista" role="tablist"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? ''
+  assert.match(lista, /role="tablist"[^>]* hidden>/, 'sin JavaScript no hay pestañas que no hagan nada')
+  const pestanas = lista.match(/<button type="button" role="tab"[^>]*>[^<]*<\/button>/g) ?? []
+  assert.deepEqual(pestanas.map((p) => p.replace(/<[^>]+>/g, '')), ['Linux', 'Windows Server'])
+  const ordenes = [
+    ['sudo ./tramtai servidor instalar', 'sudo ./tramtai server install', 'sudo tramtai-servidor administrador contraseña', 'sudo tramtai-servidor admin password'],
+    ['.\\tramtai.exe servidor instalar', '.\\tramtai.exe server install', 'tramtai-servidor administrador contraseña', 'tramtai-servidor admin password'],
+  ]
+  pestanas.forEach((p, i) => {
+    const panel = p.match(/aria-controls="([^"]+)"/)?.[1] ?? ''
+    // Sin JavaScript se ven los dos sistemas: ningún panel empieza oculto.
+    const pre = grupo.match(new RegExp(`<pre class="codigo" id="${panel}" aria-labelledby="${p.match(/ id="([^"]+)"/)?.[1]}" tabindex="0">[\\s\\S]*?</pre>`))?.[0] ?? ''
+    assert.ok(pre, panel)
+    const [instalarEs, instalarEn, claveEs, claveEn] = ordenes[i]
+    assert.ok(pre.includes(`<span lang="es">${instalarEs}</span><span lang="en">${instalarEn}</span>`), instalarEn)
+    assert.ok(pre.includes(`<span lang="es">${claveEs}</span><span lang="en">${claveEn}</span>`), claveEn)
+    for (const c of pre.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
+  })
+  // Cada juego de pestañas (data-pestanas="nombre") cambia y se recuerda aparte: elegir Windows no toca OpenAI · curl.
+  assert.match(js, /if \(\(g\.dataset\.pestanas \|\| ''\) !== nombre\) return;/)
+  assert.match(js, /localStorage\.setItem\(nombre \? 'tramtai\.' \+ nombre : clave, lenguaje\)/)
+})
+
+test('la línea del entorno lleva a la guía y a los cinco riesgos de Privacidad; no se anuncia Docker', () => {
+  const pie = servidor.match(/<p class="servidor-pie">[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(pie, /href="servidor\.html"/)
+  assert.ok(pie.includes('Es otro entorno: tus APIs y claves no pasan de uno a otro. Antes de instalar, <a href="#riesgos">lee los cinco riesgos</a>.'))
+  assert.match(seccion('privacidad'), /<div class="cabeza riesgos-cabeza" id="riesgos">[\s\S]*<!-- comun:riesgos -->/)
   const aviso = seccion('privacidad').match(/<ol class="riesgos">[\s\S]*?<\/ol>/)?.[0] ?? ''
   assert.equal((aviso.match(/<li>/g) ?? []).length, 5, 'los cinco riesgos')
-  assert.match(seccion('privacidad'), /<!-- comun:riesgos -->/, 'el aviso sale de riesgos.* (npm run sitio)')
+  // No hay imagen Docker de Tramtai (spec §6): Docker solo prueba los proxies.
+  assert.doesNotMatch(html, /docker/i)
 })
 
 test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {

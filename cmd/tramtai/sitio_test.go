@@ -21,13 +21,6 @@ var (
 // neutrosSitio son nombres que se escriben igual en los dos idiomas: valen en una línea en inglés sin alias.
 var neutrosSitio = map[string]bool{"terminal": true, "token": true, "totp": true, "version": true}
 
-// ordenesNuevasSitio son las líneas que enseñará el sitio nuevo (Tarea 16), todas en inglés.
-var ordenesNuevasSitio = []string{
-	"sudo ./tramtai server install",
-	"sudo tramtai-servidor admin password",
-	`.\tramtai.exe server install`,
-}
-
 // lineasDePre separa el contenido de un <pre> en líneas de texto. es es cada línea para quien lee en español: lo que no
 // está marcado y lo marcado lang="es". en solo trae las líneas que llevan algo lang="en", con lo no marcado más lo
 // marcado lang="en". Una línea sin nada lang="en" (aunque esté dentro de lang="es") es solo español.
@@ -254,9 +247,6 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Fatalf("%s: no hay ningún <pre>: ¿cambió el marcado?", archivo)
 		}
 	}
-	for _, o := range ordenesNuevasSitio {
-		lineas = append(lineas, linea{"Tarea 16", o, true})
-	}
 	revisadas := 0
 	for _, l := range lineas {
 		args, servidor, ok := ordenDeLinea(l.texto)
@@ -268,9 +258,10 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
-	// Hoy son 10 (3 nuevas y 7 de los <pre>): perder los bloques de index.html o servidor.html baja de aquí.
-	if revisadas < 10 {
-		t.Errorf("solo se revisaron %d órdenes (mínimo 10): ¿cambió el marcado de los <pre>?", revisadas)
+	// Hoy son 23: 11 en index.html (tramtai terminal, igual en los dos idiomas, cuenta una vez) y 12 en servidor.html.
+	// Perder los bloques de una página baja de aquí.
+	if revisadas < 23 {
+		t.Errorf("solo se revisaron %d órdenes (mínimo 23): ¿cambió el marcado de los <pre>?", revisadas)
 	}
 }
 

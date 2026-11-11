@@ -112,6 +112,74 @@ test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en l
   }
 })
 
+// v0.59 (spec §6): servidor.html abre con una cabecera que presenta el modo servidor (titular, entrada, el mapa de la
+// portada en grande, «¿Es para ti?», tres pasos por sistema y dos capturas reales), y debajo sigue la documentación.
+const servidor = fijas.get('servidor.html')!
+const cabeceraServidor = servidor.slice(servidor.indexOf('<main'), servidor.indexOf('<nav class="indice"'))
+test('servidor.html: la cabecera nueva tiene titular, entrada, mapa, «¿Es para ti?» y las capturas en es/en', () => {
+  assert.match(cabeceraServidor, /<div class="servidor-cabecera">\s*<header>\s*<h1>/)
+  const entrada = cabeceraServidor.match(/<p class="entrada"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/p>/)
+  assert.ok(entrada, 'falta la entrada')
+  for (const t of entrada.slice(1)) assert.ok(Math.abs(t.split(/\s+/).length - 30) <= 8, `unas 30 palabras: ${t}`)
+  const mapa = cabeceraServidor.match(/<figure class="mapa-servidor">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  assert.equal((mapa.match(/<svg [^>]*role="img" aria-label="[^"]+" data-aria-en="[^"]+"/g) ?? []).length, 2)
+  assert.match(cabeceraServidor, /<section id="para-ti">[\s\S]*<article class="tarjeta">[\s\S]*El escritorio, si…[\s\S]*<article class="tarjeta">[\s\S]*El servidor, si…/)
+  // Dos pantallas reales, en claro y oscuro y en los dos idiomas, cada una con su alt en su idioma.
+  const imgs = cabeceraServidor.match(/<img [^>]*>/g) ?? []
+  assert.equal(imgs.length, 8)
+  for (const img of imgs) {
+    const m = img.match(/^<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/(servidor-(?:entrar|inicio))-\1-\2-1440\.webp"/)
+    assert.ok(m, img.slice(0, 120))
+    const base = `capturas/${m[3]}-${m[1]}-${m[2]}`
+    assert.ok(img.includes(`srcset="${base}-960.webp 960w, ${base}-1440.webp 1440w"`), base)
+    assert.match(img, /width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">$/)
+    assert.doesNotMatch(img, /data-alt-en/)
+  }
+  for (const [nombre, alt] of [['entrar', 'contraseña'], ['inicio', 'Servidor']]) assert.match(cabeceraServidor, new RegExp(`servidor-${nombre}-claro-es-1440\\.webp"[^>]*alt="[^"]*${alt}`), nombre)
+})
+
+test('servidor.html: tres pasos por sistema (instalar, contraseña, HTTPS o proxy) con las órdenes en su idioma', () => {
+  const pasos = cabeceraServidor.match(/<section id="pasos">[\s\S]*?<\/section>/)?.[0] ?? ''
+  const lista = pasos.match(/<div class="pestanas-lista" role="tablist"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? ''
+  assert.match(lista, / hidden>/)
+  assert.deepEqual((lista.match(/<button type="button" role="tab"[^>]*>[^<]*<\/button>/g) ?? []).map((p) => p.replace(/<[^>]+>/g, '')), ['Linux', 'Windows Server'])
+  assert.match(pasos, /data-pestanas="sistema"/)
+  const paneles = pasos.match(/<div class="pasos-panel" id="[^"]+" aria-labelledby="[^"]+">[\s\S]*?<\/ol>\s*<\/div>/g) ?? []
+  assert.equal(paneles.length, 2)
+  for (const [i, panel] of paneles.entries()) {
+    assert.equal((panel.match(/<li>/g) ?? []).length, 3, `panel ${i}`)
+    const instalar = i === 0 ? ['sudo ./tramtai servidor instalar', 'sudo ./tramtai server install'] : ['.\\tramtai.exe servidor instalar', '.\\tramtai.exe server install']
+    assert.ok(panel.includes(`<span lang="es">${instalar[0]}</span><span lang="en">${instalar[1]}</span>`), instalar[1])
+    assert.match(panel, /tramtai-servidor administrador contraseña<\/span><span lang="en">(sudo )?tramtai-servidor admin password<\/span>/)
+    assert.match(panel, /href="#red"/)
+  }
+  // Los pasos son instrucciones de instalación: antes, el enlace al aviso de los cinco riesgos.
+  assert.ok(pasos.indexOf('href="#aviso"') > 0 && pasos.indexOf('href="#aviso"') < pasos.indexOf('<ol'), 'el aviso antes de los pasos')
+})
+
+test('servidor.html: el aviso de los cinco riesgos va justo antes de Instalar, también en «En esta página»', () => {
+  const ids = [...servidor.matchAll(/<section id="([^"]+)"/g)].map((m) => m[1])
+  assert.equal(ids[ids.indexOf('instalar') - 1], 'aviso')
+  const indice = [...(servidor.match(/<nav class="indice"[\s\S]*?<\/nav>/)?.[0] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
+  assert.deepEqual(indice, ids.filter((id) => indice.includes(id)), 'el índice sigue el orden de la página')
+  assert.equal(indice[indice.indexOf('instalar') - 1], 'aviso')
+  const aviso = servidor.match(/<section id="aviso">[\s\S]*?<\/section>/)?.[0] ?? ''
+  assert.match(aviso, /<!-- comun:riesgos-servidor -->[\s\S]*<!-- \/comun:riesgos-servidor -->[\s\S]*href="https:\/\/github\.com\/MscottB\/Tramtai\/blob\/main\/TERMINOS\.md"/)
+})
+
+test('servidor.html: ni Docker en la cabecera ni órdenes en español en la parte en inglés', () => {
+  assert.doesNotMatch(cabeceraServidor, /docker/i)
+  // Lo que lee quien eligió inglés: los bloques lang="en" y las líneas en inglés de los <pre>.
+  const ingles = [...servidor.split('<div lang="en">').slice(1).map((s) => s.split(/<div lang="es">|<\/section>/)[0]),
+    ...[...servidor.matchAll(/<span lang="en">([\s\S]*?)<\/span>/g)].map((m) => m[1])].join('\n')
+  const codigos = [...ingles.matchAll(/<code>([^<]*)<\/code>/g)].map((m) => m[1])
+  assert.ok(codigos.length > 10)
+  for (const c of codigos) assert.doesNotMatch(c, /\b(instalar|administrador|contraseña|claves|guardar|actualizar|desinstalar|estado|registro|borrar-datos|activar)\b/, c)
+  // Ningún <pre> enseña a la vez las dos formas: cada orden de Tramtai va dentro de su lang.
+  for (const pre of servidor.match(/<pre[\s\S]*?<\/pre>/g) ?? [])
+    for (const linea of pre.split('\n')) if (/(^|>)(sudo )?(\.\/|\.\\)?tramtai/.test(linea.replace(/<code>/, ''))) assert.match(linea, /lang="es"[\s\S]*lang="en"/, linea)
+})
+
 test('el README y la guía del servidor tienen al día el aviso de riesgos.* (npm run sitio)', () => {
   for (const [ruta, zonas] of [['../../README.md', ['riesgos:es', 'riesgos:en']], ['../../docs/servidor.md', ['riesgos-servidor:es', 'riesgos-servidor:en']]] as const) {
     const md = readFileSync(new URL(ruta, import.meta.url), 'utf8')

@@ -180,9 +180,17 @@
   if (!grupos.length) return;
   // La Ayuda y la portada tienen otras pestañas que la guía: cada una recuerda la suya.
   var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : document.querySelector('.portada') ? 'tramtai.lenguaje-portada' : 'tramtai.lenguaje';
+  // Cada data-pestanas="nombre" es un juego aparte (el de lenguajes no tiene nombre; Linux · Windows Server es
+  // «sistema»): sus pestañas cambian a la vez y recuerdan su elección sin tocar las del otro juego.
+  function juego(lenguaje) {
+    var b = document.querySelector('[data-pestanas] [role="tab"][data-lenguaje="' + CSS.escape(lenguaje) + '"]');
+    return b ? b.closest('[data-pestanas]').dataset.pestanas : '';
+  }
   // elegir enseña la pestaña; solo se recuerda la que elige la persona (guardar), no la de por defecto al cargar.
   function elegir(lenguaje, foco, guardar) {
+    var nombre = juego(lenguaje);
     grupos.forEach(function (g) {
+      if ((g.dataset.pestanas || '') !== nombre) return;
       var botones = g.querySelectorAll('[role="tab"]');
       var hay = Array.prototype.some.call(botones, function (b) { return b.dataset.lenguaje === lenguaje; });
       botones.forEach(function (b, i) {
@@ -193,7 +201,8 @@
         if (activo && foco === g) b.focus();
       });
     });
-    if (guardar) try { localStorage.setItem(clave, lenguaje); } catch (e) {}
+    // El sistema elegido vale en la portada y en servidor.html.
+    if (guardar) try { localStorage.setItem(nombre ? 'tramtai.' + nombre : clave, lenguaje); } catch (e) {}
   }
   grupos.forEach(function (g) {
     var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
@@ -216,6 +225,13 @@
   // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en la portada). Sin JavaScript se ven
   // todos los paneles de la guía, cada uno con su enlace a GitHub.
   elegir(guardado || 'python');
+  // Linux · Windows Server: el guardado, si sigue siendo de ese juego, o la primera (Linux). Sin JavaScript se ven los dos.
+  var sistema = document.querySelector('[data-pestanas="sistema"] [role="tab"]');
+  if (sistema) {
+    var elegido = null;
+    try { elegido = localStorage.getItem('tramtai.sistema'); } catch (e) {}
+    elegir(elegido && juego(elegido) === 'sistema' ? elegido : sistema.dataset.lenguaje);
+  }
   document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
     fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
       if (!r.ok) throw r;
