@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -357,22 +358,33 @@ func clavesOrdenadas(m map[string]any) []string {
 	return l
 }
 
-// ordenEnLinea une la orden con espacios, entre comillas dobles las partes que los tengan: la ejecuta una shell (cmd.exe
-// en Windows, según la M0).
-// Entre comillas dobles cmd trata como literales los caracteres &^()|<>, pero «%» lo expande aunque haya comillas y no se
-// puede escapar de forma fiable: una parte con «%» es un error.
+// ordenEnLinea une la orden con espacios para la shell que la ejecuta: cmd.exe en Windows (según la M0), sh en los demás.
 func ordenEnLinea(orden []string) (string, error) {
+	return ordenParaShell(orden, runtime.GOOS == "windows")
+}
+
+// ordenParaShell pone entre comillas las partes que lo necesitan.
+// En cmd, entre comillas dobles son literales los caracteres &^()|<>, pero «%» se expande aunque haya comillas y no se
+// puede escapar de forma fiable: una parte con «%» es un error. En sh, entre comillas simples todo es literal; una
+// comilla simple cierra las comillas, va escapada con \ y las abre de nuevo.
+func ordenParaShell(orden []string, cmd bool) (string, error) {
 	partes := make([]string, len(orden))
 	for i, p := range orden {
-		if strings.Contains(p, "%") {
-			return "", errOrdenConPorcentaje
-		}
 		partes[i] = p
-		if strings.ContainsAny(p, " \t&^()|<>") {
+		switch {
+		case cmd && strings.Contains(p, "%"):
+			return "", errOrdenConPorcentaje
+		case cmd && strings.ContainsAny(p, " \t&^()|<>"):
 			partes[i] = `"` + p + `"`
+		case !cmd && (p == "" || strings.ContainsFunc(p, func(r rune) bool { return !esSeguroEnSh(r) })):
+			partes[i] = "'" + strings.ReplaceAll(p, "'", `'\''`) + "'"
 		}
 	}
 	return strings.Join(partes, " "), nil
+}
+
+func esSeguroEnSh(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("/._-+:,@=", r)
 }
 
 // ClaudeCode escribe en settings.json la URL, el modelo y el apiKeyHelper que entrega la clave de la API desde el
