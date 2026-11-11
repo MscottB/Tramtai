@@ -465,7 +465,8 @@ func TestRespuestasHerramientasQueNoSonFunciones(t *testing.T) {
 		return `{"model":"simulado","input":"hola","stream":true,"tools":[` + herramientas + `],"tool_choice":` + eleccion + `}`
 	}
 	r, flujo := pedir(t, ts, "POST", "/openai/v1/responses", base(`{"name":"sin_tipo"}`, `"auto"`))
-	if r.StatusCode != 200 || !strings.Contains(r.Header.Get("Tramtai-Advertencia"), "tools[]") {
+	_, lista, _ := strings.Cut(r.Header.Get("Tramtai-Advertencia"), ": ") // «se ignoran: a, b»
+	if r.StatusCode != 200 || !slices.Contains(strings.Split(lista, ", "), "tools[]") {
 		t.Fatalf("type vacío: %d %v %s", r.StatusCode, r.Header, flujo)
 	}
 	for nombre, eleccion := range map[string]string{"required": `"required"`, "una función": `{"type":"function","name":"spawn_agent"}`} {
@@ -538,6 +539,16 @@ func TestAnthropicAceptaPeticionDeClaudeCode(t *testing.T) {
 	// Con thinking activado a mano (budget_tokens) sí se rechaza: un agente CLI no puede respetar ese presupuesto.
 	if r, cuerpo := pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"thinking":{"type":"enabled","budget_tokens":2000},"messages":[{"role":"user","content":"x"}]}`); r.StatusCode != 400 {
 		t.Fatalf("thinking enabled: %d %s", r.StatusCode, cuerpo)
+	}
+	// thinking es de la API de Anthropic: en chat/completions y responses no existe (allí es reasoning) y, como cualquier
+	// parámetro desconocido, se rechaza también en adaptive.
+	for ruta, cuerpo := range map[string]string{
+		"/openai/v1/chat/completions": `{"model":"simulado","thinking":{"type":"adaptive"},"messages":[{"role":"user","content":"x"}]}`,
+		"/openai/v1/responses":        `{"model":"simulado","thinking":{"type":"adaptive"},"input":"x"}`,
+	} {
+		if r, respuesta := pedir(t, ts, "POST", ruta, cuerpo); r.StatusCode != 400 || !strings.Contains(respuesta, "thinking") {
+			t.Errorf("%s con thinking adaptive: %d %s", ruta, r.StatusCode, respuesta)
+		}
 	}
 }
 
