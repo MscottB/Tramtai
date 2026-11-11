@@ -239,6 +239,16 @@ func TestOlvidarBorraClave(t *testing.T) {
 	if _, activa, _ := apuntar.Leer(p.s.opc.Datos, "codex"); activa || len(p.almacen) != 0 || apiGlobal(t, "codex").EstaActivo() {
 		t.Fatalf("se olvida igual: %v %v", activa, p.almacen)
 	}
+
+	// Una anotación ilegible tampoco lo impide, y el aviso no habla de un archivo sin nombre.
+	os.WriteFile(filepath.Join(p.s.opc.Datos, "herramientas", "codex.json"), []byte("{roto"), 0o600)
+	r, cuerpo = p.pedir(t, "global", "POST", "/api/v1/herramientas/codex/olvidar", "")
+	if r.StatusCode != 409 || strings.Contains(cuerpo, " de : ") || !strings.Contains(cuerpo, "anotó") {
+		t.Fatalf("olvidar con la anotación ilegible: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, err := os.Stat(filepath.Join(p.s.opc.Datos, "herramientas", "codex.json")); err == nil {
+		t.Fatal("la anotación ilegible se borra al olvidar")
+	}
 }
 
 // Una activación que falla deja la API, su clave y el almacén como estaban: una reactivación fallida no detiene una

@@ -434,7 +434,11 @@ func (s *Servicio) olvidarHerramienta(h apuntar.Herramienta) error {
 	}
 	s.Recargar()
 	_ = s.persistirEstado()
-	if err == nil && errQuitar != nil {
+	switch {
+	case err != nil || errQuitar == nil:
+	case a.Ruta == "": // no se pudo ni leer la anotación: no se sabe qué archivo era
+		err = nucleo.NuevoError(nucleo.CodigoHerramientaEnConflicto, idioma.Tf("Tramtai la olvidó, pero no pudo leer lo que anotó de ella para quitarlo de su archivo: %s", nucleo.MensajeDe(errQuitar)))
+	default:
 		err = nucleo.NuevoError(nucleo.CodigoHerramientaEnConflicto, idioma.Tf("Tramtai la olvidó, pero no pudo quitar lo suyo de %s: %s", a.Ruta, nucleo.MensajeDe(errQuitar)))
 	}
 	return err
