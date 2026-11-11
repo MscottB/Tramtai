@@ -240,6 +240,73 @@ func TestOlvidarBorraClave(t *testing.T) {
 	}
 }
 
+// Una activación que falla deja la API, su clave y el almacén como estaban: una reactivación fallida no detiene una
+// herramienta que funcionaba ni invalida su clave, y una primera activación fallida no deja API ni clave.
+func TestActivacionFallidaNoDejaNadaAMedias(t *testing.T) {
+	t.Run("reactivación", func(t *testing.T) {
+		p := entornoHerramientas(t, nil, "codex")
+		p.s.ActivarGlobal()
+		p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
+		clave := p.almacen["TRAMTAI_HERRAMIENTA_CODEX"]
+		huella, _ := os.ReadFile(RutaTokenPunto(p.s.opc.Datos, "codex"))
+		os.WriteFile(filepath.Join(p.casa, "codex", "config.toml"), []byte("[[[ no es toml\n"), 0o600)
+		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"],"modelo":"claude/sonnet"}`); r.StatusCode == 200 {
+			t.Fatalf("con el archivo ilegible no se activa: %s", cuerpo)
+		}
+		if api := apiGlobal(t, "codex"); api == nil || !api.EstaActivo() || !slices.Equal(api.ModelosPermitidos, []string{"claude/haiku"}) {
+			t.Fatalf("la API sigue en marcha con su modelo: %+v", api)
+		}
+		if ahora, _ := os.ReadFile(RutaTokenPunto(p.s.opc.Datos, "codex")); p.almacen["TRAMTAI_HERRAMIENTA_CODEX"] != clave || string(ahora) != string(huella) {
+			t.Fatalf("la clave anterior sigue en el almacén y en su huella: %v", p.almacen)
+		}
+		if r, cuerpo := pedir(t, p.ts.URL, "GET", "/p/codex/openai/v1/models", clave, ""); r.StatusCode != 200 {
+			t.Fatalf("la clave anterior sigue valiendo: %d %s", r.StatusCode, cuerpo)
+		}
+	})
+	sinRastro := func(t *testing.T, p *pruebaHerramientas) {
+		t.Helper()
+		if api := apiGlobal(t, "codex"); api != nil {
+			t.Fatalf("no queda API: %+v", api)
+		}
+		if _, err := os.Stat(RutaTokenPunto(p.s.opc.Datos, "codex")); err == nil || len(p.almacen) != 0 {
+			t.Fatalf("no queda clave: %v %v", err, p.almacen)
+		}
+	}
+	t.Run("primera activación", func(t *testing.T) {
+		p := entornoHerramientas(t, nil, "codex")
+		p.s.ActivarGlobal()
+		os.WriteFile(filepath.Join(p.casa, "codex", "config.toml"), []byte("[[[ no es toml\n"), 0o600)
+		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode == 200 {
+			t.Fatalf("con el archivo ilegible no se activa: %s", cuerpo)
+		}
+		sinRastro(t, p)
+	})
+	t.Run("almacén que falla", func(t *testing.T) {
+		p := entornoHerramientas(t, nil, "codex")
+		p.s.ActivarGlobal()
+		p.s.guardarClave = func(string, string) error { return os.ErrPermission }
+		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode == 200 {
+			t.Fatalf("sin almacén no se activa: %s", cuerpo)
+		}
+		sinRastro(t, p)
+	})
+	t.Run("NuevaClave que falla", func(t *testing.T) {
+		p := entornoHerramientas(t, nil, "codex")
+		p.s.ActivarGlobal()
+		ruta := RutaTokenPunto(p.s.opc.Datos, "codex")
+		os.MkdirAll(filepath.Join(ruta, "ocupada"), 0o700) // una carpeta donde va la huella: no se puede escribir
+		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode == 200 {
+			t.Fatalf("sin huella no se activa: %s", cuerpo)
+		}
+		if apiGlobal(t, "codex") != nil || len(p.almacen) != 0 {
+			t.Fatalf("no queda API ni clave: %v", p.almacen)
+		}
+		if _, err := os.Stat(filepath.Join(ruta, "ocupada")); err != nil {
+			t.Fatal("lo que no es de Tramtai no se borra")
+		}
+	})
+}
+
 func TestHerramientasConHTTPSPropio(t *testing.T) {
 	p := entornoHerramientas(t, nil, "codex", "continue")
 	p.s.ActivarGlobal()

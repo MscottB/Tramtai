@@ -3,6 +3,7 @@ package servicio
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -264,12 +265,36 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 	if inst.ID != "global" {
 		instancia = inst.ID
 	}
+	// Lo que se cambia a continuación, tal como está, para dejarlo igual si la activación falla: una reactivación fallida
+	// no detiene una herramienta que funcionaba ni invalida su clave; una primera no deja API ni clave.
+	apiAntes, rutaHuella, nombreClave := apiHerramienta(h.ID), RutaTokenPunto(s.opc.Datos, h.ID), NombreClaveHerramienta(h.ID)
+	huellaAntes, errHuella := os.ReadFile(rutaHuella)
+	claveAntes := ""
+	if !h.ClaveEnArchivo {
+		claveAntes, _ = s.leerClave(nombreClave)
+	}
+	deshacer := func() { // de mejor esfuerzo: el error que importa es el de la activación
+		_ = volverAPI(h.ID, apiAntes)
+		if errHuella == nil {
+			_ = configuracion.EscribirAtomico(rutaHuella, huellaAntes, 0o600)
+		} else if errors.Is(errHuella, fs.ErrNotExist) {
+			_ = os.Remove(rutaHuella)
+		}
+		if h.ClaveEnArchivo {
+			return
+		}
+		if claveAntes != "" {
+			_ = s.guardarClave(nombreClave, claveAntes)
+		} else {
+			_ = s.borrarClave(nombreClave)
+		}
+	}
 	if err := prepararAPI(instancia, h.ID, modelo); err != nil {
 		return err
 	}
-	clave, err := NuevaClave(RutaTokenPunto(s.opc.Datos, h.ID))
+	clave, err := NuevaClave(rutaHuella)
 	if err != nil {
-		_ = detenerAPI(h.ID)
+		deshacer()
 		return err
 	}
 	puerto := s.puertoActual() // sin HTTPS propio (sinHTTPPropio): el puerto principal habla HTTP en 127.0.0.1
@@ -280,19 +305,34 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 	} else {
 		exe, err := s.ejecutable()
 		if err == nil {
-			err = s.guardarClave(NombreClaveHerramienta(h.ID), clave)
+			err = s.guardarClave(nombreClave, clave)
 		}
 		if err != nil {
-			_ = detenerAPI(h.ID)
+			deshacer()
 			return err
 		}
 		v.Orden = []string{exe, "herramientas", "clave", h.ID}
 	}
 	if _, err := apuntar.Aplicar(s.opc.Datos, h, alcance, proyecto, v); err != nil {
-		_ = detenerAPI(h.ID) // sin archivo que la use, la API no queda en marcha
+		deshacer()
 		return err
 	}
 	return nil
+}
+
+// volverAPI deja la API de la herramienta como estaba antes de prepararAPI (antes nil: no existía, se quita).
+func volverAPI(id string, antes *ConfigPunto) error {
+	return editarAPIs(func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		i := slices.IndexFunc(lista, func(c ConfigPunto) bool { return c.Nombre == id && c.Grupo == grupoHerramientas })
+		switch {
+		case i < 0:
+			return nil, errSinAPI
+		case antes == nil:
+			return slices.Delete(lista, i, i+1), nil
+		}
+		lista[i].Activo, lista[i].Instancia, lista[i].ModelosPermitidos = antes.Activo, antes.Instancia, antes.ModelosPermitidos
+		return lista, nil
+	})
 }
 
 // Las APIs de las herramientas van todas en la configuración global, también la de un proyecto (con el campo instancia
