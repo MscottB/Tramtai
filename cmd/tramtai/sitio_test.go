@@ -232,7 +232,8 @@ func comprobarOrdenSitio(raiz *cobra.Command, args []string, servidor, ingles bo
 	return nil
 }
 
-// TestOrdenesDelSitioIdioma: una línea en inglés no pasa con un nombre en español, ni siquiera el que cobra acepta.
+// TestSinOpciones: sinOpciones quita las opciones y sus valores (separados, pegados o con =) y deja los argumentos;
+// una opción desconocida, sin su valor o sin nombre es un error.
 func TestSinOpciones(t *testing.T) {
 	cmd := &cobra.Command{Use: "prueba"}
 	cmd.Flags().IntP("numero", "n", 0, "")
@@ -260,6 +261,7 @@ func TestSinOpciones(t *testing.T) {
 	}
 }
 
+// TestOrdenesDelSitioIdioma: una línea en inglés no pasa con un nombre en español, ni siquiera el que cobra acepta.
 func TestOrdenesDelSitioIdioma(t *testing.T) {
 	raiz := nuevaRaiz()
 	for _, c := range []struct {
