@@ -28,6 +28,7 @@ export const servidor: Tema = {
         { id: 'servidor-mismo-equipo', pregunta: 'ayuda.servidor.pMismo', respuesta: 'ayuda.servidor.rMismo' },
         { id: 'servidor-claves', pregunta: 'ayuda.servidor.pClaves', respuesta: 'ayuda.servidor.rClaves' },
         { id: 'servidor-agentes', pregunta: 'ayuda.servidor.pAgentes', respuesta: 'ayuda.servidor.rAgentes' },
+        { id: 'servidor-herramientas', pregunta: 'ayuda.servidor.pHerramientas', respuesta: 'ayuda.servidor.rHerramientas', tema: 'conectar-herramientas' },
         { id: 'servidor-suscripcion', pregunta: 'ayuda.servidor.pSuscripcion', respuesta: 'ayuda.servidor.rSuscripcion' },
         { id: 'servidor-codex', pregunta: 'ayuda.servidor.pCodex', respuesta: 'ayuda.servidor.rCodex' },
         { id: 'servidor-actualizar', pregunta: 'ayuda.servidor.pActualizar', respuesta: 'ayuda.servidor.rActualizar' },

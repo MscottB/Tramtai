@@ -609,6 +609,8 @@ const ayudaEs = {
   'ayuda.servidor.rClaves': 'Cifradas: en Windows, en el almacén de la cuenta del servicio; en Linux, con systemd-creds. La clave del servicio, con el servidor abierto a la red, solo vale desde el propio equipo.',
   'ayuda.servidor.pAgentes': '¿Quién ejecuta los agentes?',
   'ayuda.servidor.rAgentes': 'El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale.',
+  'ayuda.servidor.pHerramientas': '¿Puedo conectar mis herramientas?',
+  'ayuda.servidor.rHerramientas': 'Aquí no: el modo servidor no ofrece Claude Code, Codex, Continue, opencode ni Kilo Code. Conéctalas desde el Tramtai de tu usuario.',
   'ayuda.servidor.pSuscripcion': '¿Puedo usar mi suscripción en el servidor?',
   'ayuda.servidor.rSuscripcion': 'Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas).',
   'ayuda.servidor.pCodex': '¿Qué riesgo tiene Codex en el servidor?',

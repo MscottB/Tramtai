@@ -611,6 +611,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.servidor.rClaves': 'Encrypted: on Windows, in the service account’s store; on Linux, with systemd-creds. The service key, with the server open to the network, only works from the server itself.',
   'ayuda.servidor.pAgentes': 'Who runs the agents?',
   'ayuda.servidor.rAgentes': 'The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works.',
+  'ayuda.servidor.pHerramientas': 'Can I connect my tools?',
+  'ayuda.servidor.rHerramientas': 'Not here: server mode doesn’t offer Claude Code, Codex, Continue, opencode or Kilo Code. Connect them from your user’s Tramtai.',
   'ayuda.servidor.pSuscripcion': 'Can I use my subscription on the server?',
   'ayuda.servidor.rSuscripcion': 'By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas).',
   'ayuda.servidor.pCodex': 'What’s the risk with Codex on the server?',
