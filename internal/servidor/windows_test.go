@@ -136,6 +136,15 @@ func TestInstalarServicioWindows(t *testing.T) {
 		if err := Desinstalar(true); err != nil && !errors.As(err, new(Aviso)) {
 			t.Errorf("desinstalar al terminar: %v", err)
 		}
+		// Windows puede tardar en descargar el perfil de la cuenta: sin esto quedaría un TramtaiPrueba<pid> en
+		// ServiceProfiles por cada vez que se corre la prueba. borrarPerfil ya espera unos 10 s por intento.
+		err := borrarPerfil(sidServicio(nombre))
+		for limite := time.Now().Add(time.Minute); err != nil && time.Now().Before(limite); {
+			err = borrarPerfil(sidServicio(nombre))
+		}
+		if err != nil {
+			t.Logf("queda el perfil de la cuenta de prueba en %s: %v", perfilServicio(), err)
+		}
 		_ = os.RemoveAll(base)
 		nombreServicio, rutas, editarRutaSistema = nombre0, rutas0, path0
 	})
