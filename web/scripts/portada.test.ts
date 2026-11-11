@@ -697,7 +697,6 @@ test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia au
   for (const [token, colores] of pares) if (token !== 'velo') colores.forEach((c, i) => assert.ok(contraste(c, fondo[i]) >= 4.5, `${token} ${i ? 'de noche' : 'de día'}: ${contraste(c, fondo[i]).toFixed(2)}:1`))
   assert.ok(contraste('#0f1b1e', pares.get('velo')![0]) >= 4.5 && contraste('#e5edf0', pares.get('velo')![1]) >= 4.5, 'texto sobre el velo')
   assert.ok(css.includes('.t-b { font-weight: 700; }'))
-  assert.match(css, /\.t-d \{ opacity: [\d.]+; \}/)
   assert.ok(css.includes('.g { display: inline-block; width: 1ch; text-align: center; }'))
   const fuente = css.match(/@font-face \{[^}]*cascadia\.woff2[^}]*\}/)?.[0] ?? ''
   assert.match(fuente, /font-family: 'Tramtai Mono'/, 'Cascadia Code es nombre reservado (OFL)')

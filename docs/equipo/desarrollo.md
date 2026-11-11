@@ -107,7 +107,7 @@ desde los mismos datos.
   muestra una ruta del equipo, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento («N peticiones en
   curso» o filas ya terminadas como «terminada 9 s», que Inicio deja a la vista unos segundos antes de quitarlas) o si
   el Historial está vacío. `tui.Captura` no da por asentada una vista así: espera a que la red quede vacía.
-  `ansiAHtml` escribe clases, no colores: `t-<token>` (tinta), `tf-<token>` (fondo), `t-b` (negrita) y `t-d` (tenue), con
+  `ansiAHtml` escribe clases, no colores: `t-<token>` (tinta), `tf-<token>` (fondo) y `t-b` (negrita), con
   los tokens de `DESIGN.md` (`TOKENS_TERMINAL`); la TUI usa exactamente la paleta de cada tema, así que un solo HTML por
   página e idioma sirve en los dos. Un color sin token hace fallar la captura.
   Cada flecha, forma o símbolo que Cascadia Mono no trae entero (`← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗`, los rangos `U+2190–21FF` y
