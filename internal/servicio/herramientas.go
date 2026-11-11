@@ -299,7 +299,7 @@ func (s *Servicio) activarHerramienta(inst *Instancia, h apuntar.Herramienta, mo
 		}
 		return unirErrores(errs)
 	}
-	clave, err := NuevaClave(rutaHuella)
+	clave, err := s.nuevaClave(rutaHuella)
 	if err != nil {
 		return aMedias(err, deshacer())
 	}

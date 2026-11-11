@@ -356,6 +356,15 @@ func TestActivacionFallidaNoDejaNadaAMedias(t *testing.T) {
 	t.Run("NuevaClave que falla", func(t *testing.T) {
 		p := entornoHerramientas(t, nil, "codex")
 		p.s.ActivarGlobal()
+		p.s.nuevaClave = func(string) (string, error) { return "", os.ErrPermission } // con la API ya creada
+		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode == 200 {
+			t.Fatalf("sin clave nueva no se activa: %s", cuerpo)
+		}
+		sinRastro(t, p)
+	})
+	t.Run("huella ilegible: no se toca nada", func(t *testing.T) {
+		p := entornoHerramientas(t, nil, "codex")
+		p.s.ActivarGlobal()
 		ruta := RutaTokenPunto(p.s.opc.Datos, "codex")
 		os.MkdirAll(filepath.Join(ruta, "ocupada"), 0o700) // una carpeta donde va la huella: no se puede escribir
 		if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode == 200 {

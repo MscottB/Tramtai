@@ -339,7 +339,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
-          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue and opencode at itself.</span></p>
+          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue, opencode and Kilo Code at itself.</span></p>
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
@@ -349,7 +349,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
       <ol class="ventajas-linea" start="4">
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
-          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store.</span></p>
+          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code, que va en su archivo, solo para ti.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store, except the one for Continue, opencode and Kilo Code, which goes in their file, readable only by you.</span></p>
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
@@ -1204,7 +1204,7 @@ tramtai terminal</pre>
             </li>
             <li class="parada">
               <h4 class="parada-titulo"><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
-              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak.</span></p>
+              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran. La de la API de Continue, opencode o Kilo Code va además en el archivo de esa herramienta, con permisos solo para ti.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak. The key of the Continue, opencode or Kilo Code API also goes in that tool’s file, readable only by you.</span></p>
             </li>
             <li class="parada">
               <h4 class="parada-titulo"><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>

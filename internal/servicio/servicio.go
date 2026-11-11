@@ -188,6 +188,7 @@ type Servicio struct {
 	guardarClave   func(nombre, valor string) error
 	leerClave      func(nombre string) (string, error)
 	borrarClave    func(nombre string) error
+	nuevaClave     func(ruta string) (string, error)
 	ejecutable     func() (string, error)
 	muHerramientas sync.Mutex
 }
@@ -226,7 +227,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}, frenos: nuevosFrenos(), claves: nuevoContador(30, time.Minute, time.Minute),
 		lineaAdministrador: leerAdministrador(opc.Datos),
-		guardarClave:       credenciales.Guardar, leerClave: credenciales.Leer, borrarClave: credenciales.Borrar, ejecutable: os.Executable}
+		guardarClave:       credenciales.Guardar, leerClave: credenciales.Leer, borrarClave: credenciales.Borrar, nuevaClave: NuevaClave, ejecutable: os.Executable}
 	if opc.Almacen != nil {
 		s.guardarClave, s.leerClave, s.borrarClave = opc.Almacen.Guardar, opc.Almacen.Leer, opc.Almacen.Borrar
 	}

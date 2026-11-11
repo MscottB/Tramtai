@@ -250,9 +250,9 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
   1. **Usa lo que ya pagas:** tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub
      Copilot. Sin cuentas nuevas.
   2. **Sin tocar tu código:** con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex,
-     Continue y opencode los apunta Tramtai.
+     Continue, opencode y Kilo Code los apunta Tramtai.
   3. **Si un agente falla, sigue otro:** llega a su límite y la petición continúa con el siguiente de tu lista.
-  4. **Todo corre en tu equipo:** sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema. («Queda»
+  4. **Todo corre en tu equipo:** sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code, que va en su archivo, solo para ti. («Queda»
      decía de más: las peticiones sí salen hacia el proveedor; regla de la auditoría del 2026-10-22.)
   5. **Cada app, con su clave y su límite:** presupuesto diario o mensual por app y cada petición a la vista.
   6. **Escritorio, terminal o servidor:** la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.
