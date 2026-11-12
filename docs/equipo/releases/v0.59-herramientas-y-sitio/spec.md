@@ -58,8 +58,8 @@ reales»).
 
 | Herramienta | Archivo | Qué escribe Tramtai | Clave |
 |---|---|---|---|
-| Claude Code | `~/.claude/settings.json`; en un proyecto, `.claude/settings.local.json` ([docs](https://code.claude.com/docs/en/settings)) | `env.ANTHROPIC_BASE_URL` (`…/anthropic`), `env.ANTHROPIC_MODEL` y `apiKeyHelper` | Almacén cifrado; `apiKeyHelper` llama a `tramtai herramientas clave claude-code` |
-| Codex CLI | `$CODEX_HOME/config.toml` (`~/.codex/config.toml`) ([docs](https://learn.chatgpt.com/docs/config-file/config-advanced)) | `model`, `model_provider = "tramtai"` y `[model_providers.tramtai]` con `base_url` (`…/openai/v1`), `wire_api = "responses"` y `auth.command` | Almacén cifrado; `auth.command` llama a `tramtai herramientas clave codex` |
+| Claude Code | `~/.claude/settings.json`; en un proyecto, `.claude/settings.local.json` ([docs](https://code.claude.com/docs/en/settings)) | `env.ANTHROPIC_BASE_URL` (`…/p/claude-code/anthropic`), `env.ANTHROPIC_MODEL` y `apiKeyHelper` | Almacén cifrado; `apiKeyHelper` llama a `tramtai herramientas clave claude-code` |
+| Codex CLI | `$CODEX_HOME/config.toml` (`~/.codex/config.toml`) ([docs](https://learn.chatgpt.com/docs/config-file/config-advanced)) | `model`, `model_provider = "tramtai"` y `[model_providers.tramtai]` con `base_url` (`…/p/codex/openai/v1`), `wire_api = "responses"` y `auth.command` | Almacén cifrado; `auth.command` llama a `tramtai herramientas clave codex` |
 | Continue | `~/.continue/config.yaml` ([docs](https://docs.continue.dev/reference)) | Un modelo `provider: openai` con `apiBase`, `model`, `roles` y `capabilities: [tool_use]` | En el archivo |
 | opencode y Kilo Code | `~/.config/opencode/opencode.json(c)` y `~/.config/kilo/kilo.jsonc`, mismo formato ([docs](https://opencode.ai/docs/providers/)) | Un proveedor `tramtai` (`@ai-sdk/openai-compatible`) con `baseURL` y el modelo | En el archivo |
 
@@ -87,7 +87,9 @@ reales»).
 ### Activar
 
 1. **Modelo:** eliges agente y modelo; por defecto, el primero conectado. Con «Activar todas» se elige una vez para todas.
-2. **API:** Tramtai crea en el espacio actual una API con el nombre de la herramienta («Claude Code», «Codex»…), en el
+2. **API:** Tramtai crea en el espacio actual una API con el id de la herramienta (`claude-code`, `codex`…: los nombres
+   de API van en minúsculas y sin espacios; la UI enseña «Claude Code», «Codex»…), y la herramienta usa sus URLs
+   (`/p/<api>/anthropic`, `/p/<api>/openai/v1`), donde vale su clave. Va en el
    grupo «Herramientas», limitada a ese agente y con su propia clave. Si ya existe (porque se activó antes), la reanuda.
 3. **Clave:** Claude Code y Codex admiten pedirla a una orden. Para ellas, la clave se guarda cifrada en el almacén del
    sistema (donde ya están las de los proveedores) y su configuración llama a `tramtai herramientas clave <id>`, así que

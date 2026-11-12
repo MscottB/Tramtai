@@ -13,7 +13,7 @@ import (
 // max_tokens se acepta como tope pero ningún adaptador CLI lo aplica: se ignora con aviso.
 var politicaMensajes = politica{
 	soportados:   conjunto("model", "messages", "system", "stream", "tools", "tool_choice"),
-	ignorables:   conjunto("max_tokens", "temperature", "top_p", "top_k", "metadata", "service_tier"),
+	ignorables:   conjunto("max_tokens", "temperature", "top_p", "top_k", "metadata", "service_tier", "context_management", "safeguards", "output_config"),
 	noSoportados: conjunto("stop_sequences", "thinking", "mcp_servers", "container"),
 }
 

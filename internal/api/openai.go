@@ -24,7 +24,7 @@ var politicaRespuestas = politica{
 	soportados: conjunto("model", "input", "instructions", "stream", "text", "reasoning", "tools", "tool_choice",
 		"parallel_tool_calls"),
 	ignorables: conjunto("temperature", "top_p", "max_output_tokens", "metadata", "user", "store",
-		"truncation", "service_tier", "include", "stream_options"),
+		"truncation", "service_tier", "include", "stream_options", "prompt_cache_key", "client_metadata"),
 	noSoportados: conjunto("previous_response_id", "background", "prompt", "conversation"),
 }
 
@@ -194,6 +194,19 @@ func herramientasOpenAI(sol *nucleo.SolicitudEjecucion, funciones []funcionOpenA
 	}
 	sol.EleccionHerramienta, sol.LlamadasParalelas = e, paralelas
 	return nil
+}
+
+// quitarNoFunciones separa las herramientas que no son funciones y devuelve sus tipos, sin repetir.
+func quitarNoFunciones(herramientas []funcionOpenAI) (funciones []funcionOpenAI, tipos []string) {
+	for _, h := range herramientas {
+		switch {
+		case h.Type == "function":
+			funciones = append(funciones, h)
+		case !contiene(tipos, h.Type):
+			tipos = append(tipos, h.Type)
+		}
+	}
+	return funciones, tipos
 }
 
 // llamadasChat da las llamadas como tool_calls; en streaming cada una lleva su índice.
@@ -427,7 +440,17 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		err = formatoSalida(&sol, p.Text.Format.Type, p.Text.Format.Schema)
 	}
 	if err == nil {
+		// Codex envía siempre herramientas propias (namespace, web_search…) junto a las funciones: se dejan fuera con aviso.
+		var otras []string
+		p.Tools, otras = quitarNoFunciones(p.Tools)
+		for _, tipo := range otras {
+			avisos = append(avisos, "tools["+tipo+"]")
+		}
 		err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
+		if modo := sol.EleccionHerramienta.Modo; err == nil && len(otras) > 0 && len(sol.Herramientas) == 0 && (modo == "obligatoria" || modo == "una") {
+			err = nucleo.NuevoError(nucleo.CodigoParametroNoSoportado,
+				idioma.T("tool_choice exige una función y no hay ninguna: las demás herramientas no existen aquí"))
+		}
 	}
 	if err != nil {
 		EscribirError(w, r, err)
