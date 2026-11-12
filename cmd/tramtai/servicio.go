@@ -42,7 +42,7 @@ func contexto() (context.Context, context.CancelFunc) {
 }
 
 func conectar() (*cliente.Cliente, error) {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func conectar() (*cliente.Cliente, error) {
 
 // asegurarServicio conecta con el servicio o lo inicia en segundo plano.
 func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func esperaReinicio() time.Duration { return cliente.PlazoDrenaje() + time.Minut
 
 // esperarCierreServicio espera, como mucho esperaReinicio, a que el servicio en marcha termine (drena sus trabajos).
 func esperarCierreServicio() {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return
 	}
@@ -101,7 +101,7 @@ func esperarCierreServicio() {
 
 // seguirRegistro muestra las últimas n líneas de servicio.log y, con seguir, lo que se añada hasta Ctrl+C.
 func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func comandoServicio() *cobra.Command {
 				if !si && !confirmar(cmd, idioma.T("¿Detener el servicio y todos sus espacios?")) {
 					return nil
 				}
-				datos, err := carpetas.DirDatos()
+				datos, err := dirDatos()
 				if err == nil {
 					err = cliente.DetenerAnterior(datos)
 				}
@@ -687,6 +687,6 @@ func identificar(ambito string) (raiz, id string, c *configuracion.Configuracion
 
 // idDeCarpeta es el espacio de la carpeta raiz con la regla del servicio, sobre el registro de la carpeta de datos.
 func idDeCarpeta(raiz string, c *configuracion.Configuracion) string {
-	datos, _ := carpetas.DirDatos()
+	datos, _ := dirDatos()
 	return servicio.IDDeCarpeta(datos, raiz, c)
 }
