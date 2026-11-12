@@ -60,7 +60,8 @@ type Herramienta struct {
 	EnProyecto     bool // admite el archivo de un proyecto además del global
 	Programa       string
 	Ruta           func(alcance Alcance, proyecto string) (string, error)
-	Gestionado     func() bool // nil salvo Claude Code: ¿una política de la organización manda sobre su archivo?
+	Gestionado     func() bool                          // nil salvo Claude Code: ¿una política de la organización manda sobre su archivo?
+	Previa         func(ruta string, existe bool) error // nil salvo Continue: ¿hay algo que impida activar?; se llama antes de escribir nada
 	Formato        Formato
 }
 
@@ -70,6 +71,7 @@ func Lista() []Herramienta {
 		{ID: "claude-code", Nombre: "Claude Code", EnProyecto: true, Programa: "claude", Ruta: rutaClaudeCode,
 			Gestionado: gestionadoClaudeCode, Formato: ClaudeCode()},
 		{ID: "codex", Nombre: "Codex", Programa: "codex", Ruta: rutaCodex, Formato: Codex()},
+		{ID: "continue", Nombre: "Continue", ClaveEnArchivo: true, Programa: "cn", Ruta: rutaContinue, Previa: previaContinue, Formato: Continue()},
 		{ID: "opencode", Nombre: "opencode", ClaveEnArchivo: true, Programa: "opencode", Ruta: rutaOpenCode, Formato: OpenCode()},
 		{ID: "kilo", Nombre: "Kilo Code", ClaveEnArchivo: true, Programa: "kilo", Ruta: rutaKilo, Formato: OpenCode()},
 	}
@@ -211,6 +213,11 @@ func Aplicar(datos string, h Herramienta, alcance Alcance, proyecto string, v Va
 	})
 	if err != nil {
 		return Anotacion{}, err
+	}
+	if h.Previa != nil {
+		if err := h.Previa(ruta, existe); err != nil {
+			return Anotacion{}, err
+		}
 	}
 	a := Anotacion{ID: h.ID, Ruta: ruta, Alcance: alcance, Modelo: v.Modelo, API: h.ID, Puerto: v.Puerto,
 		Escrito: escrito, Previos: previos, NoExistia: !existe, Fecha: time.Now().UTC().Truncate(time.Second)}
