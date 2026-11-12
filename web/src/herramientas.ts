@@ -1,6 +1,6 @@
 // Herramientas de terceros (Claude Code, Codex, Continue, opencode, Kilo) apuntadas a Tramtai: lo que decide la pestaña de
-// Mis APIs (componentes/accesos/Herramientas.vue) y su acceso al servicio. Los textos de los estados son fijos en inglés
-// (los mismos de la CLI y la terminal).
+// Mis APIs (componentes/accesos/Herramientas.vue) y su acceso al servicio. Las palabras de los estados se traducen (es y en)
+// con las claves herramientas.estado.*, las mismas de la terminal; solo la tabla de la CLI las lleva en las palabras de idioma.
 import { ref } from 'vue'
 import { api, avisarError, ErrorApi, mensajeError } from './api/cliente'
 import type { EstadoHerramienta } from './api/tipos'

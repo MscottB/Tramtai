@@ -147,6 +147,10 @@ export const CLAVES_APIS: string[] = [
   'herramientas.olvidarTexto', 'herramientas.restaurarTitulo', 'herramientas.restaurarTexto', 'herramientas.restaurarTextoSinFecha', 'herramientas.avisoActivada',
   'herramientas.avisoDesactivada', 'herramientas.avisoOlvidada', 'herramientas.avisoRestaurada', 'herramientas.vacio', 'herramientas.vacioTexto',
   'herramientas.servidor', 'herramientas.servidorTexto',
+  // Por qué una herramienta no va, con el código del servicio (la terminal traduce igual que la Web UI).
+  'herramientas.motivo.gestionado', 'herramientas.motivo.sin_https_propio', 'herramientas.motivo.api_no_existe', 'herramientas.motivo.api_detenida',
+  'herramientas.motivo.puerto', 'herramientas.motivo.orden_no_existe', 'herramientas.motivo.clave_no_almacen', 'herramientas.motivo.editada_a_mano',
+  'herramientas.motivo.otro_archivo', 'herramientas.motivo.anotacion_ilegible', 'herramientas.motivo.continue_json',
 ]
 
 // CLAVES_ESPACIOS son los textos de Espacios que la terminal repite tal cual: estados, etiquetas, acciones y sus

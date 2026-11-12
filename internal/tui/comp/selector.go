@@ -19,7 +19,9 @@ type Elegido struct{ Valor string }
 // Selector elige una opción de una lista: lo que se escribe la filtra, ↑ ↓ mueven, Intro responde Elegido y Esc
 // Cancelado. Sirve para el espacio, el modelo, el agente o el esfuerzo.
 type Selector struct {
-	Titulo  string
+	Titulo string
+	// Texto, si lo hay, es una explicación bajo el título (hasta dos líneas); con poco alto no se enseña.
+	Texto   string
 	estilos *pagina.Estilos
 	lista   Lista[Item]
 	filtro  string
@@ -85,6 +87,12 @@ func (s *Selector) Vista(ancho, alto int) string {
 	if s.filtro != "" {
 		filtro = "/ " + s.filtro
 	}
-	cabecera := []string{e.Titulo.Render(e.Recortar(s.Titulo, ancho)), e.Recortar(filtro, ancho), ""}
+	cabecera := []string{e.Titulo.Render(e.Recortar(s.Titulo, ancho))}
+	if s.Texto != "" && alto >= 12 {
+		for _, l := range e.Envolver(s.Texto, ancho, 2) {
+			cabecera = append(cabecera, e.Tenue.Render(l))
+		}
+	}
+	cabecera = append(cabecera, e.Recortar(filtro, ancho), "")
 	return strings.Join(append(cabecera, s.lista.Vista(ancho, alto-len(cabecera))), "\n")
 }
