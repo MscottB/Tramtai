@@ -100,8 +100,9 @@
     boton.className = 'copiar';
     boton.innerHTML = copiar;
     boton.addEventListener('click', function () {
-      // El código que se ve ahora (un ejemplo cargado después), sin el propio botón ni los comentarios del otro idioma.
-      var copia = (pre.querySelector('code') || pre).cloneNode(true);
+      // El código que se ve ahora (un ejemplo cargado después), sin el propio botón ni lo del otro idioma (comentarios,
+      // o el <code> entero en la guía del desarrollador).
+      var copia = pre.cloneNode(true);
       copia.querySelectorAll('.copiar, [lang]:not([lang="' + document.documentElement.lang + '"])').forEach(function (e) { e.remove(); });
       var texto = copia.textContent.trim();
       navigator.clipboard.writeText(texto).then(function () {
@@ -174,7 +175,7 @@
 })();
 
 // Pestañas de lenguaje de la guía del desarrollador: todas cambian a la vez y se recuerda la elección. Cada panel carga
-// su ejemplo de ejemplos/ (los de docs/ejemplos, que el CI ejecuta); sin JavaScript queda el enlace a GitHub.
+// su ejemplo de ejemplos/ en cada idioma (los de docs/ejemplos, que el CI ejecuta); sin JavaScript queda el enlace a GitHub.
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
@@ -232,12 +233,14 @@
     try { elegido = localStorage.getItem('tramtai.sistema'); } catch (e) {}
     elegir(elegido && juego(elegido) === 'sistema' ? elegido : sistema.dataset.lenguaje);
   }
-  document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
-    fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
+  // Cada panel lleva un <code lang="es"> y uno lang="en" (los de docs/ejemplos/*/en): el CSS enseña el del idioma
+  // elegido, y Copiar solo copia ese.
+  document.querySelectorAll('code[data-ejemplo]').forEach(function (code) {
+    fetch('ejemplos/' + code.dataset.ejemplo).then(function (r) {
       if (!r.ok) throw r;
       return r.text();
     }).then(function (texto) {
-      pre.querySelector('code').textContent = texto.replace(/\s+$/, '');
+      code.textContent = texto.replace(/\s+$/, '');
     }).catch(function () {});
   });
 })();

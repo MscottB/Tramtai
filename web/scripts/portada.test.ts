@@ -847,3 +847,29 @@ test('los bloques de código en inglés no traen texto en español', () => {
     assert.doesNotMatch(ingles, espanol, ingles.slice(0, 120))
   }
 })
+
+// La guía del desarrollador en inglés enseña (y copia) los ejemplos de docs/ejemplos/*/en: cada panel lleva un
+// <code lang="es"> y uno lang="en" con su archivo, los dos existen, y ni el archivo inglés ni lo demás que se ve en
+// inglés (la terminal, los curl de una línea) trae español. Los campos y las rutas de la API propia (mensajes, rol,
+// contenido, argumentos, archivo…) son su contrato y se quedan.
+test('desarrolladores.html en inglés enseña los ejemplos ingleses', () => {
+  const dev = readFileSync(new URL('../../site/desarrolladores.html', import.meta.url), 'utf8')
+  const espanol = /\b(?:cliente|respuesta|flujo|trozo|CLAVE|MODELO|TRAMTAI_CLAVE|TRAMTAI_MODELO|clima|ciudad|Hola|despejado|agente pide|siguió|muestra|tu-usuario|tu-equipo|servicio|iniciar|ruta|datos|esquema|cabeceras|llamada|ronda|terminado|resumen|entorno|predeterminado|pregunta)\b|¿|quién/
+  const bloques = [...dev.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g)].map((m) => m[0])
+  let ejemplos = 0
+  for (const b of bloques) {
+    const rutas = (lang: string) => [...b.matchAll(new RegExp(`<code lang="${lang}" data-ejemplo="([^"]+)"`, 'g'))].map((m) => m[1])
+    const [rEs, rEn] = [rutas('es'), rutas('en')]
+    if (b.includes('data-ejemplo')) {
+      assert.equal(rEs.length + rEn.length, 2, `cada panel, un ejemplo por idioma: ${b.slice(0, 160)}`)
+      assert.ok(rEn.length === 1 && rEn[0].split('/')[1] === 'en' && !rEs[0].includes('/en/'), `${rEs} / ${rEn}`)
+      for (const r of [rEs[0], rEn[0]]) statSync(new URL(`../../docs/ejemplos/${r}`, import.meta.url))
+      const codigo = readFileSync(new URL(`../../docs/ejemplos/${rEn[0]}`, import.meta.url), 'utf8')
+      assert.doesNotMatch(codigo, espanol, rEn[0])
+      ejemplos++
+    }
+    const ingles = b.replace(/<(code|span)[^>]*\blang="es"[^>]*>[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '')
+    assert.doesNotMatch(ingles, espanol, ingles.slice(0, 120))
+  }
+  assert.equal(ejemplos, 21)
+})

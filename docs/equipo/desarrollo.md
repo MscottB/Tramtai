@@ -292,6 +292,15 @@ Conservan lo que no es suyo: comentarios y orden en JSON/JSONC; en TOML y YAML, 
 job «Ejemplos» del CI). En local necesita Python con `openai` y `requests` (`TRAMTAI_PYTHON` apunta a su intérprete),
 `npm install` en `docs/ejemplos/javascript` y, para curl, `sh`, `curl` y `jq`; lo que falte se salta fuera del CI.
 
+Cada ejemplo tiene su versión inglesa en la carpeta `en/` de su lenguaje (`python/en/tools.py`, `go/en/tools/main.go`…),
+con nombres, comentarios, mensajes y variables en inglés (`TRAMTAI_KEY`, `TRAMTAI_MODEL`); los campos y las rutas de la
+API propia (`mensajes`, `rol`, `/api/v1/trabajos`…) no se traducen, porque son lo que la API acepta. Van dentro de la
+carpeta de su lenguaje para compartir el módulo de Go, `node_modules` y `requirements.txt`, y `en/file` lee
+`docs/ejemplos/sample.txt`. El agente simulado contesta en inglés cuando la conversación no lleva ¿ ni tildes, y la prueba
+exige los 21 de cada idioma. Al añadir un ejemplo, escribe los dos, ponlos en `esperado` y en las dos mitades de
+`site/desarrolladores.html` (`<code lang="es" data-ejemplo>` y `<code lang="en" data-ejemplo>`): la página en inglés carga
+y copia los de `en/`, y `portada.test.ts` falla si uno trae español.
+
 ## Estructura
 
 ```
