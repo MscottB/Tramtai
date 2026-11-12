@@ -1117,7 +1117,7 @@ const en: Textos = {
   'herramientas.modelo': 'Model: {modelo}',
   'herramientas.soloGlobal': 'Only from the global workspace',
   'herramientas.noDetectadaFila': 'We couldn’t find it on this computer.',
-  'herramientas.claveEnArchivo': 'The key stays in its file, readable only by you',
+  'herramientas.claveEnArchivo': 'The key stays in its file, inside your user folder',
   'herramientas.volverAActivar': 'Turn on again',
   'herramientas.acciones': 'Actions for {nombre}',
   'herramientas.cambiarModelo': 'Change model',

@@ -1128,7 +1128,7 @@ const es = {
   'herramientas.modelo': 'Modelo: {modelo}',
   'herramientas.soloGlobal': 'Solo desde el espacio global',
   'herramientas.noDetectadaFila': 'No la encontramos en este equipo.',
-  'herramientas.claveEnArchivo': 'La clave queda en su archivo, solo para ti',
+  'herramientas.claveEnArchivo': 'La clave queda en su archivo, dentro de tu carpeta de usuario',
   'herramientas.volverAActivar': 'Volver a activar',
   'herramientas.acciones': 'Acciones de {nombre}',
   'herramientas.cambiarModelo': 'Cambiar modelo',
