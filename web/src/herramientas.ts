@@ -9,9 +9,8 @@ import es, { type Clave } from './idiomas/es'
 import { fecha } from './formato'
 import { t } from './i18n'
 
-// TEMA_AYUDA es el tema de la Ayuda que explica estas herramientas. Hoy es el de conectar una app: el tema propio lo trae la
-// Tarea 10 con otro id (el id «herramientas» ya es el de las herramientas de un agente), y entonces se cambia aquí.
-export const TEMA_AYUDA = 'conectar'
+// TEMA_AYUDA es el tema de la Ayuda que explica estas herramientas (el id «herramientas» ya es el de las herramientas de un agente).
+export const TEMA_AYUDA = 'conectar-herramientas'
 
 // textoEstado dice el estado con una palabra; claseEstado, el color de su etiqueta (nunca el único aviso).
 export function textoEstado(estado: string): string {
