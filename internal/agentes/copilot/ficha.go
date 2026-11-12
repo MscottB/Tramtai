@@ -11,25 +11,25 @@ import (
 var valoresEsfuerzo = []string{"low", "medium", "high", "xhigh", "max"}
 
 // descargaWindows es la descarga directa que GitHub documenta (el zip trae solo copilot.exe), con el SHA256SUMS.txt de la
-// misma versión. Hay copilot-win32-arm64.zip para ARM, que esta receta aún no distingue.
+// misma versión. {arq} es x64 o arm64.
 var descargaWindows = adaptadores.DescargaVerificada{
-	URL:      "https://github.com/github/copilot-cli/releases/download/v{version}/copilot-win32-x64.zip",
+	URL:      "https://github.com/github/copilot-cli/releases/download/v{version}/copilot-win32-{arq}.zip",
 	URLSumas: "https://github.com/github/copilot-cli/releases/download/v{version}/SHA256SUMS.txt",
 }
 
-// instalarUnix es el instalador oficial; sin terminal solo avisa del PATH, y VERSION se omite si no se fija versión.
-var instalarUnix = adaptadores.OrdenReceta{Programa: "sh", Argumentos: []string{"-c", "curl -fsSL https://gh.io/copilot-install | bash"},
+// ordenInstalarUnix es el instalador oficial; sin terminal solo avisa del PATH, y VERSION se omite si no se fija versión.
+var ordenInstalarUnix = adaptadores.OrdenReceta{Programa: "sh", Argumentos: []string{"-c", "curl -fsSL https://gh.io/copilot-install | bash"},
 	Entorno: []string{"VERSION={version}"}}
 
-var actualizar = adaptadores.OrdenReceta{Programa: "copilot", Argumentos: []string{"update"}}
+var ordenActualizar = adaptadores.OrdenReceta{Programa: "copilot", Argumentos: []string{"update"}}
 
 // receta es la de Copilot CLI (m0.md, «GitHub Copilot»). En Windows no usa winget (no está para la cuenta de un servicio ni
 // sin administrador): Tramtai baja el zip verificado a la carpeta donde winget deja el CLI, así copilot update y una
 // instalación con winget conviven; no toca el PATH, por eso se encuentra por Rutas. Se actualiza solo al arrancar.
 var receta = adaptadores.Receta{
 	// Windows no tiene entrada en Instalar: va por Descarga.
-	Instalar:   map[string]adaptadores.OrdenReceta{"darwin": instalarUnix, "linux": instalarUnix},
-	Actualizar: map[string]adaptadores.OrdenReceta{"windows": actualizar, "darwin": actualizar, "linux": actualizar},
+	Instalar:   map[string]adaptadores.OrdenReceta{"darwin": ordenInstalarUnix, "linux": ordenInstalarUnix},
+	Actualizar: map[string]adaptadores.OrdenReceta{"windows": ordenActualizar, "darwin": ordenActualizar, "linux": ordenActualizar},
 	Descarga:   map[string]adaptadores.DescargaVerificada{"windows": descargaWindows},
 	Borrar: map[string][]string{
 		"windows": {"~/AppData/Local/GitHubCopilotCLI"},

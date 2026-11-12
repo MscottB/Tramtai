@@ -29,6 +29,7 @@ var receta = adaptadores.Receta{
 		"linux":   {Programa: "codex", Argumentos: []string{"update"}, Entorno: []string{"CODEX_NON_INTERACTIVE=1", "CODEX_RELEASE="}},
 	},
 	Borrar: map[string][]string{
+		// …/Codex/bin es una junction a current\bin: se quita el enlace, no su contenido (lo prueba la Tarea 3).
 		"windows": {"~/AppData/Local/Programs/OpenAI/Codex/bin", "~/.codex/packages/standalone"},
 		"darwin":  {"~/.local/bin/codex", "~/.codex/packages/standalone"},
 		"linux":   {"~/.local/bin/codex", "~/.codex/packages/standalone"},

@@ -58,6 +58,7 @@ func TestLectoresConSalidaReal(t *testing.T) {
 	}{
 		{"claude", "sesion-windows.txt", "https://claude.com/cai/oauth/authorize?code=true&", "", true},
 		{"claude", "sesion-linux-pty.txt", "https://claude.com/cai/oauth/authorize?code=true&", "", true},
+		{"claude", "sesion-windows-codigo-rechazado.txt", "https://claude.com/cai/oauth/authorize?code=true&", "", true},
 		{"codex", "sesion-windows.txt", "https://auth.openai.com/codex/device", "ABCD-12345", false},
 		{"codex", "sesion-sin-color.txt", "https://auth.openai.com/codex/device", "ABCD-12345", false},
 		{"codex", "sesion-linux-pty.txt", "https://auth.openai.com/codex/device", "ABCD-12345", false},
@@ -113,5 +114,84 @@ func TestComprobadasTienenLaDelM0(t *testing.T) {
 		if f.Receta.Sesion == nil && len(f.Receta.Comprobadas["iniciar_sesion"]) != 0 {
 			t.Errorf("%s: sin sesión no hay iniciar_sesion comprobada", id)
 		}
+	}
+}
+
+func TestLectoresNoCasanSinSalida(t *testing.T) {
+	sinSalida := map[string][]string{
+		"claude":  {"", "Opening browser to sign in…\n", "Login failed: That code wasn't accepted. Sign in again to get a new code.\n"},
+		"codex":   {"Not logged in\n", "Welcome to Codex [v0.167.2]\n"},
+		"copilot": {"Waiting for authorization...\n", "Login failed: Error: Failed to request device code: Bad Request\n"},
+	}
+	for id, textos := range sinSalida {
+		f, _ := Buscar(id)
+		for _, texto := range textos {
+			if m := f.Receta.Sesion.Enlace.FindStringSubmatch(texto); m != nil {
+				t.Errorf("%s: %q no tiene enlace y casó %q", id, texto, m)
+			}
+			if c := f.Receta.Sesion.Codigo; c != nil && c.MatchString(texto) {
+				t.Errorf("%s: %q no tiene código y casó", id, texto)
+			}
+		}
+	}
+}
+
+func TestComodinDeComprobadas(t *testing.T) {
+	formato := regexp.MustCompile(`^\d+\.\d+\.(\d+|\*)$`)
+	for _, f := range Todos() {
+		if f.Receta == nil {
+			continue
+		}
+		for accion, versiones := range f.Receta.Comprobadas {
+			for _, v := range versiones {
+				if !formato.MatchString(v) {
+					t.Errorf("%s/%s: versión %q sin forma exacta o 2.1.*", f.Nombre, accion, v)
+				}
+			}
+		}
+	}
+}
+
+func TestFijaVersionYURLsSeguras(t *testing.T) {
+	for _, f := range Todos() {
+		r := f.Receta
+		if r == nil {
+			continue
+		}
+		lleva := false
+		for goos, o := range r.Instalar {
+			lleva = lleva || slices.ContainsFunc(append(slices.Clone(o.Argumentos), o.Entorno...), func(s string) bool { return strings.Contains(s, "{version}") })
+			if !strings.Contains(strings.Join(o.Argumentos, " "), "http") {
+				continue // órdenes sin URL (copilot update…) no se miran
+			}
+			for _, a := range o.Argumentos {
+				for _, url := range regexp.MustCompile(`https?://\S+`).FindAllString(a, -1) {
+					if !strings.HasPrefix(url, "https://") {
+						t.Errorf("%s/%s: %s no es https", f.Nombre, goos, url)
+					}
+				}
+			}
+		}
+		for goos, d := range r.Descarga {
+			lleva = lleva || strings.Contains(d.URL, "{version}")
+			for _, u := range []string{d.URL, d.URLSumas} {
+				if !strings.HasPrefix(u, "https://") {
+					t.Errorf("%s/%s: %s no es https", f.Nombre, goos, u)
+				}
+			}
+			if strings.Contains(d.URLSumas, "{arq}") {
+				t.Errorf("%s/%s: URLSumas solo lleva {version}", f.Nombre, goos)
+			}
+		}
+		if lleva != r.FijaVersion {
+			t.Errorf("%s: FijaVersion = %v pero {version} en Instalar/Descarga = %v", f.Nombre, r.FijaVersion, lleva)
+		}
+		if !strings.HasPrefix(r.Ultima.Nombre, "https://") && r.Ultima.Tipo == "url" {
+			t.Errorf("%s: Ultima no es https", f.Nombre)
+		}
+	}
+	f, _ := Buscar("copilot")
+	if u := f.Receta.Descarga["windows"].URL; !strings.Contains(u, "{arq}") || !strings.Contains(u, "{version}") || !strings.HasPrefix(u, "https://") {
+		t.Errorf("copilot/windows: %s", u)
 	}
 }
