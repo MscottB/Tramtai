@@ -308,3 +308,33 @@ type EstadoConversor struct {
 	// entonces se ofrece, tras un error, para cuando la red de la empresa bloquea la descarga.
 	Paquete bool `json:"paquete,omitempty"`
 }
+
+// PedidoPreparacion es lo que pide POST /api/v1/agentes/{id}/preparacion.
+type PedidoPreparacion struct {
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	// BorrarDatos, al desinstalar, borra también la sesión y los ajustes del CLI.
+	BorrarDatos bool `json:"borrar_datos"`
+	// Confirmar sigue con una versión aún no comprobada.
+	Confirmar bool `json:"confirmar"`
+}
+
+// EstadoPreparacion es el de la preparación de un agente (internal/preparar): la que está en marcha o la última.
+type EstadoPreparacion struct {
+	Agente string `json:"agente"`
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	Estado string `json:"estado" ts:"'instalando' | 'actualizando' | 'desinstalando' | 'comprobando' | 'esperando_usuario' | 'listo' | 'error' | 'cancelado'"`
+	Etapa  string `json:"etapa,omitempty" ts:"'descarga' | 'orden' | 'borrado'"`
+	// Enlace y Codigo son los del inicio de sesión; PidePegar, si el CLI espera que se le pegue un código.
+	Enlace    string `json:"enlace,omitempty"`
+	Codigo    string `json:"codigo,omitempty"`
+	PidePegar bool   `json:"pide_pegar,omitempty"`
+	// MotivoCodigo es el código del error (estado error) y Mensaje, el texto legible.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'requisito_falta' | 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'"`
+	Mensaje      string `json:"mensaje,omitempty"`
+	// Lineas son las últimas 20 de la salida, sin nada con forma de secreto.
+	Lineas         []string   `json:"lineas,omitempty"`
+	VersionAntes   string     `json:"version_antes,omitempty"`
+	VersionDespues string     `json:"version_despues,omitempty"`
+	Inicio         *time.Time `json:"inicio,omitempty"`
+	Fin            *time.Time `json:"fin,omitempty"`
+}
