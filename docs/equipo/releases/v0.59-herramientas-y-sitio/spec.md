@@ -100,7 +100,7 @@ reales»).
    no queda ninguna clave en disco. Para Continue y opencode/Kilo, la clave va en su archivo (0600 en Linux y macOS; en Windows la protege la ACL heredada
    de la carpeta del usuario), y la app lo dice.
 4. **Copia:** el archivo entero se copia en `datos-tramtai/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, con
-   permisos solo para el usuario: puede tener otros secretos suyos. Se guardan como mucho las **3 copias** más recientes
+   0600 en Linux y macOS (en Windows, la ACL heredada de la carpeta del usuario): puede tener otros secretos suyos. Se guardan como mucho las **3 copias** más recientes
    de cada herramienta; olvidar no las borra.
 5. **Escritura:** Tramtai escribe solo lo suyo y anota en `datos-tramtai/herramientas/<id>.json` qué escribió y qué
    valores había antes. La anotación nunca lleva secretos: de una clave escrita en un archivo guarda su huella
@@ -172,7 +172,8 @@ y una petición real.
   - se respetan los cambios del usuario hechos después de activar;
   - se rechaza un archivo roto sin tocarlo;
   - en un proyecto nunca se escribe `.claude/settings.json`;
-  - las copias y los archivos con clave quedan con permisos solo para el usuario.
+  - las copias y los archivos con clave quedan con 0600 en Linux y macOS (en Windows, con la ACL heredada de la carpeta
+    del usuario).
 - **Servicio:** las rutas de la API para la Web UI y la terminal.
 - **Paridad:** las pruebas de paridad de la terminal y de la Web UI.
 

@@ -96,6 +96,7 @@ func TestEjemplos(t *testing.T) {
 	}
 	type caso struct{ lenguaje, nombre string } // nombre va con / desde la carpeta del lenguaje: en/tools.py
 	var casos []caso
+	porIdioma := map[string]int{}
 	for _, l := range []string{"python", "javascript", "curl", "go"} {
 		for _, sub := range []string{"", "en"} {
 			entradas, _ := os.ReadDir(filepath.Join(raiz, l, sub))
@@ -103,12 +104,13 @@ func TestEjemplos(t *testing.T) {
 				esGo := l == "go" && e.IsDir() && e.Name() != "en"
 				if ext := filepath.Ext(e.Name()); ext == ".py" || ext == ".mjs" || ext == ".sh" || esGo {
 					casos = append(casos, caso{l, path.Join(sub, e.Name())})
+					porIdioma[sub]++
 				}
 			}
 		}
 	}
-	if len(casos) < 42 {
-		t.Fatalf("faltan ejemplos (21 en español y 21 en inglés): %v", casos)
+	if porIdioma[""] < 21 || porIdioma["en"] < 21 {
+		t.Fatalf("faltan ejemplos (21 en español y 21 en inglés): %d y %d", porIdioma[""], porIdioma["en"])
 	}
 	for _, c := range casos {
 		t.Run(c.lenguaje+"/"+c.nombre, func(t *testing.T) {
