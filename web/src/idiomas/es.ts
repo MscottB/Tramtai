@@ -815,6 +815,8 @@ const es = {
   'error.entrada_remota_no_disponible': 'Aquí no se puede entrar con contraseña',
   'error.accion_no_permitida': 'El servidor no permite hacer eso ahora',
   'error.entrada_ocupada': 'Hay demasiados intentos de entrada a la vez: vuelve a probar en unos segundos',
+  'error.no_disponible_en_servidor': 'Las herramientas no están disponibles en el servidor',
+  'error.herramienta_en_conflicto': 'La herramienta no se pudo cambiar ahora: lee el detalle',
   'error.confianza_requerida': 'Hay que decidir si confías en esa carpeta',
   'error.espacio_detenido': 'El espacio de este proyecto está detenido',
   'error.conflicto_idempotencia': 'Ya hay otra petición con esa clave de idempotencia: usa una clave nueva para cada envío distinto',

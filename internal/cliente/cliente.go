@@ -561,6 +561,44 @@ func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (cont
 	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
 }
 
+// Herramientas devuelve las herramientas de terceros (Claude Code, Codex…) vistas desde el espacio.
+func (c *Cliente) Herramientas(ctx context.Context, inst string) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "GET", "/api/v1/herramientas", inst, nil)
+}
+
+// ActivarHerramientas apunta a Tramtai las herramientas indicadas (o todas las detectadas) y devuelve la lista.
+func (c *Cliente) ActivarHerramientas(ctx context.Context, inst string, p contrato.ActivarHerramientas) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "POST", "/api/v1/herramientas/activar", inst, cuerpoJSON(p))
+}
+
+// DesactivarHerramientas quita Tramtai de las herramientas indicadas (o de todas) y detiene sus APIs.
+func (c *Cliente) DesactivarHerramientas(ctx context.Context, inst string, ids []string, todas bool) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "POST", "/api/v1/herramientas/desactivar", inst, cuerpoJSON(map[string]any{"ids": ids, "todas": todas}))
+}
+
+func (c *Cliente) herramientas(ctx context.Context, metodo, ruta, inst string, cuerpo io.Reader) ([]contrato.EstadoHerramienta, error) {
+	var r struct {
+		Herramientas []contrato.EstadoHerramienta `json:"herramientas"`
+	}
+	err := c.pedir(ctx, metodo, ruta, inst, cuerpo, "application/json", &r)
+	return r.Herramientas, err
+}
+
+// OlvidarHerramienta desactiva la herramienta y borra su clave del almacén y lo que Tramtai sabía de ella; su API queda
+// detenida en Mis APIs.
+func (c *Cliente) OlvidarHerramienta(ctx context.Context, inst, id string) error {
+	return c.pedir(ctx, "POST", "/api/v1/herramientas/"+url.PathEscape(id)+"/olvidar", inst, nil, "", nil)
+}
+
+// RestaurarHerramienta devuelve el archivo de la herramienta a como estaba antes de activarla; copia es la copia usada.
+func (c *Cliente) RestaurarHerramienta(ctx context.Context, inst, id string) (copia string, err error) {
+	var r struct {
+		Copia string `json:"copia"`
+	}
+	err = c.pedir(ctx, "POST", "/api/v1/herramientas/"+url.PathEscape(id)+"/restaurar", inst, nil, "", &r)
+	return r.Copia, err
+}
+
 func (c *Cliente) Trabajo(ctx context.Context, instancia, id string) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
 	return t, c.pedir(ctx, "GET", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", &t)

@@ -30,7 +30,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n), Contadores: contadores(e.Trabajos)})
 		return true
 	}
-	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {
+	herramientas := ruta == "/api/v1/herramientas" || strings.HasPrefix(ruta, "/api/v1/herramientas/")
+	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") && !herramientas {
 		return false
 	}
 	if !privilegiada {
@@ -38,6 +39,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return true
 	}
 	switch {
+	case herramientas:
+		s.rutaHerramientas(w, r, inst)
 	case ruta == "/api/v1/instancia/pasos" && r.Method == http.MethodGet:
 		api.EscribirJSON(w, http.StatusOK, s.primerosPasos(r.Context(), inst, mismoUsuarioLocal(r)))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:

@@ -15,9 +15,10 @@ import (
 // Nombres son las variables que admite el almacén; cada una se guarda como tramtai/<NOMBRE>.
 var Nombres = []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_API_KEY", "GEMINI_API_KEY", "COPILOT_GITHUB_TOKEN"}
 
-// Internos son los secretos propios de Tramtai que van al mismo almacén (el TOTP del administrador del servidor): no
-// son claves de proveedor, así que ni «claves lista» los enseña ni «claves guardar» los acepta.
-var Internos = []string{"TRAMTAI_TOTP"}
+// Internos son los secretos propios de Tramtai que van al mismo almacén (el TOTP del administrador del servidor y las
+// claves de las herramientas que la piden con una orden): no son claves de proveedor, así que ni «claves lista» los
+// enseña ni «claves guardar» los acepta.
+var Internos = []string{"TRAMTAI_TOTP", "TRAMTAI_HERRAMIENTA_CLAUDE_CODE", "TRAMTAI_HERRAMIENTA_CODEX"}
 
 // Admitido indica si el nombre es una de las claves que Tramtai sabe usar.
 func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }
