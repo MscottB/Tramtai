@@ -60,12 +60,12 @@ func TestServicioIniciarNoAvisa(t *testing.T) {
 		}
 		return c
 	}
-	for _, args := range [][]string{{"servicio", "iniciar"}, {"terminos"}, {"terminos", "aceptar"}, {"terminal"}} {
+	for _, args := range [][]string{{"servicio", "iniciar"}, {"terminos"}, {"terminos", "aceptar"}, {"terminal"}, {"herramientas", "clave"}} {
 		if !sinAviso(buscar(args...)) {
 			t.Errorf("%v no debe avisar", args)
 		}
 	}
-	for _, args := range [][]string{{"version"}, {"servicio", "detener"}, {"abrir"}, {"agentes"}} {
+	for _, args := range [][]string{{"version"}, {"servicio", "detener"}, {"abrir"}, {"agentes"}, {"herramientas", "listar"}} {
 		if sinAviso(buscar(args...)) {
 			t.Errorf("%v debe avisar", args)
 		}

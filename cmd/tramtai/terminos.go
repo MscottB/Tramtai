@@ -45,9 +45,10 @@ func comandoTerminos() *cobra.Command {
 var sinAvisoDeTerminos = []string{"terminos", "terminal", "servidor", "help", "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}
 
 // sinAviso dice si la orden no avisa: las de sinAvisoDeTerminos (y las que cuelgan de ellas), la raíz sola y
-// «servicio iniciar», que se lanza en segundo plano con su stderr en servicio-salida.log y lo ensuciaría en cada arranque.
+// «servicio iniciar», que se lanza en segundo plano con su stderr en servicio-salida.log y lo ensuciaría en cada arranque,
+// y «herramientas clave», que Claude Code y Codex ejecutan una y otra vez (Codex cada 300 s) y solo esperan la clave.
 func sinAviso(cmd *cobra.Command) bool {
-	if cmd.Parent() == nil || cmd.Name() == "iniciar" && cmd.Parent().Name() == "servicio" {
+	if cmd.Parent() == nil || cmd.Name() == "iniciar" && cmd.Parent().Name() == "servicio" || cmd.Name() == "clave" && cmd.Parent().Name() == "herramientas" {
 		return true
 	}
 	for c := cmd; c != nil; c = c.Parent() {
