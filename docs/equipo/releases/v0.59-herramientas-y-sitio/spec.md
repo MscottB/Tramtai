@@ -97,8 +97,8 @@ reales»).
    grupo «Herramientas», limitada a ese agente y con su propia clave. Si ya existe (porque se activó antes), la reanuda.
 3. **Clave:** Claude Code y Codex admiten pedirla a una orden. Para ellas, la clave se guarda cifrada en el almacén del
    sistema (donde ya están las de los proveedores) y su configuración llama a `tramtai herramientas clave <id>`, así que
-   no queda ninguna clave en disco. Para Continue y opencode/Kilo, la clave va en su archivo, con permisos solo para el
-   usuario, y la app lo dice.
+   no queda ninguna clave en disco. Para Continue y opencode/Kilo, la clave va en su archivo (0600 en Linux y macOS; en Windows la protege la ACL heredada
+   de la carpeta del usuario), y la app lo dice.
 4. **Copia:** el archivo entero se copia en `datos-tramtai/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, con
    permisos solo para el usuario: puede tener otros secretos suyos. Se guardan como mucho las **3 copias** más recientes
    de cada herramienta; olvidar no las borra.
@@ -161,7 +161,7 @@ Tramtai (nunca la del usuario ni su puerto 17373). Comprueba:
 - que los nombres `agente/modelo` llegan enteros;
 - que `apiKeyHelper` y `auth.command` funcionan.
 
-Lo que no encaje se arregla en la ruta de Tramtai, dentro de la versión. Continue y opencode se comprueban con su archivo
+Lo que no encaje se arregla en la ruta de Tramtai, dentro de la versión. Continue, opencode y Kilo Code se comprueban con su archivo
 y una petición real.
 
 ### Pruebas
@@ -182,7 +182,7 @@ Un tema nuevo, «Conectar tus herramientas» (id `conectar-herramientas`: `herra
 `tools` de los agentes):
 - qué toca en cada una;
 - dónde está la copia y cómo deshacer;
-- por qué la clave de Continue y opencode va en su archivo;
+- por qué la clave de Continue, opencode y Kilo Code va en su archivo;
 - qué pasa con los equipos que sincronizan su configuración.
 
 En el sitio, lo de la sección 3.
@@ -375,7 +375,7 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
 **Herramientas:**
 - Con Claude Code y Codex reales, activar desde la app, la terminal o la CLI deja la herramienta hablando con Tramtai sin
   ninguna clave en su archivo. Desactivar la devuelve a como estaba, respetando lo que el usuario cambió después.
-- Continue y opencode/Kilo quedan apuntados, con la clave en su archivo y permisos solo para el usuario.
+- Continue y opencode/Kilo quedan apuntados, con la clave en su archivo, dentro de la carpeta del usuario.
 - «Activar todas» y «Desactivar todas» hacen lo mismo con todas las detectadas.
 - Siempre queda una copia del archivo antes del primer cambio, y «Restaurar» la repone.
 - Desde un proyecto, solo se escribe `.claude/settings.local.json`.
