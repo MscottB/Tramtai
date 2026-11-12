@@ -42,8 +42,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
         <a href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="#terminal">Terminal</a>
+        <a href="#servidor"><span lang="es">Servidor</span><span lang="en">Server</span></a>
         <a href="#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
-        <a href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
         <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
         <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
       </nav>
@@ -66,15 +67,15 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <!-- /comun:cabecera -->
 
 <main id="contenido" tabindex="-1">
-  <section class="portada">
+  <section id="portada" class="portada">
     <div class="envoltura">
       <h1>
         <span lang="es">Tus agentes de IA, <em>como una API local</em>.</span>
         <span lang="en">Your AI agents, <em>as a local API</em>.</span>
       </h1>
       <p class="entrada">
-        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL.</span>
-        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. If your app already uses the OpenAI or Anthropic SDK, you only change the URL.</span>
+        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL y la clave.</span>
+        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. If your app already uses the OpenAI or Anthropic SDK, you only change the URL and the key.</span>
       </p>
       <div class="acciones">
         <a class="boton principal" href="#descargar" data-descarga>
@@ -83,6 +84,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         </a>
         <a class="boton secundario" href="ayuda/empezar.html"><span lang="es">Cómo empezar</span><span lang="en">How to get started</span></a>
       </div>
+      <!-- Las tres formas de usar la misma Tramtai, cada una con su sección. -->
+      <nav class="accesos" aria-label="Formas de usarlo" data-aria-en="Ways to use it">
+        <a href="#app"><span lang="es">Escritorio</span><span lang="en">Desktop</span></a>
+        <span aria-hidden="true">·</span>
+        <a href="#terminal">Terminal</a>
+        <span aria-hidden="true">·</span>
+        <a href="#servidor"><span lang="es">Servidor</span><span lang="en">Server</span></a>
+      </nav>
       <p class="nota">
         <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso personal y no comercial</span>
         <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for personal and non-commercial use</span>
@@ -223,9 +232,10 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
     </div>
   </section>
 
-  <!-- El problema y la solución, dibujados (v0.56): el antes y el después en SVG con su texto visible, y los seis motivos.
-       El color de cada agente solo aparece en «Con Tramtai», en la línea de su agente. -->
-  <section id="pagas" class="destacado">
+  <!-- Por qué Tramtai (v0.59): el antes y el después en SVG con su texto visible (v0.56), cuatro cifras del producto que
+       se comprueban en esta misma página y la línea de seis ventajas. El color de cada agente solo aparece en «Con
+       Tramtai», en la línea de su agente; la línea de ventajas va en el acento. -->
+  <section id="por-que" class="destacado">
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
@@ -312,63 +322,44 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <figcaption><span lang="es">Una URL local y los agentes que ya tienes.</span><span lang="en">One local URL and the agents you already have.</span></figcaption>
         </figure>
       </div>
-      <ul class="motivos">
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
-          <h3><span lang="es">Lo que ya pagas</span><span lang="en">What you already pay for</span></h3>
-          <p><span lang="es">Para tus apps, la clave de API de cada agente; tu suscripción de Claude, ChatGPT o GitHub Copilot, solo para tu uso personal.</span><span lang="en">For your apps, each agent’s API key; your Claude, ChatGPT or GitHub Copilot subscription, only for your personal use.</span></p>
-        </li>
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-          <h3><span lang="es">En tu equipo</span><span lang="en">On your computer</span></h3>
-          <p><span lang="es">Todo corre en tu equipo; tus peticiones no pasan por nosotros.</span><span lang="en">Everything runs on your computer; your requests don’t go through us.</span></p>
-        </li>
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14m-3-3 3 3-3 3M20 16H6m3-3-3 3 3 3"/></svg>
-          <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
-          <p><span lang="es">Hablas con los agentes desde el SDK que ya usas, con respuesta en vivo y llamadas a herramientas.</span><span lang="en">Talk to the agents from the SDK you already use, with live responses and tool calls.</span></p>
-        </li>
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h6l4-6h8M9 12l4 6h8"/></svg>
-          <h3><span lang="es">Respaldo</span><span lang="en">Fallback</span></h3>
-          <p><span lang="es">Si un agente no puede, sigue otro de tu lista.</span><span lang="en">If one agent can’t, another on your list carries on.</span></p>
-        </li>
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          <h3><span lang="es">Por proyecto</span><span lang="en">Per project</span></h3>
-          <p><span lang="es">Cada proyecto, con lo suyo aparte.</span><span lang="en">Each project, with its own things kept apart.</span></p>
-        </li>
-        <li class="motivo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-          <h3><span lang="es">Bajo control</span><span lang="en">In control</span></h3>
-          <p><span lang="es">Límites por app y cada petición a la vista.</span><span lang="en">Limits per app, and every request in view.</span></p>
-        </li>
+      <!-- Cifras del producto, no de uso: cada una se comprueba en esta página (Agentes, Funciones, Privacidad y el código
+           de Cómo funciona). -->
+      <ul class="cifras">
+        <li class="cifra"><span class="cifra-numero">4</span><span class="cifra-texto"><span lang="es">agentes desde tus apps</span><span lang="en">agents from your apps</span></span></li>
+        <li class="cifra"><span class="cifra-numero">3</span><span class="cifra-texto"><span lang="es">APIs: OpenAI, Anthropic y la propia</span><span lang="en">APIs: OpenAI, Anthropic and the native one</span></span></li>
+        <li class="cifra"><span class="cifra-numero">0</span><span class="cifra-texto"><span lang="es">telemetría y ningún servidor nuestro</span><span lang="en">telemetry and no server of ours</span></span></li>
+        <li class="cifra"><span class="cifra-numero">2</span><span class="cifra-texto"><span lang="es">cambios en tu app: la URL y la clave</span><span lang="en">changes in your app: the URL and the key</span></span></li>
       </ul>
-    </div>
-  </section>
-
-  <section class="conexiones">
-    <div class="envoltura">
-      <div class="panel">
-        <h2 class="panel-titulo"><span lang="es">Conecta estos agentes</span><span lang="en">Works with these agents</span></h2>
-        <ul class="fichas">
-          <li style="--c: var(--claude)"><span class="punto"></span>Claude Code</li>
-          <li style="--c: var(--codex)"><span class="punto"></span>Codex</li>
-          <li style="--c: var(--copilot)"><span class="punto"></span>GitHub Copilot CLI</li>
-          <li style="--c: var(--gemini)"><span class="punto"></span>Gemini API</li>
-          <li class="sin-apps"><span class="punto"></span>Antigravity <span lang="es">(fuera de tus apps)</span><span lang="en">(not for your apps)</span></li>
-        </ul>
-      </div>
-      <div class="panel">
-        <h2 class="panel-titulo"><span lang="es">Desde tus apps y SDK</span><span lang="en">From your apps and SDKs</span></h2>
-        <ul class="fichas">
-          <li><span class="punto"></span><span lang="es">SDK de OpenAI</span><span lang="en">OpenAI SDK</span></li>
-          <li><span class="punto"></span><span lang="es">SDK de Anthropic</span><span lang="en">Anthropic SDK</span></li>
-          <li><span class="punto"></span>curl</li>
-          <li><span class="punto"></span>LangChain</li>
-          <li><span class="punto"></span>n8n</li>
-          <li><span class="punto"></span><span lang="es">API propia (OpenAPI)</span><span lang="en">Native API (OpenAPI)</span></li>
-        </ul>
+      <!-- La línea de ventajas: una vía con seis estaciones en el acento. Son dos listas de tres: en el móvil se leen como una sola línea de seis y, desde 901 px, van lado a lado, cada una con sus paradas a su ritmo. -->
+      <div class="ventajas">
+      <ol class="ventajas-linea">
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
+          <p class="parada-texto"><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
+          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue and opencode at itself.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
+          <p class="parada-texto"><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
+        </li>
+      </ol>
+      <ol class="ventajas-linea" start="4">
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
+          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
+          <p class="parada-texto"><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
+        </li>
+        <li class="parada parada-ventaja">
+          <h3 class="parada-titulo"><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
+          <p class="parada-texto"><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH, or always on your server.</span></p>
+        </li>
+      </ol>
       </div>
     </div>
   </section>
@@ -391,9 +382,26 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <li>
             <h3><span lang="es">Apunta tu aplicación</span><span lang="en">Point your app</span></h3>
             <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
+            <p class="suave"><span lang="es">A Claude Code, Codex, Continue, opencode y Kilo los apunta Tramtai por ti, en Mis APIs → Herramientas: antes guarda una copia de su configuración, y un interruptor los deja como estaban. <a href="ayuda/conectar-herramientas.html">Conectar tus herramientas</a></span><span lang="en">Tramtai points Claude Code, Codex, Continue, opencode and Kilo at itself for you, in My APIs → Tools: it first saves a copy of their configuration, and a switch puts them back as they were. <a href="ayuda/conectar-herramientas.html">Connect your tools</a></span></p>
           </li>
         </ol>
-<pre class="codigo" id="codigo-como"><span class="k">import</span> anthropic
+        <!-- El mismo mensaje por las tres puertas. Sin JavaScript no hay pestañas y queda el primer ejemplo; sitio.js las
+             enciende con el patrón de la guía del desarrollador (flechas, Inicio y Fin). -->
+        <div class="pestanas" data-pestanas>
+          <div class="pestanas-lista" role="tablist" aria-label="Ejemplo" data-aria-en="Example" hidden><button type="button" role="tab" id="como-openai" aria-controls="como-openai-panel" aria-selected="true" tabindex="0" data-lenguaje="openai">OpenAI</button><button type="button" role="tab" id="como-anthropic" aria-controls="como-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Anthropic</button><button type="button" role="tab" id="como-curl" aria-controls="como-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+<pre class="codigo" id="como-openai-panel" aria-labelledby="como-openai" tabindex="0"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+<span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
+cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+
+<span class="c" lang="es"># La respuesta llega en vivo, trozo a trozo</span><span class="c" lang="en"># The response arrives live, chunk by chunk</span>
+flujo = cliente.chat.completions.create(
+    model=<span class="s">"claude/sonnet"</span>, stream=<span class="k">True</span>,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Explica este error en dos frases"</span>}],
+)
+<span class="k">for</span> trozo <span class="k">in</span> flujo:
+    <span class="k">print</span>(trozo.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
+<pre class="codigo" id="como-anthropic-panel" aria-labelledby="como-anthropic" tabindex="0" hidden><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
 cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
@@ -401,56 +409,18 @@ cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/a
 respuesta = cliente.messages.create(
     model=<span class="s">"claude/haiku"</span>, max_tokens=1024,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
-)</pre>
+)
+<span class="k">print</span>(respuesta.content[0].text)</pre>
+<pre class="codigo" id="como-curl-panel" aria-labelledby="como-curl" tabindex="0" hidden><span class="c" lang="es"># La misma petición por la URL compatible con OpenAI</span><span class="c" lang="en"># The same request through the OpenAI-compatible URL</span>
+curl http://127.0.0.1:17373/openai/v1/chat/completions \
+  -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "Resume este contrato en tres puntos"}]}'</span></pre>
+        </div>
       </div>
     </div>
   </section>
 
-  <section id="terminal">
-    <div class="envoltura">
-      <div class="cabeza">
-        <h2><span lang="es">Todo desde la terminal.</span><span lang="en">Everything from the terminal.</span></h2>
-        <p class="suave"><span lang="es">Nuevo en la v0.56: <code>tramtai terminal</code> tiene las mismas ocho páginas que la app, de Inicio a la Ayuda. Sirve sin abrir la app y por SSH al equipo donde corre Tramtai.</span><span lang="en">New in v0.56: <code>tramtai terminal</code> has the same eight pages as the app, from Home to Help. It works without opening the app and over SSH to the computer where Tramtai runs.</span></p>
-        <p class="suave"><span lang="es">Tab abre el menú, del 1 al 7 vas a cada página, <code>?</code> abre la Ayuda de la página y Esc vuelve. Necesita una ventana de 60×20 como mínimo, y con <code>NO_COLOR</code> va sin color. Paso a paso, en <a href="ayuda/empezar.html#s-soloterminal">Solo con la terminal</a>.</span><span lang="en">Tab opens the menu, 1 to 7 go to each page, <code>?</code> opens the page’s Help and Esc goes back. It needs a window of at least 60×20, and with <code>NO_COLOR</code> it runs without color. Step by step, in <a href="ayuda/empezar.html#s-soloterminal">Terminal only</a>.</span></p>
-      </div>
-<pre class="codigo"><span class="c" lang="es"># El servicio en segundo plano, sin abrir la app</span><span class="c" lang="en"># The service in the background, without the app</span>
-tramtai servicio iniciar -d
-
-<span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
-tramtai terminal</pre>
-      <div class="terminal-capturas">
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/terminal-inicio-claro-es-1440.webp" srcset="capturas/terminal-inicio-claro-es-960.webp 960w, capturas/terminal-inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
-          <img class="solo-claro" lang="en" src="capturas/terminal-inicio-claro-en-1440.webp" srcset="capturas/terminal-inicio-claro-en-960.webp 960w, capturas/terminal-inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
-          <img class="solo-oscuro" lang="es" src="capturas/terminal-inicio-oscuro-es-1440.webp" srcset="capturas/terminal-inicio-oscuro-es-960.webp 960w, capturas/terminal-inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
-          <img class="solo-oscuro" lang="en" src="capturas/terminal-inicio-oscuro-en-1440.webp" srcset="capturas/terminal-inicio-oscuro-en-960.webp 960w, capturas/terminal-inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
-        </figure>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/terminal-apis-claro-es-1440.webp" srcset="capturas/terminal-apis-claro-es-960.webp 960w, capturas/terminal-apis-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
-          <img class="solo-claro" lang="en" src="capturas/terminal-apis-claro-en-1440.webp" srcset="capturas/terminal-apis-claro-en-960.webp 960w, capturas/terminal-apis-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
-          <img class="solo-oscuro" lang="es" src="capturas/terminal-apis-oscuro-es-1440.webp" srcset="capturas/terminal-apis-oscuro-es-960.webp 960w, capturas/terminal-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
-          <img class="solo-oscuro" lang="en" src="capturas/terminal-apis-oscuro-en-1440.webp" srcset="capturas/terminal-apis-oscuro-en-960.webp 960w, capturas/terminal-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <section id="servidor">
-    <div class="envoltura">
-      <div class="cabeza">
-        <h2><span lang="es">Y en tu propio servidor.</span><span lang="en">And on your own server.</span></h2>
-        <p class="suave"><span lang="es">Nuevo en la v0.58: el modo servidor instala Tramtai como servicio del sistema en Linux o Windows Server. Arranca con el equipo, sin que nadie inicie sesión, y se abre desde otros equipos solo por HTTPS, con la contraseña del administrador y, si quieres, un segundo factor.</span><span lang="en">New in v0.58: server mode installs Tramtai as a system service on Linux or Windows Server. It starts with the computer, with nobody signed in, and opens from other computers over HTTPS only, with the administrator password and, if you want, a second factor.</span></p>
-        <p class="suave"><span lang="es">Es <strong>otro entorno</strong>: tus APIs, claves y ajustes del escritorio no pasan al servidor, ni al revés, y la cabecera siempre dice en cuál estás. <a href="servidor.html">La guía del servidor</a> explica cómo instalarlo, ponerlo detrás de tu proxy y qué riesgos asumes.</span><span lang="en">It’s <strong>a separate environment</strong>: your desktop APIs, keys and settings don’t carry over to the server, or the other way around, and the header always says which one you’re in. <a href="servidor.html">The server guide</a> explains how to install it, put it behind your proxy and which risks you take on.</span></p>
-      </div>
-<pre class="codigo"><span class="c" lang="es"># Linux, desde el .tar.gz: pide aceptar los términos</span><span class="c" lang="en"># Linux, from the .tar.gz: it asks you to accept the terms</span>
-sudo ./tramtai servidor instalar
-
-<span class="c" lang="es"># La contraseña de la Web UI remota</span><span class="c" lang="en"># The remote Web UI password</span>
-sudo tramtai-servidor administrador contraseña</pre>
-    </div>
-  </section>
-
-  <section id="capturas">
+  <section id="app">
     <div class="envoltura">
       <div class="cabeza centrada">
         <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
@@ -463,8 +433,10 @@ sudo tramtai-servidor administrador contraseña</pre>
           <p class="suave"><span lang="es">Cada petición viaja en vivo por la línea de su agente: ves qué apps llegan a Tramtai, qué agentes están en servicio y por dónde va cada una.</span><span lang="en">Every request travels live along its agent’s line: see which apps reach Tramtai, which agents are in service and where each request is.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/inicio-claro-1440.webp" srcset="capturas/inicio-claro-640.webp 640w, capturas/inicio-claro-960.webp 960w, capturas/inicio-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente" data-alt-en="Home: the live map with your apps, Tramtai and one line per agent">
-          <img class="solo-oscuro" src="capturas/inicio-oscuro-1440.webp" srcset="capturas/inicio-oscuro-640.webp 640w, capturas/inicio-oscuro-960.webp 960w, capturas/inicio-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente" data-alt-en="Home: the live map with your apps, Tramtai and one line per agent">
+          <img class="solo-claro" lang="es" src="capturas/inicio-claro-es-1440.webp" srcset="capturas/inicio-claro-es-640.webp 640w, capturas/inicio-claro-es-960.webp 960w, capturas/inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
+          <img class="solo-claro" lang="en" src="capturas/inicio-claro-en-1440.webp" srcset="capturas/inicio-claro-en-640.webp 640w, capturas/inicio-claro-en-960.webp 960w, capturas/inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
+          <img class="solo-oscuro" lang="es" src="capturas/inicio-oscuro-es-1440.webp" srcset="capturas/inicio-oscuro-es-640.webp 640w, capturas/inicio-oscuro-es-960.webp 960w, capturas/inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
+          <img class="solo-oscuro" lang="en" src="capturas/inicio-oscuro-en-1440.webp" srcset="capturas/inicio-oscuro-en-640.webp 640w, capturas/inicio-oscuro-en-960.webp 960w, capturas/inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
         </figure>
       </article>
       <article class="par invertido">
@@ -474,8 +446,10 @@ sudo tramtai-servidor administrador contraseña</pre>
           <p class="suave"><span lang="es">El espacio global y uno por cada proyecto, con su historial, sus APIs y sus ajustes. Actívalos o detenlos, y si mueves la carpeta de un proyecto, la vuelves a ubicar sin perder nada.</span><span lang="en">The global workspace and one per project, each with its history, APIs and settings. Start or stop them, and if you move a project’s folder, point Tramtai to it again without losing anything.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/espacios-claro-1440.webp" srcset="capturas/espacios-claro-640.webp 640w, capturas/espacios-claro-960.webp 960w, capturas/espacios-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones" data-alt-en="Workspaces: the global workspace and one per project, with their status, APIs and requests">
-          <img class="solo-oscuro" src="capturas/espacios-oscuro-1440.webp" srcset="capturas/espacios-oscuro-640.webp 640w, capturas/espacios-oscuro-960.webp 960w, capturas/espacios-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones" data-alt-en="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+          <img class="solo-claro" lang="es" src="capturas/espacios-claro-es-1440.webp" srcset="capturas/espacios-claro-es-640.webp 640w, capturas/espacios-claro-es-960.webp 960w, capturas/espacios-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
+          <img class="solo-claro" lang="en" src="capturas/espacios-claro-en-1440.webp" srcset="capturas/espacios-claro-en-640.webp 640w, capturas/espacios-claro-en-960.webp 960w, capturas/espacios-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+          <img class="solo-oscuro" lang="es" src="capturas/espacios-oscuro-es-1440.webp" srcset="capturas/espacios-oscuro-es-640.webp 640w, capturas/espacios-oscuro-es-960.webp 960w, capturas/espacios-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
+          <img class="solo-oscuro" lang="en" src="capturas/espacios-oscuro-en-1440.webp" srcset="capturas/espacios-oscuro-en-640.webp 640w, capturas/espacios-oscuro-en-960.webp 960w, capturas/espacios-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
         </figure>
       </article>
       <article class="par">
@@ -485,8 +459,10 @@ sudo tramtai-servidor administrador contraseña</pre>
           <p class="suave"><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/probar-claro-1440.webp" srcset="capturas/probar-claro-640.webp 640w, capturas/probar-claro-960.webp 960w, capturas/probar-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
-          <img class="solo-oscuro" src="capturas/probar-oscuro-1440.webp" srcset="capturas/probar-oscuro-640.webp 640w, capturas/probar-oscuro-960.webp 960w, capturas/probar-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
+          <img class="solo-claro" lang="es" src="capturas/probar-claro-es-1440.webp" srcset="capturas/probar-claro-es-640.webp 640w, capturas/probar-claro-es-960.webp 960w, capturas/probar-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
+          <img class="solo-claro" lang="en" src="capturas/probar-claro-en-1440.webp" srcset="capturas/probar-claro-en-640.webp 640w, capturas/probar-claro-en-960.webp 960w, capturas/probar-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
+          <img class="solo-oscuro" lang="es" src="capturas/probar-oscuro-es-1440.webp" srcset="capturas/probar-oscuro-es-640.webp 640w, capturas/probar-oscuro-es-960.webp 960w, capturas/probar-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
+          <img class="solo-oscuro" lang="en" src="capturas/probar-oscuro-en-1440.webp" srcset="capturas/probar-oscuro-en-640.webp 640w, capturas/probar-oscuro-en-960.webp 960w, capturas/probar-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
         </figure>
       </article>
       <article class="par invertido">
@@ -496,8 +472,10 @@ sudo tramtai-servidor administrador contraseña</pre>
           <p class="suave"><span lang="es">Búscalas, fíltralas y mira cómo conectar cada una. La clave del espacio queda para ti y tus scripts.</span><span lang="en">Search, filter and see how to connect each one. The workspace key is for you and your scripts.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/mis-apis-claro-1440.webp" srcset="capturas/mis-apis-claro-640.webp 640w, capturas/mis-apis-claro-960.webp 960w, capturas/mis-apis-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-          <img class="solo-oscuro" src="capturas/mis-apis-oscuro-1440.webp" srcset="capturas/mis-apis-oscuro-640.webp 640w, capturas/mis-apis-oscuro-960.webp 960w, capturas/mis-apis-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          <img class="solo-claro" lang="es" src="capturas/mis-apis-claro-es-1440.webp" srcset="capturas/mis-apis-claro-es-640.webp 640w, capturas/mis-apis-claro-es-960.webp 960w, capturas/mis-apis-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
+          <img class="solo-claro" lang="en" src="capturas/mis-apis-claro-en-1440.webp" srcset="capturas/mis-apis-claro-en-640.webp 640w, capturas/mis-apis-claro-en-960.webp 960w, capturas/mis-apis-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          <img class="solo-oscuro" lang="es" src="capturas/mis-apis-oscuro-es-1440.webp" srcset="capturas/mis-apis-oscuro-es-640.webp 640w, capturas/mis-apis-oscuro-es-960.webp 960w, capturas/mis-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
+          <img class="solo-oscuro" lang="en" src="capturas/mis-apis-oscuro-en-1440.webp" srcset="capturas/mis-apis-oscuro-en-640.webp 640w, capturas/mis-apis-oscuro-en-960.webp 960w, capturas/mis-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
         </figure>
       </article>
       <article class="par">
@@ -507,16 +485,15 @@ sudo tramtai-servidor administrador contraseña</pre>
           <p class="suave"><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Ves con qué cuenta entró cada CLI, Tramtai te avisa si la sesión cambió y puedes desconectar un agente cuando quieras.</span><span lang="en">With your subscription or with a key stored encrypted in the system. See which account each CLI is signed in with; Tramtai warns you if the session changed, and you can disconnect an agent whenever you like.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/agentes-claro-1440.webp" srcset="capturas/agentes-claro-640.webp 640w, capturas/agentes-claro-960.webp 960w, capturas/agentes-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
-          <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-640.webp 640w, capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
+          <img class="solo-claro" lang="es" src="capturas/agentes-claro-es-1440.webp" srcset="capturas/agentes-claro-es-640.webp 640w, capturas/agentes-claro-es-960.webp 960w, capturas/agentes-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
+          <img class="solo-claro" lang="en" src="capturas/agentes-claro-en-1440.webp" srcset="capturas/agentes-claro-en-640.webp 640w, capturas/agentes-claro-en-960.webp 960w, capturas/agentes-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
+          <img class="solo-oscuro" lang="es" src="capturas/agentes-oscuro-es-1440.webp" srcset="capturas/agentes-oscuro-es-640.webp 640w, capturas/agentes-oscuro-es-960.webp 960w, capturas/agentes-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
+          <img class="solo-oscuro" lang="en" src="capturas/agentes-oscuro-en-1440.webp" srcset="capturas/agentes-oscuro-en-640.webp 640w, capturas/agentes-oscuro-en-960.webp 960w, capturas/agentes-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
       <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17388; la tuya usa el 17373 si no lo cambias, como los ejemplos de código.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17388; yours uses 17373 unless you change it, like the code examples.</span></p>
-    </div>
-  </section>
-
-  <section id="demo" aria-labelledby="demo-titulo">
-    <div class="envoltura">
+      <!-- El recorrido guiado va justo después de las capturas; #demo es su ancla desde Funciones y la guía. -->
+      <div id="demo">
       <div class="cabeza centrada">
         <h2 id="demo-titulo"><span lang="es">Aprende la app con un recorrido guiado.</span><span lang="en">Learn the app with a guided tour.</span></h2>
         <p class="suave"><span lang="es">La primera vez que abres Tramtai, un recorrido te lleva por Inicio, Agentes, Probar, Mis APIs y Espacios: te señala cada cosa y no toca nada. Así es, paso a paso. Lo repites cuando quieras con «Haz el recorrido de Tramtai».</span><span lang="en">The first time you open Tramtai, a tour walks you through Home, Agents, Playground, My APIs and Workspaces: it points at each thing and changes nothing. Here it is, step by step. Repeat it any time with “Take the guided tour”.</span></p>
@@ -745,6 +722,51 @@ sudo tramtai-servidor administrador contraseña</pre>
           </div>
         </div>
       </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="terminal">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Todo desde la terminal.</span><span lang="en">Everything from the terminal.</span></h2>
+        <p class="suave"><span lang="es">Nuevo en la v0.56: <code>tramtai terminal</code> tiene las mismas ocho páginas que la app, de Inicio a la Ayuda. Sirve sin abrir la app y por SSH al equipo donde corre Tramtai.</span><span lang="en">New in v0.56: <code>tramtai terminal</code> has the same eight pages as the app, from Home to Help. It works without opening the app and over SSH to the computer where Tramtai runs.</span></p>
+        <p class="suave"><span lang="es">Tab abre el menú, del 1 al 7 vas a cada página, <code>?</code> abre la Ayuda de la página y Esc vuelve. Necesita una ventana de 60×20 como mínimo, y con <code>NO_COLOR</code> va sin color. Paso a paso, en <a href="ayuda/empezar.html#s-soloterminal">Solo con la terminal</a>.</span><span lang="en">Tab opens the menu, 1 to 7 go to each page, <code>?</code> opens the page’s Help and Esc goes back. It needs a window of at least 60×20, and with <code>NO_COLOR</code> it runs without color. Step by step, in <a href="ayuda/empezar.html#s-soloterminal">Terminal only</a>.</span></p>
+      </div>
+<pre class="codigo"><span class="c" lang="es"># El servicio en segundo plano, sin abrir la app</span><span class="c" lang="en"># The service in the background, without the app</span>
+tramtai servicio iniciar -d
+
+<span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
+tramtai terminal</pre>
+      <div class="terminal-capturas">
+        <figure class="captura">
+          <img class="solo-claro" lang="es" src="capturas/terminal-inicio-claro-es-1440.webp" srcset="capturas/terminal-inicio-claro-es-960.webp 960w, capturas/terminal-inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
+          <img class="solo-claro" lang="en" src="capturas/terminal-inicio-claro-en-1440.webp" srcset="capturas/terminal-inicio-claro-en-960.webp 960w, capturas/terminal-inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
+          <img class="solo-oscuro" lang="es" src="capturas/terminal-inicio-oscuro-es-1440.webp" srcset="capturas/terminal-inicio-oscuro-es-960.webp 960w, capturas/terminal-inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="La terminal en Inicio: la red, los primeros pasos y las peticiones recientes">
+          <img class="solo-oscuro" lang="en" src="capturas/terminal-inicio-oscuro-en-1440.webp" srcset="capturas/terminal-inicio-oscuro-en-960.webp 960w, capturas/terminal-inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="885" loading="lazy" decoding="async" alt="The terminal on Home: the network, getting started and recent requests">
+        </figure>
+        <figure class="captura">
+          <img class="solo-claro" lang="es" src="capturas/terminal-apis-claro-es-1440.webp" srcset="capturas/terminal-apis-claro-es-960.webp 960w, capturas/terminal-apis-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
+          <img class="solo-claro" lang="en" src="capturas/terminal-apis-claro-en-1440.webp" srcset="capturas/terminal-apis-claro-en-960.webp 960w, capturas/terminal-apis-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
+          <img class="solo-oscuro" lang="es" src="capturas/terminal-apis-oscuro-es-1440.webp" srcset="capturas/terminal-apis-oscuro-es-960.webp 960w, capturas/terminal-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="La terminal en Mis APIs: las APIs por aplicación, con sus grupos, y la clave del espacio">
+          <img class="solo-oscuro" lang="en" src="capturas/terminal-apis-oscuro-en-1440.webp" srcset="capturas/terminal-apis-oscuro-en-960.webp 960w, capturas/terminal-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 540px" width="1440" height="888" loading="lazy" decoding="async" alt="The terminal on My APIs: the per-app APIs, with their groups, and the workspace key">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="servidor">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Y en tu propio servidor.</span><span lang="en">And on your own server.</span></h2>
+        <p class="suave"><span lang="es">Nuevo en la v0.58: el modo servidor instala Tramtai como servicio del sistema en Linux o Windows Server. Arranca con el equipo, sin que nadie inicie sesión, y se abre desde otros equipos solo por HTTPS, con la contraseña del administrador y, si quieres, un segundo factor.</span><span lang="en">New in v0.58: server mode installs Tramtai as a system service on Linux or Windows Server. It starts with the computer, with nobody signed in, and opens from other computers over HTTPS only, with the administrator password and, if you want, a second factor.</span></p>
+        <p class="suave"><span lang="es">Es <strong>otro entorno</strong>: tus APIs, claves y ajustes del escritorio no pasan al servidor, ni al revés, y la cabecera siempre dice en cuál estás. <a href="servidor.html">La guía del servidor</a> explica cómo instalarlo, ponerlo detrás de tu proxy y qué riesgos asumes.</span><span lang="en">It’s <strong>a separate environment</strong>: your desktop APIs, keys and settings don’t carry over to the server, or the other way around, and the header always says which one you’re in. <a href="servidor.html">The server guide</a> explains how to install it, put it behind your proxy and which risks you take on.</span></p>
+      </div>
+<pre class="codigo"><span class="c" lang="es"># Linux, desde el .tar.gz: pide aceptar los términos</span><span class="c" lang="en"># Linux, from the .tar.gz: it asks you to accept the terms</span>
+sudo ./tramtai servidor instalar
+
+<span class="c" lang="es"># La contraseña de la Web UI remota</span><span class="c" lang="en"># The remote Web UI password</span>
+sudo tramtai-servidor administrador contraseña</pre>
     </div>
   </section>
 
@@ -783,6 +805,29 @@ sudo tramtai-servidor administrador contraseña</pre>
         </article>
       </div>
       <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real, hecha por última vez el 2026-10-18 en Windows: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI, last run on 2026-10-18 on Windows: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
+      <div class="conexiones">
+        <div class="panel">
+          <h3 class="panel-titulo"><span lang="es">Conecta estos agentes</span><span lang="en">Works with these agents</span></h3>
+          <ul class="fichas">
+            <li style="--c: var(--claude)"><span class="punto"></span>Claude Code</li>
+            <li style="--c: var(--codex)"><span class="punto"></span>Codex</li>
+            <li style="--c: var(--copilot)"><span class="punto"></span>GitHub Copilot CLI</li>
+            <li style="--c: var(--gemini)"><span class="punto"></span>Gemini API</li>
+            <li class="sin-apps"><span class="punto"></span>Antigravity <span lang="es">(fuera de tus apps)</span><span lang="en">(not for your apps)</span></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3 class="panel-titulo"><span lang="es">Desde tus apps y SDK</span><span lang="en">From your apps and SDKs</span></h3>
+          <ul class="fichas">
+            <li><span class="punto"></span><span lang="es">SDK de OpenAI</span><span lang="en">OpenAI SDK</span></li>
+            <li><span class="punto"></span><span lang="es">SDK de Anthropic</span><span lang="en">Anthropic SDK</span></li>
+            <li><span class="punto"></span>curl</li>
+            <li><span class="punto"></span>LangChain</li>
+            <li><span class="punto"></span>n8n</li>
+            <li><span class="punto"></span><span lang="es">API propia (OpenAPI)</span><span lang="en">Native API (OpenAPI)</span></li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -870,6 +915,39 @@ sudo tramtai-servidor administrador contraseña</pre>
     </div>
   </section>
 
+  <section id="privacidad">
+    <div class="envoltura">
+      <div class="tablero">
+        <div class="cabeza">
+          <span class="tablero-cabecera"><span lang="es">Privacidad</span><span lang="en">Privacy</span></span>
+          <h2><span lang="es">Tramtai no tiene servidor propio.</span><span lang="en">Tramtai has no server of its own.</span></h2>
+          <p><span lang="es">Funciona en tu equipo y no tiene cuentas. Tus peticiones van de tu equipo al proveedor del agente que elijas, no a Tramtai.</span><span lang="en">It runs on your computer and has no accounts. Your requests go from your computer to the provider of the agent you choose, not to Tramtai.</span></p>
+        </div>
+        <ul>
+          <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Por defecto escucha solo en <strong>127.0.0.1</strong>; abrirlo a otros equipos es un ajuste aparte, apagado de serie, y solo arranca con HTTPS. Cada API exige su propia clave.</span><span lang="en">By default it listens only on <strong>127.0.0.1</strong>; opening it to other computers is a separate setting, off out of the box, and it only starts with HTTPS. Every API requires its own key.</span></span></li>
+          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de proveedor quedan <strong>cifradas en el almacén del sistema</strong>, no en los archivos de Tramtai. La clave de cada API y la de cada espacio solo se ven al crearlas o regenerarlas, Tramtai guarda solo su huella y no sirven para abrir la app.</span><span lang="en">Your provider keys are <strong>encrypted in the system store</strong>, not in Tramtai’s files. Each API’s key and each workspace’s key are shown only when they are created or regenerated, Tramtai stores only a hash of them and they can’t open the app.</span></span></li>
+          <li><b><span lang="es">Sesiones</span><span lang="en">Sessions</span></b><span><span lang="es">Tramtai <strong>no lee las credenciales de los CLI</strong>: les pregunta con qué cuenta iniciaste sesión. Con GitHub Copilot copia a su carpeta privada qué cuenta es, sin su clave.</span><span lang="en">Tramtai <strong>doesn’t read the CLIs’ credentials</strong>: it asks them which account you signed in with. With GitHub Copilot it copies which account it is to its private folder, without its key.</span></span></li>
+          <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas se guardan <strong>24 horas por defecto</strong>; lo cambias en Ajustes, donde también vacías el historial.</span><span lang="en">Responses are kept for <strong>24 hours by default</strong>; you change that in Settings, where you can also clear the history.</span></span></li>
+          <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso. Solo consulta GitHub para buscar versiones nuevas, y eso se apaga en Ajustes.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics. It only checks GitHub for new versions, and you can turn that off in Settings.</span></span></li>
+        </ul>
+      </div>
+      <div class="cabeza riesgos-cabeza">
+        <h3><span lang="es">Antes de usarlo, cinco riesgos.</span><span lang="en">Before you use it, five risks.</span></h3>
+        <p class="suave"><span lang="es">Los mismos que te enseña Tramtai antes de aceptar sus términos, en la app, la terminal y al instalar el servidor.</span><span lang="en">The same ones Tramtai shows you before you accept its terms, in the app, the terminal and when you install the server.</span></p>
+      </div>
+<!-- comun:riesgos -->
+<ol class="riesgos">
+  <li><span lang="es">Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.</span><span lang="en">Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.</span></li>
+  <li><span lang="es">Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.</span><span lang="en">Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.</span></li>
+  <li><span lang="es">Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.</span><span lang="en">If you use server mode, what you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.</span></li>
+  <li><span lang="es">Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.</span><span lang="en">If you use server mode and other people use it, you answer for their data under the law that applies to you.</span></li>
+  <li><span lang="es">Tramtai es gratuito y se entrega tal cual, sin garantías.</span><span lang="en">Tramtai is free and provided as is, without warranties.</span></li>
+</ol>
+<!-- /comun:riesgos -->
+      <p><a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Los términos de uso completos</span><span lang="en">The full terms of use</span></a></p>
+    </div>
+  </section>
+
   <section id="descargar">
     <div class="envoltura">
       <div class="cabeza">
@@ -905,58 +983,16 @@ brew install tramtai</code></pre>
       <p class="suave todas"><a href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Todas las descargas</span><span lang="en">All downloads</span></a><span data-version></span> · <a href="https://github.com/MscottB/Tramtai/releases/latest/download/SHA256SUMS.txt"><code>SHA256SUMS.txt</code></a></p>
       <script type="application/json" id="descargas">{}</script>
       <p class="suave todas"><span lang="es">El conversor sin conexión solo hace falta si tu red bloquea la descarga de markitdown, que Tramtai usa para leer PDF, Word o Excel.</span><span lang="en">The offline converter is only needed if your network blocks the markitdown download, which Tramtai uses to read PDF, Word or Excel files.</span></p>
-    </div>
-  </section>
-
-  <section id="aviso">
-    <div class="envoltura">
-      <div class="cabeza">
-        <h2><span lang="es">Antes de usarlo, cinco riesgos.</span><span lang="en">Before you use it, five risks.</span></h2>
-        <p class="suave"><span lang="es">Los mismos que te enseña Tramtai antes de aceptar sus términos, en la app, la terminal y al instalar el servidor.</span><span lang="en">The same ones Tramtai shows you before you accept its terms, in the app, the terminal and when you install the server.</span></p>
-      </div>
-<!-- comun:riesgos -->
-<ol class="riesgos">
-  <li><span lang="es">Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.</span><span lang="en">Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.</span></li>
-  <li><span lang="es">Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.</span><span lang="en">Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.</span></li>
-  <li><span lang="es">Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.</span><span lang="en">If you use server mode, what you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.</span></li>
-  <li><span lang="es">Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.</span><span lang="en">If you use server mode and other people use it, you answer for their data under the law that applies to you.</span></li>
-  <li><span lang="es">Tramtai es gratuito y se entrega tal cual, sin garantías.</span><span lang="en">Tramtai is free and provided as is, without warranties.</span></li>
-</ol>
-<!-- /comun:riesgos -->
-      <p><a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Los términos de uso completos</span><span lang="en">The full terms of use</span></a></p>
-    </div>
-  </section>
-
-  <section id="privacidad">
-    <div class="envoltura">
-      <div class="tablero">
-        <div class="cabeza">
-          <span class="tablero-cabecera"><span lang="es">Privacidad</span><span lang="en">Privacy</span></span>
-          <h2><span lang="es">Tramtai no tiene servidor propio.</span><span lang="en">Tramtai has no server of its own.</span></h2>
-          <p><span lang="es">Funciona en tu equipo y no tiene cuentas. Tus peticiones van de tu equipo al proveedor del agente que elijas, no a Tramtai.</span><span lang="en">It runs on your computer and has no accounts. Your requests go from your computer to the provider of the agent you choose, not to Tramtai.</span></p>
-        </div>
-        <ul>
-          <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Por defecto escucha solo en <strong>127.0.0.1</strong>; abrirlo a otros equipos es un ajuste aparte, apagado de serie, y solo arranca con HTTPS. Cada API exige su propia clave.</span><span lang="en">By default it listens only on <strong>127.0.0.1</strong>; opening it to other computers is a separate setting, off out of the box, and it only starts with HTTPS. Every API requires its own key.</span></span></li>
-          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de proveedor quedan <strong>cifradas en el almacén del sistema</strong>, no en los archivos de Tramtai. La clave de cada API y la de cada espacio solo se ven al crearlas o regenerarlas, Tramtai guarda solo su huella y no sirven para abrir la app.</span><span lang="en">Your provider keys are <strong>encrypted in the system store</strong>, not in Tramtai’s files. Each API’s key and each workspace’s key are shown only when they are created or regenerated, Tramtai stores only a hash of them and they can’t open the app.</span></span></li>
-          <li><b><span lang="es">Sesiones</span><span lang="en">Sessions</span></b><span><span lang="es">Tramtai <strong>no lee las credenciales de los CLI</strong>: les pregunta con qué cuenta iniciaste sesión. Con GitHub Copilot copia a su carpeta privada qué cuenta es, sin su clave.</span><span lang="en">Tramtai <strong>doesn’t read the CLIs’ credentials</strong>: it asks them which account you signed in with. With GitHub Copilot it copies which account it is to its private folder, without its key.</span></span></li>
-          <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas se guardan <strong>24 horas por defecto</strong>; lo cambias en Ajustes, donde también vacías el historial.</span><span lang="en">Responses are kept for <strong>24 hours by default</strong>; you change that in Settings, where you can also clear the history.</span></span></li>
-          <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso. Solo consulta GitHub para buscar versiones nuevas, y eso se apaga en Ajustes.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics. It only checks GitHub for new versions, and you can turn that off in Settings.</span></span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="cierre">
-    <div class="envoltura">
+      <div class="cierre">
       <div class="cabeza centrada">
         <h2><span lang="es">Gratis para uso personal y no comercial.</span><span lang="en">Free for personal and non-commercial use.</span></h2>
       </div>
       <div class="empezar">
-        <a class="tarjeta" href="#descargar">
-          <h3><span lang="es">Descarga Tramtai</span><span lang="en">Download Tramtai</span></h3>
-          <p><span lang="es">Para Windows, macOS y Linux. Después conectas un agente y creas tu primera API.</span><span lang="en">For Windows, macOS and Linux. Then you connect an agent and create your first API.</span></p>
-        </a>
         <a class="tarjeta" href="ayuda/empezar.html">
+          <h3><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></h3>
+          <p><span lang="es">Después de instalar, conectas un agente y creas tu primera API.</span><span lang="en">After installing, you connect an agent and create your first API.</span></p>
+        </a>
+        <a class="tarjeta" href="ayuda/">
           <h3><span lang="es">Lee la ayuda</span><span lang="en">Read the help</span></h3>
           <p><span lang="es">Cómo conectar cada agente, apuntar tus apps y resolver los errores habituales.</span><span lang="en">How to connect each agent, point your apps and fix the usual errors.</span></p>
         </a>
@@ -969,6 +1005,7 @@ brew install tramtai</code></pre>
         <span lang="es">Tramtai se publica con la licencia <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>. Para usarlo en una empresa o en un producto comercial, <a href="https://github.com/MscottB">escríbeme</a>.</span>
         <span lang="en">Tramtai is released under the <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> license. To use it in a business or a commercial product, <a href="https://github.com/MscottB">get in touch</a>.</span>
       </p>
+      </div>
     </div>
   </section>
 </main>
