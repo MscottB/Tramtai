@@ -17,6 +17,9 @@ import (
 // servicioEnMarcha) y apuntan dirDatos a su carpeta.
 func TestMain(m *testing.M) { os.Exit(correrAislado(m)) }
 
+// raizPruebas es la carpeta temporal de todo el paquete: la casa, los datos y la configuración de las pruebas cuelgan de ella.
+var raizPruebas string
+
 func correrAislado(m *testing.M) int {
 	raiz, err := os.MkdirTemp("", "tramtai-cmd-")
 	if err != nil {
@@ -24,6 +27,7 @@ func correrAislado(m *testing.M) int {
 		return 1
 	}
 	defer os.RemoveAll(raiz)
+	raizPruebas = raiz
 	casa := filepath.Join(raiz, "casa")
 	datos := filepath.Join(raiz, "datos")
 	if err := os.MkdirAll(datos, 0o700); err != nil {

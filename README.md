@@ -7,7 +7,7 @@
 **Tus agentes de IA, como una API local.**
 
 Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
-Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. Antigravity, por ahora, solo desde Probar, la terminal y la CLI.
+Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y la clave. Antigravity, por ahora, solo desde Probar, la terminal y la CLI.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)
 [![Versión](https://img.shields.io/github/v/release/MscottB/Tramtai?label=versi%C3%B3n&color=0b6e64)](https://github.com/MscottB/Tramtai/releases/latest)
@@ -28,6 +28,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. A
 - **Agente y modelo en cada petición:** `claude/sonnet`, `codex`, `copilot`, `gemini/…` o un perfil, con respaldo a otro agente si el primero falla.
 - **Archivos y respuestas con forma:** PDF, Word, Excel o PowerPoint como entrada y JSON validado como salida, sin escribir JSON Schema.
 - **Una API por aplicación,** con su clave, sus modelos, sus instrucciones y su presupuesto.
+- **Tus herramientas, apuntadas por ti:** `tramtai herramientas activar` (o la pestaña Herramientas de Mis APIs) apunta Claude Code, Codex, Continue y opencode/Kilo a Tramtai, guarda antes una copia de su configuración y se deshace con `desactivar`.
 - **Tu suscripción o tu clave de API,** en la app de escritorio, la Web UI, la terminal o la CLI, en español e inglés.
 - **Todo desde la terminal:** `tramtai terminal` tiene las mismas páginas que la app, de Inicio a la Ayuda, y sirve sin abrir la app y por SSH.
 - **Local y privado:** por defecto escucha solo en `127.0.0.1`, sin telemetría, y las claves quedan cifradas en el almacén del sistema.
@@ -117,12 +118,13 @@ Antigravity son marcas de sus respectivos dueños.
 
 **Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible
 API that runs on your own computer.** If your app already uses the OpenAI or Anthropic SDK, you only change the base
-URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
+URL and the key. Antigravity, for now, only from the Playground, the terminal and the CLI.
 
 - **Compatible:** the OpenAI and Anthropic SDKs with streaming and tools, plus a native API for long-running requests.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
+- **Your tools, pointed for you:** `tramtai tools enable` (or the Tools tab in My APIs) points Claude Code, Codex, Continue and opencode/Kilo at Tramtai, backs up their configuration first and undoes it with `disable`.
 - **Everything from the terminal:** `tramtai terminal` has the same pages as the app, from Home to Help, and works
   without the app open, also over SSH (`tramtai servicio iniciar -d` starts the service in the background). Tab opens the
   menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes back and `q` quits.

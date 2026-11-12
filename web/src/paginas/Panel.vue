@@ -39,7 +39,7 @@
       </div>
       <div class="q-px-md q-pb-lg q-pt-sm">
         <MapaRed v-if="adaptadores && instancia" :adaptadores="ordenarAgentes(adaptadores)" :apis="puntos" :base="instancia.base"
-          :tranvias="vivos.lista" :resto="vivos.resto" @ir="(p) => $emit('ir', p)" @seguir="seguir" />
+          :tranvias="vivos.lista" :resto="vivos.resto" :en-curso="vivos.enCurso" @ir="(p) => $emit('ir', p)" @seguir="seguir" />
         <q-skeleton v-else type="rect" height="200px" />
         <SiguiendoTrabajo v-if="seguido" :tranvia="seguido" class="q-mt-md" @dejar="seguido = undefined" @ir="(p) => $emit('ir', p)" />
         <div v-else-if="vivos.lista.length" class="text-caption texto-suave q-mt-sm">{{ t('vivo.pista') }}</div>

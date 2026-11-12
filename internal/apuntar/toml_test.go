@@ -396,6 +396,53 @@ func TestCodexConElNucleo(t *testing.T) {
 	}
 }
 
+// Sin anotación (se perdió) y sin marcas (las quitó el usuario), un «model_provider = "tramtai"» que quedó sin su
+// proveedor es un resto de Tramtai: no se toma como valor previo del usuario, que al quitar dejaría Codex sin proveedor.
+func TestCodexRestoSinMarcasNoEsPrevio(t *testing.T) {
+	nuevo, a := aplicarCodex(t, "model = \"gpt-5\"\nmodel_provider = \"tramtai\"\n")
+	if _, hay := a.Previos["model_provider"]; hay || strings.Contains(nuevo, prefijoComentado+"model_provider") {
+		t.Fatalf("previos = %v:\n%s", a.Previos, nuevo)
+	}
+	quitado, _, err := Codex().Quitar([]byte(nuevo), a)
+	if err != nil || leerTOML(t, string(quitado))["model_provider"] != nil || leerTOML(t, string(quitado))["model"] != "gpt-5" {
+		t.Fatalf("tras quitar (err %v):\n%s", err, quitado)
+	}
+}
+
+// Con una anotación sin Escrito (dañada a mano) no se sabe qué es de Tramtai: Quitar se fía de las marcas y quita los
+// bloques enteros, en vez de dejar sus líneas sin marcas.
+func TestCodexQuitarSinEscrito(t *testing.T) {
+	nuevo, _ := aplicarCodex(t, "model = \"gpt-5\"\n")
+	quitado, _, err := Codex().Quitar([]byte(nuevo), Anotacion{ID: "codex"})
+	if err != nil || string(quitado) != "model = \"gpt-5\"\n" {
+		t.Fatalf("tras quitar (err %v):\n%s", err, quitado)
+	}
+}
+
+// Un corte entre la anotación y el archivo deja una anotación de un archivo sin tocar: desactualizada, y tanto quitar
+// como volver a activar lo dejan bien.
+func TestCodexCorteEntreAnotacionYArchivo(t *testing.T) {
+	datos, ruta, h := herramientaTemporal(t, "codex", []byte("model = \"gpt-5\"\n"), "config.toml")
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresCodex()); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(ruta, []byte("model = \"gpt-5\"\n"), 0o600) // el archivo, como si no se hubiera llegado a escribir
+	a, _, _ := Leer(datos, "codex")
+	if actual, _ := os.ReadFile(ruta); Codex().Contiene(actual, a) {
+		t.Fatal("la anotación no describe el archivo: no lo contiene")
+	}
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresCodex()); err != nil {
+		t.Fatal(err)
+	}
+	a, _, _ = Leer(datos, "codex")
+	if err := Quitar(datos, h, a); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(ruta); string(got) != "model = \"gpt-5\"\n" {
+		t.Fatalf("tras reactivar y quitar: %q", got)
+	}
+}
+
 func TestRutaCodex(t *testing.T) {
 	casa, codex := t.TempDir(), t.TempDir()
 	t.Setenv("HOME", casa)

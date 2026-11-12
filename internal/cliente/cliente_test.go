@@ -181,6 +181,13 @@ func TestEncabezadoDelCliente(t *testing.T) {
 	}
 }
 
+// almacenMemoria sustituye al almacén de credenciales del equipo en las pruebas.
+type almacenMemoria map[string]string
+
+func (a almacenMemoria) Guardar(nombre, valor string) error { a[nombre] = valor; return nil }
+func (a almacenMemoria) Leer(nombre string) (string, error) { return a[nombre], nil }
+func (a almacenMemoria) Borrar(nombre string) error         { delete(a, nombre); return nil }
+
 // servicioDePrueba levanta un servicio real con el agente simulado y devuelve un cliente conectado a él.
 func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
 	t.Helper()
@@ -198,7 +205,7 @@ func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
 	ts := httptest.NewUnstartedServer(nil)
 	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
 		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
-		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv")})
+		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv"), Almacen: almacenMemoria{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,8 +235,6 @@ func terminado(t *testing.T, cli *Cliente, inst, id string) {
 	}
 }
 
-// Las herramientas por el cliente, con Continue (su clave va en su archivo: el almacén del sistema no se toca) y sus
-// carpetas en temporales.
 // FichasAgentes trae, en el orden del servicio, si cada agente está desconectado y si vale en APIs.
 func TestClienteFichasAgentes(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
@@ -253,6 +258,7 @@ func TestClienteFichasAgentes(t *testing.T) {
 	}
 }
 
+// Las herramientas por el cliente, con Continue, sus carpetas en temporales y un almacén de claves en memoria.
 func TestClienteHerramientas(t *testing.T) {
 	casa := t.TempDir()
 	for _, v := range []string{"HOME", "USERPROFILE", "APPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME"} {

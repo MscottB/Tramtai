@@ -64,9 +64,9 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
 
 const VENTAJAS = [
   ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
-  ['Sin tocar tu código', 'con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.'],
+  ['Sin tocar tu código', 'con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.'],
   ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
-  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.'],
+  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.'],
   ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
   ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
 ]
@@ -697,7 +697,6 @@ test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia au
   for (const [token, colores] of pares) if (token !== 'velo') colores.forEach((c, i) => assert.ok(contraste(c, fondo[i]) >= 4.5, `${token} ${i ? 'de noche' : 'de día'}: ${contraste(c, fondo[i]).toFixed(2)}:1`))
   assert.ok(contraste('#0f1b1e', pares.get('velo')![0]) >= 4.5 && contraste('#e5edf0', pares.get('velo')![1]) >= 4.5, 'texto sobre el velo')
   assert.ok(css.includes('.t-b { font-weight: 700; }'))
-  assert.match(css, /\.t-d \{ opacity: [\d.]+; \}/)
   assert.ok(css.includes('.g { display: inline-block; width: 1ch; text-align: center; }'))
   const fuente = css.match(/@font-face \{[^}]*cascadia\.woff2[^}]*\}/)?.[0] ?? ''
   assert.match(fuente, /font-family: 'Tramtai Mono'/, 'Cascadia Code es nombre reservado (OFL)')
@@ -834,4 +833,43 @@ test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew
     assert.ok(r.includes(tap) && r.includes('brew install tramtai'), r)
   }
   assert.ok(![html, es['ayuda.empezar.rTerminal'], en['ayuda.empezar.rTerminal']].some((x) => x.includes('mscottb/tramtai/tramtai')))
+})
+
+// Las órdenes y los ejemplos de código siguen el idioma elegido: lo que se ve (y se copia) en inglés no trae texto en
+// español conocido. Los campos de la API propia (mensajes, rol, contenido…) son su contrato y se quedan.
+test('los bloques de código en inglés no traen texto en español', () => {
+  const servidor = readFileSync(new URL('../../site/servidor.html', import.meta.url), 'utf8')
+  const espanol = /\b(?:cliente|respuesta|flujo|trozo|tu-clave|Resume|Traduce|Explica|Saca las|acta\.pdf|instalar|administrador|iniciar)\b|contraseña/
+  const bloques = [...html.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g), ...servidor.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g)].map((m) => m[0])
+  assert.ok(bloques.length >= 15, `${bloques.length} bloques`)
+  for (const b of bloques) {
+    const ingles = b.replace(/<span[^>]*\blang="es"[^>]*>[^<]*<\/span>/g, '').replace(/<[^>]+>/g, '')
+    assert.doesNotMatch(ingles, espanol, ingles.slice(0, 120))
+  }
+})
+
+// La guía del desarrollador en inglés enseña (y copia) los ejemplos de docs/ejemplos/*/en: cada panel lleva un
+// <code lang="es"> y uno lang="en" con su archivo, los dos existen, y ni el archivo inglés ni lo demás que se ve en
+// inglés (la terminal, los curl de una línea) trae español. Los campos y las rutas de la API propia (mensajes, rol,
+// contenido, argumentos, archivo…) son su contrato y se quedan.
+test('desarrolladores.html en inglés enseña los ejemplos ingleses', () => {
+  const dev = readFileSync(new URL('../../site/desarrolladores.html', import.meta.url), 'utf8')
+  const espanol = /\b(?:cliente|respuesta|flujo|trozo|CLAVE|MODELO|TRAMTAI_CLAVE|TRAMTAI_MODELO|clima|ciudad|Hola|despejado|agente pide|siguió|muestra|tu-usuario|tu-equipo|servicio|iniciar|ruta|datos|esquema|cabeceras|llamada|ronda|terminado|resumen|entorno|predeterminado|pregunta)\b|¿|quién/
+  const bloques = [...dev.matchAll(/<pre class="codigo"[^>]*>[\s\S]*?<\/pre>/g)].map((m) => m[0])
+  let ejemplos = 0
+  for (const b of bloques) {
+    const rutas = (lang: string) => [...b.matchAll(new RegExp(`<code lang="${lang}" data-ejemplo="([^"]+)"`, 'g'))].map((m) => m[1])
+    const [rEs, rEn] = [rutas('es'), rutas('en')]
+    if (b.includes('data-ejemplo')) {
+      assert.equal(rEs.length + rEn.length, 2, `cada panel, un ejemplo por idioma: ${b.slice(0, 160)}`)
+      assert.ok(rEn.length === 1 && rEn[0].split('/')[1] === 'en' && !rEs[0].includes('/en/'), `${rEs} / ${rEn}`)
+      for (const r of [rEs[0], rEn[0]]) statSync(new URL(`../../docs/ejemplos/${r}`, import.meta.url))
+      const codigo = readFileSync(new URL(`../../docs/ejemplos/${rEn[0]}`, import.meta.url), 'utf8')
+      assert.doesNotMatch(codigo, espanol, rEn[0])
+      ejemplos++
+    }
+    const ingles = b.replace(/<(code|span)[^>]*\blang="es"[^>]*>[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '')
+    assert.doesNotMatch(ingles, espanol, ingles.slice(0, 120))
+  }
+  assert.equal(ejemplos, 21)
 })

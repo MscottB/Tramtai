@@ -181,7 +181,7 @@ test('el motivo se dice en el idioma de la interfaz según su código, con sus d
 })
 
 test('cada código de motivo que pone el servicio tiene su texto en español y en inglés', () => {
-  const codigos = ['gestionado', 'sin_https_propio', 'api_no_existe', 'api_detenida', 'puerto', 'orden_no_existe', 'clave_no_almacen', 'editada_a_mano', 'otro_archivo', 'anotacion_ilegible', 'continue_json']
+  const codigos = ['gestionado', 'sin_https_propio', 'api_no_existe', 'api_detenida', 'modelo_no_permitido', 'puerto', 'orden_no_existe', 'clave_no_almacen', 'editada_a_mano', 'otro_archivo', 'anotacion_ilegible', 'continue_json']
   const servicio = readFileSync(new URL('../../../../internal/servicio/herramientas.go', import.meta.url), 'utf8')
   try {
     for (const c of codigos) {

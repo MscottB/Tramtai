@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 )
@@ -203,7 +204,7 @@ func Aplicar(datos string, h Herramienta, alcance Alcance, proyecto string, v Va
 	if err != nil {
 		return Anotacion{}, err
 	}
-	if activa && previa.Ruta != ruta {
+	if activa && !carpetas.MismaRuta(previa.Ruta, ruta) {
 		return Anotacion{}, ErrOtraActivacion
 	}
 	var escrito, previos map[string]any
@@ -224,9 +225,12 @@ func Aplicar(datos string, h Herramienta, alcance Alcance, proyecto string, v Va
 	if len(v.Orden) > 0 {
 		a.Orden = v.Orden[0]
 	}
+	if !existe {
+		a.Carpeta = carpetaQueFalta(ruta)
+	}
 	copia := ""
 	if activa {
-		a.Fecha, a.NoExistia = previa.Fecha, previa.NoExistia
+		a.Fecha, a.NoExistia, a.Carpeta = previa.Fecha, previa.NoExistia, previa.Carpeta
 		if a.Previos == nil {
 			a.Previos = map[string]any{}
 		}
@@ -301,6 +305,9 @@ func Quitar(datos string, h Herramienta, a Anotacion) error {
 				}
 				return nil
 			})
+			if err == nil {
+				quitarCarpetas(a)
+			}
 		} else {
 			err = configuracion.EscribirAtomico(a.Ruta, nuevo, 0o600)
 		}
@@ -309,6 +316,31 @@ func Quitar(datos string, h Herramienta, a Anotacion) error {
 		}
 	}
 	return Borrar(datos, a.ID)
+}
+
+// carpetaQueFalta es la carpeta más alta que hay que crear para escribir ruta ("" si su carpeta ya existe).
+func carpetaQueFalta(ruta string) string {
+	falta := ""
+	for d := filepath.Dir(ruta); filepath.Dir(d) != d; d = filepath.Dir(d) {
+		if _, err := os.Stat(d); !errors.Is(err, fs.ErrNotExist) {
+			break
+		}
+		falta = d
+	}
+	return falta
+}
+
+// quitarCarpetas borra, de dentro afuera hasta a.Carpeta, las carpetas que creó Tramtai para el archivo y han quedado
+// vacías. Es de mejor esfuerzo, y os.Remove nunca borra una carpeta con algo dentro.
+func quitarCarpetas(a Anotacion) {
+	if rel, err := filepath.Rel(a.Carpeta, filepath.Dir(a.Ruta)); a.Carpeta == "" || err != nil || strings.HasPrefix(rel, "..") {
+		return // sin carpeta anotada, o una que no contiene el archivo
+	}
+	for d := filepath.Dir(a.Ruta); filepath.Dir(d) != d; d = filepath.Dir(d) {
+		if os.Remove(d) != nil || carpetas.MismaRuta(d, a.Carpeta) {
+			return
+		}
+	}
 }
 
 // Restaurar devuelve el archivo a como estaba antes de activar la herramienta, con la copia de esa activación, y olvida

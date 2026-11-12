@@ -430,17 +430,17 @@
             [
               "Continue",
               "config.yaml de ~/.continue: un modelo llamado Tramtai",
-              "En su archivo, con permisos solo para ti"
+              "En su archivo, dentro de tu carpeta de usuario"
             ],
             [
               "opencode",
               "opencode.json (o opencode.jsonc) de ~/.config/opencode: un proveedor llamado tramtai",
-              "En su archivo, con permisos solo para ti"
+              "En su archivo, dentro de tu carpeta de usuario"
             ],
             [
               "Kilo Code",
               "kilo.jsonc de ~/.config/kilo: un proveedor llamado tramtai",
-              "En su archivo, con permisos solo para ti"
+              "En su archivo, dentro de tu carpeta de usuario"
             ]
           ]
         },
@@ -499,7 +499,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "«Desactualizada» pasa si se borró o detuvo su API, cambió el puerto, Tramtai se movió o actualizó (la orden de la clave ya no existe), falta la clave, se editó a mano o activas el HTTPS propio."
+            "«Desactualizada» pasa si su API se borró, se detuvo o no admite su modelo, cambió el puerto, Tramtai se movió o actualizó, falta la clave, se editó a mano o activas el HTTPS propio."
           ]
         },
         {
@@ -514,7 +514,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos, con permisos solo para ti. Guarda las 3 últimas de cada herramienta."
+            "Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos. Guarda las 3 últimas de cada herramienta."
           ]
         },
         {
@@ -540,7 +540,7 @@
           "pares": [
             [
               "¿Por qué la clave de Continue, opencode y Kilo va en su archivo?",
-              "Porque no saben pedirla con una orden, como Claude Code y Codex. Tramtai la escribe en su archivo, con permisos solo para ti; es la de su API, que no vale en ningún otro sitio."
+              "Porque no saben pedirla con una orden, como Claude Code y Codex. Tramtai la escribe en su archivo, dentro de tu carpeta de usuario; es la de su API, que no vale en ningún otro sitio."
             ],
             [
               "¿Por qué no puedo activar una herramienta?",
@@ -1292,6 +1292,10 @@
             [
               "¿Quién ejecuta los agentes?",
               "El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale."
+            ],
+            [
+              "¿Puedo conectar mis herramientas?",
+              "Aquí no: el modo servidor no ofrece Claude Code, Codex, Continue, opencode ni Kilo Code. Conéctalas desde Tramtai con tu usuario normal, fuera del modo servidor."
             ],
             [
               "¿Puedo usar mi suscripción en el servidor?",
@@ -2048,17 +2052,17 @@
             [
               "Continue",
               "config.yaml in ~/.continue: a model named Tramtai",
-              "In its file, readable only by you"
+              "In its file, inside your user folder"
             ],
             [
               "opencode",
               "opencode.json (or opencode.jsonc) in ~/.config/opencode: a provider named tramtai",
-              "In its file, readable only by you"
+              "In its file, inside your user folder"
             ],
             [
               "Kilo Code",
               "kilo.jsonc in ~/.config/kilo: a provider named tramtai",
-              "In its file, readable only by you"
+              "In its file, inside your user folder"
             ]
           ]
         },
@@ -2117,7 +2121,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "It is “Out of date” if its API was deleted or stopped, the port changed, Tramtai moved or updated (key command gone), its key is missing, it was edited by hand or you turn on Tramtai’s own HTTPS."
+            "It is “Out of date” if its API was deleted, stopped or no longer allows its model, the port changed, Tramtai moved or updated, its key is missing, it was edited by hand or you turn on your own HTTPS."
           ]
         },
         {
@@ -2132,7 +2136,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder, readable only by you. It keeps the last 3 copies of each tool."
+            "Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder. It keeps the last 3 copies of each tool."
           ]
         },
         {
@@ -2158,7 +2162,7 @@
           "pares": [
             [
               "Why do the keys of Continue, opencode and Kilo go in their file?",
-              "Because they cannot ask for it with a command, as Claude Code and Codex can. Tramtai writes it in their file, readable only by you; it is the key of their own API, which works nowhere else."
+              "Because they cannot ask for it with a command, as Claude Code and Codex can. Tramtai writes it in their file, inside your user folder; it is the key of their own API, which works nowhere else."
             ],
             [
               "Why can’t I turn a tool on?",
@@ -2910,6 +2914,10 @@
             [
               "Who runs the agents?",
               "The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works."
+            ],
+            [
+              "Can I connect my tools?",
+              "Not here: server mode doesn’t offer Claude Code, Codex, Continue, opencode or Kilo Code. Connect them from Tramtai with your normal user, outside server mode."
             ],
             [
               "Can I use my subscription on the server?",

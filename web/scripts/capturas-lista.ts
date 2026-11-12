@@ -38,6 +38,13 @@ export const TERMINAL: { nombre: 'inicio' | 'apis' | 'historial'; teclas: string
   { nombre: 'historial', teclas: ['5'] },
 ]
 
+// PETICIONES son las peticiones de ejemplo que llenan el Historial, en el idioma de cada captura (las del inglés no
+// deben enseñar texto en español, ni al revés).
+export const PETICIONES: Record<'es' | 'en', string[]> = {
+  es: ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.'],
+  en: ['Summarize in one line: Tramtai puts AI agents behind an API.', 'Say hello in three languages.'],
+}
+
 // TOKENS_TERMINAL traduce cada color que pinta la TUI (internal/tui/tema.go, la paleta clara y la oscura de
 // docs/diseno/DESIGN.md) al token de DESIGN.md: por eso un solo HTML sirve en los dos temas del sitio. Cada token lleva su
 // color de día y el de noche; velo es el fondo de la fila elegida.
@@ -65,14 +72,14 @@ export function redEnMovimiento(t: Record<string, string>): RegExp {
 }
 
 // ansiAHtml convierte lo que pinta la terminal en HTML para la portada: cada trozo con el mismo estilo es un
-// <span class="…"> con t-<token> (tinta), tf-<token> (fondo), t-b (negrita) y t-d (tenue); la hoja del sitio da a cada
-// clase el valor de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende
-// lo que usa la TUI: color de 24 bits que esté en TOKENS_TERMINAL, negrita y tenue. Un color sin token, o cualquier
-// otro estilo (16 y 256 colores, inverso, subrayado…), lanza un error: así no se cuela un color suelto ni un estilo que
-// se pierde sin avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
+// <span class="…"> con t-<token> (tinta), tf-<token> (fondo) y t-b (negrita); la hoja del sitio da a cada clase el valor
+// de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende lo que usa la
+// TUI: color de 24 bits que esté en TOKENS_TERMINAL y negrita. Un color sin token, o cualquier otro estilo (16 y 256
+// colores, tenue, inverso, subrayado…), lanza un error: así no se cuela un color suelto ni un estilo que se pierde sin
+// avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
 export function ansiAHtml(ansi: string): string {
   const limpio = ansi.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '').replace(/\x1b\[[0-9;?]*[A-Za-ln-z]/g, '')
-  const vacio = { fg: '', bg: '', negrita: false, tenue: false }
+  const vacio = { fg: '', bg: '', negrita: false }
   let e = { ...vacio }
   let html = '', clase = '', texto = ''
   const volcar = () => {
@@ -88,7 +95,7 @@ export function ansiAHtml(ansi: string): string {
     const sgr = trozo.match(/^\x1b\[([0-9;]*)m$/)
     if (!sgr) {
       if (!trozo) continue
-      const nueva = [e.fg && 't-' + e.fg, e.bg && 'tf-' + e.bg, e.negrita && 't-b', e.tenue && 't-d'].filter(Boolean).join(' ')
+      const nueva = [e.fg && 't-' + e.fg, e.bg && 'tf-' + e.bg, e.negrita && 't-b'].filter(Boolean).join(' ')
       if (nueva !== clase) { volcar(); clase = nueva }
       for (const c of trozo) {
         if (GLIFOS.test(c)) { volcar(); html += `<span class="${clase ? clase + ' g' : 'g'}">${c}</span>` }
@@ -101,8 +108,7 @@ export function ansiAHtml(ansi: string): string {
       const n = p[i]
       if (n === 0) e = { ...vacio }
       else if (n === 1) e.negrita = true
-      else if (n === 2) e.tenue = true
-      else if (n === 22) e.negrita = e.tenue = false
+      else if (n === 22) e.negrita = false
       else if (n === 39) e.fg = ''
       else if (n === 49) e.bg = ''
       else if ((n === 38 || n === 48) && p[i + 1] === 2) {

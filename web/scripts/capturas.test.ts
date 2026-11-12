@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PETICIONES, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -92,11 +92,12 @@ test('las capturas del servidor son las de Ajustes → Servidor y Seguridad, la 
 
 // v0.59: la terminal de la portada es texto real. ansiAHtml no escribe colores: escribe la clase del token de DESIGN.md
 // (t-<token> para la tinta, tf-<token> para el fondo), y la hoja del sitio le da el valor del tema.
-test('ansiAHtml: el mismo token en el tema claro y en el oscuro, negrita, tenue, fondo y restablecer', () => {
+test('ansiAHtml: el mismo token en el tema claro y en el oscuro, negrita, fondo y restablecer', () => {
   assert.equal(ansiAHtml('\x1b[38;2;45;212;191mX'), '<span class="t-acento">X</span>')
   assert.equal(ansiAHtml('\x1b[38;2;11;110;100mX'), '<span class="t-acento">X</span>')
   assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb\x1b[0mc'), 'a<span class="t-acento t-b">b</span>c')
-  assert.equal(ansiAHtml('\x1b[2;38;2;147;165;172mx\x1b[22m y'), '<span class="t-suave t-d">x</span><span class="t-suave"> y</span>')
+  assert.equal(ansiAHtml('\x1b[1;38;2;147;165;172mx\x1b[22m y'), '<span class="t-suave t-b">x</span><span class="t-suave"> y</span>')
+  assert.throws(() => ansiAHtml('\x1b[2mx'), /SGR 2/, 'la TUI no pinta tenue: la hoja no tiene con qué')
   assert.equal(ansiAHtml('\x1b[48;2;17;56;56m\x1b[38;2;229;237;240mx\x1b[49m\x1b[39my'), '<span class="t-texto tf-velo">x</span>y')
   assert.equal(ansiAHtml('\x1b[1mn\x1b[m'), '<span class="t-b">n</span>')
 })
@@ -160,7 +161,7 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
   const t = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
   assert.deepEqual(Object.keys(t), ['es', 'en'])
   const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
-  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 't-d', 'g'])
+  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 'g'])
   const privada = rutaPrivada(['C:\\Users\\Administrator', 'C:\\Users\\Administrator\\AppData', '/home/runner', '/tmp/x'])
   for (const idioma of ['es', 'en']) {
     assert.deepEqual(Object.keys(t[idioma]), TERMINAL.map((p) => p.nombre))
@@ -180,6 +181,11 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(!html.replace(/<span class="[^"<>]*">|<\/span>/g, '').includes('<'), `${donde}: una etiqueta que no es <span class>`)
     }
     assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
+    // Las peticiones del Historial están en el idioma de la captura (PETICIONES), nunca en el otro.
+    const historial = t[idioma].historial.replace(/<[^>]+>/g, '')
+    const otro = idioma === 'es' ? 'en' : 'es'
+    for (const p of PETICIONES[idioma]) assert.ok(historial.includes(p.slice(0, 12)), `${idioma}/historial: falta «${p}»`)
+    for (const p of PETICIONES[otro]) assert.ok(!historial.includes(p.slice(0, 12)), `${idioma}/historial: sale «${p}»`)
     // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
     const red = textos[idioma]['inicio.redTexto'].slice(0, 20)
     assert.ok(t[idioma].inicio.replace(/<[^>]+>/g, '').includes(red), `${idioma}/inicio: la red no está vacía (falta «${red}»)`)

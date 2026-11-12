@@ -171,12 +171,17 @@ func sinOpciones(cmd *cobra.Command, args []string) ([]string, error) {
 		}
 		nombre, _, conValor := strings.Cut(strings.TrimLeft(a, "-"), "=")
 		var existe, pideValor bool
-		if strings.HasPrefix(a, "--") {
+		switch {
+		case nombre == "":
+		case strings.HasPrefix(a, "--"):
 			if f := cmd.Flags().Lookup(nombre); f != nil {
 				existe, pideValor = true, f.NoOptDefVal == ""
 			}
-		} else if f := cmd.Flags().ShorthandLookup(nombre[:1]); f != nil {
-			existe, pideValor = true, f.NoOptDefVal == ""
+		default:
+			if f := cmd.Flags().ShorthandLookup(nombre[:1]); f != nil {
+				existe, pideValor = true, f.NoOptDefVal == ""
+				conValor = conValor || len(nombre) > 1 // -n50: el valor va pegado
+			}
 		}
 		switch {
 		case !existe:
@@ -227,6 +232,35 @@ func comprobarOrdenSitio(raiz *cobra.Command, args []string, servidor, ingles bo
 	return nil
 }
 
+// TestSinOpciones: sinOpciones quita las opciones y sus valores (separados, pegados o con =) y deja los argumentos;
+// una opción desconocida, sin su valor o sin nombre es un error.
+func TestSinOpciones(t *testing.T) {
+	cmd := &cobra.Command{Use: "prueba"}
+	cmd.Flags().IntP("numero", "n", 0, "")
+	cmd.Flags().StringP("modelo", "m", "", "")
+	cmd.Flags().BoolP("todas", "t", false, "")
+	for _, c := range []struct {
+		args, quiere []string
+	}{
+		{[]string{"a", "-n", "50", "b"}, []string{"a", "b"}},
+		{[]string{"a", "-n50", "b"}, []string{"a", "b"}}, // valor pegado: b no es el valor
+		{[]string{"-n=50", "a"}, []string{"a"}},
+		{[]string{"--modelo", "x", "a"}, []string{"a"}},
+		{[]string{"--modelo=x", "a"}, []string{"a"}},
+		{[]string{"-t", "a"}, []string{"a"}}, // booleana: no se come a
+		{[]string{"-", "a"}, []string{"-", "a"}},
+	} {
+		if got, err := sinOpciones(cmd, c.args); err != nil || !slices.Equal(got, c.quiere) {
+			t.Errorf("%q -> %q, %v; quería %q", c.args, got, err, c.quiere)
+		}
+	}
+	for _, args := range [][]string{{"-=x"}, {"--=x"}, {"-z"}, {"--otra"}, {"-m"}} {
+		if _, err := sinOpciones(cmd, args); err == nil {
+			t.Errorf("%q debería ser un error", args)
+		}
+	}
+}
+
 // TestOrdenesDelSitioIdioma: una línea en inglés no pasa con un nombre en español, ni siquiera el que cobra acepta.
 func TestOrdenesDelSitioIdioma(t *testing.T) {
 	raiz := nuevaRaiz()
@@ -263,7 +297,8 @@ func TestOrdenesDelSitioIdioma(t *testing.T) {
 	}
 }
 
-// TestComandosDelSitioExisten: cada orden de tramtai que enseñan los <pre> de index.html y servidor.html existe, y las de
+// TestComandosDelSitioExisten: cada orden de tramtai que enseñan los <pre> de index.html, servidor.html y
+// desarrolladores.html existe, y las de
 // los lang="en" existen con nombres en inglés. Lo que no está dentro de ningún lang se lee como español (se enseña en los
 // dos idiomas, así que las Tareas 15 y 16 lo marcan por idioma). Solo lee archivos y llama a Find: no ejecuta nada.
 func TestComandosDelSitioExisten(t *testing.T) {
@@ -273,7 +308,7 @@ func TestComandosDelSitioExisten(t *testing.T) {
 		ingles, enLinea bool
 	}
 	var lineas []linea
-	for _, archivo := range []string{"index.html", "servidor.html"} {
+	for _, archivo := range []string{"index.html", "servidor.html", "desarrolladores.html"} {
 		datos, err := os.ReadFile("../../site/" + archivo)
 		if err != nil {
 			t.Fatal(err)
@@ -288,9 +323,13 @@ func TestComandosDelSitioExisten(t *testing.T) {
 				lineas = append(lineas, linea{archivo, l, true, false})
 			}
 		}
-		// También las órdenes citadas en una frase (<code> fuera de los <pre>), en el idioma de su bloque.
-		for _, c := range codigosEnLinea(string(datos)) {
-			lineas = append(lineas, linea{archivo + " (en una frase)", c.texto, c.lang == "en", true})
+		// También las órdenes citadas en una frase (<code> fuera de los <pre>), en el idioma de su bloque. En
+		// desarrolladores.html no: las de sus frases (tramtai espacios, global token --rotar, agentes conectar…) aún no
+		// tienen alias en inglés.
+		if archivo != "desarrolladores.html" {
+			for _, c := range codigosEnLinea(string(datos)) {
+				lineas = append(lineas, linea{archivo + " (en una frase)", c.texto, c.lang == "en", true})
+			}
 		}
 		if len(lineas) == antes {
 			t.Fatalf("%s: no hay ningún <pre>: ¿cambió el marcado?", archivo)
@@ -311,10 +350,10 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
-	// Hoy son 23: 11 en index.html (tramtai terminal, igual en los dos idiomas, cuenta una vez) y 12 en servidor.html.
-	// Perder los bloques de una página baja de aquí.
-	if revisadas < 23 {
-		t.Errorf("solo se revisaron %d órdenes (mínimo 23): ¿cambió el marcado de los <pre>?", revisadas)
+	// Hoy son 26: 11 en index.html (tramtai terminal, igual en los dos idiomas, cuenta una vez), 12 en servidor.html y 3
+	// en desarrolladores.html. Perder los bloques de una página baja de aquí.
+	if revisadas < 26 {
+		t.Errorf("solo se revisaron %d órdenes (mínimo 26): ¿cambió el marcado de los <pre>?", revisadas)
 	}
 	t.Logf("órdenes revisadas: %d en <pre> y %d en frases", revisadas, enFrases)
 	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 32 entre los dos idiomas.

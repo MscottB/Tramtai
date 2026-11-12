@@ -144,9 +144,10 @@ type EstadoHerramienta struct {
 	// si la gestiona una política de la organización.
 	Motivo string `json:"motivo,omitempty"`
 	// MotivoCodigo y MotivoDatos dicen lo mismo que Motivo para que la Web UI lo traduzca a su idioma (Motivo va en el del
-	// servicio): gestionado, solo_global, sin_https_propio, api_no_existe{api}, api_detenida{api}, puerto{actual,anotado},
-	// orden_no_existe{ruta}, clave_no_almacen, editada_a_mano{ruta}, otro_archivo{ruta}, anotacion_ilegible{detalle},
-	// continue_json y previa. Un código que la Web UI no conozca se queda con Motivo.
+	// servicio): gestionado, solo_global, sin_https_propio, api_no_existe{api}, api_detenida{api},
+	// modelo_no_permitido{api,modelo}, puerto{actual,anotado}, orden_no_existe{ruta}, clave_no_almacen, editada_a_mano{ruta},
+	// otro_archivo{ruta}, anotacion_ilegible{detalle}, continue_json y previa. Un código que la Web UI no conozca se queda
+	// con Motivo.
 	MotivoCodigo   string            `json:"motivo_codigo,omitempty"`
 	MotivoDatos    map[string]string `json:"motivo_datos,omitempty"`
 	ClaveEnArchivo bool              `json:"clave_en_archivo"`

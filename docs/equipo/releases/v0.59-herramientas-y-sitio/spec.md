@@ -72,7 +72,11 @@ reales»).
 
 - **App:** una pestaña «Herramientas» en Mis APIs, junto a «APIs por aplicación» y «Clave del espacio».
   - Una fila por herramienta, con su estado (punto y texto): No detectada, Detectada, Activa, Desactivada o
-    Desactualizada.
+    Desactualizada (en inglés Not detected, Detected, Active, Turned off, Out of date; desde un proyecto, «Solo global»,
+    Global only). Las mismas palabras en la CLI, la Web UI y la terminal.
+  - Lo que no va (por qué está desactualizada, qué impide activarla) sale como **motivo**: el servicio lo manda con un
+    código y sus datos (`motivo_codigo`, `motivo_datos`) para que la Web UI lo traduzca; la CLI y la terminal usan el
+    texto `motivo`, en el idioma del proceso.
   - Cada fila tiene un **interruptor** para activarla o desactivarla, y muestra el modelo y el archivo que toca.
   - Encima de la lista, «Activar todas» y «Desactivar todas», para las detectadas.
 - **Terminal:** la misma pestaña en Mis APIs, con las mismas acciones y sus teclas.
@@ -93,13 +97,18 @@ reales»).
    grupo «Herramientas», limitada a ese agente y con su propia clave. Si ya existe (porque se activó antes), la reanuda.
 3. **Clave:** Claude Code y Codex admiten pedirla a una orden. Para ellas, la clave se guarda cifrada en el almacén del
    sistema (donde ya están las de los proveedores) y su configuración llama a `tramtai herramientas clave <id>`, así que
-   no queda ninguna clave en disco. Para Continue y opencode/Kilo, la clave va en su archivo, con permisos solo para el
-   usuario, y la app lo dice.
-4. **Copia:** el archivo entero se copia en `datos-tramtai/herramientas/copias/<id>-<fecha>`, con permisos solo para el
-   usuario: puede tener otros secretos suyos.
+   no queda ninguna clave en disco. Para Continue y opencode/Kilo, la clave va en su archivo (0600 en Linux y macOS; en Windows la protege la ACL heredada
+   de la carpeta del usuario), y la app lo dice.
+4. **Copia:** el archivo entero se copia en `datos-tramtai/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, con
+   0600 en Linux y macOS (en Windows, la ACL heredada de la carpeta del usuario): puede tener otros secretos suyos. Se guardan como mucho las **3 copias** más recientes
+   de cada herramienta; olvidar no las borra.
 5. **Escritura:** Tramtai escribe solo lo suyo y anota en `datos-tramtai/herramientas/<id>.json` qué escribió y qué
-   valores había antes.
-   - Relee el archivo justo antes de escribir, porque Claude Code y Codex reescriben sus propios archivos.
+   valores había antes. La anotación nunca lleva secretos: de una clave escrita en un archivo guarda su huella
+   (`sha256:…`).
+   - Relee el archivo justo antes de escribir, porque Claude Code y Codex reescriben sus propios archivos. Si su huella
+     cambió entre leer y renombrar, reintenta una vez; si vuelve a cambiar, error «el archivo cambió, vuelve a
+     intentarlo».
+   - Rutas de ejecutable con `%` (el `apiKeyHelper` lo ejecuta `cmd.exe`, que lo expandiría): error, no se escribe.
    - Escribe de forma atómica (temporal y renombrar) y reintenta si Windows tiene el archivo bloqueado.
    - Conserva los comentarios: JSON/JSONC con un lector que los respeta; TOML y YAML con un bloque entre
      `# >>> tramtai` y `# <<< tramtai`, sin reescribir el resto.
@@ -120,6 +129,14 @@ reales»).
   la API se crea en ese espacio. Nunca se escribe en `.claude/settings.json`, que se comparte por git.
 - **Solo global:** Codex (un `config.toml` de proyecto no admite proveedores), Continue y opencode/Kilo (la clave
   quedaría en una carpeta del repositorio). Desde un proyecto, su fila lo dice.
+- **Una sola activación por herramienta:** si ya está activa en otra ruta (otro proyecto), activarla devuelve el error
+  `ErrOtraActivacion` con su motivo; no se mueve sola. El usuario la desactiva y la activa donde quiere.
+- **Sin activación con el HTTPS propio del servicio** (`servicio.tls.modo` distinto de `ninguno`): el puerto principal solo
+  habla TLS y el HTTP de loopback es efímero. Error claro y motivo en cada fila; quien lo use puede poner un proxy.
+- **Continue con `config.json` y sin `config.yaml`:** se niega con un error claro. Crear el YAML haría que Continue
+  descartara en silencio la configuración del usuario; hay que migrar a `config.yaml` antes.
+- **Modo servidor:** las herramientas no se ofrecen (la cuenta del servicio no es la del usuario). La pestaña lo dice y
+  la API responde `409 no_disponible_en_servidor` sin escribir nada.
 
 ### Avisos y errores
 
@@ -128,8 +145,10 @@ reales»).
   avisa de que Tramtai no puede cambiarlos.
 - **Desactualizada:** si cambia el puerto, la API ya no existe o el archivo ya no tiene lo que Tramtai escribió, la fila
   pasa a «Desactualizada» con «Volver a activar».
-- **`tramtai herramientas clave <id>`:** solo sirve para herramientas activas y escribe la clave en la salida estándar,
-  sin nada más. Nunca aparece en registros ni en el historial.
+- **`tramtai herramientas clave <id>`:** responde mientras Tramtai guarde la clave (con la herramienta activa o
+  desactivada; no después de «Olvidar») y la escribe en la salida estándar, sin nada más. Lee el almacén sin pasar por el
+  servicio. Nunca aparece en registros ni en el historial. Con la herramienta desactivada su API está detenida, así que
+  la clave no sirve de nada.
 - **Sincronización:** la Ayuda avisa de que, si sincronizas `~/.claude` o tus dotfiles, la configuración llega a equipos
   sin Tramtai.
 
@@ -137,12 +156,12 @@ reales»).
 
 Antes de cerrar la versión, una prueba al estilo M0 con Claude Code y Codex reales, apuntados a una copia de prueba de
 Tramtai (nunca la del usuario ni su puerto 17373). Comprueba:
-- `/anthropic/v1/messages` en vivo, aceptando la cabecera `anthropic-beta`;
-- `/openai/v1/responses` en vivo;
+- `/p/claude-code/anthropic/v1/messages` en vivo, aceptando la cabecera `anthropic-beta`;
+- `/p/codex/openai/v1/responses` en vivo;
 - que los nombres `agente/modelo` llegan enteros;
 - que `apiKeyHelper` y `auth.command` funcionan.
 
-Lo que no encaje se arregla en la ruta de Tramtai, dentro de la versión. Continue y opencode se comprueban con su archivo
+Lo que no encaje se arregla en la ruta de Tramtai, dentro de la versión. Continue, opencode y Kilo Code se comprueban con su archivo
 y una petición real.
 
 ### Pruebas
@@ -153,16 +172,18 @@ y una petición real.
   - se respetan los cambios del usuario hechos después de activar;
   - se rechaza un archivo roto sin tocarlo;
   - en un proyecto nunca se escribe `.claude/settings.json`;
-  - las copias y los archivos con clave quedan con permisos solo para el usuario.
+  - las copias y los archivos con clave quedan con 0600 en Linux y macOS (en Windows, con la ACL heredada de la carpeta
+    del usuario).
 - **Servicio:** las rutas de la API para la Web UI y la terminal.
 - **Paridad:** las pruebas de paridad de la terminal y de la Web UI.
 
 ### Ayuda
 
-Un tema nuevo, «Conectar tus herramientas»:
+Un tema nuevo, «Conectar tus herramientas» (id `conectar-herramientas`: `herramientas` ya es el de las herramientas
+`tools` de los agentes):
 - qué toca en cada una;
 - dónde está la copia y cómo deshacer;
-- por qué la clave de Continue y opencode va en su archivo;
+- por qué la clave de Continue, opencode y Kilo Code va en su archivo;
 - qué pasa con los equipos que sincronizan su configuración.
 
 En el sitio, lo de la sección 3.
@@ -223,16 +244,17 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
   - **4** agentes desde tus apps;
   - **3** API: OpenAI, Anthropic y la propia;
   - **0** telemetría y ningún servidor nuestro;
-  - **1** cambio en tu app: la URL.
+  - **2** cambios en tu app: la URL y la clave (con el SDK de OpenAI o el de Anthropic también cambia la clave).
 
   Son cifras del producto, verificables en el propio sitio. No hay cifras de descargas ni testimonios: no se inventan.
 - **Línea de seis paradas** con el trazo y las estaciones del sitio (acento, no colores de agente):
   1. **Usa lo que ya pagas:** tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub
      Copilot. Sin cuentas nuevas.
-  2. **Sin tocar tu código:** si tu app usa el SDK de OpenAI o el de Anthropic, cambias la URL. Y a Claude Code, Codex,
-     Continue y opencode los apunta Tramtai por ti.
+  2. **Sin tocar tu código:** con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex,
+     Continue, opencode y Kilo Code los apunta Tramtai.
   3. **Si un agente falla, sigue otro:** llega a su límite y la petición continúa con el siguiente de tu lista.
-  4. **Todo queda en tu equipo:** sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.
+  4. **Todo corre en tu equipo:** sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo. («Queda»
+     decía de más: las peticiones sí salen hacia el proveedor; regla de la auditoría del 2026-10-22.)
   5. **Cada app, con su clave y su límite:** presupuesto diario o mensual por app y cada petición a la vista.
   6. **Escritorio, terminal o servidor:** la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.
 - **Disposición:** en pantalla ancha, dos líneas verticales de tres paradas, lado a lado; en móvil, una sola línea de
@@ -257,7 +279,9 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
   - Se mantiene el bloqueo de rutas reales de hoy.
 - **Fuente:** un subconjunto autoalojado de Cascadia Mono (OFL, como Overpass) con las letras y los símbolos que usa la
   TUI (`✓ ✗ ● ○ ▸ ▾ │ ·`, flechas y bloques). Con la fuente de reserva, `✓`/`✗` miden más que una letra y descuadran las
-  columnas (visto en la prueba).
+  columnas (visto en la prueba). Se llama `Tramtai Mono` en la hoja del sitio, con Cascadia Mono, Consolas y `monospace`
+  de reserva. Cada flecha, forma o símbolo va en un `<span class="g">` de `1ch` y centrado, así las columnas cuadran con
+  cualquier fuente (el subconjunto no puede llevar `✗`, que Cascadia no tiene).
 - **En la portada:**
   - Una ventana que **sigue el tema del sitio** (terminal clara de día, oscura de noche, con la paleta de cada tema de
     `DESIGN.md`), con tres puntos de semáforo, pestañas «1 Inicio · 4 Mis APIs · 5 Historial» y un rótulo «tramtai
@@ -279,17 +303,20 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
 ### 6. El servidor
 
 **Sección en la portada:**
-- Una frase que separa escritorio y servidor: «El escritorio es para ti; el servidor, para tu casa o tu equipo de
-  trabajo, encendido aunque nadie inicie sesión».
+- Una frase que separa escritorio y servidor: «El escritorio es para ti; el servidor, para tu casa o tu oficina,
+  encendido aunque nadie inicie sesión».
 - Un mapa de tranvía en SVG en línea: tus equipos (portátil, móvil, scripts) → tramo **HTTPS** en el acento → Tramtai en
   tu servidor → las líneas de los agentes. El texto del mapa va en `<tspan lang>`.
 - Cuatro virtudes, cada una con una línea:
   - **Arranca con el equipo:** sin sesión iniciada.
   - **Solo por HTTPS:** sin él no arranca.
   - **Contraseña y TOTP:** segundo factor opcional.
-  - **Detrás de tu proxy:** con ejemplos para los más usados.
+  - **Detrás de tu proxy:** con ejemplos comprobados en el CI, y solo esos: Caddy, nginx, Apache, Traefik y HAProxy. IIS
+    tiene ejemplo, pero no se comprueba en el CI, así que la virtud no lo nombra y el paso 3 de Windows lo dice.
 - Dos tarjetas: «El escritorio, si…» y «El servidor, si…».
-- Pestañas Linux · Windows Server, con la orden de instalar y la de la contraseña en el idioma elegido.
+- Pestañas Linux · Windows Server, con la orden de instalar y la de la contraseña en el idioma elegido. En Windows la
+  contraseña va en una consola de administrador nueva, porque la de la instalación aún no ve el PATH. `tramtai abrir`
+  tiene el alias `open` (como `servidor`/`server`), y el inglés de la página lo usa.
 - Un enlace a la guía y, en la misma línea: «Es otro entorno: tus APIs y claves no pasan de uno a otro. Antes de
   instalar, lee los cinco riesgos».
 
@@ -349,7 +376,7 @@ Todo lo que se ve cambia con el idioma elegido: el texto, las imágenes y los co
 **Herramientas:**
 - Con Claude Code y Codex reales, activar desde la app, la terminal o la CLI deja la herramienta hablando con Tramtai sin
   ninguna clave en su archivo. Desactivar la devuelve a como estaba, respetando lo que el usuario cambió después.
-- Continue y opencode/Kilo quedan apuntados, con la clave en su archivo y permisos solo para el usuario.
+- Continue y opencode/Kilo quedan apuntados, con la clave en su archivo, dentro de la carpeta del usuario.
 - «Activar todas» y «Desactivar todas» hacen lo mismo con todas las detectadas.
 - Siempre queda una copia del archivo antes del primer cambio, y «Restaurar» la repone.
 - Desde un proyecto, solo se escribe `.claude/settings.local.json`.

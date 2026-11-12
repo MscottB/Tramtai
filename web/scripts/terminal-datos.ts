@@ -149,6 +149,7 @@ export const CLAVES_APIS: string[] = [
   'herramientas.servidor', 'herramientas.servidorTexto',
   // Por qué una herramienta no va, con el código del servicio (la terminal traduce igual que la Web UI).
   'herramientas.motivo.gestionado', 'herramientas.motivo.sin_https_propio', 'herramientas.motivo.api_no_existe', 'herramientas.motivo.api_detenida',
+  'herramientas.motivo.modelo_no_permitido',
   'herramientas.motivo.puerto', 'herramientas.motivo.orden_no_existe', 'herramientas.motivo.clave_no_almacen', 'herramientas.motivo.editada_a_mano',
   'herramientas.motivo.otro_archivo', 'herramientas.motivo.anotacion_ilegible', 'herramientas.motivo.continue_json',
 ]

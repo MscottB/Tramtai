@@ -66,6 +66,25 @@ func TestEnvoltorioEnSuCarpeta(t *testing.T) {
 	}
 }
 
+// archivosNuevosSonDeAdministradores crea un archivo y mira su dueño: Administradores o SYSTEM, como en una consola de
+// administrador normal.
+func archivosNuevosSonDeAdministradores(t *testing.T) bool {
+	t.Helper()
+	ruta := filepath.Join(t.TempDir(), "sonda")
+	if err := os.WriteFile(ruta, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sd, err := windows.GetNamedSecurityInfo(ruta, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dueno, _, err := sd.Owner()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) || dueno.IsWellKnown(windows.WinLocalSystemSid)
+}
+
 type servicioMinimo struct{}
 
 func (servicioMinimo) Execute(_ []string, peticiones <-chan svc.ChangeRequest, estado chan<- svc.Status) (bool, uint32) {
@@ -85,6 +104,11 @@ func (servicioMinimo) Execute(_ []string, peticiones <-chan svc.ChangeRequest, e
 func TestInstalarServicioWindows(t *testing.T) {
 	if !EsAdministrador() {
 		t.Skip("necesita una consola de administrador (el SCM y la DACL)")
+	}
+	// Un proceso con token restringido (el Bash de un agente con sandbox, por ejemplo) es administrador, pero sus archivos
+	// nuevos son del usuario y no de Administradores: Instalar rechaza con razón una carpeta con archivos de «otro usuario».
+	if !archivosNuevosSonDeAdministradores(t) {
+		t.Skip("los archivos nuevos de este proceso no son de Administradores (token restringido): usa una consola de administrador normal")
 	}
 	nombre := fmt.Sprintf("TramtaiPrueba%d", os.Getpid())
 	// En %ProgramData% y no en la temporal del administrador: la cuenta virtual tiene que poder leer el programa.
@@ -111,6 +135,15 @@ func TestInstalarServicioWindows(t *testing.T) {
 	t.Cleanup(func() {
 		if err := Desinstalar(true); err != nil && !errors.As(err, new(Aviso)) {
 			t.Errorf("desinstalar al terminar: %v", err)
+		}
+		// Windows puede tardar en descargar el perfil de la cuenta: sin esto quedaría un TramtaiPrueba<pid> en
+		// ServiceProfiles por cada vez que se corre la prueba. borrarPerfil ya espera unos 10 s por intento.
+		err := borrarPerfil(sidServicio(nombre))
+		for limite := time.Now().Add(time.Minute); err != nil && time.Now().Before(limite); {
+			err = borrarPerfil(sidServicio(nombre))
+		}
+		if err != nil {
+			t.Logf("queda el perfil de la cuenta de prueba en %s: %v", perfilServicio(), err)
 		}
 		_ = os.RemoveAll(base)
 		nombreServicio, rutas, editarRutaSistema = nombre0, rutas0, path0

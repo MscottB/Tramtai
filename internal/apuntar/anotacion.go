@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"tramtai/internal/configuracion"
+	"tramtai/internal/idioma"
 )
 
 // Alcance es dónde se apunta la herramienta: su archivo global o el de un proyecto.
@@ -32,7 +34,8 @@ type Anotacion struct {
 	Puerto    int            `json:"puerto"`
 	Escrito   map[string]any `json:"escrito"`
 	Previos   map[string]any `json:"previos"`
-	NoExistia bool           `json:"noExistia"` // el archivo lo creó Tramtai: al desactivar se borra si solo queda lo suyo
+	NoExistia bool           `json:"noExistia"`         // el archivo lo creó Tramtai: al desactivar se borra si solo queda lo suyo
+	Carpeta   string         `json:"carpeta,omitempty"` // la carpeta más alta que creó Tramtai para el archivo: se borra con él si queda vacía
 	Fecha     time.Time      `json:"fecha"`
 }
 
@@ -60,6 +63,9 @@ func Leer(datos, id string) (Anotacion, bool, error) {
 	d.UseNumber() // un número de Escrito/Previos vuelve como json.Number, no como un float64 que pierde enteros grandes
 	if err := d.Decode(&a); err != nil {
 		return a, false, err
+	}
+	if _, err := d.Token(); !errors.Is(err, io.EOF) { // algo detrás del objeto: la anotación no es la que escribió Tramtai
+		return Anotacion{}, false, errors.New(idioma.T("la anotación tiene datos de más tras el objeto"))
 	}
 	return a, true, nil
 }

@@ -444,6 +444,8 @@ func (a *archivoYAML) quitarModelo(raiz *yaml.Node, k int, anot Anotacion) {
 		if previo, ok := anot.Previos[claveModels].(string); ok {
 			// el models estaba vacío antes de activar: vuelve su línea tal cual, con su comentario
 			a.ls[linea] = previo + strings.TrimPrefix(a.ls[linea], finDeLinea(a.ls[linea]))
+		} else if c := strings.Index(a.ls[linea], "#"); c > 0 {
+			a.ls[linea] = a.ls[linea][c:] // la línea la escribió Tramtai, pero el comentario que le puso el usuario se queda
 		} else {
 			quitar[linea] = true
 			if len(raiz.Content) == 2*(len(cabeceraNueva)/2)+2 {

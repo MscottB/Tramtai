@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/tailscale/hujson"
 )
 
-var ordenPrueba = []string{`C:\Tramtai\tramtai.exe`, "herramientas", "clave", "claude-code"}
+// ordenPrueba se escribe igual para cmd y para sh (ver TestOrdenEnLineaCmd y TestOrdenEnLineaSh).
+var ordenPrueba = []string{`/opt/Tramtai/tramtai`, "herramientas", "clave", "claude-code"}
 
 func valoresClaude() Valores {
 	return Valores{URLAnthropic: "http://127.0.0.1:17373/p/claude-code/anthropic", Modelo: "claude/sonnet",
@@ -99,7 +102,7 @@ func TestClaudeCodeConservaLoDemas(t *testing.T) {
 	if en(t, m, "env", "ANTHROPIC_BASE_URL") != valoresClaude().URLAnthropic || en(t, m, "env", "ANTHROPIC_MODEL") != "claude/sonnet" {
 		t.Errorf("faltan las claves de Tramtai: %s", nuevo)
 	}
-	if m["apiKeyHelper"] != `C:\Tramtai\tramtai.exe herramientas clave claude-code` {
+	if m["apiKeyHelper"] != `/opt/Tramtai/tramtai herramientas clave claude-code` {
 		t.Errorf("apiKeyHelper = %v", m["apiKeyHelper"])
 	}
 	if len(previos) != 0 || len(escrito) != 3 {
@@ -112,7 +115,7 @@ func TestClaudeCodeConservaLoDemas(t *testing.T) {
     "ANTHROPIC_MODEL": "claude/sonnet"
   },
   "includeCoAuthoredBy": false,
-  "apiKeyHelper": "C:\\Tramtai\\tramtai.exe herramientas clave claude-code"
+  "apiKeyHelper": "/opt/Tramtai/tramtai herramientas clave claude-code"
 }
 `; !strings.HasSuffix(string(nuevo), want) {
 		t.Errorf("no respetó el estilo del archivo:\n%s", nuevo)
@@ -181,12 +184,16 @@ func TestClaudeCodeOrdenConEspacios(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := `"C:\Users\Ana María\Tramtai\tramtai.exe" herramientas clave claude-code`; escrito["apiKeyHelper"] != want {
+	want := `"C:\Users\Ana María\Tramtai\tramtai.exe" herramientas clave claude-code`
+	if runtime.GOOS != "windows" {
+		want = `'C:\Users\Ana María\Tramtai\tramtai.exe' herramientas clave claude-code`
+	}
+	if escrito["apiKeyHelper"] != want {
 		t.Errorf("apiKeyHelper = %q, quería %q", escrito["apiKeyHelper"], want)
 	}
 	// en el archivo va escapado como JSON
 	nuevo, _, _, _ := ClaudeCode().Aplicar(nil, v)
-	if !strings.Contains(string(nuevo), `"apiKeyHelper": "\"C:\\Users\\Ana María\\Tramtai\\tramtai.exe\" herramientas clave claude-code"`) {
+	if escapado, _ := json.Marshal(want); !strings.Contains(string(nuevo), `"apiKeyHelper": `+string(escapado)) {
 		t.Errorf("escape en el archivo: %s", nuevo)
 	}
 }
@@ -439,6 +446,38 @@ func TestJSONConFinesDeLineaCRLF(t *testing.T) {
 	}
 }
 
+// Un comentario de bloque en la línea de la llave de cierre sigue ahí tras activar y desactivar.
+func TestComentarioDeBloqueAntesDeLaLlave(t *testing.T) {
+	for _, original := range []string{
+		"{\n  \"env\": {\n    \"OTRA\": \"1\" /* mío */\n  }\n}\n",
+		"{\n  \"includeCoAuthoredBy\": false /* mío */\n}\n",
+		"{\n  \"env\": {\n    \"OTRA\": \"1\"\n  /* mío */ }\n}\n",
+	} {
+		nuevo, escrito, previos, err := ClaudeCode().Aplicar([]byte(original), valoresClaude())
+		if err != nil {
+			t.Fatal(err)
+		}
+		quitado, _, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+		if err != nil || string(quitado) != original {
+			t.Errorf("%q\ntras activar: %s\ntras quitar (err %v): %s", original, nuevo, err, quitado)
+		}
+	}
+}
+
+// Límite conocido (podar): un objeto que ya estaba vacío antes de activar no sobrevive a desactivar; el archivo dice lo
+// mismo para Claude Code.
+func TestEnvVacioNoSobreviveADesactivar(t *testing.T) {
+	original := []byte(`{"env": {}, "includeCoAuthoredBy": false}`)
+	nuevo, escrito, previos, err := ClaudeCode().Aplicar(original, valoresClaude())
+	if err != nil {
+		t.Fatal(err)
+	}
+	quitado, vacio, err := ClaudeCode().Quitar(nuevo, Anotacion{Escrito: escrito, Previos: previos})
+	if err != nil || vacio || !reflect.DeepEqual(comoMapa(t, quitado), map[string]any{"includeCoAuthoredBy": false}) {
+		t.Errorf("tras quitar (err %v, vacío %v): %s", err, vacio, quitado)
+	}
+}
+
 func TestOrdenEnLineaCmd(t *testing.T) {
 	for _, c := range []struct{ parte, quiere string }{
 		{`C:\Tramtai\tramtai.exe`, `C:\Tramtai\tramtai.exe`},
@@ -449,15 +488,46 @@ func TestOrdenEnLineaCmd(t *testing.T) {
 		{`C:\a|b\t.exe`, `"C:\a|b\t.exe"`},
 		{`C:\a<b>\t.exe`, `"C:\a<b>\t.exe"`},
 	} {
-		got, err := ordenEnLinea([]string{c.parte, "herramientas"})
+		got, err := ordenParaShell([]string{c.parte, "herramientas"}, true)
 		if err != nil || got != c.quiere+" herramientas" {
 			t.Errorf("%q -> %q, %v; quería %q", c.parte, got, err, c.quiere)
 		}
 	}
-	v := valoresClaude()
-	v.Orden = []string{`C:\100%\tramtai.exe`, "herramientas"}
-	if _, _, _, err := ClaudeCode().Aplicar(nil, v); !errors.Is(err, errOrdenConPorcentaje) {
+	if _, err := ordenParaShell([]string{`C:\100%\tramtai.exe`}, true); !errors.Is(err, errOrdenConPorcentaje) {
 		t.Errorf("con %%: err = %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		v := valoresClaude()
+		v.Orden = []string{`C:\100%\tramtai.exe`, "herramientas"}
+		if _, _, _, err := ClaudeCode().Aplicar(nil, v); !errors.Is(err, errOrdenConPorcentaje) {
+			t.Errorf("con %% en Windows: err = %v", err)
+		}
+	}
+}
+
+func TestOrdenEnLineaSh(t *testing.T) {
+	for _, c := range []struct{ parte, quiere string }{
+		{`/usr/local/bin/tramtai`, `/usr/local/bin/tramtai`},
+		{`/home/ana maría/tramtai`, `'/home/ana maría/tramtai'`},
+		{`/opt/o'brien/tramtai`, `'/opt/o'\''brien/tramtai'`},
+		{`/opt/$HOME/tramtai`, `'/opt/$HOME/tramtai'`},
+		{"/opt/`id`/tramtai", "'/opt/`id`/tramtai'"},
+		{`/opt/100%/tramtai`, `'/opt/100%/tramtai'`}, // «%» solo es un problema en cmd
+	} {
+		got, err := ordenParaShell([]string{c.parte, "herramientas"}, false)
+		if err != nil || got != c.quiere+" herramientas" {
+			t.Errorf("%q -> %q, %v; quería %q", c.parte, got, err, c.quiere)
+		}
+	}
+	if runtime.GOOS == "windows" {
+		return
+	}
+	// la línea que se escribe, ejecutada por sh, da cada parte intacta
+	partes := []string{"/opt/o'brien $HOME `id`/x", "a b", "c"}
+	linea, _ := ordenParaShell(partes, false)
+	salida, err := exec.Command("sh", "-c", `printf '%s\n' `+linea).Output()
+	if err != nil || string(salida) != strings.Join(partes, "\n")+"\n" {
+		t.Errorf("sh -c %s: %q, %v", linea, salida, err)
 	}
 }
 

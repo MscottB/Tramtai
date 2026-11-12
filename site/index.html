@@ -195,34 +195,34 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <pre class="codigo" id="codigo-mapa-1"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.chat.completions.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.chat.completions.create(
     model=<span class="s">"claude/haiku"</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"</span>}],
 )</pre>
 <pre class="codigo" id="codigo-mapa-2" hidden><span class="c" lang="es"># 1. Sube el PDF</span><span class="c" lang="en"># 1. Upload the PDF</span>
-curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -F archivo=@acta.pdf
+curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -F archivo=@<span lang="es">acta.pdf</span><span lang="en">minutes.pdf</span>
 
 <span class="c" lang="es"># 2. Pide la respuesta con forma</span><span class="c" lang="en"># 2. Ask for a shaped answer</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -d <span class="s">'{
   "agente": "codex", "cargas": ["carga_…"],
-  "mensajes": [{"rol": "usuario", "contenido": "Saca las fechas y los nombres de esta acta"}],
+  "mensajes": [{"rol": "usuario", "contenido": "<span lang="es">Saca las fechas y los nombres de esta acta</span><span lang="en">Get the dates and names from these minutes</span>"}],
   "salida": {"formato": "json", "esquema": {"type": "object",
-    "properties": {"fechas": {"type": "array"}, "nombres": {"type": "array"}}}}
+    "properties": {"<span lang="es">fechas</span><span lang="en">dates</span>": {"type": "array"}, "<span lang="es">nombres</span><span lang="en">names</span>": {"type": "array"}}}}
 }'</span></pre>
 <pre class="codigo" id="codigo-mapa-3" hidden><span class="k">import</span> anthropic
 
-cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.messages.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.messages.create(
     model=<span class="s">"copilot"</span>, max_tokens=1024,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Traduce este texto al inglés"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Traduce este texto al inglés</span><span lang="en">Translate this text into English</span>"</span>}],
 )</pre>
 <pre class="codigo" id="codigo-mapa-4" hidden><span class="c" lang="es"># Primero Claude; si falla antes de responder, Codex</span><span class="c" lang="en"># Claude first; if it fails before answering, Codex</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -d <span class="s">'{
   "agente": "claude", "respaldo": ["codex"],
-  "mensajes": [{"rol": "usuario", "contenido": "Resume este contrato en tres puntos"}]
+  "mensajes": [{"rol": "usuario", "contenido": "<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"}]
 }'</span></pre>
             </div>
           </div>
@@ -339,7 +339,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
-          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o de Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue y opencode los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue and opencode at itself.</span></p>
+          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue, opencode and Kilo Code at itself.</span></p>
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
@@ -349,7 +349,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
       <ol class="ventajas-linea" start="4">
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
-          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store.</span></p>
+          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store, except Continue’s, opencode’s and Kilo Code’s: in each tool’s file.</span></p>
         </li>
         <li class="parada parada-ventaja">
           <h3 class="parada-titulo"><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
@@ -392,29 +392,29 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
 <pre class="codigo" id="como-openai-panel" aria-labelledby="como-openai" tabindex="0"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
 <span class="c" lang="es"># La respuesta llega en vivo, trozo a trozo</span><span class="c" lang="en"># The response arrives live, chunk by chunk</span>
-flujo = cliente.chat.completions.create(
+<span lang="es">flujo</span><span lang="en">stream</span> = <span lang="es">cliente</span><span lang="en">client</span>.chat.completions.create(
     model=<span class="s">"claude/sonnet"</span>, stream=<span class="k">True</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Explica este error en dos frases"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Explica este error en dos frases</span><span lang="en">Explain this error in two sentences</span>"</span>}],
 )
-<span class="k">for</span> trozo <span class="k">in</span> flujo:
-    <span class="k">print</span>(trozo.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
+<span class="k">for</span> <span lang="es">trozo</span><span lang="en">chunk</span> <span class="k">in</span> <span lang="es">flujo</span><span lang="en">stream</span>:
+    <span class="k">print</span>(<span lang="es">trozo</span><span lang="en">chunk</span>.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</pre>
 <pre class="codigo" id="como-anthropic-panel" aria-labelledby="como-anthropic" tabindex="0" hidden><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+<span lang="es">cliente</span><span lang="en">client</span> = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"<span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span>)
 
-respuesta = cliente.messages.create(
+<span lang="es">respuesta</span><span lang="en">response</span> = <span lang="es">cliente</span><span lang="en">client</span>.messages.create(
     model=<span class="s">"claude/haiku"</span>, max_tokens=1024,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"</span>}],
 )
-<span class="k">print</span>(respuesta.content[0].text)</pre>
+<span class="k">print</span>(<span lang="es">respuesta</span><span lang="en">response</span>.content[0].text)</pre>
 <pre class="codigo" id="como-curl-panel" aria-labelledby="como-curl" tabindex="0" hidden><span class="c" lang="es"># La misma petición por la URL compatible con OpenAI</span><span class="c" lang="en"># The same request through the OpenAI-compatible URL</span>
 curl http://127.0.0.1:17373/openai/v1/chat/completions \
-  -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -H <span class="s">"Content-Type: application/json"</span> \
-  -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "Resume este contrato en tres puntos"}]}'</span></pre>
+  -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"}]}'</span></pre>
         </div>
       </div>
     </div>
@@ -864,8 +864,8 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
 <div class="ventana-pantalla" id="terminal-historial-panel" aria-labelledby="terminal-historial" tabindex="0">
 <pre class="pantalla" lang="es" role="img" aria-label="La terminal en Historial: las peticiones recientes, con su estado, y los filtros"><span class="t-acento t-b">Tramtai</span> <span class="t-acento t-b">Historial</span>                                                               Global <span class="t-suave">·</span> <span class="t-ok g">●</span><span class="t-ok"> En marcha</span>
 <span class="t-suave t-b">Empezar</span>             <span class="t-suave">│</span> <span class="t-suave">Estado: Todas · Origen: Todos los orígenes</span>                                    
-  1 Inicio          <span class="t-suave">│</span> <span class="t-texto tf-velo g">▸</span><span class="t-texto tf-velo"> </span><span class="t-texto tf-velo g">✓</span><span class="t-texto tf-velo"> Completado   Di «hola» en tres idiomas.                         hace 1 min</span>
-  2 Agentes         <span class="t-suave">│</span>   <span class="g">✓</span> Completado   Resume en una línea: Tramtai pone agentes de IA d… hace 1 min
+  1 Inicio          <span class="t-suave">│</span> <span class="t-texto tf-velo g">▸</span><span class="t-texto tf-velo"> </span><span class="t-texto tf-velo g">✓</span><span class="t-texto tf-velo"> Completado   Di «hola» en tres idiomas.                          hace 29 s</span>
+  2 Agentes         <span class="t-suave">│</span>   <span class="g">✓</span> Completado   Resume en una línea: Tramtai pone agentes de IA d…  hace 35 s
   3 Probar          <span class="t-suave">│</span> <span class="t-suave">Mostrando las 2 más recientes</span>                                                 
                     <span class="t-suave">│</span>                                                                               
 <span class="t-suave t-b">Usar</span>                <span class="t-suave">│</span>                                                                               
@@ -892,8 +892,8 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
 <span class="t-acento t-b">Enter</span> <span class="t-suave">detalles · </span><span class="t-acento t-b">/</span> <span class="t-suave">busca · </span><span class="t-acento t-b">e</span> <span class="t-suave">Estado · </span><span class="t-acento t-b">f</span> <span class="t-suave">Origen · </span><span class="t-acento t-b">t</span> <span class="t-suave">Reintentar · </span><span class="t-acento t-b">x</span> <span class="t-suave">El…</span>   <span class="t-acento t-b">Tab</span> <span class="t-suave">menú · </span><span class="t-acento t-b">?</span> <span class="t-suave">ayuda · </span><span class="t-acento t-b">q</span> <span class="t-suave">salir</span></pre>
 <pre class="pantalla" lang="en" role="img" aria-label="The terminal on History: the recent requests, with their status, and the filters"><span class="t-acento t-b">Tramtai</span> <span class="t-acento t-b">History</span>                                                                   Global <span class="t-suave">·</span> <span class="t-ok g">●</span><span class="t-ok"> Running</span>
 <span class="t-suave t-b">Get started</span>         <span class="t-suave">│</span> <span class="t-suave">Status: All · Source: All sources</span>                                             
-  1 Home            <span class="t-suave">│</span> <span class="t-texto tf-velo g">▸</span><span class="t-texto tf-velo"> </span><span class="t-texto tf-velo g">✓</span><span class="t-texto tf-velo"> Completed    Di «hola» en tres idiomas.                          1 min ago</span>
-  2 Agents          <span class="t-suave">│</span>   <span class="g">✓</span> Completed    Resume en una línea: Tramtai pone agentes de IA d…  1 min ago
+  1 Home            <span class="t-suave">│</span> <span class="t-texto tf-velo g">▸</span><span class="t-texto tf-velo"> </span><span class="t-texto tf-velo g">✓</span><span class="t-texto tf-velo"> Completed    Say hello in three languages.                        33 s ago</span>
+  2 Agents          <span class="t-suave">│</span>   <span class="g">✓</span> Completed    Summarize in one line: Tramtai puts AI agents beh…   38 s ago
   3 Playground      <span class="t-suave">│</span> <span class="t-suave">Showing the 2 most recent</span>                                                     
                     <span class="t-suave">│</span>                                                                               
 <span class="t-suave t-b">Use</span>                 <span class="t-suave">│</span>                                                                               
@@ -1204,7 +1204,7 @@ tramtai terminal</pre>
             </li>
             <li class="parada">
               <h4 class="parada-titulo"><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
-              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak.</span></p>
+              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran. La clave que Tramtai da a Continue, opencode o Kilo Code va además en el archivo de cada herramienta, dentro de tu carpeta de usuario.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak. The key Tramtai gives Continue, opencode or Kilo Code also goes in each tool’s file, inside your user folder.</span></p>
             </li>
             <li class="parada">
               <h4 class="parada-titulo"><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>

@@ -185,6 +185,11 @@ tramtai agentes desconectar|conectar <agente>   # deja un agente fuera sin desin
 tramtai agentes suscripcion <agente>            # tu suscripción, tras los riesgos (en el servidor abierto a la red: --personal [--simultaneas 1-3])
 tramtai --servidor agentes entrar <agente>      # en el servidor: el CLI inicia sesión con la cuenta del servicio
 
+tramtai herramientas listar                          # Claude Code, Codex, Continue, opencode y Kilo: detectadas, activas, desactivadas
+tramtai herramientas activar claude-code codex       # o --todas; --modelo agente/modelo; copia del archivo antes del primer cambio
+tramtai herramientas desactivar --todas              # devuelve los archivos a como estaban (respeta lo que cambiaste después)
+tramtai herramientas restaurar|olvidar <herramienta> # repone la copia entera / desactiva y borra su clave
+
 tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones; -i <espacio> para elegir otro; --global para la global
 ```
 
@@ -347,7 +352,7 @@ tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el del espacio
 
 `tramtai acceso` guarda los cambios a través del servicio, con las mismas reglas que Mis APIs y la terminal, y lo inicia en segundo plano si no está en marcha. Trabaja sobre el archivo (la configuración global o, con `--local`, `.tramtai/local.yaml` del proyecto), así que también llega a una API cuyo espacio no está activo o que no se pudo abrir: se puede detener o eliminar, pero no guardar otra vez con su error.
 
-**Mis APIs** tiene dos pestañas, que el navegador recuerda:
+**Mis APIs** tiene tres pestañas, que el navegador recuerda:
 
 - **APIs por aplicación:**
   - **Filtros:** buscador (por nombre, grupo, modelo o instrucciones), grupo, estado (activas, detenidas, con error) y agente.
@@ -356,6 +361,7 @@ tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el del espacio
   - **Páginas:** de 20; una página que empieza en medio de un grupo repite su cabecera con «(continúa)».
   - **Grupos:** cada uno se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados.
 - **Clave del espacio:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. Un espacio nuevo no tiene clave: se crea aquí (**Crear la clave del espacio**) y se regenera con **Regenerar la clave**; en los dos casos se ve en el momento, con un ejemplo que la lleva puesta, y no se vuelve a ver. Es para ti y tus scripts; cada app va mejor con su propia API, y Mis APIs lo sugiere si muchas peticiones de apps llegan con esta clave. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
+- **Herramientas:** Claude Code, Codex, Continue, opencode y Kilo Code, cada una con su estado, su modelo y un interruptor para apuntarla a Tramtai o dejarla como estaba ([cómo funciona](#herramientas-claude-code-codex-continue-opencode-y-kilo)).
 
 Al pulsar el nombre o la fila de una API se abre su detalle, con **Dirección y clave**: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave (solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer), los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
 
@@ -374,6 +380,20 @@ Al pulsar el nombre o la fila de una API se abre su detalle, con **Dirección y 
   - `--forzar` ignora el modelo que pide la petición y lo informa en la cabecera `Tramtai-Modelo-Forzado`.
 - **Peticiones:** cada petición guarda la API que la creó (`punto_acceso`), y por esa API solo se ven sus propias peticiones.
 - **Sin reinicios:** los cambios se aplican al momento. Las APIs que no cambian siguen abiertas y no se cortan las peticiones en curso.
+
+## Herramientas: Claude Code, Codex, Continue, opencode y Kilo
+
+Tramtai puede apuntar estas herramientas a sí mismo por ti, desde la pestaña **Herramientas** de Mis APIs, desde la terminal o con `tramtai herramientas`.
+
+- **Qué toca:** solo lo suyo, en el archivo de cada herramienta (Claude Code `~/.claude/settings.json`, Codex `~/.codex/config.toml`, Continue `~/.continue/config.yaml`, opencode `~/.config/opencode/opencode.json` o `.jsonc`, Kilo `~/.config/kilo/kilo.jsonc`). Conserva tus comentarios y no toca nada más.
+- **Una API por herramienta:** al activar, Tramtai crea en el espacio actual una API con el id de la herramienta (`claude-code`, `codex`, `continue`, `opencode`, `kilo`), en el grupo «Herramientas» y limitada al modelo que eliges (`agente/modelo`). La herramienta usa su dirección, `http://127.0.0.1:<puerto>/p/<id>/anthropic` o `…/openai/v1`.
+- **La clave:** Claude Code y Codex la piden a `tramtai herramientas clave <id>`: queda cifrada en el almacén del sistema y no hay ninguna clave en su archivo. Continue, opencode y Kilo no saben pedirla así, así que la clave va en su archivo, dentro de tu carpeta de usuario.
+- **Copia:** antes del primer cambio de cada activación se guarda el archivo entero en `herramientas/copias/` de los datos de Tramtai (las 3 últimas por herramienta, solo para tu usuario). `restaurar` lo repone.
+- **Desactivar** quita lo que puso Tramtai, devuelve lo que había y respeta lo que cambiaste después; la API se detiene y la clave se queda para volver a activar enseguida. **Olvidar** además borra la clave y lo que Tramtai anotó. `tramtai herramientas clave <id>` responde mientras la clave siga guardada, también con la herramienta desactivada.
+- **Estados:** No detectada, Detectada, Activa, Desactivada, Desactualizada (cambió el puerto, falta la API o el archivo ya no tiene lo escrito: **Volver a activar**) y, desde un proyecto, Solo global. Si una política de tu organización manda sobre los ajustes de Claude Code, la fila lo dice.
+- **Desde un proyecto:** solo Claude Code, en `.claude/settings.local.json` de la carpeta (nunca en `.claude/settings.json`, que se comparte por git). Las demás son solo globales.
+- **Límites:** una herramienta solo está activa en un archivo a la vez (desactívala para moverla a otro proyecto); con el HTTPS propio del servicio no se activan; Continue con `config.json` y sin `config.yaml` se niega (migra a `config.yaml`); y en el [modo servidor](#modo-servidor) no se ofrecen (`409 no_disponible_en_servidor`), porque la cuenta del servicio no es la tuya.
+- **Si sincronizas** `~/.claude` o tus dotfiles, la configuración llega a equipos sin Tramtai: desactiva las herramientas antes o excluye esos archivos.
 
 ## Administración (para la CLI y la terminal)
 

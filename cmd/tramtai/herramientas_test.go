@@ -177,7 +177,13 @@ func TestHerramientasListar(t *testing.T) {
 // TestMotivoNoEnsanchaLaTabla: la explicación va en la última columna; una larga no mueve las demás (herramientas y espacios).
 func TestMotivoNoEnsanchaLaTabla(t *testing.T) {
 	largo := strings.Repeat("motivo larguísimo ", 10)
-	posicion := func(salida, columna string) int { return strings.Index(strings.SplitN(salida, "\n", 2)[0], columna) }
+	posicion := func(salida, columna string) int {
+		i := strings.Index(strings.SplitN(salida, "\n", 2)[0], columna)
+		if i < 0 { // sin la columna, -1 == -1 pasaría en vacío
+			t.Fatalf("falta la columna %s en:\n%s", columna, salida)
+		}
+		return i
+	}
 	var sin, con strings.Builder
 	h := contrato.EstadoHerramienta{ID: "codex", Nombre: "Codex", Estado: "desactualizada", Ruta: "config.toml"}
 	escribirHerramientas(&sin, []contrato.EstadoHerramienta{h})
