@@ -28,9 +28,7 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
 
 // POR_SACAR son las capturas de la Ayuda que un tema ya cita y todavía no se han sacado, con el motivo: mientras tanto el tema sale
 // sin imagen (la Web UI y el sitio la omiten). Al sacarla (npm run capturas) la entrada sobra y la prueba lo avisa.
-export const POR_SACAR: Record<string, string> = {
-  herramientas: 'v0.59: la saca la Tarea 13 del plan, con la copia de prueba y sus dos peticiones reales a claude/haiku, que se avisan antes',
-}
+export const POR_SACAR: Record<string, string> = {}
 
 // TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal.json), con las teclas que llevan a ella
 // desde Inicio. Agentes no está: enseñaría los CLI reales del equipo que saca la captura.
