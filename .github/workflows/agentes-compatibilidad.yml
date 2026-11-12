@@ -30,6 +30,10 @@ jobs:
           - { agente: codex, version: 0.167.1 }
           - { agente: copilot, version: 1.0.108 }
     runs-on: ${{ matrix.os }}
+    # Los valores de la matriz llegan a los run: por el entorno, nunca pegados en la orden.
+    env:
+      AGENTE: ${{ matrix.agente }}
+      VERSION: ${{ matrix.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,18 +41,17 @@ jobs:
       - name: Instalar, actualizar e iniciar sesión (Linux y macOS)
         if: runner.os != 'Windows'
         env:
-          VERSION: ${{ matrix.version }}
           ACTUALIZAR: '1'
           SESION: '1'
           DESINSTALAR: '1'
-        run: sh scripts/agentes/probar-instalacion.sh ${{ matrix.agente }} "$RUNNER_TEMP/casa"
+        run: sh scripts/agentes/probar-instalacion.sh "$AGENTE" "$RUNNER_TEMP/casa"
       - name: Instalar, actualizar e iniciar sesión (Windows Server)
         if: runner.os == 'Windows'
-        run: ./scripts/agentes/probar-instalacion.ps1 -Agente ${{ matrix.agente }} -Version '${{ matrix.version }}' -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion -Desinstalar
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente $env:AGENTE -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion -Desinstalar
       # Copilot sin winget (no está para la cuenta de un servicio): su descarga directa de GitHub Releases.
       - name: Copilot por su descarga directa (Windows Server)
         if: runner.os == 'Windows' && matrix.agente == 'copilot'
-        run: ./scripts/agentes/probar-instalacion.ps1 -Agente copilot -Descarga -Version '${{ matrix.version }}' -Carpeta "$env:RUNNER_TEMP\casa-descarga" -Actualizar -ProbarSesion -Desinstalar
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente copilot -Descarga -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa-descarga" -Actualizar -ProbarSesion -Desinstalar
 
   # ¿Puede la cuenta virtual de un servicio (como la de Tramtai en modo servidor) instalar cada CLI y lanzar su inicio
   # de sesión? Cada agente, con su servicio y su cuenta (NT SERVICE\TramtaiM0<agente>), en su perfil de verdad.

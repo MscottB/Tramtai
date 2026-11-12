@@ -23,6 +23,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# -SinAislar instala, escribe .claude\settings.json y desinstala en las carpetas reales de la cuenta: solo se admite con
+# la cuenta virtual de un servicio de prueba, nunca con la de una persona (ni aunque CI esté puesta).
+$identidad = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+if ($SinAislar -and $identidad -notlike 'NT SERVICE\*') {
+    throw "-SinAislar usa las carpetas reales de la cuenta: solo con la cuenta virtual de un servicio de prueba (NT SERVICE\…), no con $identidad"
+}
+if ($Descarga -and $Agente -ne 'copilot') { throw "-Descarga solo vale para copilot (su descarga directa), no para $Agente" }
 $deVerdad = $env:CI -eq 'true' -or $SinAislar
 if (-not $deVerdad -and -not $CambiarRegistro -and $Agente -in 'codex', 'copilot') {
     throw "$Agente cambia el PATH de usuario del registro al instalarse: fuera del CI hace falta -CambiarRegistro"
@@ -168,6 +175,8 @@ if ($Desinstalar) {
         }
         'copilot' {
             if ($Descarga) { Remove-Item -Recurse -Force (Split-Path $exe) } else {
+                # El MSI va al LOCALAPPDATA real aunque se aísle: fuera del CI quitaría un Copilot que ya tuviera el usuario.
+                if ($env:CI -ne 'true') { throw 'winget uninstall GitHub.Copilot solo en el CI' }
                 & winget uninstall --id GitHub.Copilot --exact --silent --disable-interactivity --accept-source-agreements
                 Write-Host "winget salió con $LASTEXITCODE"
             }

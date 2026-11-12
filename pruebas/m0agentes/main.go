@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"golang.org/x/sys/windows/svc"
 )
@@ -53,7 +54,11 @@ func (manejador) Execute(_ []string, peticiones <-chan svc.ChangeRequest, estado
 			return false, 0
 		case p := <-peticiones:
 			if p.Cmd == svc.Stop || p.Cmd == svc.Shutdown {
-				_ = orden.Process.Kill()
+				// El árbol entero: pwsh y lo que lanzó (el instalador o el inicio de sesión del CLI).
+				if err := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(orden.Process.Pid)).Run(); err != nil {
+					fmt.Fprintln(salida, "taskkill:", err)
+					_ = orden.Process.Kill()
+				}
 				<-fin
 				fmt.Fprintln(salida, "\n=== detenida")
 				return false, 0

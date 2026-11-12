@@ -24,7 +24,7 @@ for f in .bashrc .bash_profile .profile .zshrc .zprofile; do : >"$casa/$f"; done
 seccion() { printf '\n=== %s\n' "$1"; }
 # El instalador se baja a un archivo: con «curl | bash </dev/null» bash leería el guion de /dev/null.
 instalador="$casa/instalador.sh"
-bajar() { curl -fsSL "$1" -o "$instalador"; }
+bajar() { curl --proto '=https' --tlsv1.2 -fsSL "$1" -o "$instalador"; }
 seccion "Instalar $agente ${version:-(última)} en $casa"
 inicio=$(date +%s)
 case "$agente" in
