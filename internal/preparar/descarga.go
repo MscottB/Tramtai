@@ -24,11 +24,16 @@ var arquitecturas = map[string]string{"amd64": "x64", "arm64": "arm64"}
 // maximoDescarga acota lo que se baja: el zip de Copilot ronda los 100 MB.
 const maximoDescarga = 1 << 30
 
+// errorSinHTTPS es una redirección que deja HTTPS: es la descarga la que falla, no la red.
+type errorSinHTTPS string
+
+func (e errorSinHTTPS) Error() string { return idioma.Tf("solo se descarga por HTTPS: %s", string(e)) }
+
 // clienteHTTPS no sigue una redirección que deje HTTPS.
 func clienteHTTPS() *http.Client {
 	return &http.Client{CheckRedirect: func(r *http.Request, previas []*http.Request) error {
 		if r.URL.Scheme != "https" {
-			return errors.New(idioma.Tf("solo se descarga por HTTPS: %s", r.URL.Redacted()))
+			return errorSinHTTPS(r.URL.Redacted())
 		}
 		if len(previas) >= 10 {
 			return errors.New(idioma.T("demasiadas redirecciones"))
@@ -44,12 +49,20 @@ func (c *corrida) descargar(d adaptadores.DescargaVerificada, version, destino s
 	if arq == "" {
 		return &Error{CodigoInstaladorFallo, idioma.Tf("no hay descarga para la arquitectura %s", runtime.GOARCH)}
 	}
+	if err := validarVersion(version); err != nil {
+		return err
+	}
 	url := strings.NewReplacer("{version}", version, "{arq}", arq).Replace(d.URL)
 	urlSumas := strings.ReplaceAll(d.URLSumas, "{version}", version)
 	for _, u := range []string{url, urlSumas} {
 		if !strings.HasPrefix(u, "https://") {
-			return &Error{CodigoInstaladorFallo, idioma.Tf("solo se descarga por HTTPS: %s", u)}
+			return &Error{CodigoInstaladorFallo, errorSinHTTPS(u).Error()}
 		}
+	}
+	// Lo que dejó una descarga cortada (el servicio cayó a mitad) no se queda.
+	sobrantes, _ := filepath.Glob(filepath.Join(filepath.Dir(destino), ".descarga-*.zip"))
+	for _, s := range append(sobrantes, destino+".nuevo") {
+		_ = os.Remove(s)
 	}
 	c.anotar("GET " + url)
 	var sumas strings.Builder
@@ -86,10 +99,14 @@ func (c *corrida) bajar(url string, w io.Writer, limite int64) error {
 		return &Error{CodigoInstaladorFallo, err.Error()}
 	}
 	r, err := c.p.cliente.Do(pedido)
-	if err != nil {
-		if c.ctx.Err() != nil {
-			return c.ctx.Err()
-		}
+	var sinHTTPS errorSinHTTPS
+	switch {
+	case err == nil:
+	case c.ctx.Err() != nil:
+		return c.ctx.Err()
+	case errors.As(err, &sinHTTPS):
+		return &Error{CodigoInstaladorFallo, sinHTTPS.Error()}
+	default:
 		return &Error{CodigoSinRed, idioma.Tf("no se pudo descargar %s: %s", url, err.Error())}
 	}
 	defer r.Body.Close()
@@ -143,9 +160,12 @@ func extraer(f *os.File, nombre, destino string) error {
 		if err != nil {
 			return &Error{CodigoInstaladorFallo, err.Error()}
 		}
-		_, err = io.Copy(salida, io.LimitReader(origen, maximoDescarga))
+		n, err := io.Copy(salida, io.LimitReader(origen, maximoDescarga+1))
 		if cerrar := salida.Close(); err == nil {
 			err = cerrar
+		}
+		if err == nil && n > maximoDescarga { // nunca un binario cortado en silencio
+			err = errors.New(idioma.Tf("%s es más grande de lo esperado", nombre))
 		}
 		if err == nil {
 			err = os.Rename(nuevo, destino)

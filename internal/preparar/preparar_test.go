@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -79,7 +80,15 @@ func falso(modo string) {
 		fmt.Println("no queda espacio en el disco")
 		fmt.Fprintln(os.Stderr, "fallo grave")
 		os.Exit(1)
-	case "colgar": // un bucle que no termina: escribe un latido para saber si sigue vivo
+	case "colgar": // un instalador que no termina y deja un nieto: los dos escriben un latido para saber si siguen vivos
+		yo, _ := os.Executable()
+		nieto := exec.Command(yo)
+		nieto.Env = append(os.Environ(), "PREPARAR_FALSO=latir", "PREPARAR_LATIDO="+os.Getenv("PREPARAR_LATIDO")+".nieto")
+		if err := nieto.Start(); err != nil {
+			os.Exit(3)
+		}
+		falso("latir")
+	case "latir":
 		for {
 			f, err := os.OpenFile(os.Getenv("PREPARAR_LATIDO"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 			if err == nil {
@@ -128,7 +137,11 @@ func (pr *prueba) guardadasHasta() []string {
 // nueva prepara un Preparador con la ficha dada, una casa temporal y unos datos temporales.
 func nueva(t *testing.T, f adaptadores.Ficha) *prueba {
 	t.Helper()
-	pr := &prueba{casa: t.TempDir(), datos: t.TempDir()}
+	// La casa va dentro de una carpeta propia de la prueba: lo que hay junto a ella también es de la prueba.
+	pr := &prueba{casa: filepath.Join(t.TempDir(), "casa"), datos: t.TempDir()}
+	if err := os.Mkdir(pr.casa, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("USERPROFILE", pr.casa)
 	t.Setenv("HOME", pr.casa)
 	pr.p = Nuevo(Opciones{
@@ -234,32 +247,95 @@ func TestInstaladorEsperaEntrada(t *testing.T) {
 	pr = nueva(t, fichaFalsa(t, "colgar", "PREPARAR_LATIDO="+latido))
 	pr.p.plazo = 2 * time.Second
 	e := iniciar(t, pr.p, "instalar")
-	if e.Estado != "error" || e.MotivoCodigo != CodigoPlazoAgotado {
+	if e.Estado != "error" || e.MotivoCodigo != CodigoPlazoAgotado || !strings.Contains(e.Mensaje, "1 min") {
 		t.Fatalf("estado %+v", e)
 	}
-	antes, _ := os.ReadFile(latido)
-	time.Sleep(500 * time.Millisecond)
-	if despues, _ := os.ReadFile(latido); len(antes) == 0 || len(despues) != len(antes) {
-		t.Fatalf("el instalador colgado sigue vivo (latido %d → %d)", len(antes), len(despues))
+	muertos(t, latido, latido+".nieto")
+}
+
+// vivos espera a que los procesos de esos latidos hayan empezado a latir.
+func vivos(t *testing.T, latidos ...string) {
+	t.Helper()
+	limite := time.Now().Add(15 * time.Second)
+	for _, latido := range latidos {
+		for datos, _ := os.ReadFile(latido); len(datos) == 0; datos, _ = os.ReadFile(latido) {
+			if time.Now().After(limite) {
+				t.Fatalf("%s: el proceso no llegó a arrancar", filepath.Base(latido))
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+}
+
+// muertos comprueba que los procesos que escriben esos latidos ya no viven: el instalador y su nieto.
+func muertos(t *testing.T, latidos ...string) {
+	t.Helper()
+	for _, latido := range latidos {
+		antes, _ := os.ReadFile(latido)
+		time.Sleep(300 * time.Millisecond)
+		if despues, _ := os.ReadFile(latido); len(antes) == 0 || len(despues) != len(antes) {
+			t.Errorf("%s: el proceso sigue vivo (latido %d → %d)", filepath.Base(latido), len(antes), len(despues))
+		}
 	}
 }
 
 // Revisión 3: dos pantallas lanzan la misma preparación; la segunda ve la primera.
 func TestYaEnCurso(t *testing.T) {
-	pr := nueva(t, fichaFalsa(t, "colgar", "PREPARAR_LATIDO="+filepath.Join(t.TempDir(), "latido")))
-	primero, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"})
-	if err != nil {
-		t.Fatal(err)
+	latido := filepath.Join(t.TempDir(), "latido")
+	pr := nueva(t, fichaFalsa(t, "colgar", "PREPARAR_LATIDO="+latido))
+	type respuesta struct {
+		e   contrato.EstadoPreparacion
+		err error
 	}
-	segundo, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "desinstalar"})
-	if codigo(err) != CodigoYaEnCurso || segundo.Accion != "instalar" || segundo.Estado != "instalando" || !segundo.Inicio.Equal(*primero.Inicio) {
-		t.Fatalf("se esperaba ya_en_curso con el estado de la primera: %+v %v", segundo, err)
+	salida := make(chan respuesta, 2)
+	listos := make(chan struct{})
+	for _, accion := range []string{"instalar", "instalar"} {
+		go func() {
+			<-listos
+			e, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: accion})
+			salida <- respuesta{e, err}
+		}()
 	}
+	close(listos) // las dos a la vez
+	a, b := <-salida, <-salida
+	if a.err != nil {
+		a, b = b, a
+	}
+	if a.err != nil || codigo(b.err) != CodigoYaEnCurso || b.e.Estado != "instalando" || !b.e.Inicio.Equal(*a.e.Inicio) {
+		t.Fatalf("una se lanza y la otra recibe ya_en_curso con el estado de la primera: %+v %v / %+v %v", a.e, a.err, b.e, b.err)
+	}
+	vivos(t, latido, latido+".nieto")
 	if err := pr.p.Cancelar("falso"); err != nil {
 		t.Fatal(err)
 	}
 	if e := final(t, pr.p, "falso"); e.Estado != "cancelado" {
 		t.Fatalf("estado %+v", e)
+	}
+	muertos(t, latido, latido+".nieto")
+}
+
+// EnCurso puede preguntar por el estado: no se llama con el cerrojo tomado.
+func TestEnCursoSinCerrojo(t *testing.T) {
+	pr := nueva(t, fichaFalsa(t, "instalar"))
+	pr.p.o.EnCurso = func(agente string) int {
+		pr.p.Estado(agente)
+		return 1
+	}
+	hecho := make(chan error, 1)
+	go func() {
+		_, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"})
+		hecho <- err
+	}()
+	select {
+	case err := <-hecho:
+		if codigo(err) != CodigoPeticionesEnCurso {
+			t.Fatalf("se esperaba peticiones_en_curso: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Iniciar se bloqueó: EnCurso se llamó con el cerrojo tomado")
+	}
+	if e, ok := pr.p.Estado("falso"); ok {
+		t.Fatalf("la reserva se deshace: %+v", e)
 	}
 }
 
@@ -323,10 +399,11 @@ func TestRecuperarTrasCaida(t *testing.T) {
 	iniciado := make(chan inicio, 1)
 	ctx := procesos.ConAlIniciar(context.Background(), func(pid int, firma string) { iniciado <- inicio{pid, firma} })
 	terminado := make(chan struct{})
+	latido := filepath.Join(t.TempDir(), "latido")
 	go func() {
 		defer close(terminado)
 		_, _ = procesos.Ejecutar(ctx, procesos.Orden{Programa: yo, Entorno: append(os.Environ(), "PREPARAR_FALSO=colgar",
-			"PREPARAR_LATIDO="+filepath.Join(t.TempDir(), "latido"))}, func(string) error { return nil })
+			"PREPARAR_LATIDO="+latido)}, func(string) error { return nil })
 	}()
 	var i inicio
 	select {
@@ -340,6 +417,7 @@ func TestRecuperarTrasCaida(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	vivos(t, latido, latido+".nieto")
 	p := Nuevo(pr.p.o)
 	p.Recuperar()
 	select {
@@ -351,6 +429,7 @@ func TestRecuperarTrasCaida(t *testing.T) {
 	if !ok || e.Estado != "error" || e.MotivoCodigo != CodigoInterrumpida || e.Fin == nil {
 		t.Fatalf("estado %+v", e)
 	}
+	muertos(t, latido, latido+".nieto")
 }
 
 func TestRegistroRedactado(t *testing.T) {
@@ -377,8 +456,12 @@ func TestDescargaSumaNoCoincide(t *testing.T) {
 	z.Close()
 	suma := sha256.Sum256(zipeado.Bytes())
 	sumas := hex.EncodeToString(suma[:])
+	var pedidos atomic.Int32
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pedidos.Add(1)
 		switch {
+		case strings.HasPrefix(r.URL.Path, "/a-http/"): // una redirección que deja HTTPS
+			http.Redirect(w, r, "http://"+r.Host+strings.TrimPrefix(r.URL.Path, "/a-http"), http.StatusFound)
 		case strings.HasSuffix(r.URL.Path, "/SHA256SUMS.txt"):
 			fmt.Fprintf(w, "%s  otro.zip\n%s  falso-%s.zip\n", strings.Repeat("0", 64), sumas, arquitecturas[runtime.GOARCH])
 		case strings.HasPrefix(r.URL.Path, "/v1.2.3/falso-"):
@@ -398,26 +481,62 @@ func TestDescargaSumaNoCoincide(t *testing.T) {
 		return pr
 	}
 
+	// sinTemporales: ni los de esta descarga ni los que dejó una anterior cortada.
+	sinTemporales := func(t *testing.T, pr *prueba) {
+		t.Helper()
+		sobrantes, _ := filepath.Glob(filepath.Join(pr.casa, "bin", ".descarga-*"))
+		if _, err := os.Stat(filepath.Join(pr.casa, "bin", nombreFalso()+".nuevo")); err == nil {
+			sobrantes = append(sobrantes, nombreFalso()+".nuevo")
+		}
+		if len(sobrantes) > 0 {
+			t.Errorf("quedan temporales: %q", sobrantes)
+		}
+	}
+	cortada := func(t *testing.T, pr *prueba) {
+		t.Helper()
+		os.MkdirAll(filepath.Join(pr.casa, "bin"), 0o700)
+		os.WriteFile(filepath.Join(pr.casa, "bin", ".descarga-123.zip"), []byte("a medias"), 0o600)
+		os.WriteFile(filepath.Join(pr.casa, "bin", nombreFalso()+".nuevo"), []byte("a medias"), 0o600)
+	}
+
 	pr := con(t, srv.URL)
+	cortada(t, pr)
 	if e := iniciar(t, pr.p, "instalar"); e.Estado != "listo" {
 		t.Fatalf("con la suma buena: %+v", e)
 	}
 	if datos, err := os.ReadFile(filepath.Join(pr.casa, "bin", nombreFalso())); err != nil || !bytes.Equal(datos, binario) {
 		t.Fatalf("el binario extraído: %q %v", datos, err)
 	}
+	sinTemporales(t, pr)
 
 	sumas = strings.Repeat("f", 64)
 	pr = con(t, srv.URL)
+	cortada(t, pr)
 	if e := iniciar(t, pr.p, "instalar"); e.Estado != "error" || e.MotivoCodigo != CodigoInstaladorFallo {
 		t.Fatalf("con la suma mala: %+v", e)
 	}
 	if _, err := os.Stat(filepath.Join(pr.casa, "bin", nombreFalso())); !os.IsNotExist(err) {
 		t.Fatalf("con la suma mala no se deja el binario: %v", err)
 	}
+	sinTemporales(t, pr)
 
 	pr = con(t, strings.Replace(srv.URL, "https://", "http://", 1))
 	if e := iniciar(t, pr.p, "instalar"); e.Estado != "error" || e.MotivoCodigo != CodigoInstaladorFallo {
 		t.Fatalf("por http no se descarga: %+v", e)
+	}
+
+	pr = con(t, srv.URL+"/a-http")
+	if e := iniciar(t, pr.p, "instalar"); e.Estado != "error" || e.MotivoCodigo != CodigoInstaladorFallo || !strings.Contains(e.Mensaje, "HTTPS") {
+		t.Fatalf("una redirección a http se rechaza: %+v", e)
+	}
+	sinTemporales(t, pr)
+
+	// Una versión con otra forma no llega a ninguna URL.
+	pr = con(t, srv.URL)
+	pr.p.o.UltimaVersion = func(context.Context, string) (string, error) { return "1.0;iex x", nil }
+	antes := pedidos.Load()
+	if e := iniciar(t, pr.p, "instalar"); e.Estado != "error" || e.MotivoCodigo != CodigoInstaladorFallo || pedidos.Load() != antes {
+		t.Fatalf("una versión no válida no se descarga: %+v (%d pedidos)", e, pedidos.Load()-antes)
 	}
 }
 
@@ -425,15 +544,144 @@ func TestDescargaSumaNoCoincide(t *testing.T) {
 func TestVersionEnLaOrden(t *testing.T) {
 	t.Setenv("FALSO_VERSION", "heredada")
 	o := adaptadores.OrdenReceta{Argumentos: []string{"-c", "x", "{version}"}, Entorno: []string{"A=1", "FALSO_VERSION={version}"}}
-	args, extra := conVersion(o, "")
+	args, extra, err := conVersion(o, "")
 	entorno := entornoDe(extra)
-	if !slices.Equal(args, []string{"-c", "x"}) || !slices.Contains(entorno, "A=1") ||
+	if err != nil || !slices.Equal(args, []string{"-c", "x"}) || !slices.Contains(entorno, "A=1") ||
 		slices.ContainsFunc(entorno, func(par string) bool { return strings.HasPrefix(par, "FALSO_VERSION=") }) {
-		t.Fatalf("sin versión: %q %q", args, extra)
+		t.Fatalf("sin versión: %q %q %v", args, extra, err)
 	}
-	args, extra = conVersion(o, "2.0.1")
-	if !slices.Equal(args, []string{"-c", "x", "2.0.1"}) || !slices.Contains(entornoDe(extra), "FALSO_VERSION=2.0.1") {
-		t.Fatalf("con versión: %q %q", args, extra)
+	args, extra, err = conVersion(o, "2.0.1")
+	if err != nil || !slices.Equal(args, []string{"-c", "x", "2.0.1"}) || !slices.Contains(entornoDe(extra), "FALSO_VERSION=2.0.1") {
+		t.Fatalf("con versión: %q %q %v", args, extra, err)
+	}
+	for _, mala := range []string{"1.0;iex x", "1.0 --x", "$(rm)", "v1.0", "1..0", "-1"} {
+		if _, _, err := conVersion(o, mala); codigo(err) != CodigoInstaladorFallo {
+			t.Errorf("%q no es una versión: %v", mala, err)
+		}
+	}
+}
+
+// Una versión que no vale no lanza nada.
+func TestVersionNoValidaNoLanza(t *testing.T) {
+	f := fichaFalsa(t, "instalar") // su orden lleva {version} y, si se lanzara, dejaría el CLI en ~/bin
+	pr := nueva(t, f)
+	c := &corrida{p: pr.p, t: &tarea{}, agente: "falso", f: f, r: f.Receta, ctx: context.Background()}
+	if err := c.ejecutar(f.Receta.Instalar[runtime.GOOS], "1.0;iex x"); codigo(err) != CodigoInstaladorFallo {
+		t.Fatalf("se esperaba instalador_fallo: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(pr.casa, "bin", nombreFalso())); !os.IsNotExist(err) {
+		t.Fatal("la orden se lanzó con una versión que no vale")
+	}
+}
+
+func TestFormaSecreto(t *testing.T) {
+	c := &corrida{}
+	for _, secreto := range []string{claveFalsa, "ghp_" + strings.Repeat("a1", 15), "npm_" + strings.Repeat("Ab1", 12),
+		"AKIAABCDEFGHIJKLMNOP", "ya29.a0AfH6SMBx-abc_def", "glpat-" + strings.Repeat("x9", 10), "AIza" + strings.Repeat("B", 35),
+		"xoxb-1234567890-abc", "eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.firma", "Bearer abcdefghijklmnop1234"} {
+		if tapado := c.redactar("salida " + secreto + " fin"); strings.Contains(tapado, secreto) || !strings.Contains(tapado, "[REDACTADO]") {
+			t.Errorf("no se tapó %q: %q", secreto, tapado)
+		}
+	}
+	if tapado := c.redactar("https://usuario:clave@proxy.local"); strings.Contains(tapado, "clave") {
+		t.Errorf("una URL con contraseña: %q", tapado)
+	}
+	if c.redactar("introduce el código ABCD-1234 en github.com/login/device") != "introduce el código ABCD-1234 en github.com/login/device" {
+		t.Error("un código de dispositivo no es un secreto")
+	}
+}
+
+// Desinstalar solo borra dentro de la casa y nunca una carpeta compartida; si una ruta no vale, no se borra ninguna.
+func TestBorrarSoloEnLaCasa(t *testing.T) {
+	base := t.TempDir()
+	fuera := t.TempDir()
+	testigo := func(dir string) string {
+		ruta := filepath.Join(dir, "testigo")
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(ruta, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return ruta
+	}
+	for _, mala := range []string{"~", "~/.", "~/..", "~/../otro", fuera, "rel", "~/.local", "~/AppData/Local", "~/bin/../.."} {
+		t.Run(mala, func(t *testing.T) {
+			f := fichaFalsa(t, "instalar")
+			pr := nueva(t, f)
+			t.Chdir(base)
+			bueno := testigo(filepath.Join(pr.casa, "bueno"))
+			testigos := []string{bueno, testigo(pr.casa), testigo(filepath.Dir(pr.casa)), testigo(filepath.Join(filepath.Dir(pr.casa), "otro")),
+				testigo(fuera), testigo(filepath.Join(base, "rel")), testigo(filepath.Join(pr.casa, ".local")),
+				testigo(filepath.Join(pr.casa, "AppData", "Local"))}
+			f.Receta.Borrar[runtime.GOOS] = []string{"~/bueno", mala} // la buena va primero: tampoco se borra
+			if e := iniciar(t, pr.p, "desinstalar"); e.Estado != "error" || e.MotivoCodigo != CodigoInstaladorFallo {
+				t.Fatalf("estado %+v", e)
+			}
+			for _, ruta := range testigos {
+				if _, err := os.Stat(ruta); err != nil {
+					t.Errorf("se borró %s: %v", ruta, err)
+				}
+			}
+		})
+	}
+}
+
+// enlazar deja en enlace un enlace a destino: una junction en Windows (como Codex/bin), un enlace simbólico en los demás.
+func enlazar(t *testing.T, destino, enlace string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		if salida, err := exec.Command("cmd", "/c", "mklink", "/J", enlace, destino).CombinedOutput(); err != nil {
+			t.Fatalf("mklink /J: %v %s", err, salida)
+		}
+		return
+	}
+	if err := os.Symlink(destino, enlace); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Desinstalar quita los enlaces (también los de DatosCLI, y lo dice) sin tocar lo que hay detrás; una ruta que pasa por un
+// enlace a fuera de la casa no se borra.
+func TestDesinstalarEnlaces(t *testing.T) {
+	f := fichaFalsa(t, "instalar")
+	pr := nueva(t, f)
+	programa, datos := t.TempDir(), t.TempDir()
+	tras := []string{filepath.Join(programa, "falso"), filepath.Join(datos, "sesion.json")}
+	for _, ruta := range tras {
+		os.WriteFile(ruta, []byte("x"), 0o600)
+	}
+	os.MkdirAll(filepath.Join(pr.casa, "bin"), 0o700)
+	enlazar(t, programa, filepath.Join(pr.casa, "bin", "enlace"))
+	enlazar(t, datos, filepath.Join(pr.casa, ".falso"))
+	f.Receta.Borrar[runtime.GOOS] = []string{"~/bin/enlace"}
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "desinstalar", BorrarDatos: true}); err != nil {
+		t.Fatal(err)
+	}
+	e := final(t, pr.p, "falso")
+	// El aviso de DatosCLI nombra el enlace (en el idioma que toque).
+	if e.Estado != "listo" || !slices.ContainsFunc(e.Lineas, func(l string) bool { return strings.Contains(l, ".falso") }) {
+		t.Fatalf("estado %+v", e)
+	}
+	for _, ruta := range []string{filepath.Join(pr.casa, "bin", "enlace"), filepath.Join(pr.casa, ".falso")} {
+		if _, err := os.Lstat(ruta); !os.IsNotExist(err) {
+			t.Errorf("el enlace %s sigue: %v", ruta, err)
+		}
+	}
+	for _, ruta := range tras {
+		if _, err := os.Stat(ruta); err != nil {
+			t.Errorf("se borró lo que había detrás del enlace: %v", err)
+		}
+	}
+
+	// ~/.falso/sesion.json pasa por un enlace a fuera de la casa: no se borra.
+	enlazar(t, datos, filepath.Join(pr.casa, ".falso"))
+	f.Receta.Borrar[runtime.GOOS] = []string{"~/.falso/sesion.json"}
+	if e := iniciar(t, pr.p, "desinstalar"); e.Estado != "error" {
+		t.Fatalf("estado %+v", e)
+	}
+	if _, err := os.Stat(tras[1]); err != nil {
+		t.Fatalf("se borró fuera de la casa a través de un enlace: %v", err)
 	}
 }
 
@@ -461,11 +709,9 @@ func TestBorrarJunction(t *testing.T) {
 		t.Fatal(err)
 	}
 	enlace := filepath.Join(dir, "bin")
-	if salida, err := exec.Command("cmd", "/c", "mklink", "/J", enlace, destino).CombinedOutput(); err != nil {
-		t.Fatalf("mklink /J: %v %s", err, salida)
-	}
-	if err := borrar(enlace); err != nil {
-		t.Fatal(err)
+	enlazar(t, destino, enlace)
+	if esEnlace, err := borrar(enlace); err != nil || !esEnlace {
+		t.Fatalf("borrar: %v %v", esEnlace, err)
 	}
 	if _, err := os.Lstat(enlace); !os.IsNotExist(err) {
 		t.Fatalf("la junction sigue: %v", err)

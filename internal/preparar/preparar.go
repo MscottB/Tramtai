@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,7 +18,6 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
@@ -56,7 +56,8 @@ type Error struct{ Codigo, Mensaje string }
 
 func (e *Error) Error() string { return e.Mensaje }
 
-// Opciones son lo que la preparación necesita del servicio.
+// Opciones son lo que la preparación necesita del servicio. Las funciones nunca se llaman con el cerrojo del Preparador
+// tomado: pueden llamar a Estado, Iniciar o Cancelar sin bloquearse.
 type Opciones struct {
 	// Datos es la carpeta de datos de Tramtai: el estado va en datos/agentes/preparaciones.
 	Datos string
@@ -132,29 +133,41 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	if !ok || !disponible(f.Receta, pedido.Accion) {
 		return contrato.EstadoPreparacion{}, errors.New(idioma.Tf("acción no disponible para %s en este sistema: %s", agente, pedido.Accion))
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	t := p.tareas[agente]
-	if t != nil && t.enMarcha {
-		return copia(t.g.EstadoPreparacion), &Error{CodigoYaEnCurso, idioma.Tf("ya hay una preparación de %s en marcha", f.Programa)}
-	}
-	if p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
-		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
-	}
-	var ruta string
-	if t != nil {
-		ruta = t.g.RutaGuardada
-	} else if g, err := p.leer(agente); err == nil {
+	ruta := ""
+	if g, err := p.leer(agente); err == nil {
 		ruta = g.RutaGuardada
+	}
+	// Se reserva el agente con el cerrojo y se pregunta por las peticiones sin él (EnCurso puede llamar a Estado).
+	p.mu.Lock()
+	anterior := p.tareas[agente]
+	if anterior != nil && anterior.enMarcha {
+		defer p.mu.Unlock()
+		return copia(anterior.g.EstadoPreparacion), &Error{CodigoYaEnCurso, idioma.Tf("ya hay una preparación de %s en marcha", f.Programa)}
+	}
+	if anterior != nil {
+		ruta = anterior.g.RutaGuardada
 	}
 	ahora := time.Now()
 	ctx, cancelar := context.WithTimeout(context.Background(), p.plazo)
-	t = &tarea{enMarcha: true, cancelar: cancelar, g: guardado{RutaGuardada: ruta,
+	t := &tarea{enMarcha: true, cancelar: cancelar, g: guardado{RutaGuardada: ruta,
 		EstadoPreparacion: contrato.EstadoPreparacion{Agente: agente, Accion: pedido.Accion, Estado: estado, Inicio: &ahora}}}
 	p.tareas[agente] = t
-	c := &corrida{p: p, t: t, f: f, r: f.Receta, ctx: ctx, pedido: pedido}
+	estadoInicial := copia(t.g.EstadoPreparacion)
+	p.mu.Unlock()
+	if p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
+		cancelar()
+		p.mu.Lock()
+		if anterior != nil {
+			p.tareas[agente] = anterior
+		} else {
+			delete(p.tareas, agente)
+		}
+		p.mu.Unlock()
+		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
+	}
+	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, ctx: ctx, pedido: pedido}
 	go c.correr(cancelar)
-	return copia(t.g.EstadoPreparacion), nil
+	return estadoInicial, nil
 }
 
 // disponible dice si la receta tiene la acción en este sistema.
@@ -180,8 +193,9 @@ func (p *Preparador) Cancelar(agente string) error {
 	return nil
 }
 
-// Recuperar, al arrancar, carga el estado de cada agente; una preparación que el servicio dejó a medias termina su
-// proceso si sigue vivo (solo si su firma coincide) y queda en error con interrumpida.
+// Recuperar, al arrancar, carga el estado de cada agente. Un proceso que quedó anotado (una preparación que el servicio
+// dejó a medias, o una cancelación sin confirmar) se termina si sigue vivo y su firma coincide; la preparación a medias
+// queda en error con interrumpida. Un agente con una preparación ya en marcha en este servicio no se toca.
 func (p *Preparador) Recuperar() {
 	archivos, _ := filepath.Glob(filepath.Join(p.carpeta(), "*.json"))
 	for _, archivo := range archivos {
@@ -189,20 +203,29 @@ func (p *Preparador) Recuperar() {
 		if _, ok := p.o.Ficha(agente); !ok {
 			continue
 		}
+		p.mu.Lock()
+		cargado := p.tareas[agente] != nil
+		p.mu.Unlock()
+		if cargado {
+			continue
+		}
 		g, err := p.leer(agente)
 		if err != nil {
 			continue
 		}
-		if enMarcha(g.Estado) {
+		if g.PID != 0 || enMarcha(g.Estado) {
 			procesos.TerminarHuerfano(g.PID, g.Firma)
-			ahora := time.Now()
-			g.Estado, g.MotivoCodigo, g.Mensaje, g.Fin, g.PID, g.Firma = "error", CodigoInterrumpida,
-				idioma.T("el servicio se reinició a mitad de la preparación"), &ahora, 0, ""
-			_ = p.guardar(agente, g)
+			if enMarcha(g.Estado) {
+				ahora := time.Now()
+				g.Estado, g.MotivoCodigo, g.Mensaje, g.Fin = "error", CodigoInterrumpida,
+					idioma.T("el servicio se reinició a mitad de la preparación"), &ahora
+			}
+			g.PID, g.Firma = 0, ""
 		}
 		p.mu.Lock()
 		if p.tareas[agente] == nil {
 			p.tareas[agente] = &tarea{g: g}
+			_ = p.guardar(agente, g)
 		}
 		p.mu.Unlock()
 	}
@@ -227,14 +250,18 @@ func (p *Preparador) guardar(agente string, g guardado) error {
 
 // corrida es una preparación en marcha.
 type corrida struct {
-	p        *Preparador
-	t        *tarea
+	p *Preparador
+	t *tarea
+	// agente es el id con que se pidió: la única clave del estado, los archivos y las opciones.
+	agente   string
 	f        adaptadores.Ficha
 	r        *adaptadores.Receta
 	ctx      context.Context
 	pedido   contrato.PedidoPreparacion
 	secretos []string
 	registro []string // órdenes y resultado, para <id>.log
+	// sinConfirmar es el aviso de un proceso que no confirmó su terminación: su PID y su firma se quedan para Recuperar.
+	sinConfirmar string
 }
 
 // fijar cambia el estado y lo guarda en disco, con el cerrojo tomado: la última preparación es la última que se escribe.
@@ -242,12 +269,13 @@ func (c *corrida) fijar(cambiar func(g *guardado)) {
 	c.p.mu.Lock()
 	defer c.p.mu.Unlock()
 	cambiar(&c.t.g)
-	_ = c.p.guardar(c.f.Nombre, c.t.g)
+	_ = c.p.guardar(c.agente, c.t.g)
 }
 
-// formaSecreto son textos con forma de clave o token (Anthropic, OpenAI, GitHub, Google, Slack, JWT, Bearer) o una URL
+// formaSecreto son textos con forma de clave o token (Anthropic, OpenAI, GitHub, GitLab, Google, AWS, npm, Slack, JWT,
+// Bearer) o una URL
 // con usuario y contraseña: el registro y las líneas los tapan aunque no sean claves conocidas.
-var formaSecreto = regexp.MustCompile(`\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[0-9A-Za-z_-]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+)|(?i:bearer\s+)[A-Za-z0-9._~+/-]{16,}=*|://[^/@\s:]+:[^/@\s]+@`)
+var formaSecreto = regexp.MustCompile(`\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[0-9A-Za-z_-]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|npm_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|ya29\.[0-9A-Za-z_-]{10,}|glpat-[0-9A-Za-z_-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+)|(?i:bearer\s+)[A-Za-z0-9._~+/-]{16,}=*|://[^/@\s:]+:[^/@\s]+@`)
 
 func (c *corrida) redactar(texto string) string {
 	return formaSecreto.ReplaceAllString(adaptadores.RedactarCon(texto, c.secretos...), "[REDACTADO]")
@@ -274,7 +302,7 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	defer cancelar()
 	c.secretos = adaptadores.Secretos() // fuera del cerrojo: en macOS y Linux pregunta al almacén con un proceso por clave
 	c.fijar(func(*guardado) {})
-	c.anotar(c.pedido.Accion + " " + c.f.Nombre)
+	c.anotar(c.pedido.Accion + " " + c.agente)
 	err := c.accion()
 	codigo, mensaje := "", ""
 	estado := "listo"
@@ -282,7 +310,7 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	switch {
 	case err == nil:
 	case errors.Is(c.ctx.Err(), context.DeadlineExceeded):
-		estado, codigo, mensaje = "error", CodigoPlazoAgotado, idioma.Tf("la preparación superó su plazo de %s y se cerró", c.p.plazo.String())
+		estado, codigo, mensaje = "error", CodigoPlazoAgotado, idioma.Tf("la preparación superó su plazo de %d min y se cerró", int(math.Ceil(c.p.plazo.Minutes())))
 	case c.ctx.Err() != nil:
 		estado = "cancelado"
 	case errors.As(err, &e):
@@ -290,13 +318,17 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	default:
 		estado, codigo, mensaje = "error", CodigoInstaladorFallo, err.Error()
 	}
-	ultimas, _ := c.p.Estado(c.f.Nombre)
-	c.registro = append(c.registro, ultimas.Lineas...)
+	if c.sinConfirmar != "" {
+		mensaje = strings.TrimPrefix(mensaje+". "+c.sinConfirmar, ". ")
+	}
+	c.p.mu.Lock()
+	c.registro = append(c.registro, c.t.g.Lineas...)
+	c.p.mu.Unlock()
 	c.anotar(strings.TrimSpace(estado + " " + codigo + " " + mensaje))
-	_ = configuracion.EscribirAtomico(filepath.Join(c.p.carpeta(), c.f.Nombre+".log"), []byte(strings.Join(c.registro, "\n")+"\n"), 0o600)
+	_ = configuracion.EscribirAtomico(filepath.Join(c.p.carpeta(), c.agente+".log"), []byte(strings.Join(c.registro, "\n")+"\n"), 0o600)
 	ahora := time.Now()
 	c.fijar(func(g *guardado) {
-		g.Estado, g.Etapa, g.MotivoCodigo, g.Mensaje, g.Fin, g.PID, g.Firma = estado, "", codigo, c.redactar(mensaje), &ahora, 0, ""
+		g.Estado, g.Etapa, g.MotivoCodigo, g.Mensaje, g.Fin = estado, "", codigo, c.redactar(mensaje), &ahora
 		c.t.enMarcha = false // con el estado final: quien lo ve terminado ya puede lanzar otra
 	})
 }
@@ -326,7 +358,7 @@ func (c *corrida) accion() error {
 		}
 	}
 	// Tarea 5: la versión debe estar comprobada para esta acción, salvo que el usuario confirme.
-	if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.f.Nombre, c.pedido.Accion, version) {
+	if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
 		return &Error{CodigoVersionNoComprobada, idioma.Tf("%s %s aún no está comprobado con Tramtai", c.f.Programa, version)}
 	}
 	switch {
@@ -341,7 +373,7 @@ func (c *corrida) accion() error {
 	if hayDescarga {
 		rutas := c.r.Rutas[runtime.GOOS]
 		if len(rutas) == 0 {
-			return &Error{CodigoInstaladorFallo, idioma.Tf("acción no disponible para %s en este sistema: %s", c.f.Nombre, c.pedido.Accion)}
+			return &Error{CodigoInstaladorFallo, idioma.Tf("acción no disponible para %s en este sistema: %s", c.agente, c.pedido.Accion)}
 		}
 		destino := expandir(rutas[0])
 		c.fijar(func(g *guardado) { g.Etapa = "descarga" })
@@ -360,7 +392,7 @@ func (c *corrida) ultimaVersion() (string, error) {
 	}
 	ctx, cancelar := context.WithTimeout(c.ctx, 10*time.Second)
 	defer cancelar()
-	version, err := c.p.o.UltimaVersion(ctx, c.f.Nombre)
+	version, err := c.p.o.UltimaVersion(ctx, c.agente)
 	if err != nil || version == "" {
 		return "", &Error{CodigoSinRed, idioma.Tf("no se pudo consultar la última versión de %s", c.f.Programa)}
 	}
@@ -384,7 +416,7 @@ func (c *corrida) encontrar() error {
 	despues := c.version(ruta)
 	guardada := c.t.g.RutaGuardada // solo la escribe esta corrida
 	if !mismoArchivo(ruta, enPath(c.f.Comando)) && c.p.o.Guardar != nil {
-		if err := c.p.o.Guardar(c.f.Nombre, ruta); err != nil {
+		if err := c.p.o.Guardar(c.agente, ruta); err != nil {
 			return &Error{CodigoInstaladorFallo, idioma.Tf("no se pudo guardar la ruta de %s: %s", c.f.Programa, err.Error())}
 		}
 		guardada = ruta
@@ -397,26 +429,39 @@ func (c *corrida) encontrar() error {
 // puso Tramtai. Solo se borra dentro de la casa de la cuenta del servicio.
 func (c *corrida) desinstalar() error {
 	c.fijar(func(g *guardado) { g.Etapa = "borrado" })
-	rutas := c.r.Borrar[runtime.GOOS]
+	lista := c.r.Borrar[runtime.GOOS]
+	programa := len(lista) // las de después son DatosCLI
 	if c.pedido.BorrarDatos {
-		rutas = append(slices.Clone(rutas), c.r.DatosCLI...)
+		lista = append(slices.Clone(lista), c.r.DatosCLI...)
 	}
 	casa, err := os.UserHomeDir()
+	if err == nil && (!filepath.IsAbs(casa) || filepath.Dir(casa) == casa) {
+		err = errors.New(idioma.Tf("la carpeta del usuario (%s) no es válida para borrar nada", casa))
+	}
 	if err != nil {
 		return &Error{CodigoInstaladorFallo, err.Error()}
 	}
-	for _, r := range rutas {
-		ruta := expandir(r)
-		if !carpetas.Dentro(casa, ruta) || carpetas.MismaRuta(casa, ruta) {
-			return &Error{CodigoInstaladorFallo, idioma.Tf("%s está fuera de la carpeta del usuario: no se borra", ruta)}
+	// Todas se comprueban antes de borrar ninguna.
+	rutas := make([]string, len(lista))
+	for i, r := range lista {
+		if rutas[i], err = dentroDeCasa(casa, r); err != nil {
+			return &Error{CodigoInstaladorFallo, err.Error()}
 		}
+	}
+	for i, ruta := range rutas {
 		c.anotar("borrar " + ruta)
-		if err := borrar(ruta); err != nil {
+		enlace, err := borrar(ruta)
+		if err != nil {
 			return &Error{CodigoInstaladorFallo, idioma.Tf("no se pudo borrar %s: %s", ruta, err.Error())}
+		}
+		if enlace && i >= programa {
+			aviso := idioma.Tf("%s es un enlace: se quitó el enlace, no lo que hay detrás", ruta)
+			c.linea(aviso)
+			c.anotar(aviso)
 		}
 	}
 	if c.t.g.RutaGuardada != "" && c.p.o.Guardar != nil {
-		if err := c.p.o.Guardar(c.f.Nombre, ""); err != nil {
+		if err := c.p.o.Guardar(c.agente, ""); err != nil {
 			return &Error{CodigoInstaladorFallo, idioma.Tf("no se pudo guardar la ruta de %s: %s", c.f.Programa, err.Error())}
 		}
 		c.fijar(func(g *guardado) { g.RutaGuardada = "" })
@@ -431,7 +476,10 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 	if err != nil {
 		return err
 	}
-	args, extra := conVersion(o, version)
+	args, extra, err := conVersion(o, version)
+	if err != nil {
+		return err
+	}
 	c.fijar(func(g *guardado) { g.Etapa = "orden" })
 	c.anotar(strings.Join(append([]string{programa}, args...), " "))
 	casa, _ := os.UserHomeDir()
@@ -440,7 +488,12 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 	})
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: programa, Argumentos: args, Directorio: casa, Entorno: entornoDe(extra)},
 		func(l string) error { c.linea(l); return nil })
-	c.fijar(func(g *guardado) { g.PID, g.Firma = 0, "" })
+	if nucleo.CodigoDe(err) == nucleo.CodigoCancelacionNoConfirmada {
+		c.sinConfirmar = nucleo.MensajeDe(err) // su PID y su firma se quedan: Recuperar lo terminará
+	} else {
+		c.fijar(func(g *guardado) { g.PID, g.Firma = 0, "" })
+	}
+	// stderr llega entero al terminar (procesos solo guarda su cola): sus líneas van detrás de las de stdout.
 	for _, l := range strings.Split(r.Errores, "\n") {
 		c.linea(l)
 	}
@@ -474,9 +527,24 @@ func (c *corrida) resolver(programa string) (string, error) {
 	return ruta, nil
 }
 
+// reVersion es la forma de una versión que puede entrar en una orden o una URL (2.1.311, 0.167.2, 1.0.0-beta).
+var reVersion = regexp.MustCompile(`^[0-9]+(\.[0-9A-Za-z-]+)*$`)
+
+func validarVersion(version string) error {
+	if !reVersion.MatchString(version) {
+		return &Error{CodigoInstaladorFallo, idioma.Tf("versión no válida: %q", version)}
+	}
+	return nil
+}
+
 // conVersion sustituye "{version}" en una orden. Sin versión se omite el argumento que la lleva y la variable queda como
-// «NOMBRE=», que entornoDe quita también del entorno heredado.
-func conVersion(o adaptadores.OrdenReceta, version string) (args, entorno []string) {
+// «NOMBRE=», que entornoDe quita también del entorno heredado. Una versión con otra forma no se usa.
+func conVersion(o adaptadores.OrdenReceta, version string) (args, entorno []string, err error) {
+	if version != "" {
+		if err := validarVersion(version); err != nil {
+			return nil, nil, err
+		}
+	}
 	for _, a := range o.Argumentos {
 		if strings.Contains(a, "{version}") {
 			if version == "" {
@@ -497,7 +565,7 @@ func conVersion(o adaptadores.OrdenReceta, version string) (args, entorno []stri
 		}
 		entorno = append(entorno, e)
 	}
-	return args, entorno
+	return args, entorno, nil
 }
 
 // entornoDe es el entorno de una orden: el heredado sin credenciales, con las variables de la receta; una «NOMBRE=»

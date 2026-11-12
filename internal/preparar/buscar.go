@@ -4,11 +4,15 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/carpetas"
+	"tramtai/internal/idioma"
 )
 
 // expandir pasa una ruta de la receta («~/…» con «/») a una del sistema; «~» es la casa de la cuenta que corre el servicio.
@@ -54,18 +58,73 @@ func mismoArchivo(a, b string) bool {
 	return err1 == nil && err2 == nil && os.SameFile(ia, ib)
 }
 
+// compartidas son carpetas de la casa que usan otros programas: ninguna receta las borra enteras.
+var compartidas = []string{".local", ".local/bin", ".local/share", ".local/state", ".config", ".cache", ".npm", ".ssh",
+	".gemini", "bin", "AppData", "AppData/Local", "AppData/LocalLow", "AppData/Roaming", "AppData/Local/Programs",
+	"AppData/Local/Temp", "Library", "Library/Application Support", "Library/Caches", "Library/Preferences", "Documents",
+	"Desktop", "Downloads"}
+
+// RutaBorrable dice si una ruta de Receta.Borrar o Receta.DatosCLI se puede borrar: «~/…», sin «.» ni «..», y que no sea
+// una carpeta compartida.
+func RutaBorrable(r string) error {
+	resto, ok := strings.CutPrefix(r, "~/")
+	if !ok || resto == "" || resto == "." || strings.Contains(resto, `\`) || path.Clean(resto) != resto ||
+		slices.Contains(strings.Split(resto, "/"), "..") {
+		return errors.New(idioma.Tf("%s no es una ruta de la casa que se pueda borrar", r))
+	}
+	if slices.ContainsFunc(compartidas, func(c string) bool { return strings.EqualFold(c, resto) }) {
+		return errors.New(idioma.Tf("%s es una carpeta compartida: no se borra", r))
+	}
+	return nil
+}
+
+// dentroDeCasa comprueba una ruta de la receta y la expande: tiene que caer dentro de casa y las carpetas entre casa y
+// ella tienen que ser carpetas de verdad. Un enlace o una junction por el medio podría llevar fuera de la casa (en Windows
+// EvalSymlinks no sigue las junction), así que se rechaza.
+func dentroDeCasa(casa, r string) (string, error) {
+	if err := RutaBorrable(r); err != nil {
+		return "", err
+	}
+	ruta := expandir(r)
+	if !carpetas.Dentro(casa, ruta) || carpetas.MismaRuta(casa, ruta) {
+		return "", errors.New(idioma.Tf("%s está fuera de la carpeta del usuario: no se borra", ruta))
+	}
+	rel, err := filepath.Rel(casa, filepath.Dir(ruta))
+	if err != nil {
+		return "", err
+	}
+	carpeta := casa
+	for _, parte := range strings.Split(rel, string(filepath.Separator)) {
+		if parte == "." {
+			break
+		}
+		carpeta = filepath.Join(carpeta, parte)
+		info, err := os.Lstat(carpeta)
+		if errors.Is(err, fs.ErrNotExist) {
+			return ruta, nil // no existe: no hay nada que borrar
+		}
+		if err != nil || info.Mode().Type() != fs.ModeDir {
+			return "", errors.New(idioma.Tf("%s pasa por un enlace: no se borra", ruta))
+		}
+	}
+	return ruta, nil
+}
+
 // borrar quita una ruta de la receta. Un enlace o una junction (Codex/bin en Windows) se quita sin tocar lo que hay
-// detrás; una carpeta de verdad, con su contenido.
-func borrar(ruta string) error {
+// detrás (enlace es true); una carpeta de verdad, con su contenido.
+func borrar(ruta string) (enlace bool, err error) {
 	info, err := os.Lstat(ruta)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
-	if info.Mode().Type() != fs.ModeDir {
-		return os.Remove(ruta)
+	switch info.Mode().Type() {
+	case fs.ModeDir:
+		return false, os.RemoveAll(ruta)
+	case 0:
+		return false, os.Remove(ruta)
 	}
-	return os.RemoveAll(ruta)
+	return true, os.Remove(ruta)
 }

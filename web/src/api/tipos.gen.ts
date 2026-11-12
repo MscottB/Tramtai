@@ -289,7 +289,7 @@ export interface EstadoPreparacion {
   enlace?: string
   codigo?: string
   pide_pegar?: boolean
-  motivo_codigo?: 'requisito_falta' | 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'
+  motivo_codigo?: 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'
   mensaje?: string
   lineas?: string[]
   version_antes?: string
