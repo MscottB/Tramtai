@@ -1,0 +1,9 @@
+// Mi configuración de opencode
+{
+  "$schema": "https://opencode.ai/config.json",
+  /* tema del editor */
+  "theme": "tokyonight", // el que me gusta
+  "provider": {
+    "otro": { "npm": "@ai-sdk/openai-compatible", "name": "Otro" },
+  },
+}

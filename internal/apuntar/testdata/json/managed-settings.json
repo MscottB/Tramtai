@@ -1,0 +1,4 @@
+{
+  "env": { "ANTHROPIC_BASE_URL": "https://gateway.empresa.example/anthropic" },
+  "permissions": { "deny": ["WebFetch"] }
+}
