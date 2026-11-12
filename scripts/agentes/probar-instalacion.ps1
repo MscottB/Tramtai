@@ -1,9 +1,11 @@
 # M0 de la v0.60 (docs/equipo/releases/v0.60-preparar-agentes/m0.md): instala un CLI con su instalador oficial en una
 # carpeta de usuario temporal (USERPROFILE, HOME, APPDATA, LOCALAPPDATA y TEMP apuntan ahí) e imprime dónde quedó, su
 # --version, los archivos que dejó y si cambió el PATH de usuario del registro. Con -Actualizar ejecuta después su orden
-# de actualizar y, con -ProbarSesion, lanza su inicio de sesión con tuberías, guarda lo que imprime en 25 s y lo cierra.
-# Lo usa el job agentes-compatibilidad.yml:
-#   pwsh -NoProfile -File scripts/agentes/probar-instalacion.ps1 -Agente claude [-Version 2.1.311] [-Actualizar] [-ProbarSesion]
+# de actualizar; con -ProbarSesion, lanza su inicio de sesión con tuberías, guarda lo que imprime en 25 s y lo cierra; y
+# con -Desinstalar lo quita como lo haría la receta. Lo usa el job agentes-compatibilidad.yml:
+#   pwsh -NoProfile -File scripts/agentes/probar-instalacion.ps1 -Agente claude [-Version 2.1.311] [-Actualizar] [-ProbarSesion] [-Desinstalar]
+# Copilot va con winget (la orden oficial en Windows) o, con -Descarga, con su descarga directa de GitHub Releases
+# (copilot-win32-x64.zip y su SHA256SUMS.txt) en la carpeta donde lo deja su MSI.
 #
 # El registro (PATH de usuario, HKCU) no se puede aislar: Codex (install.ps1) y Copilot (winget) lo cambian, así que
 # fuera del CI se niegan salvo con -CambiarRegistro. Antigravity, fuera del CI, va con --skip-path --skip-aliases.
@@ -15,7 +17,9 @@ param(
     [switch]$Actualizar,
     [switch]$ProbarSesion,
     [switch]$CambiarRegistro,
-    [switch]$SinAislar
+    [switch]$SinAislar,
+    [switch]$Desinstalar,
+    [switch]$Descarga
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -27,7 +31,9 @@ if (-not $deVerdad -and -not $CambiarRegistro -and $Agente -in 'codex', 'copilot
 $casa = if ($SinAislar) { $env:USERPROFILE } else { [IO.Path]::GetFullPath($Carpeta) }
 $entorno = @{
     CODEX_NON_INTERACTIVE = '1'          # sin «¿Iniciar Codex ahora?» ni otras preguntas
-    BROWSER = "$casa\no-abrir-navegador.exe" # no existe: el CLI no puede abrir el navegador y enseña el enlace
+    BROWSER = "$casa\no-abrir-navegador.exe" # no existe: Claude no abre el navegador y enseña el enlace
+    # Copilot, si BROWSER falla, abre el navegador del sistema; con esta variable usa solo la orden que se le da.
+    COPILOT_DEBUG_BROWSER = (ConvertTo-Json -Compress @("$casa\no-abrir-navegador.exe"))
 }
 if (-not $SinAislar) {
     $entorno += @{
@@ -61,9 +67,24 @@ switch ($Agente) {
         if ($Version) { $env:CODEX_RELEASE = $Version }
         $s = Invoke-RestMethod 'https://chatgpt.com/codex/install.ps1'
         & ([scriptblock]::Create($s))
-        $exe = "$casa\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe"
+        Remove-Item env:CODEX_RELEASE -ErrorAction SilentlyContinue # «codex update» vuelve a ejecutar install.ps1, que la leería
+        $exe = "$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin\codex.exe"
     }
     'copilot' {
+        if ($Descarga) {
+            $base = if ($Version) { "https://github.com/github/copilot-cli/releases/download/v$Version" } else { 'https://github.com/github/copilot-cli/releases/latest/download' }
+            $zip = "$env:TEMP\copilot-win32-x64.zip"
+            Invoke-WebRequest "$base/copilot-win32-x64.zip" -OutFile $zip
+            $sumas = (Invoke-WebRequest "$base/SHA256SUMS.txt").Content
+            $sumas = if ($sumas -is [byte[]]) { [Text.Encoding]::UTF8.GetString($sumas) } else { $sumas }
+            $esperada = ($sumas -split "`n" | Where-Object { $_ -match '\scopilot-win32-x64\.zip\s*$' }) -split '\s+' | Select-Object -First 1
+            $real = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+            if (-not $esperada -or $real -ne $esperada.ToLower()) { throw "SHA-256 de copilot-win32-x64.zip: $real, esperada $esperada" }
+            Write-Host "SHA-256 comprobada: $real"
+            Expand-Archive $zip "$env:LOCALAPPDATA\GitHubCopilotCLI" -Force
+            $exe = "$env:LOCALAPPDATA\GitHubCopilotCLI\copilot.exe"
+            break
+        }
         # La orden oficial en Windows es winget (GitHub.Copilot, un MSI); npm necesita Node.
         if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw 'winget no está en este equipo' }
         $a = @('install', '--id', 'GitHub.Copilot', '--exact', '--silent', '--disable-interactivity', '--accept-package-agreements', '--accept-source-agreements')
@@ -77,7 +98,7 @@ switch ($Agente) {
         $s = Invoke-RestMethod 'https://antigravity.google/cli/install.ps1'
         $extra = if ($deVerdad) { @() } else { @('--skip-path', '--skip-aliases') }
         & ([scriptblock]::Create($s)) @extra
-        $exe = "$casa\AppData\Local\agy\bin\agy.exe"
+        $exe = "$env:LOCALAPPDATA\agy\bin\agy.exe"
     }
 }
 Write-Host "Tardó $([int]((Get-Date) - $inicio).TotalSeconds) s"
@@ -133,4 +154,28 @@ if ($ProbarSesion -and $Agente -ne 'antigravity') {
     Write-Host "terminó solo: $termino; código: $($proc.ExitCode)"
     Write-Host '--- stdout'; Write-Host $out.Result
     Write-Host '--- stderr'; Write-Host $err.Result
+}
+
+if ($Desinstalar) {
+    # Lo que haría la receta: la orden oficial si la hay (winget) y si no, borrar lo que dejó el instalador.
+    Seccion 'Desinstalar'
+    switch ($Agente) {
+        'claude' { Remove-Item -Force $exe; Remove-Item -Recurse -Force "$casa\.local\share\claude" }
+        'codex' {
+            # bin es un enlace (junction) a packages\standalone\current\bin: se quita el enlace y luego el paquete.
+            Remove-Item -Force -Recurse "$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin"
+            Remove-Item -Recurse -Force "$(if ($env:CODEX_HOME) { $env:CODEX_HOME } else { "$casa\.codex" })\packages\standalone"
+        }
+        'copilot' {
+            if ($Descarga) { Remove-Item -Recurse -Force (Split-Path $exe) } else {
+                & winget uninstall --id GitHub.Copilot --exact --silent --disable-interactivity --accept-source-agreements
+                Write-Host "winget salió con $LASTEXITCODE"
+            }
+        }
+        'antigravity' { Remove-Item -Force $exe }
+    }
+    Write-Host "¿Sigue ${exe}? $(Test-Path $exe)"
+    $pathFinal = PathUsuario
+    $quedan = ($pathFinal -split ';') | Where-Object { $_ -and ($pathAntes -split ';') -notcontains $_ }
+    Write-Host "Entradas del PATH de usuario que dejó y siguen: $(if ($quedan) { $quedan -join '; ' } else { 'ninguna' })"
 }

@@ -1,7 +1,7 @@
 # Compatibilidad de los CLI de los agentes (v0.60). Por ahora es el M0 (docs/equipo/releases/v0.60-preparar-agentes/m0.md):
 # instala cada CLI con su instalador oficial en una carpeta de usuario temporal de Linux, macOS y Windows Server, lo
-# actualiza desde una versión fijada y lanza su inicio de sesión hasta el enlace y el código, sin cuenta (se cierra a
-# los 25 s). En Windows Server, además, lo mismo con la cuenta virtual de un servicio de prueba. La Tarea 13 le añade
+# actualiza desde una versión fijada, lanza su inicio de sesión hasta el enlace y el código, sin cuenta (se cierra a
+# los 25 s), y lo desinstala. En Windows Server, además, lo mismo con la cuenta virtual de un servicio de prueba. La Tarea 13 le añade
 # la ejecución semanal y la lista firmada de versiones comprobadas.
 name: Compatibilidad de los agentes
 
@@ -40,10 +40,15 @@ jobs:
           VERSION: ${{ matrix.version }}
           ACTUALIZAR: '1'
           SESION: '1'
+          DESINSTALAR: '1'
         run: sh scripts/agentes/probar-instalacion.sh ${{ matrix.agente }} "$RUNNER_TEMP/casa"
       - name: Instalar, actualizar e iniciar sesión (Windows Server)
         if: runner.os == 'Windows'
-        run: ./scripts/agentes/probar-instalacion.ps1 -Agente ${{ matrix.agente }} -Version '${{ matrix.version }}' -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente ${{ matrix.agente }} -Version '${{ matrix.version }}' -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion -Desinstalar
+      # Copilot sin winget (no está para la cuenta de un servicio): su descarga directa de GitHub Releases.
+      - name: Copilot por su descarga directa (Windows Server)
+        if: runner.os == 'Windows' && matrix.agente == 'copilot'
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente copilot -Descarga -Version '${{ matrix.version }}' -Carpeta "$env:RUNNER_TEMP\casa-descarga" -Actualizar -ProbarSesion -Desinstalar
 
   # ¿Puede la cuenta virtual de un servicio (como la de Tramtai en modo servidor) instalar cada CLI y lanzar su inicio
   # de sesión? Cada agente, con su servicio y su cuenta (NT SERVICE\TramtaiM0<agente>), en su perfil de verdad.
@@ -69,7 +74,7 @@ jobs:
           foreach ($a in 'claude', 'codex', 'copilot', 'antigravity') {
             $n = "TramtaiM0$a"
             $log = "$dir\$a.log"
-            $bin = "`"$dir\sonda.exe`" `"$log`" `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$dir\probar-instalacion.ps1`" -Agente $a -SinAislar -ProbarSesion"
+            $bin = "`"$dir\sonda.exe`" `"$log`" `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$dir\probar-instalacion.ps1`" -Agente $a -SinAislar -Actualizar -ProbarSesion -Desinstalar$(if ($a -eq 'copilot') { ' -Descarga' })"
             sc.exe create $n binPath= $bin obj= "NT SERVICE\$n" | Out-Null
             icacls $dir /grant "NT SERVICE\${n}:(OI)(CI)M" | Out-Null
             sc.exe start $n | Out-Null

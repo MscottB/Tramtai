@@ -3,8 +3,8 @@
 # carpeta de usuario temporal (HOME y XDG_* apuntan ahí) e imprime dónde quedó, su --version, los archivos que dejó y
 # qué archivos de arranque de la shell tocó. Con ACTUALIZAR=1 ejecuta después su orden de actualizar y, con SESION=1,
 # lanza su inicio de sesión dos veces (con tuberías y con una pseudoterminal de `script`), guarda lo que imprime en 25 s
-# y lo cierra. Lo usa el job agentes-compatibilidad.yml:
-#   [VERSION=2.1.311] [ACTUALIZAR=1] [SESION=1] sh scripts/agentes/probar-instalacion.sh claude [carpeta]
+# y lo cierra; con DESINSTALAR=1, lo quita como lo haría la receta. Lo usa el job agentes-compatibilidad.yml:
+#   [VERSION=2.1.311] [ACTUALIZAR=1] [SESION=1] [DESINSTALAR=1] sh scripts/agentes/probar-instalacion.sh claude [carpeta]
 set -eu
 
 agente="${1:?uso: probar-instalacion.sh claude|codex|copilot|antigravity [carpeta]}"
@@ -15,6 +15,8 @@ casa="$(cd "$casa" && pwd)"
 export HOME="$casa" XDG_CONFIG_HOME="$casa/.config" XDG_DATA_HOME="$casa/.local/share" XDG_CACHE_HOME="$casa/.cache" \
     XDG_STATE_HOME="$casa/.local/state" CLAUDE_CONFIG_DIR="$casa/.claude" CODEX_HOME="$casa/.codex" \
     COPILOT_HOME="$casa/.copilot" CODEX_NON_INTERACTIVE=1 BROWSER="$casa/no-abrir-navegador"
+# Copilot, si BROWSER falla, abre el navegador del sistema; con esta variable usa solo la orden que se le da.
+export COPILOT_DEBUG_BROWSER="[\"$casa/no-abrir-navegador\"]"
 mkdir -p "$CLAUDE_CONFIG_DIR"
 # Los instaladores escriben el PATH en el archivo de arranque de la shell que les toca: se crean vacíos para ver cuál.
 for f in .bashrc .bash_profile .profile .zshrc .zprofile; do : >"$casa/$f"; done
@@ -75,7 +77,7 @@ probar_sesion() {
     if [ "$modo" = tuberias ]; then
         "$exe" "$@" <"$fifo" >"$salida" 2>&1 &
     elif [ "$(uname -s)" = Darwin ]; then
-        script -q "$salida" "$exe" "$@" <"$fifo" >/dev/null 2>&1 &
+        script -q "$salida" "$exe" "$@" <"$fifo" >/dev/null 2>"$salida.err" &
     else
         script -qfec "$(printf '%s ' "$exe" "$@")" "$salida" <"$fifo" >/dev/null 2>&1 &
     fi
@@ -91,6 +93,7 @@ probar_sesion() {
     fi
     kill $retenedor 2>/dev/null || true
     cat -v "$salida"
+    if [ -s "$salida.err" ]; then echo "--- errores de script"; cat "$salida.err"; fi
 }
 if [ "${SESION:-}" = 1 ] && [ "$agente" != antigravity ]; then
     case "$agente" in
@@ -101,5 +104,17 @@ if [ "${SESION:-}" = 1 ] && [ "$agente" != antigravity ]; then
     probar_sesion tuberias "$@"
     probar_sesion pty "$@"
     if [ "$agente" = copilot ]; then probar_sesion tuberias login; fi # sin --device-code: ¿flujo web o código?
+fi
+
+if [ "${DESINSTALAR:-}" = 1 ]; then
+    # Ninguno tiene orden de desinstalar: se borra lo que dejó su instalador. Las líneas del PATH que añadieron a los
+    # archivos de arranque de la shell se quedan.
+    seccion 'Desinstalar'
+    case "$agente" in
+    claude) rm -f "$exe"; rm -rf "$casa/.local/share/claude" ;;
+    codex) rm -f "$exe" "$casa/.local/bin/codex-code-mode-host"; rm -rf "$CODEX_HOME/packages/standalone" ;;
+    copilot | antigravity) rm -f "$exe" ;;
+    esac
+    if [ -e "$exe" ]; then echo "sigue $exe"; else echo "ya no está $exe"; fi
 fi
 exit 0
