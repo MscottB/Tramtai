@@ -21,13 +21,6 @@ var (
 // neutrosSitio son nombres que se escriben igual en los dos idiomas: valen en una línea en inglés sin alias.
 var neutrosSitio = map[string]bool{"terminal": true, "token": true, "totp": true, "version": true}
 
-// ordenesNuevasSitio son las líneas que enseñará el sitio nuevo (Tarea 16), todas en inglés.
-var ordenesNuevasSitio = []string{
-	"sudo ./tramtai server install",
-	"sudo tramtai-servidor admin password",
-	`.\tramtai.exe server install`,
-}
-
 // lineasDePre separa el contenido de un <pre> en líneas de texto. es es cada línea para quien lee en español: lo que no
 // está marcado y lo marcado lang="es". en solo trae las líneas que llevan algo lang="en", con lo no marcado más lo
 // marcado lang="en". Una línea sin nada lang="en" (aunque esté dentro de lang="es") es solo español.
@@ -92,6 +85,51 @@ func lineasDePre(contenido string) (es, en []string) {
 	}
 	cerrar()
 	return es, en
+}
+
+// vaciosSitio son las etiquetas sin cierre: no entran en la pila de lenguas.
+var vaciosSitio = map[string]bool{"meta": true, "link": true, "img": true, "br": true, "input": true, "source": true, "hr": true}
+
+// codigosEnLinea saca el texto de cada <code> fuera de un <pre> con su idioma efectivo ("" si nada lo marca): las órdenes
+// que la página cita dentro de una frase.
+func codigosEnLinea(pagina string) (codigos []struct{ texto, lang string }) {
+	type abierta struct{ nombre, lang string }
+	var pila []abierta
+	inicio, langCodigo := -1, ""
+	for _, m := range etiquetaSitio.FindAllStringSubmatchIndex(pagina, -1) {
+		cierre, nombre, atributos := pagina[m[2]:m[3]] == "/", strings.ToLower(pagina[m[4]:m[5]]), pagina[m[6]:m[7]]
+		lang, enPre := "", false
+		for _, a := range pila {
+			if a.lang != "" {
+				lang = a.lang
+			}
+			enPre = enPre || a.nombre == "pre"
+		}
+		switch {
+		case cierre:
+			for i := len(pila) - 1; i >= 0; i-- {
+				if pila[i].nombre == nombre {
+					pila = pila[:i]
+					break
+				}
+			}
+			if nombre == "code" && inicio >= 0 {
+				texto := etiquetaSitio.ReplaceAllString(pagina[inicio:m[0]], "")
+				codigos = append(codigos, struct{ texto, lang string }{html.UnescapeString(texto), langCodigo})
+				inicio = -1
+			}
+		case vaciosSitio[nombre] || strings.HasSuffix(atributos, "/"):
+		default:
+			if l := langSitio.FindStringSubmatch(atributos); l != nil {
+				lang = l[1]
+			}
+			pila = append(pila, abierta{nombre, lang})
+			if nombre == "code" && !enPre {
+				inicio, langCodigo = m[1], lang
+			}
+		}
+	}
+	return codigos
 }
 
 // ordenDeLinea saca los argumentos (con sus opciones) de una línea que es una orden de Tramtai: tras un sudo y un ./ o .\
@@ -231,8 +269,8 @@ func TestOrdenesDelSitioIdioma(t *testing.T) {
 func TestComandosDelSitioExisten(t *testing.T) {
 	raiz := nuevaRaiz()
 	type linea struct {
-		fuente, texto string
-		ingles        bool
+		fuente, texto   string
+		ingles, enLinea bool
 	}
 	var lineas []linea
 	for _, archivo := range []string{"index.html", "servidor.html"} {
@@ -244,33 +282,57 @@ func TestComandosDelSitioExisten(t *testing.T) {
 		for _, pre := range preSitio.FindAllStringSubmatch(string(datos), -1) {
 			es, en := lineasDePre(pre[1])
 			for _, l := range es {
-				lineas = append(lineas, linea{archivo, l, false})
+				lineas = append(lineas, linea{archivo, l, false, false})
 			}
 			for _, l := range en {
-				lineas = append(lineas, linea{archivo, l, true})
+				lineas = append(lineas, linea{archivo, l, true, false})
 			}
+		}
+		// También las órdenes citadas en una frase (<code> fuera de los <pre>), en el idioma de su bloque.
+		for _, c := range codigosEnLinea(string(datos)) {
+			lineas = append(lineas, linea{archivo + " (en una frase)", c.texto, c.lang == "en", true})
 		}
 		if len(lineas) == antes {
 			t.Fatalf("%s: no hay ningún <pre>: ¿cambió el marcado?", archivo)
 		}
 	}
-	for _, o := range ordenesNuevasSitio {
-		lineas = append(lineas, linea{"Tarea 16", o, true})
-	}
-	revisadas := 0
+	revisadas, enFrases := 0, 0
 	for _, l := range lineas {
 		args, servidor, ok := ordenDeLinea(l.texto)
 		if !ok {
 			continue
 		}
-		revisadas++
+		if l.enLinea {
+			enFrases++
+		} else {
+			revisadas++
+		}
 		if err := comprobarOrdenSitio(raiz, args, servidor, l.ingles); err != nil {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
-	// Hoy son 10 (3 nuevas y 7 de los <pre>): perder los bloques de index.html o servidor.html baja de aquí.
-	if revisadas < 10 {
-		t.Errorf("solo se revisaron %d órdenes (mínimo 10): ¿cambió el marcado de los <pre>?", revisadas)
+	// Hoy son 23: 11 en index.html (tramtai terminal, igual en los dos idiomas, cuenta una vez) y 12 en servidor.html.
+	// Perder los bloques de una página baja de aquí.
+	if revisadas < 23 {
+		t.Errorf("solo se revisaron %d órdenes (mínimo 23): ¿cambió el marcado de los <pre>?", revisadas)
+	}
+	t.Logf("órdenes revisadas: %d en <pre> y %d en frases", revisadas, enFrases)
+	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 32 entre los dos idiomas.
+	if enFrases < 30 {
+		t.Errorf("solo se revisaron %d órdenes en frases (mínimo 30): ¿cambió el marcado de los <code>?", enFrases)
+	}
+}
+
+// TestCodigosEnLineaSitio: el idioma sale del bloque que envuelve al <code>, y los <code> de un <pre> no cuentan.
+func TestCodigosEnLineaSitio(t *testing.T) {
+	pagina := `<div lang="en"><p>Run <code>tramtai-servidor open</code>.</p><img src="x"></div>` +
+		`<p><span lang="es"><code>tramtai-servidor abrir</code></span></p><pre><code>tramtai x</code></pre><code>&amp;</code>`
+	var r []string
+	for _, c := range codigosEnLinea(pagina) {
+		r = append(r, c.lang+"|"+c.texto)
+	}
+	if got := strings.Join(r, ","); got != "en|tramtai-servidor open,es|tramtai-servidor abrir,|&" {
+		t.Errorf("codigosEnLinea: %q", got)
 	}
 }
 

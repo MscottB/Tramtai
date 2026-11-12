@@ -944,14 +944,148 @@ tramtai terminal</pre>
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Y en tu propio servidor.</span><span lang="en">And on your own server.</span></h2>
-        <p class="suave"><span lang="es">Nuevo en la v0.58: el modo servidor instala Tramtai como servicio del sistema en Linux o Windows Server. Arranca con el equipo, sin que nadie inicie sesión, y se abre desde otros equipos solo por HTTPS, con la contraseña del administrador y, si quieres, un segundo factor.</span><span lang="en">New in v0.58: server mode installs Tramtai as a system service on Linux or Windows Server. It starts with the computer, with nobody signed in, and opens from other computers over HTTPS only, with the administrator password and, if you want, a second factor.</span></p>
-        <p class="suave"><span lang="es">Es <strong>otro entorno</strong>: tus APIs, claves y ajustes del escritorio no pasan al servidor, ni al revés, y la cabecera siempre dice en cuál estás. <a href="servidor.html">La guía del servidor</a> explica cómo instalarlo, ponerlo detrás de tu proxy y qué riesgos asumes.</span><span lang="en">It’s <strong>a separate environment</strong>: your desktop APIs, keys and settings don’t carry over to the server, or the other way around, and the header always says which one you’re in. <a href="servidor.html">The server guide</a> explains how to install it, put it behind your proxy and which risks you take on.</span></p>
+        <p class="suave"><span lang="es">El escritorio es para ti; el servidor, para tu casa o tu oficina, encendido aunque nadie inicie sesión.</span><span lang="en">The desktop is for you; the server, for your home or your office, on even when nobody is signed in.</span></p>
       </div>
-<pre class="codigo"><span class="c" lang="es"># Linux, desde el .tar.gz: pide aceptar los términos</span><span class="c" lang="en"># Linux, from the .tar.gz: it asks you to accept the terms</span>
-sudo ./tramtai servidor instalar
+      <!-- El mapa de la cabecera, en el servidor: tus equipos llegan por el tramo HTTPS (acento) a Tramtai, y Tramtai a cada
+           agente por su línea (el color de línea solo en los agentes, con data-agente). Hasta 780 px, en vertical. -->
+      <figure class="mapa-servidor">
+        <svg class="servidor-ancho" viewBox="0 0 760 236" role="img" aria-label="Tu portátil, tu móvil y tus scripts llegan por HTTPS a Tramtai en tu servidor, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your laptop, your phone and your scripts reach Tramtai on your server over HTTPS, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
+          <g fill="none" stroke-linecap="round">
+            <path d="M 170 70 L 182 70 C 216 70 216 125 250 125" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 170 125 L 250 125" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 170 180 L 182 180 C 216 180 216 125 250 125" stroke-width="3" stroke="var(--borde-control)"/>
+            <path class="tramo-https" d="M 250 125 L 372 125" stroke-width="4" stroke="var(--acento)"/>
+            <path data-agente="claude" d="M 542 110 L 552 110 C 587 110 587 50 622 50" stroke-width="4" stroke="var(--claude)"/>
+            <path data-agente="codex" d="M 542 120 L 552 120 C 587 120 587 100 622 100" stroke-width="4" stroke="var(--codex)"/>
+            <path data-agente="copilot" d="M 542 130 L 552 130 C 587 130 587 150 622 150" stroke-width="4" stroke="var(--copilot)"/>
+            <path data-agente="gemini" d="M 542 140 L 552 140 C 587 140 587 200 622 200" stroke-width="4" stroke="var(--gemini)"/>
+          </g>
+          <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+            <circle cx="170" cy="70" r="7"/>
+            <circle cx="170" cy="125" r="7"/>
+            <circle cx="170" cy="180" r="7"/>
+          </g>
+          <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+            <text x="152" y="75"><tspan lang="es">Tu portátil</tspan><tspan lang="en">Your laptop</tspan></text>
+            <text x="152" y="130"><tspan lang="es">Tu móvil</tspan><tspan lang="en">Your phone</tspan></text>
+            <text x="152" y="185"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+          </g>
+          <text x="311" y="113" text-anchor="middle" font-size="14" font-weight="700" fill="var(--acento)">HTTPS</text>
+          <rect x="372" y="89" width="170" height="72" rx="36" stroke-width="5" fill="var(--superficie)" stroke="var(--texto)"/>
+          <text x="457" y="122" text-anchor="middle" font-size="18" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+          <text x="457" y="142" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu servidor</tspan><tspan lang="en">on your server</tspan></text>
+          <circle data-agente="claude" cx="622" cy="50" r="9" fill="var(--claude)"/>
+          <circle data-agente="codex" cx="622" cy="100" r="9" fill="var(--codex)"/>
+          <circle data-agente="copilot" cx="622" cy="150" r="9" fill="var(--copilot)"/>
+          <circle data-agente="gemini" cx="622" cy="200" r="9" fill="var(--gemini)"/>
+          <g font-size="15" font-weight="650" fill="var(--texto)">
+            <text x="640" y="48">Claude Code</text>
+            <text x="640" y="98">Codex</text>
+            <text x="640" y="148">GitHub Copilot</text>
+            <text x="640" y="198">Gemini API</text>
+          </g>
+          <g font-size="12" fill="var(--texto-suave)">
+            <text x="640" y="66">Anthropic</text>
+            <text x="640" y="116">OpenAI</text>
+            <text x="640" y="166">GitHub</text>
+            <text x="640" y="216">Google</text>
+          </g>
+        </svg>
+        <svg class="servidor-alto" viewBox="0 0 320 392" role="img" aria-label="Tu portátil, tu móvil y tus scripts llegan por HTTPS a Tramtai en tu servidor, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your laptop, your phone and your scripts reach Tramtai on your server over HTTPS, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
+          <line x1="18" y1="14" x2="18" y2="112" stroke-width="3" stroke="var(--borde-control)"/>
+          <line class="tramo-https" x1="18" y1="112" x2="18" y2="182" stroke-width="4" stroke="var(--acento)"/>
+          <line x1="18" y1="232" x2="18" y2="376" stroke-width="3" stroke="var(--borde-fuerte)"/>
+          <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+            <circle cx="18" cy="14" r="6"/>
+            <circle cx="18" cy="52" r="6"/>
+            <circle cx="18" cy="90" r="6"/>
+          </g>
+          <g font-size="14" font-weight="500" fill="var(--texto)">
+            <text x="36" y="19"><tspan lang="es">Tu portátil</tspan><tspan lang="en">Your laptop</tspan></text>
+            <text x="36" y="57"><tspan lang="es">Tu móvil</tspan><tspan lang="en">Your phone</tspan></text>
+            <text x="36" y="95"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+          </g>
+          <text x="36" y="152" font-size="14" font-weight="700" fill="var(--acento)">HTTPS</text>
+          <rect x="4" y="176" width="312" height="58" rx="29" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
+          <text x="160" y="202" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+          <text x="160" y="220" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu servidor</tspan><tspan lang="en">on your server</tspan></text>
+          <line data-agente="claude" x1="18" y1="262" x2="44" y2="262" stroke-width="4" stroke-linecap="round" stroke="var(--claude)"/>
+          <circle data-agente="claude" cx="52" cy="262" r="7" fill="var(--claude)"/>
+          <line data-agente="codex" x1="18" y1="300" x2="44" y2="300" stroke-width="4" stroke-linecap="round" stroke="var(--codex)"/>
+          <circle data-agente="codex" cx="52" cy="300" r="7" fill="var(--codex)"/>
+          <line data-agente="copilot" x1="18" y1="338" x2="44" y2="338" stroke-width="4" stroke-linecap="round" stroke="var(--copilot)"/>
+          <circle data-agente="copilot" cx="52" cy="338" r="7" fill="var(--copilot)"/>
+          <line data-agente="gemini" x1="18" y1="376" x2="44" y2="376" stroke-width="4" stroke-linecap="round" stroke="var(--gemini)"/>
+          <circle data-agente="gemini" cx="52" cy="376" r="7" fill="var(--gemini)"/>
+          <g font-size="15" font-weight="650" fill="var(--texto)">
+            <text x="70" y="267">Claude Code</text>
+            <text x="70" y="305">Codex</text>
+            <text x="70" y="343">GitHub Copilot</text>
+            <text x="70" y="381">Gemini API</text>
+          </g>
+          <g text-anchor="end" font-size="12" fill="var(--texto-suave)">
+            <text x="314" y="267">Anthropic</text>
+            <text x="314" y="305">OpenAI</text>
+            <text x="314" y="343">GitHub</text>
+            <text x="314" y="381">Google</text>
+          </g>
+        </svg>
+      </figure>
+      <ul class="virtudes">
+        <li class="virtud">
+          <h3><span lang="es">Arranca con el equipo</span><span lang="en">Starts with the computer</span></h3>
+          <p class="suave"><span lang="es">Sin que nadie inicie sesión: es un servicio del sistema.</span><span lang="en">Without anyone signing in: it’s a system service.</span></p>
+        </li>
+        <li class="virtud">
+          <h3><span lang="es">Solo por HTTPS</span><span lang="en">HTTPS only</span></h3>
+          <p class="suave"><span lang="es">Abierto a la red sin HTTPS, no arranca: tus claves no viajan sin cifrar.</span><span lang="en">Opened to the network without HTTPS, it won’t start: your keys don’t travel unencrypted.</span></p>
+        </li>
+        <li class="virtud">
+          <h3><span lang="es">Contraseña y TOTP</span><span lang="en">Password and TOTP</span></h3>
+          <p class="suave"><span lang="es">La del administrador y, si quieres, un segundo factor.</span><span lang="en">The administrator’s, plus a second factor if you want one.</span></p>
+        </li>
+        <li class="virtud">
+          <h3><span lang="es">Detrás de tu proxy</span><span lang="en">Behind your proxy</span></h3>
+          <p class="suave"><span lang="es">Con ejemplos comprobados para Caddy, nginx, Apache, Traefik y HAProxy.</span><span lang="en">With tested examples for Caddy, nginx, Apache, Traefik and HAProxy.</span></p>
+        </li>
+      </ul>
+      <div class="para-ti">
+        <article class="tarjeta">
+          <h3><span lang="es">El escritorio, si…</span><span lang="en">The desktop, if…</span></h3>
+          <ul>
+            <li><span lang="es">lo usas tú, en tu propio equipo;</span><span lang="en">you use it yourself, on your own computer;</span></li>
+            <li><span lang="es">tus apps y scripts corren en ese mismo equipo;</span><span lang="en">your apps and scripts run on that same computer;</span></li>
+            <li><span lang="es">quieres la app, con su icono en la bandeja, o la terminal.</span><span lang="en">you want the app, with its tray icon, or the terminal.</span></li>
+          </ul>
+        </article>
+        <article class="tarjeta">
+          <h3><span lang="es">El servidor, si…</span><span lang="en">The server, if…</span></h3>
+          <ul>
+            <li><span lang="es">quieres usarlo desde otros equipos: tu portátil, tu móvil o tus scripts;</span><span lang="en">you want to use it from other computers: your laptop, your phone or your scripts;</span></li>
+            <li><span lang="es">tiene que seguir en marcha aunque nadie inicie sesión;</span><span lang="en">it has to keep running when nobody is signed in;</span></li>
+            <li><span lang="es">puedes ponerle HTTPS y te haces cargo de lo que abres a la red;</span><span lang="en">you can give it HTTPS and you take care of what you open to the network;</span></li>
+            <li><span lang="es">te basta con un solo administrador: no tiene cuentas para varias personas.</span><span lang="en">one administrator is enough: it has no accounts for several people.</span></li>
+          </ul>
+        </article>
+      </div>
+      <!-- Linux · Windows Server: es otro juego de pestañas (data-pestanas="sistema") que el de «Cómo funciona». Sin
+           JavaScript la lista espera oculta y se ven los dos sistemas. -->
+      <div class="servidor-ordenes">
+        <div class="pestanas" data-pestanas="sistema">
+          <div class="pestanas-lista" role="tablist" aria-label="Sistema" data-aria-en="System" hidden><button type="button" role="tab" id="servidor-linux" aria-controls="servidor-linux-panel" aria-selected="true" tabindex="0" data-lenguaje="linux">Linux</button><button type="button" role="tab" id="servidor-windows" aria-controls="servidor-windows-panel" aria-selected="false" tabindex="-1" data-lenguaje="windows">Windows Server</button></div>
+<pre class="codigo" id="servidor-linux-panel" aria-labelledby="servidor-linux" tabindex="0"><span class="c" lang="es"># Linux, desde el .tar.gz y como root: antes te pide aceptar los términos</span><span class="c" lang="en"># Linux, from the .tar.gz and as root: first it asks you to accept the terms</span>
+<span lang="es">sudo ./tramtai servidor instalar</span><span lang="en">sudo ./tramtai server install</span>
 
-<span class="c" lang="es"># La contraseña de la Web UI remota</span><span class="c" lang="en"># The remote Web UI password</span>
-sudo tramtai-servidor administrador contraseña</pre>
+<span class="c" lang="es"># La contraseña del administrador, para entrar desde otros equipos</span><span class="c" lang="en"># The administrator password, to sign in from other computers</span>
+<span lang="es">sudo tramtai-servidor administrador contraseña</span><span lang="en">sudo tramtai-servidor admin password</span></pre>
+<pre class="codigo" id="servidor-windows-panel" aria-labelledby="servidor-windows" tabindex="0"><span class="c" lang="es"># Windows Server, desde el .zip y en una consola de administrador</span><span class="c" lang="en"># Windows Server, from the .zip and in an administrator console</span>
+<span lang="es">.\tramtai.exe servidor instalar</span><span lang="en">.\tramtai.exe server install</span>
+
+<span class="c" lang="es"># La contraseña del administrador, para entrar desde otros equipos</span><span class="c" lang="en"># The administrator password, to sign in from other computers</span>
+<span lang="es">tramtai-servidor administrador contraseña</span><span lang="en">tramtai-servidor admin password</span></pre>
+        </div>
+      </div>
+      <p class="servidor-pie"><span lang="es"><a href="servidor.html">La guía del servidor</a> · Es otro entorno: tus APIs y claves no pasan de uno a otro. Antes de instalar, <a href="#riesgos">lee los cinco riesgos</a>.</span><span lang="en"><a href="servidor.html">The server guide</a> · It’s a separate environment: your APIs and keys don’t carry over from one to the other. Before installing, <a href="#riesgos">read the five risks</a>.</span></p>
     </div>
   </section>
 
@@ -1116,7 +1250,7 @@ sudo tramtai-servidor administrador contraseña</pre>
           <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso. Solo consulta GitHub para buscar versiones nuevas, y eso se apaga en Ajustes.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics. It only checks GitHub for new versions, and you can turn that off in Settings.</span></span></li>
         </ul>
       </div>
-      <div class="cabeza riesgos-cabeza">
+      <div class="cabeza riesgos-cabeza" id="riesgos">
         <h3><span lang="es">Antes de usarlo, cinco riesgos.</span><span lang="en">Before you use it, five risks.</span></h3>
         <p class="suave"><span lang="es">Los mismos que te enseña Tramtai antes de aceptar sus términos, en la app, la terminal y al instalar el servidor.</span><span lang="en">The same ones Tramtai shows you before you accept its terms, in the app, the terminal and when you install the server.</span></p>
       </div>
