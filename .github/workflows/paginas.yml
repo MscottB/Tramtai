@@ -28,11 +28,11 @@ jobs:
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      # La guía del desarrollador muestra los ejemplos que ejecuta el CI, sin copiarlos a mano.
+      # La guía del desarrollador muestra los ejemplos que ejecuta el CI, sin copiarlos a mano (con los ingleses de */en).
       - name: Ejemplos de la guía
         run: |
           mkdir -p site/ejemplos
-          cp -r docs/ejemplos/python docs/ejemplos/javascript docs/ejemplos/go docs/ejemplos/curl docs/ejemplos/muestra.txt site/ejemplos/
+          cp -r docs/ejemplos/python docs/ejemplos/javascript docs/ejemplos/go docs/ejemplos/curl docs/ejemplos/muestra.txt docs/ejemplos/sample.txt site/ejemplos/
           rm -rf site/ejemplos/javascript/node_modules
       - uses: actions/setup-node@v7
         with:
