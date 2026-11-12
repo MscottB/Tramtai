@@ -142,10 +142,18 @@ type EstadoHerramienta struct {
 	Ruta   string `json:"ruta,omitempty"` // el archivo que toca (o tocaría) Tramtai
 	// Motivo explica lo que no va: por qué está desactualizada, qué impide activarla, si está activa en otro archivo o
 	// si la gestiona una política de la organización.
-	Motivo         string `json:"motivo,omitempty"`
-	ClaveEnArchivo bool   `json:"clave_en_archivo"`
-	Gestionado     bool   `json:"gestionado"`
-	HayCopia       bool   `json:"hay_copia"` // hay copia del archivo de antes de activarla: Restaurar tiene a qué volver
+	Motivo string `json:"motivo,omitempty"`
+	// MotivoCodigo y MotivoDatos dicen lo mismo que Motivo para que la Web UI lo traduzca a su idioma (Motivo va en el del
+	// servicio): gestionado, solo_global, sin_https_propio, api_no_existe{api}, api_detenida{api}, puerto{actual,anotado},
+	// orden_no_existe{ruta}, clave_no_almacen, editada_a_mano{ruta}, otro_archivo{ruta}, anotacion_ilegible{detalle},
+	// continue_json y previa. Un código que la Web UI no conozca se queda con Motivo.
+	MotivoCodigo   string            `json:"motivo_codigo,omitempty"`
+	MotivoDatos    map[string]string `json:"motivo_datos,omitempty"`
+	ClaveEnArchivo bool              `json:"clave_en_archivo"`
+	Gestionado     bool              `json:"gestionado"`
+	HayCopia       bool              `json:"hay_copia"` // hay copia del archivo de antes de activarla: Restaurar tiene a qué volver
+	// FechaCopia (RFC 3339) es de cuándo es esa copia: la de la primera activación, aunque se haya vuelto a activar.
+	FechaCopia string `json:"fecha_copia,omitempty"`
 }
 
 // ActivarHerramientas es el cuerpo de POST /api/v1/herramientas/activar: los ids o todas las detectadas, con el modelo

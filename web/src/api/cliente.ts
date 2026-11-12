@@ -6,7 +6,7 @@ import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Capacidades, CodigosRecuperacion, EntradaRemota, EstadoServidor, EstadoTerminos, PrimerosPasos, SecretoTOTP, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, ActivarHerramientas, Capacidades, CodigosRecuperacion, EntradaRemota, EstadoServidor, EstadoTerminos, PrimerosPasos, SecretoTOTP, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, EstadoHerramienta, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -190,6 +190,15 @@ export const api = {
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${encodeURIComponent(nombre)}`),
   // regenerarClave crea una clave nueva para la API: solo se guarda su huella, así que es la única vez que se ve.
   regenerarClave: (nombre: string) => pedir<{ token: string }>('POST', `/api/v1/puntos/${encodeURIComponent(nombre)}/token`).then((r) => r.token),
+  // Herramientas de terceros apuntadas a Tramtai: cada acción responde con la lista actualizada. En el modo servidor todas
+  // dan 409 no_disponible_en_servidor.
+  herramientas: () => pedir<{ herramientas: EstadoHerramienta[] }>('GET', '/api/v1/herramientas').then((r) => r.herramientas),
+  activarHerramientas: (p: ActivarHerramientas) => pedir<{ herramientas: EstadoHerramienta[] }>('POST', '/api/v1/herramientas/activar', p).then((r) => r.herramientas),
+  desactivarHerramientas: (p: { ids: string[]; todas: boolean }) =>
+    pedir<{ herramientas: EstadoHerramienta[] }>('POST', '/api/v1/herramientas/desactivar', p).then((r) => r.herramientas),
+  // olvidarHerramienta desactiva y borra su clave y lo anotado; restaurarHerramienta repone la copia y da su ruta.
+  olvidarHerramienta: (id: string) => pedir<void>('POST', `/api/v1/herramientas/${encodeURIComponent(id)}/olvidar`),
+  restaurarHerramienta: (id: string) => pedir<{ copia: string }>('POST', `/api/v1/herramientas/${encodeURIComponent(id)}/restaurar`).then((r) => r.copia),
 }
 
 export function cargarDiasHistorial() {

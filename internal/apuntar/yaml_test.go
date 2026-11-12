@@ -409,8 +409,8 @@ func TestContinueNoUsaConfigJSON(t *testing.T) {
 	if err := os.WriteFile(json, []byte(`{"models":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresContinue()); !errors.Is(err, errContinueJSON) {
-		t.Fatalf("solo con config.json: err = %v, quería errContinueJSON", err)
+	if _, err := Aplicar(datos, h, AlcanceGlobal, "", valoresContinue()); !errors.Is(err, ErrContinueJSON) {
+		t.Fatalf("solo con config.json: err = %v, quería ErrContinueJSON", err)
 	}
 	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
 		t.Errorf("se creó config.yaml: %v", err)

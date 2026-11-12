@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/apuntar"
@@ -245,7 +246,7 @@ func TestHerramientasConHTTPSPropio(t *testing.T) {
 	p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
 	p.s.opc.TLS = &tls.Config{}
 	for id, e := range p.estados(t, "global") {
-		if !strings.Contains(e.Motivo, "HTTPS propio") || e.Estado == "activa" {
+		if !strings.Contains(e.Motivo, "HTTPS propio") || e.MotivoCodigo != "sin_https_propio" || e.Estado == "activa" {
 			t.Errorf("%s con HTTPS propio: %+v", id, e)
 		}
 	}
@@ -283,7 +284,7 @@ func TestDesdeProyectoSoloClaudeCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e := p.estados(t, pry.ID)["codex"]; e.Estado != "solo_global" {
+	if e := p.estados(t, pry.ID)["codex"]; e.Estado != "solo_global" || e.MotivoCodigo != "solo_global" {
 		t.Fatalf("codex desde un proyecto: %+v", e)
 	}
 	if r, cuerpo := p.pedir(t, pry.ID, "POST", "/api/v1/herramientas/activar", `{"ids":["codex"]}`); r.StatusCode != 400 {
@@ -320,7 +321,7 @@ func TestDesdeProyectoSoloClaudeCode(t *testing.T) {
 		}
 	}
 	// Activa en el proyecto: desde la global se ve dónde y activarla ahí pide desactivarla antes.
-	if e := p.estados(t, "global")["claude-code"]; e.Estado != "activa" || e.Motivo == "" {
+	if e := p.estados(t, "global")["claude-code"]; e.Estado != "activa" || e.Motivo == "" || e.MotivoCodigo != "otro_archivo" || e.MotivoDatos["ruta"] == "" {
 		t.Fatalf("vista desde la global: %+v", e)
 	}
 	if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["claude-code"]}`); r.StatusCode != 409 {
@@ -332,22 +333,22 @@ func TestDesactualizada(t *testing.T) {
 	p := entornoHerramientas(t, nil, "codex")
 	p.s.ActivarGlobal()
 	p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
-	comprobar := func(caso, motivo string) {
+	comprobar := func(caso, motivo, codigo string) {
 		t.Helper()
 		e := p.estados(t, "global")["codex"]
-		if e.Estado != "desactualizada" || !strings.Contains(e.Motivo, motivo) {
+		if e.Estado != "desactualizada" || !strings.Contains(e.Motivo, motivo) || e.MotivoCodigo != codigo {
 			t.Fatalf("%s: %+v", caso, e)
 		}
 	}
 	os.Rename(p.exe, p.exe+".movido")
-	comprobar("la orden ya no existe", p.exe)
+	comprobar("la orden ya no existe", p.exe, "orden_no_existe")
 	os.Rename(p.exe+".movido", p.exe)
 
 	p.s.mu.Lock()
 	puerto := p.s.opc.Puerto
 	p.s.opc.Puerto = puerto + 1
 	p.s.mu.Unlock()
-	comprobar("otro puerto", "puerto")
+	comprobar("otro puerto", "puerto", "puerto")
 	p.s.mu.Lock()
 	p.s.opc.Puerto = puerto
 	p.s.mu.Unlock()
@@ -356,19 +357,19 @@ func TestDesactualizada(t *testing.T) {
 	}
 
 	delete(p.almacen, "TRAMTAI_HERRAMIENTA_CODEX")
-	comprobar("sin la clave en el almacén", "almacén")
+	comprobar("sin la clave en el almacén", "almacén", "clave_no_almacen")
 	p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)
 
 	toml := filepath.Join(p.casa, "codex", "config.toml")
 	original, _ := os.ReadFile(toml)
 	os.WriteFile(toml, []byte("model = \"gpt-5\"\n"), 0o600)
-	comprobar("el usuario lo cambió", "config.toml")
+	comprobar("el usuario lo cambió", "config.toml", "editada_a_mano")
 	os.WriteFile(toml, original, 0o600)
 
 	if r, cuerpo := pedir(t, p.ts.URL, "DELETE", "/api/v1/puntos/codex", p.s.tokenAdmin, "", "Tramtai-Instancia", "global"); r.StatusCode != 204 {
 		t.Fatalf("borrar la API: %d %s", r.StatusCode, cuerpo)
 	}
-	comprobar("sin API", "API")
+	comprobar("sin API", "API", "api_no_existe")
 	r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/desactivar", `{"todas":true}`)
 	if r.StatusCode != 200 || porID(t, cuerpo)["codex"].Estado != "detectada" {
 		t.Fatalf("desactivar una desactualizada no falla: %d %s", r.StatusCode, cuerpo)
@@ -382,11 +383,21 @@ func TestRestaurarHerramienta(t *testing.T) {
 	if r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/codex/restaurar", ""); r.StatusCode != 400 || !strings.Contains(cuerpo, "no hay copia") {
 		t.Fatalf("sin archivo previo no hay copia: %d %s", r.StatusCode, cuerpo)
 	}
+	if e := p.estados(t, "global")["codex"]; e.HayCopia || e.FechaCopia != "" {
+		t.Fatalf("sin archivo previo no hay copia ni fecha: %+v", e)
+	}
 	p.pedir(t, "global", "POST", "/api/v1/herramientas/codex/olvidar", "")
 	toml := filepath.Join(p.casa, "codex", "config.toml")
 	os.WriteFile(toml, []byte("model = \"gpt-5\"\n"), 0o600)
-	if e := p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)["codex"]; !e.HayCopia {
-		t.Fatalf("con archivo previo hay copia: %+v", e)
+	e := p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/haiku"}`)["codex"]
+	fecha, errFecha := time.Parse(time.RFC3339, e.FechaCopia)
+	if !e.HayCopia || errFecha != nil || time.Since(fecha) > time.Minute {
+		t.Fatalf("con archivo previo hay copia y su fecha: %+v", e)
+	}
+	// Volver a activar (otro modelo) conserva la fecha de la copia original.
+	time.Sleep(1100 * time.Millisecond)
+	if otra := p.activar(t, "global", `{"ids":["codex"],"modelo":"claude/sonnet"}`)["codex"]; otra.FechaCopia != e.FechaCopia {
+		t.Fatalf("la fecha de la copia cambió al reactivar: %q y %q", e.FechaCopia, otra.FechaCopia)
 	}
 	r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/codex/restaurar", "")
 	var copia struct {
@@ -405,7 +416,7 @@ func TestHerramientaContinueConConfigJSON(t *testing.T) {
 	p := entornoHerramientas(t, nil, "continue")
 	p.s.ActivarGlobal()
 	os.WriteFile(filepath.Join(p.casa, "continue", "config.json"), []byte("{}"), 0o600)
-	if e := p.estados(t, "global")["continue"]; e.Estado != "detectada" || !strings.Contains(e.Motivo, "config.json") {
+	if e := p.estados(t, "global")["continue"]; e.Estado != "detectada" || !strings.Contains(e.Motivo, "config.json") || e.MotivoCodigo != "continue_json" {
 		t.Fatalf("Continue con config.json: %+v", e)
 	}
 	r, cuerpo := p.pedir(t, "global", "POST", "/api/v1/herramientas/activar", `{"ids":["continue"]}`)
