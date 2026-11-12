@@ -7,6 +7,14 @@
   font-weight: 100 900;
   font-display: swap;
 }
+/* Cascadia Mono (OFL, CASCADIA-OFL.txt), un subconjunto con lo que pinta la terminal. Va con otro nombre porque
+   «Cascadia Code» es nombre reservado de la licencia. */
+@font-face {
+  font-family: 'Tramtai Mono';
+  src: url('cascadia.woff2') format('woff2');
+  font-weight: 200 700;
+  font-display: swap;
+}
 :root {
   --fondo: light-dark(#eef2f1, #0a1116); --superficie: light-dark(#ffffff, #111c23); --superficie-suave: light-dark(#f4f7f6, #15222a);
   --borde: light-dark(#dce3e2, #1f2f38); --borde-fuerte: light-dark(#c2cccb, #2d404b);
@@ -128,7 +136,45 @@ section { padding: 72px 0; }
   :root:not([data-tema="claro"]) .solo-claro { display: none; }
 }
 /* La terminal de la portada: Inicio y Mis APIs, una junto a otra si caben. */
-.terminal-capturas { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); margin-top: 32px; }
+/* La terminal de la portada: texto real (terminal.json) en una ventana que sigue el tema, con la paleta clara y oscura
+   de la TUI (internal/tui/tema.go): fondo de superficie de día y de andén de noche. 100 columnas: la letra baja con la
+   pantalla hasta 11 px y, si aun así no cabe, la pantalla se desplaza dentro de su marco. */
+.terminal-figura { margin: 0; }
+.terminal-figura figcaption { margin-top: 12px; font-size: .9rem; }
+.ventana-terminal { width: fit-content; max-width: 100%; border: 1px solid var(--borde-fuerte); border-radius: var(--radio); overflow: hidden; background: light-dark(#ffffff, #0a1116); color: light-dark(#0f1b1e, #e5edf0); box-shadow: var(--sombra); }
+.ventana-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 6px 12px; background: var(--superficie-suave); border-bottom: 1px solid var(--borde); }
+.ventana-semaforo { display: inline-flex; gap: 6px; }
+.ventana-semaforo span { width: 12px; height: 12px; border-radius: 50%; background: var(--borde-fuerte); }
+.ventana-barra .pestanas-lista { margin: 0; }
+.ventana-rotulo { margin-left: auto; color: var(--texto-suave); font: .85rem var(--mono); }
+/* En pantallas estrechas, semáforo y rótulo en una fila y las pestañas debajo. */
+@media (max-width: 900px) { .ventana-barra .pestanas-lista { order: 1; } }
+.ventana-pantalla { overflow-x: auto; padding: 14px 16px; }
+/* La ventana recorta sus esquinas: el foco de la pantalla va por dentro. */
+.ventana-pantalla:focus-visible { outline-offset: -3px; }
+.ventana-mas { border-top: 1px solid var(--borde); }
+.ventana-mas summary { padding: 10px 16px; min-height: 44px; cursor: pointer; font-weight: 600; }
+.pantalla { margin: 0; width: max-content; font: 400 clamp(11px, (100vw - 112px) / 60, 15px)/1.2 'Tramtai Mono', 'Cascadia Mono', Consolas, monospace; }
+.t-acento { color: light-dark(#0b6e64, #2dd4bf); }
+.t-texto { color: light-dark(#0f1b1e, #e5edf0); }
+.t-suave { color: light-dark(#55666a, #93a5ac); }
+.t-ok { color: light-dark(#166534, #4ade80); }
+.t-error { color: light-dark(#b42525, #f87171); }
+.t-aviso { color: light-dark(#854d0e, #fbbf24); }
+/* Claude de día va en el tono de su chapa (DESIGN.md, Excepciones): #c4561d da 4,47:1 sobre blanco. */
+.t-claude { color: light-dark(#ba521c, #f28a4f); }
+.t-codex { color: light-dark(#2563eb, #5b8def); }
+.t-copilot { color: light-dark(#1f883d, #3fb950); }
+.t-gemini { color: light-dark(#7c3aed, #a78bfa); }
+.t-antigravity { color: light-dark(#db2777, #f472b6); }
+.tf-velo { background: light-dark(#d3e5e3, #113838); }
+.t-b { font-weight: 700; }
+.t-d { opacity: .7; }
+/* Cada glifo ocupa una celda aunque llegue de la fuente de reserva: así las columnas cuadran. */
+.g { display: inline-block; width: 1ch; text-align: center; }
+.teclas { display: flex; flex-wrap: wrap; gap: 8px 20px; list-style: none; margin: 28px 0 0; padding: 0; color: var(--texto-suave); }
+kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px solid var(--borde-control); border-bottom-width: 2px; border-radius: 6px; background: var(--superficie); color: var(--texto); font: 600 .85rem/1.4 var(--mono); text-align: center; }
+.teclas-mas { margin-top: 12px; }
 /* El aviso: los cinco riesgos, con aire entre uno y otro. */
 .riesgos { max-width: 72ch; padding-left: 1.4em; }
 .riesgos li + li { margin-top: 8px; }

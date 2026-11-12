@@ -226,6 +226,45 @@
   });
 })();
 
+// Pestañas de la terminal de la portada (Inicio, Mis APIs, Historial), con el patrón de las demás: ratón, flechas, Inicio
+// y Fin, y además la tecla de cada página en la TUI (1, 4, 5). Las teclas solo cuentan con el foco en las pestañas, para
+// no quitarle atajos a la página. Sin JavaScript, Inicio se ve y las otras están en <details>: aquí salen de ahí.
+(function () {
+  var ventana = document.querySelector('.ventana-terminal');
+  if (!ventana) return;
+  var lista = ventana.querySelector('[role="tablist"]');
+  var botones = Array.prototype.slice.call(lista.querySelectorAll('[role="tab"]'));
+  var paneles = botones.map(function (b) {
+    var panel = document.getElementById(b.getAttribute('aria-controls'));
+    var detalles = panel.closest('details');
+    if (detalles) detalles.replaceWith(panel);
+    panel.setAttribute('role', 'tabpanel');
+    return panel;
+  });
+  function elegir(n, foco) {
+    botones.forEach(function (b, i) {
+      b.setAttribute('aria-selected', String(i === n));
+      b.tabIndex = i === n ? 0 : -1;
+      paneles[i].hidden = i !== n;
+    });
+    if (foco) botones[n].focus();
+  }
+  botones.forEach(function (b, i) { b.addEventListener('click', function () { elegir(i); }); });
+  lista.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var i = botones.indexOf(document.activeElement);
+    var n = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: botones.length - 1 }[e.key];
+    if (n === undefined) {
+      n = botones.map(function (b) { return b.dataset.tecla; }).indexOf(e.key);
+      if (n < 0) return;
+    }
+    e.preventDefault();
+    elegir((n + botones.length) % botones.length, true);
+  });
+  lista.hidden = false;
+  elegir(0);
+})();
+
 // Buscador de la Ayuda (site/ayuda/): busca por palabras en indice.json, en el idioma que se ve. Sin JavaScript queda
 // oculto y se navega por las tarjetas.
 (function () {

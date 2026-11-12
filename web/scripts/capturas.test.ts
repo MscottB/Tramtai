@@ -174,6 +174,10 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
       assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
       assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
       for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
+      // Sobre el velo (la fila elegida) solo va la tinta del texto: los colores de agente no llegan a 4,5:1 encima.
+      for (const [, lista] of html.matchAll(/class="([^"]*\btf-velo\b[^"]*)"/g)) assert.match(lista, /\bt-texto\b/, `${donde}: ${lista}`)
+      // Solo <span class="…">: va tal cual a la portada, así que ninguna otra etiqueta se cuela.
+      assert.ok(!html.replace(/<span class="[^"<>]*">|<\/span>/g, '').includes('<'), `${donde}: una etiqueta que no es <span class>`)
     }
     assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
     // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
@@ -182,23 +186,6 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
   }
   assert.ok(statSync(new URL('../../site/cascadia.woff2', import.meta.url)).size <= 60 * 1024, 'cascadia.woff2 pasa de 60 KB')
   assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)
-})
-
-// Hasta la Tarea 15, que borra estas imágenes, la portada todavía las usa: Inicio y Mis APIs.
-test('las 16 capturas de la terminal de la portada actual existen y pesan poco', () => {
-  const portada = new URL('../../site/capturas/', import.meta.url)
-  let total = 0
-  for (const p of TERMINAL.filter((p) => p.nombre !== 'historial'))
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en'])
-        for (const ancho of [960, 1440]) {
-          const archivo = `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`
-          const tamano = statSync(new URL(archivo, portada), { throwIfNoEntry: false })?.size
-          assert.ok(tamano, `falta ${archivo}`)
-          assert.ok(tamano <= 150 * 1024, `${archivo} pesa ${tamano} bytes`)
-          total += tamano
-        }
-  assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
 })
 
 test('cada pantalla de la portada existe en WebP, en claro y oscuro, en los dos idiomas, a 640, 960 y 1440 px', () => {

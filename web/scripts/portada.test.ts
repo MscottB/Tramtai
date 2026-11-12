@@ -4,7 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { pasosBienvenida } from '../src/recorrido.ts'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
-import { PORTADA } from './capturas-lista.ts'
+import { PORTADA, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
 // seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
@@ -396,7 +396,9 @@ test('«Así se ve» dice que las capturas tienen datos de ejemplo y aclara su p
   const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
   assert.match(nota, /datos de ejemplo/)
   assert.match(nota, /sample data/)
-  for (const [, puerto] of html.matchAll(/127\.0\.0\.1:(\d+)/g)) assert.equal(puerto, '17373', 'los ejemplos usan el puerto por defecto')
+  // La terminal (comun:terminal) es una captura en texto: enseña el puerto de las capturas, como las imágenes.
+  const sinTerminal = html.replace(/<!-- comun:terminal -->[\s\S]*?<!-- \/comun:terminal -->/, '')
+  for (const [, puerto] of sinTerminal.matchAll(/127\.0\.0\.1:(\d+)/g)) assert.equal(puerto, '17373', 'los ejemplos usan el puerto por defecto')
   assert.match(nota, /17373/)
   // Las capturas salen de su propio puerto (PUERTO_CAPTURAS de capturas.mjs), para no tocar el Tramtai de quien las saca.
   const puerto = readFileSync(new URL('./capturas.mjs', import.meta.url), 'utf8').match(/const PUERTO_CAPTURAS = (\d+)/)?.[1]
@@ -612,25 +614,97 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
 })
 
-// v0.56: la portada presenta la terminal; en la v0.58, con sus capturas (Inicio y Mis APIs, claro y oscuro, es y en).
-test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda, en los dos idiomas', () => {
-  const terminal = seccion('terminal')
+// v0.59 (spec §5): la terminal es texto real (site/capturas/terminal.json, de capturas --terminal) en una ventana con
+// pestañas que sigue el tema: Inicio, Mis APIs e Historial, en los dos idiomas. Sustituye a las capturas WebP.
+const terminal = seccion('terminal')
+test('la terminal de la portada son seis pantallas de texto de terminal.json, sin colores en línea', () => {
   assert.ok(terminal, 'falta <section id="terminal">')
-  for (const t of ['Todo desde la terminal.', 'Everything from the terminal.', 'Nuevo en la v0.56', 'New in v0.56', 'SSH', '60×20'])
-    assert.ok(terminal.includes(t), `falta «${t}»`)
+  const zona = terminal.match(/<!-- comun:terminal -->([\s\S]*?)<!-- \/comun:terminal -->/)?.[1] ?? ''
+  assert.ok(zona, 'falta la zona comun:terminal (cd web; npm run sitio)')
+  const datos = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  assert.equal((zona.match(/<pre class="pantalla"/g) ?? []).length, 6, '3 páginas × 2 idiomas')
+  for (const idioma of ['es', 'en'])
+    for (const p of ['inicio', 'apis', 'historial']) {
+      const fin = zona.indexOf(`">${datos[idioma][p]}</pre>`)
+      assert.ok(fin > 0, `${p}, ${idioma}`)
+      // role="img" con su texto: el lector de pantalla oye qué enseña la página, no 28 filas de columnas.
+      const pre = zona.slice(zona.lastIndexOf('<pre ', fin), fin + 2)
+      assert.match(pre, new RegExp(`^<pre class="pantalla" lang="${idioma}" role="img" aria-label="${idioma === 'es' ? 'La terminal en' : 'The terminal on'} [^"]+">$`), `${p}, ${idioma}`)
+    }
+  assert.equal(new Set(zona.match(/aria-label="The terminal[^"]+"|aria-label="La terminal[^"]+"/g)).size, 6, 'un texto por página e idioma')
+  assert.doesNotMatch(terminal, /style=/)
+  assert.doesNotMatch(terminal, /<img /)
+  assert.doesNotMatch(css, /\.terminal-capturas/)
+  assert.deepEqual(readdirSync(new URL('../../site/capturas/', import.meta.url)).filter((a) => /^terminal-.*\.webp$/.test(a)), [], 'quedan terminal-*.webp')
+})
+
+test('la ventana de la terminal tiene semáforo, rótulo y tres pestañas; sin JavaScript, Inicio y las otras en <details>', () => {
+  assert.match(terminal, /<span class="ventana-semaforo" aria-hidden="true">/)
+  assert.ok(terminal.includes('tramtai terminal · ssh'), 'falta el rótulo')
+  const lista = terminal.match(/<div class="pestanas-lista" role="tablist"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? ''
+  assert.match(lista, /role="tablist"[^>]* hidden>/, 'sin JavaScript no hay pestañas que no hagan nada')
+  const pestanas = lista.match(/<button type="button" role="tab"[\s\S]*?<\/button>/g) ?? []
+  assert.deepEqual(pestanas.map((p) => p.replace(/<span lang="en">[^<]*<\/span>/g, '').replace(/<[^>]+>/g, '')), ['1 Inicio', '4 Mis APIs', '5 Historial'])
+  assert.deepEqual(pestanas.map((p) => p.replace(/<span lang="es">[^<]*<\/span>/g, '').replace(/<[^>]+>/g, '')), ['1 Home', '4 My APIs', '5 History'])
+  pestanas.forEach((p, i) => {
+    const id = p.match(/ id="([^"]+)"/)?.[1]
+    const panel = p.match(/aria-controls="([^"]+)"/)?.[1]
+    assert.match(p, new RegExp(`aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tecla="${['1', '4', '5'][i]}"`))
+    assert.match(terminal, new RegExp(`<div class="ventana-pantalla" id="${panel}" aria-labelledby="${id}" tabindex="0">`), `${panel}`)
+  })
+  const detalles = terminal.match(/<details class="ventana-mas">[\s\S]*?<\/details>/g) ?? []
+  assert.deepEqual(detalles.map((d) => d.match(/id="([^"]+)"/)?.[1]), ['terminal-apis-panel', 'terminal-historial-panel'])
+  assert.doesNotMatch(terminal.slice(0, terminal.indexOf('<details')), /<details/)
+  // sitio.js: las teclas solo con el foco en las pestañas (el keydown es de la lista), y saca los paneles de <details>.
+  const bloque = js.slice(js.indexOf("document.querySelector('.ventana-terminal')"))
+  assert.match(bloque, /lista\.addEventListener\('keydown'/)
+  assert.match(bloque, /dataset\.tecla/)
+  assert.match(bloque, /replaceWith/)
+  assert.doesNotMatch(bloque.slice(0, bloque.indexOf('})();')), /document\.addEventListener\('keydown'/)
+})
+
+test('debajo de la ventana: el pie de figura, la leyenda de teclas, el enlace a la Ayuda y los dos comandos por idioma', () => {
+  const pie = terminal.match(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/)?.[0] ?? ''
+  assert.match(pie, /lang="es">[^<]*datos de ejemplo y en el puerto 17388; la tuya usa el 17373/)
+  assert.match(pie, /lang="en">[^<]*sample data and on port 17388; yours uses 17373/)
+  const leyenda = terminal.match(/<ul class="teclas">[\s\S]*?<\/ul>/)?.[0] ?? ''
+  for (const [k, es, en] of [['Tab', 'menú', 'menu'], ['7', 'páginas', 'pages'], ['?', 'ayuda', 'help'], ['Esc', 'volver', 'back'], ['q', 'salir', 'quit']])
+    assert.match(leyenda, new RegExp(`<kbd>${k.replace('?', '\\?')}</kbd> <span lang="es">${es}</span><span lang="en">${en}</span>`), k)
+  assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
   const codigo = terminal.match(/<pre class="codigo">[\s\S]*?<\/pre>/)?.[0] ?? ''
-  assert.match(codigo, /^tramtai servicio iniciar -d$/m)
+  assert.match(codigo, /^<span lang="es">tramtai servicio iniciar -d<\/span><span lang="en">tramtai service start -d<\/span>$/m)
   assert.match(codigo, /^tramtai terminal<\/pre>$/m)
   for (const c of codigo.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
-  assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
-  const imgs = terminal.match(/<img [^>]*>/g) ?? []
-  assert.equal(imgs.length, 8, 'Inicio y Mis APIs, en claro y oscuro y en los dos idiomas')
-  for (const p of ['inicio', 'apis'])
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en']) {
-        const base = `capturas/terminal-${p}-${tema}-${idioma}`
-        assert.ok(imgs.some((img) => new RegExp(`class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="\\d+" height="\\d+" loading="lazy" decoding="async" alt="[^"]+"`).test(img)), `${p}, ${tema}, ${idioma}`)
-      }
+})
+
+// Cada color de la TUI (TOKENS_TERMINAL) es una clase con su valor de día y de noche: la ventana sigue el tema del sitio.
+test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia autoalojada y los glifos en su celda', () => {
+  const pares = new Map<string, string[]>()
+  for (const [hex, token] of Object.entries(TOKENS_TERMINAL)) pares.set(token, [...(pares.get(token) ?? []), hex])
+  // Claude de día va en el tono de su chapa, #ba521c (DESIGN.md, Excepciones): #c4561d se queda en 4,47:1.
+  pares.set('claude', ['#ba521c', pares.get('claude')![1]])
+  for (const [token, [dia, noche]] of pares) {
+    const regla = token === 'velo' ? `.tf-velo { background: light-dark(${dia}, ${noche}); }` : `.t-${token} { color: light-dark(${dia}, ${noche}); }`
+    assert.ok(css.includes(regla), regla)
+  }
+  // Cada tinta llega a 4,5:1 sobre el fondo de la ventana en los dos temas. Sobre el velo solo va la tinta del texto
+  // (capturas.test.ts lo comprueba en terminal.json).
+  const fondo = css.match(/\.ventana-terminal \{[^}]*background: light-dark\((#\w{6}), (#\w{6})\)/)?.slice(1) ?? []
+  assert.equal(fondo.length, 2)
+  const luz = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
+  const contraste = (a: string, b: string) => { const [x, y] = [luz(a), luz(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+  for (const [token, colores] of pares) if (token !== 'velo') colores.forEach((c, i) => assert.ok(contraste(c, fondo[i]) >= 4.5, `${token} ${i ? 'de noche' : 'de día'}: ${contraste(c, fondo[i]).toFixed(2)}:1`))
+  assert.ok(contraste('#0f1b1e', pares.get('velo')![0]) >= 4.5 && contraste('#e5edf0', pares.get('velo')![1]) >= 4.5, 'texto sobre el velo')
+  assert.ok(css.includes('.t-b { font-weight: 700; }'))
+  assert.match(css, /\.t-d \{ opacity: [\d.]+; \}/)
+  assert.ok(css.includes('.g { display: inline-block; width: 1ch; text-align: center; }'))
+  const fuente = css.match(/@font-face \{[^}]*cascadia\.woff2[^}]*\}/)?.[0] ?? ''
+  assert.match(fuente, /font-family: 'Tramtai Mono'/, 'Cascadia Code es nombre reservado (OFL)')
+  assert.match(fuente, /font-weight: 200 700/)
+  assert.match(css, /\.pantalla \{[^}]*'Tramtai Mono', 'Cascadia Mono', Consolas, monospace/)
+  // En el móvil la pantalla se desplaza dentro de su marco, con la letra a 11 px como mínimo.
+  assert.match(css, /\.ventana-pantalla \{[^}]*overflow-x: auto/)
+  assert.match(css, /\.pantalla \{[^}]*clamp\(11px,/)
 })
 
 test('la portada presenta el modo servidor, que es otro entorno, y el aviso con los cinco riesgos', () => {
