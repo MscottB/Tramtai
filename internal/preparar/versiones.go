@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"runtime"
 	"strings"
@@ -132,17 +133,31 @@ func (p *Preparador) Versiones(ctx context.Context, forzar bool) []contrato.Vers
 	consultar := p.buscaVersiones()
 	if desde := time.Since(p.compatibilidad().Leida); consultar && (forzar || desde < 0 || desde >= unDia) {
 		_ = p.LeerLista(ctx) // una firma que no vale o sin red: sigue la lista anterior
-		ultimas := map[string]string{}
+		nuevas := map[string]string{}
+		preguntadas := 0
 		var mu sync.Mutex
-		p.enParalelo(func(id string, _ adaptadores.Ficha) {
+		p.enParalelo(func(id string, f adaptadores.Ficha) {
 			v, err := p.o.UltimaVersion(ctx, id) // cada consulta con su plazo (pedir)
 			mu.Lock()
 			defer mu.Unlock()
+			if f.Receta.Ultima.Tipo != "" {
+				preguntadas++
+			}
 			if err == nil {
-				ultimas[id] = v
+				nuevas[id] = v
 			}
 		})
-		_ = p.cambiar(func(c *compatibilidad) { c.Ultimas, c.Leida = ultimas, time.Now() })
+		// Un fallo pasajero (sin red, 429) no borra lo que ya se sabía, y si no respondió ninguna se vuelve a intentar
+		// en la próxima llamada.
+		_ = p.cambiar(func(c *compatibilidad) {
+			if c.Ultimas == nil {
+				c.Ultimas = map[string]string{}
+			}
+			maps.Copy(c.Ultimas, nuevas)
+			if len(nuevas) > 0 || preguntadas == 0 {
+				c.Leida = time.Now()
+			}
+		})
 	}
 	ultimas := map[string]string{}
 	if consultar {
@@ -205,6 +220,10 @@ func (p *Preparador) versionesDe(id string, f adaptadores.Ficha, instalada, ulti
 		case aviso != "":
 		case r.Sesion == nil:
 			aviso = idioma.Tf("%s aún no está comprobado con Tramtai", conVersionSi(f.Programa, usada))
+		case usada == "": // búsqueda desactivada o sin red
+			aviso = idioma.T("No se sabe qué versión se instalará, así que no se sabe si está comprobada: si sigues y no lo está, el inicio de sesión automático quedará desactivado hasta que lo esté")
+		case accion == "actualizar":
+			aviso = idioma.T("La versión nueva aún no está comprobada: si actualizas, el inicio de sesión automático quedará desactivado hasta que lo esté")
 		default:
 			aviso = idioma.Tf("%s aún no está comprobado con Tramtai: si sigues, el inicio de sesión automático quedará desactivado hasta que lo esté",
 				conVersionSi(f.Programa, usada))

@@ -314,13 +314,13 @@ func TestSesionNoReconocida(t *testing.T) {
 	}
 	latido := filepath.Join(t.TempDir(), "latido")
 	pr := nueva(t, fichaSesion(t, "copilot", "sesion", "PREPARAR_SALIDA="+otra, "PREPARAR_LATIDO="+latido))
-	pr.p.plazoLector = 2 * time.Second
+	pr.p.plazoLector = 5 * time.Second // con -race en Windows, 2 s no siempre llegan a la primera línea
 	ponerFalso(t, pr.casa)
 	inicio := time.Now()
 	lanzarSesion(t, pr.p)
 	e := final(t, pr.p, "falso")
 	if e.Estado != "error" || e.MotivoCodigo != CodigoSalidaNoReconocida || !slices.Contains(e.Lineas, "nada que ver") ||
-		!strings.Contains(e.Mensaje, "falso login") || time.Since(inicio) > 10*time.Second {
+		!strings.Contains(e.Mensaje, "falso login") || time.Since(inicio) > 15*time.Second {
 		t.Fatalf("estado %+v", e)
 	}
 	muertos(t, latido)

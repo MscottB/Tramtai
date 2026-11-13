@@ -46,6 +46,9 @@ func init() {
 	})
 	// Las versiones comprobadas (Tarea 5).
 	agregar(map[string]string{
-		"%s aún no está comprobado con Tramtai: si sigues, el inicio de sesión automático quedará desactivado hasta que lo esté": "%s has not been checked with Tramtai yet: if you go ahead, automatic sign-in will stay off until it is",
+		"%s aún no está comprobado con Tramtai: si sigues, el inicio de sesión automático quedará desactivado hasta que lo esté":                                                   "%s has not been checked with Tramtai yet: if you go ahead, automatic sign-in will stay off until it is",
+		"La versión nueva aún no está comprobada: si actualizas, el inicio de sesión automático quedará desactivado hasta que lo esté":                                             "The new version has not been checked yet: if you update, automatic sign-in will stay off until it is",
+		"No se sabe qué versión se instalará, así que no se sabe si está comprobada: si sigues y no lo está, el inicio de sesión automático quedará desactivado hasta que lo esté": "It is not known which version will be installed, so it is not known whether it has been checked: if you go ahead and it has not, automatic sign-in will stay off until it is",
+		"la firma de la lista de versiones comprobadas no es válida: se sigue con la anterior":                                                                                     "the signature of the checked versions list is not valid: the previous list stays in use",
 	})
 }

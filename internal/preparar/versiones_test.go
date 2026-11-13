@@ -16,6 +16,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
@@ -50,6 +51,8 @@ func nuevasFuentes(t *testing.T) *fuentes {
 		switch {
 		case !ok:
 			http.NotFound(w, r)
+		case strings.HasPrefix(cuerpo, "->"):
+			http.Redirect(w, r, strings.TrimPrefix(cuerpo, "->"), http.StatusFound)
 		case cuerpo == "403" || cuerpo == "429":
 			w.WriteHeader(map[string]int{"403": http.StatusForbidden, "429": http.StatusTooManyRequests}[cuerpo])
 		default:
@@ -73,16 +76,27 @@ func (fu *fuentes) poner(ruta, cuerpo string) {
 // lista publica la lista firmada; con firmaMala, su firma no vale.
 func (fu *fuentes) lista(t *testing.T, version int, agentes map[string]map[string][]string, firmaMala bool) {
 	t.Helper()
-	datos, err := json.Marshal(map[string]any{"version": version, "agentes": agentes})
-	if err != nil {
-		t.Fatal(err)
-	}
+	datos := listaJSON(t, version, agentes, "")
 	firma := ed25519.Sign(fu.privada, datos)
 	if firmaMala {
 		firma[0] ^= 0xff
 	}
+	fu.publicar(datos, firma)
+}
+
+// publicar deja en el release una lista y una firma cualesquiera.
+func (fu *fuentes) publicar(datos, firma []byte) {
 	fu.poner("/lista/compatibilidad.json", string(datos))
 	fu.poner("/lista/compatibilidad.json.sig", base64.StdEncoding.EncodeToString(firma))
+}
+
+func listaJSON(t *testing.T, version int, agentes map[string]map[string][]string, relleno string) []byte {
+	t.Helper()
+	datos, err := json.Marshal(map[string]any{"version": version, "agentes": agentes, "relleno": relleno})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return datos
 }
 
 // conFuentes es una prueba cuyo preparador usa sus propios ganchos (Comprobada, UltimaVersion) y el servidor de fuentes.
@@ -114,6 +128,7 @@ func TestUltimaVersion(t *testing.T) {
 	fu.poner("/gh/limitado/cli/releases/latest", "403")
 	fu.poner("/gh/frenado/cli/releases/latest", "429")
 	fu.poner("/rara", "1.0;iex x")
+	fu.poner("/a-http", "->"+strings.Replace(fu.srv.URL, "https", "http", 1)+"/texto")
 	casos := []struct {
 		nombre string
 		fuente adaptadores.FuenteVersion
@@ -128,6 +143,7 @@ func TestUltimaVersion(t *testing.T) {
 		{"no encontrada", adaptadores.FuenteVersion{Tipo: "url", Nombre: fu.srv.URL + "/no-esta"}, ""},
 		{"con otra forma", adaptadores.FuenteVersion{Tipo: "url", Nombre: fu.srv.URL + "/rara"}, ""},
 		{"por http", adaptadores.FuenteVersion{Tipo: "url", Nombre: strings.Replace(fu.srv.URL, "https", "http", 1) + "/texto"}, ""},
+		{"redirigida a http", adaptadores.FuenteVersion{Tipo: "url", Nombre: fu.srv.URL + "/a-http"}, ""},
 	}
 	for _, c := range casos {
 		t.Run(c.nombre, func(t *testing.T) {
@@ -234,6 +250,23 @@ func TestListaFirmada(t *testing.T) {
 	if err := p.LeerLista(ctx); err != nil || p.Comprobada("falso", "instalar", "9.2.0") || !p.Comprobada("falso", "instalar", "9.0.0") {
 		t.Fatalf("una lista con version menor no vale: %v", err)
 	}
+	// La misma version con otro contenido tampoco: no se puede cambiar una lista ya aceptada.
+	fu.lista(t, 2, map[string]map[string][]string{"falso": {"instalar": {"9.2.1"}}}, false)
+	if err := p.LeerLista(ctx); err != nil || p.Comprobada("falso", "instalar", "9.2.1") || !p.Comprobada("falso", "instalar", "9.0.0") {
+		t.Fatalf("la misma version con otro contenido no vale: %v", err)
+	}
+	// La firma válida de otra lista no vale para esta.
+	otra := listaJSON(t, 5, map[string]map[string][]string{"falso": {"instalar": {"9.4.0"}}}, "")
+	fu.publicar(listaJSON(t, 5, map[string]map[string][]string{"falso": {"instalar": {"9.5.0"}}}, ""), ed25519.Sign(fu.privada, otra))
+	if err := p.LeerLista(ctx); err == nil || !strings.Contains(err.Error(), "lista de versiones comprobadas") || p.Comprobada("falso", "instalar", "9.5.0") {
+		t.Fatalf("una firma de otra lista no vale: %v", err)
+	}
+	// Una lista de más de 1 MiB no se acepta, aunque esté firmada.
+	grande := listaJSON(t, 6, map[string]map[string][]string{"falso": {"instalar": {"9.6.0"}}}, strings.Repeat("x", 1<<20))
+	fu.publicar(grande, ed25519.Sign(fu.privada, grande))
+	if err := p.LeerLista(ctx); err == nil || p.Comprobada("falso", "instalar", "9.6.0") {
+		t.Fatalf("una lista de más de 1 MiB no vale: %v", err)
+	}
 	datos, err := os.ReadFile(filepath.Join(pr.datos, "agentes", "compatibilidad.json"))
 	if err != nil || !strings.Contains(string(datos), `"version": 2`) {
 		t.Fatalf("compatibilidad.json: %s %v", datos, err)
@@ -265,7 +298,12 @@ func TestMarcaLocal(t *testing.T) {
 	if err := p.LeerLista(context.Background()); err != nil || p.Comprobada("falso", "iniciar_sesion", "2.1.288") {
 		t.Fatalf("una lista que no la trae no quita la marca: %v", err)
 	}
-	fu.lista(t, 2, map[string]map[string][]string{"falso": {"iniciar_sesion": {"2.1.*"}}}, false)
+	// La marca sale del inicio de sesión: traerla solo para otra acción no la quita.
+	fu.lista(t, 2, map[string]map[string][]string{"falso": {"desinstalar": {"2.1.288"}}}, false)
+	if err := p.LeerLista(context.Background()); err != nil || p.Comprobada("falso", "iniciar_sesion", "2.1.288") {
+		t.Fatalf("una lista que la trae solo para desinstalar no quita la marca: %v", err)
+	}
+	fu.lista(t, 3, map[string]map[string][]string{"falso": {"iniciar_sesion": {"2.1.*"}}}, false)
 	if err := p.LeerLista(context.Background()); err != nil || !p.Comprobada("falso", "iniciar_sesion", "2.1.288") {
 		t.Fatalf("la lista con version mayor que la trae quita la marca: %v", err)
 	}
@@ -383,5 +421,94 @@ func TestSinBusqueda(t *testing.T) {
 	}
 	if n := fu.pedidos.Load(); n != 0 {
 		t.Fatalf("%d peticiones con la búsqueda desactivada", n)
+	}
+}
+
+func TestCompararVersiones(t *testing.T) {
+	casos := []struct {
+		a, b string
+		c    int
+	}{
+		{"1.10.0", "1.9.0", 1}, {"2.0.0-beta", "2.0.0", -1}, {"2.0.0", "2.0.0-beta", 1}, {"1.10-rc", "1.9", 1},
+		{"1.2", "1.2.0", 0}, {"1.2.0", "1.2", 0}, {"2.0.0-alpha", "2.0.0-beta", -1}, {"1.2.3", "1.2.3", 0}, {"0.167.2", "0.167.10", -1},
+	}
+	for _, c := range casos {
+		if got := compararVersiones(c.a, c.b); got != c.c {
+			t.Errorf("compararVersiones(%q, %q) = %d, se esperaba %d", c.a, c.b, got, c.c)
+		}
+	}
+}
+
+// Un fallo pasajero no borra la última versión que ya se sabía, y la próxima llamada lo vuelve a intentar.
+func TestVersionesFalloPasajero(t *testing.T) {
+	fu := nuevasFuentes(t)
+	fu.poner("/texto2", "2.1.330")
+	otro := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "2.1.323") }))
+	f := fichaFalsa(t, "instalar")
+	f.Receta.Ultima = adaptadores.FuenteVersion{Tipo: "url", Nombre: otro.URL + "/texto"}
+	pr := conFuentes(t, fu, f)
+	if v := unaVersion(t, pr.p, false); v.Ultima != "2.1.323" {
+		t.Fatalf("la primera: %+v", v)
+	}
+	otro.Close()
+	viejo := time.Now().Add(-25 * time.Hour)
+	if err := pr.p.cambiar(func(c *compatibilidad) { c.Leida = viejo }); err != nil {
+		t.Fatal(err)
+	}
+	if v := unaVersion(t, pr.p, false); v.Ultima != "2.1.323" || v.MotivoCodigo == CodigoSinRed {
+		t.Fatalf("sin red se conserva la que se sabía: %+v", v)
+	}
+	if leida := pr.p.compatibilidad().Leida; !leida.Equal(viejo) {
+		t.Fatalf("sin ninguna respuesta no se da por consultado: %v", leida)
+	}
+	f.Receta.Ultima.Nombre = fu.srv.URL + "/texto2" // la receta es la misma que ve el preparador
+	if v := unaVersion(t, pr.p, false); v.Ultima != "2.1.330" {
+		t.Fatalf("la siguiente llamada vuelve a intentarlo: %+v", v)
+	}
+}
+
+// Versiones, LeerLista y Marcar a la vez no pierden nada de compatibilidad.json.
+func TestCompatibilidadALaVez(t *testing.T) {
+	fu := nuevasFuentes(t)
+	fu.poner("/texto", "2.1.323")
+	fu.lista(t, 1, map[string]map[string][]string{"falso": {"instalar": {"3.0.0"}}}, false)
+	f := fichaFalsa(t, "instalar")
+	f.Receta.Ultima = adaptadores.FuenteVersion{Tipo: "url", Nombre: fu.srv.URL + "/texto"}
+	pr := conFuentes(t, fu, f)
+	var grupo sync.WaitGroup
+	marcadas := []string{}
+	for i := range 8 {
+		marcadas = append(marcadas, fmt.Sprintf("1.0.%d", i))
+		grupo.Go(func() { pr.p.Versiones(context.Background(), true) })
+		grupo.Go(func() { _ = pr.p.LeerLista(context.Background()) })
+		grupo.Go(func() {
+			if err := pr.p.Marcar("falso", fmt.Sprintf("1.0.%d", i)); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	grupo.Wait()
+	c := pr.p.compatibilidad()
+	slices.Sort(c.NoCompatibles["falso"])
+	if c.Ultimas["falso"] != "2.1.323" || c.Lista.Version != 1 || !slices.Equal(c.NoCompatibles["falso"], marcadas) || c.Leida.IsZero() {
+		t.Fatalf("compatibilidad.json: %+v", c)
+	}
+}
+
+// Los avisos de Versiones al instalar o actualizar una versión sin comprobar.
+func TestAvisosDeVersiones(t *testing.T) {
+	f := fichaSesion(t, "codex", "sesion")
+	p := nueva(t, f).p
+	p.o.Comprobada = func(_, accion, _ string) bool { return accion != "actualizar" && accion != "instalar" }
+	if v := p.versionesDe("falso", f, "1.2.3", "9.9.9", true); v.MotivoCodigo != CodigoVersionNoComprobada ||
+		v.Motivo != "La versión nueva aún no está comprobada: si actualizas, el inicio de sesión automático quedará desactivado hasta que lo esté" ||
+		!slices.Contains(v.Acciones, "actualizar") {
+		t.Fatalf("actualizar a una sin comprobar: %+v", v)
+	}
+	if v := p.versionesDe("falso", f, "1.2.3", "", false); v.MotivoCodigo != CodigoVersionNoComprobada || !strings.HasPrefix(v.Motivo, "No se sabe qué versión se instalará") {
+		t.Fatalf("sin saber la nueva: %+v", v)
+	}
+	if v := p.versionesDe("falso", f, "", "9.9.9", true); !strings.HasPrefix(v.Motivo, "Falso CLI 9.9.9 aún no está comprobado con Tramtai: si sigues") {
+		t.Fatalf("instalar una sin comprobar: %+v", v)
 	}
 }

@@ -461,6 +461,9 @@ func (c *corrida) accion() error {
 
 // ultimaSi es la última versión publicada, consultada ahora, o vacía si no se pudo saber (sin red o sin búsqueda).
 func (c *corrida) ultimaSi() string {
+	if !c.p.buscaVersiones() { // también si el gancho es del servicio
+		return ""
+	}
 	ctx, cancelar := context.WithTimeout(c.ctx, plazoVersion)
 	defer cancelar()
 	version, err := c.p.o.UltimaVersion(ctx, c.agente)

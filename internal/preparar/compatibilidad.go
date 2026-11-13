@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/idioma"
 )
 
 // URLLista es la lista firmada de versiones comprobadas: la sube el job semanal del CI al release fijo «compatibilidad»,
@@ -106,7 +108,7 @@ func (p *Preparador) Marcar(agente, version string) error {
 }
 
 // LeerLista baja la lista firmada y, si su firma vale y su version es mayor que la guardada, la guarda y quita las marcas
-// de las versiones que vuelve a traer. Una firma que no vale o una lista igual o más vieja no cambian nada. Con
+// de las versiones que vuelve a traer para iniciar sesión (de donde sale la marca). Una firma que no vale o una lista igual o más vieja no cambian nada. Con
 // servicio.buscar_versiones_agentes=false no hace nada.
 func (p *Preparador) LeerLista(ctx context.Context) error {
 	if !p.buscaVersiones() {
@@ -120,8 +122,8 @@ func (p *Preparador) LeerLista(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := actualizacion.VerificarFirma(datos, firma); err != nil {
-		return err
+	if actualizacion.VerificarFirma(datos, firma) != nil {
+		return errors.New(idioma.T("la firma de la lista de versiones comprobadas no es válida: se sigue con la anterior"))
 	}
 	var nueva listaFirmada
 	if err := json.Unmarshal(datos, &nueva); err != nil {
@@ -133,14 +135,7 @@ func (p *Preparador) LeerLista(ctx context.Context) error {
 		}
 		c.Lista = nueva
 		for agente, marcadas := range c.NoCompatibles {
-			marcadas = slices.DeleteFunc(marcadas, func(v string) bool {
-				for _, lista := range nueva.Agentes[agente] {
-					if cubre(lista, v) {
-						return true
-					}
-				}
-				return false
-			})
+			marcadas = slices.DeleteFunc(marcadas, func(v string) bool { return cubre(nueva.Agentes[agente]["iniciar_sesion"], v) })
 			if len(marcadas) == 0 {
 				delete(c.NoCompatibles, agente)
 			} else {
@@ -163,13 +158,24 @@ func (p *Preparador) masReciente(agente string, r *adaptadores.Receta) string {
 	return mejor
 }
 
-// compararVersiones compara por número cada parte (1.10.0 > 1.9.0); una parte que no es un número, como texto.
+// compararVersiones compara primero el núcleo, parte a parte y por número (1.10.0 > 1.9.0, 1.10-rc > 1.9; 1.2 = 1.2.0;
+// una parte que no es un número, como texto); con el núcleo igual, la que lleva «-sufijo» va antes que la estable
+// (2.0.0-beta < 2.0.0) y dos con sufijo se comparan como texto.
 func compararVersiones(a, b string) int {
-	x, y := strings.Split(a, "."), strings.Split(b, ".")
-	for i := range min(len(x), len(y)) {
-		n, errN := strconv.Atoi(x[i])
-		m, errM := strconv.Atoi(y[i])
-		c := strings.Compare(x[i], y[i])
+	nucleoA, sufijoA, conA := strings.Cut(a, "-")
+	nucleoB, sufijoB, conB := strings.Cut(b, "-")
+	x, y := strings.Split(nucleoA, "."), strings.Split(nucleoB, ".")
+	for i := range max(len(x), len(y)) {
+		parteX, parteY := "0", "0" // lo que falta cuenta como 0
+		if i < len(x) {
+			parteX = x[i]
+		}
+		if i < len(y) {
+			parteY = y[i]
+		}
+		n, errN := strconv.Atoi(parteX)
+		m, errM := strconv.Atoi(parteY)
+		c := strings.Compare(parteX, parteY)
 		if errN == nil && errM == nil {
 			c = cmp.Compare(n, m)
 		}
@@ -177,5 +183,13 @@ func compararVersiones(a, b string) int {
 			return c
 		}
 	}
-	return cmp.Compare(len(x), len(y))
+	switch {
+	case conA && conB:
+		return strings.Compare(sufijoA, sufijoB)
+	case conA:
+		return -1
+	case conB:
+		return 1
+	}
+	return 0
 }
