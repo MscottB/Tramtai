@@ -90,7 +90,7 @@ test('cada #ancla interno de la portada, la guía y la Ayuda lleva a un id que e
 })
 
 test('la portada y las guías tienen al día la cabeza, la barra, el pie y el aviso de sitio.ts', () => {
-  assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'desarrolladores.html', 'servidor.html'])
+  assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'descargar.html'])
   const terminal = JSON.parse(leer('capturas/terminal.json'))
   for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p, { es, en, terminal }), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
 })
@@ -195,13 +195,11 @@ test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
     const zona = (html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '') + (html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '')
     return [...zona.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1].replace(URL_SITIO, '').replace(/^(\.\.\/|\.\/)+/, ''))
   }
-  const esperados = ['#descargar', 'ayuda/empezar.html', '#agentes', 'ayuda/', 'desarrolladores.html', 'servidor.html', 'https://github.com/MscottB/Tramtai',
+  const esperados = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html', 'ayuda/empezar.html', 'https://github.com/MscottB/Tramtai',
     'https://github.com/MscottB/Tramtai/releases', 'https://github.com/MscottB/Tramtai/blob/main/LICENSE.md', 'https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md']
   const casos: [string, string][] = [...fijas, ['ayuda/agentes.html', paginas.get('ayuda/agentes.html')!], ['404.html', paginas.get('404.html')!]]
   for (const [ruta, html] of casos) {
-    // Desde la Ayuda, «ayuda/» es «./» o «index.html».
-    const d = destinos(html).map((x) => (ruta.startsWith('ayuda/') && !x.startsWith('http') && !x.includes('#') && !x.includes('.html') && !x.startsWith('ayuda/') ? 'ayuda/' + x : x))
-      .map((x) => (ruta.startsWith('ayuda/') && /^(index\.html|empezar\.html)$/.test(x) ? 'ayuda/' + x.replace('index.html', '') : x))
+    const d = destinos(html)
     for (const e of esperados) assert.ok(d.includes(e), `${ruta}: falta ${e} (hay ${d.join(', ')})`)
   }
 })
@@ -269,11 +267,11 @@ test('Empezar avisa, junto al botón de descargar, de que hace falta un agente (
   assert.doesNotMatch(html, /Tramtai no los instala|doesn’t install them/)
 })
 
-test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 20 temas', () => {
+test('sitemap.xml lista las siete páginas y los 20 temas de la Ayuda', () => {
   const urls = [...paginas.get('sitemap.xml')!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
-  for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'servidor.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
+  for (const u of [URL_SITIO, ...['producto', 'agentes', 'servidor', 'desarrolladores', 'descargar'].map((p) => `${URL_SITIO}${p}.html`), URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
     assert.ok(urls.includes(u), u)
-  assert.equal(urls.length, 4 + 20)
+  assert.equal(urls.length, 7 + 20)
 })
 
 test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absolutas', () => {

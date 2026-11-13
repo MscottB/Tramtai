@@ -34,10 +34,10 @@ test('la portada tiene diez secciones, en su orden', () => {
   assert.deepEqual(ids, ['portada', 'por-que', 'como', 'app', 'terminal', 'servidor', 'agentes', 'funciones', 'privacidad', 'descargar'])
 })
 
-test('la barra lleva a Cómo funciona, Terminal, Servidor, Agentes, Ayuda y Desarrolladores', () => {
+test('la barra lleva a Producto, Agentes, Servidor, Desarrolladores, Ayuda y Descargar', () => {
   const nav = html.match(/<nav aria-label="Secciones"[\s\S]*?<\/nav>/)?.[0] ?? ''
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#como', '#terminal', '#servidor', '#agentes', 'ayuda/', 'desarrolladores.html'])
-  for (const t of ['Cómo funciona', 'How it works', 'Terminal', 'Servidor', 'Server', 'Agentes', 'Agents']) assert.ok(nav.includes(`>${t}<`), t)
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html'])
+  for (const t of ['Producto', 'Product', 'Agentes', 'Agents', 'Servidor', 'Server', 'Desarrolladores', 'Developers', 'Ayuda', 'Help', 'Descargar', 'Download']) assert.ok(nav.includes(`>${t}<`), t)
 })
 
 test('bajo los botones de la portada, tres accesos: Escritorio, Terminal y Servidor', () => {

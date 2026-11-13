@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://mscottb.github.io/Tramtai/</loc></url>
-  <url><loc>https://mscottb.github.io/Tramtai/desarrolladores.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/producto.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/agentes.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/servidor.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/desarrolladores.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/descargar.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/empezar.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/agentes.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/preparar.html</loc></url>
