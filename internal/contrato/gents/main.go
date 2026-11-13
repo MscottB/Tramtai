@@ -55,6 +55,8 @@ var raices = []raiz{
 	{nombre: "EstadoServidor", valor: contrato.EstadoServidor{}},
 	{nombre: "EstadoHerramienta", valor: contrato.EstadoHerramienta{}},
 	{nombre: "ActivarHerramientas", valor: contrato.ActivarHerramientas{}},
+	{nombre: "PedidoPreparacion", valor: contrato.PedidoPreparacion{}},
+	{nombre: "EstadoPreparacion", valor: contrato.EstadoPreparacion{}},
 }
 
 // nombres son los de TypeScript que no son el de Go: la Web UI ya los usaba, o el de Go choca con otro.

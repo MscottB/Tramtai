@@ -275,6 +275,29 @@ export interface ActivarHerramientas {
   modelo?: string
 }
 
+export interface PedidoPreparacion {
+  accion: 'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'
+  borrar_datos: boolean
+  confirmar: boolean
+}
+
+export interface EstadoPreparacion {
+  agente: string
+  accion: 'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'
+  estado: 'instalando' | 'actualizando' | 'desinstalando' | 'comprobando' | 'esperando_usuario' | 'listo' | 'error' | 'cancelado'
+  etapa?: 'descarga' | 'orden' | 'borrado'
+  enlace?: string
+  codigo?: string
+  pide_pegar?: boolean
+  motivo_codigo?: 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'
+  mensaje?: string
+  lineas?: string[]
+  version_antes?: string
+  version_despues?: string
+  inicio?: string
+  fin?: string
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
