@@ -1,6 +1,7 @@
 package preparar
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"io"
@@ -130,8 +131,8 @@ func (c *corrida) sesionTrasInstalar() error {
 	}
 	version := numeroVersion(c.t.g.VersionDespues) // solo la escribe esta corrida
 	if !c.p.o.Comprobada(c.agente, "iniciar_sesion", version) {
-		aviso := idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
-			conVersionSi(c.f.Programa, version), ordenConsola(c.f))
+		aviso := idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s",
+			conVersionSi(c.f.Programa, version), c.p.aMano(c.f))
 		c.linea(aviso)
 		c.anotar(aviso)
 		c.avisoListo = &Error{CodigoVersionNoComprobada, aviso}
@@ -141,9 +142,19 @@ func (c *corrida) sesionTrasInstalar() error {
 	return c.sesion(version)
 }
 
-// ordenConsola es el inicio de sesión para hacerlo a mano («claude auth login»).
-func ordenConsola(f adaptadores.Ficha) string {
-	return strings.Join(append([]string{f.Comando}, f.Receta.Sesion.Argumentos...), " ")
+// aMano dice cómo iniciar sesión a mano: en el escritorio, la orden del CLI en una consola («claude auth login»); en el
+// servidor, la de Opciones.OrdenConsola con la ruta del CLI instalado (fuera del PATH del servicio), que lo hace como la
+// cuenta del servicio. Sin orden (la cuenta virtual de Windows Server no tiene consola), queda la clave de API.
+func (p *Preparador) aMano(f adaptadores.Ficha) string {
+	args := f.Receta.Sesion.Argumentos
+	orden := strings.Join(append([]string{f.Comando}, args...), " ")
+	if p.o.OrdenConsola != nil {
+		orden = p.o.OrdenConsola(cmp.Or(buscar(f), f.Comando), args)
+	}
+	if orden == "" {
+		return idioma.T("con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)")
+	}
+	return idioma.Tf("inicia sesión en una consola con %s", orden)
 }
 
 // sesion lanza el inicio de sesión del CLI con tuberías (el M0 no pidió pty a ninguno) y la entrada abierta para lo
@@ -192,19 +203,19 @@ func (c *corrida) sesion(version string) error {
 		if err := c.p.Marcar(c.agente, version); err != nil {
 			c.anotar(err.Error())
 		}
-		return &Error{CodigoSalidaNoReconocida, idioma.Tf("no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s",
-			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), ordenConsola(c.f))}
+		return &Error{CodigoSalidaNoReconocida, idioma.Tf("no se reconoció lo que escribió %s en %d s: %s",
+			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), c.p.aMano(c.f))}
 	}
 	if err != nil {
 		return err
 	}
 	if salida != 0 {
-		return &Error{CodigoInicioSesionFallo, idioma.Tf("el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo o hazlo en una consola con %s",
-			c.f.Programa, salida, ordenConsola(c.f))}
+		return &Error{CodigoInicioSesionFallo, idioma.Tf("el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo; si no, %s",
+			c.f.Programa, salida, c.p.aMano(c.f))}
 	}
 	c.fijar(func(g *guardado) { g.Estado, g.PidePegar = "comprobando", false })
 	if c.p.o.Comprobar != nil && c.p.o.Comprobar(c.ctx, c.agente).Estado == adaptadores.SesionSin {
-		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada: inicia sesión en una consola con %s", c.f.Programa, ordenConsola(c.f))}
+		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada: %s", c.f.Programa, c.p.aMano(c.f))}
 	}
 	return nil
 }

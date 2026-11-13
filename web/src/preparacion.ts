@@ -125,6 +125,10 @@ export const siguienteTrasSaltar = (i: number, n: number): number | 'fin' => (i 
 export const CODIGOS_EXPLICADOS = ['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
   'no_disponible_en_servidor', 'interrumpida']
 
+// CON_ORDEN_A_MANO: los códigos cuyo mensaje del servicio ya dice cómo iniciar sesión a mano; en el resumen no hay nada
+// debajo, así que la razón es ese mensaje.
+const CON_ORDEN_A_MANO = ['salida_no_reconocida', 'inicio_sesion_fallo']
+
 // resumenFinal separa los agentes que quedaron listos de verdad de los que no, con el porqué de cada uno. Un agente que va
 // solo con clave (Antigravity) instalado aún no se puede usar; fallos trae por qué no se lanzó uno (sin estado).
 export function resumenFinal(agentes: string[], estados: Record<string, EstadoPreparacion | null | undefined>, fallos: Record<string, string> = {}) {
@@ -134,7 +138,8 @@ export function resumenFinal(agentes: string[], estados: Record<string, EstadoPr
     const e = estados[agente]
     const razon = !e ? (fallos[agente] ? t('bienvenida.noSeLanzo', { motivo: fallos[agente] }) : t('bienvenida.saltado'))
       : e.estado === 'cancelado' ? t('bienvenida.cancelado') : listoParaUsar(e) ? t('bienvenida.faltaClave')
-        : e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(('preparar.error.' + e.motivo_codigo) as Clave) : e.mensaje || t('bienvenida.sinTerminar')
+        : e.motivo_codigo && CON_ORDEN_A_MANO.includes(e.motivo_codigo) && e.mensaje ? e.mensaje
+          : e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(('preparar.error.' + e.motivo_codigo) as Clave) : e.mensaje || t('bienvenida.sinTerminar')
     return { agente, razon }
   })
   return { listos, pendientes }

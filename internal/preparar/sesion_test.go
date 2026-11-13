@@ -373,9 +373,21 @@ func TestSesionNoSeLanza(t *testing.T) {
 
 	ponerFalso(t, pr.casa)
 	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoVersionNoComprobada || len(e.Lineas) != 0 ||
-		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con falso login" {
+		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con falso login" {
 		t.Fatalf("sin comprobar, el aviso de la tarjeta con la orden para la consola: %+v", e)
 	}
+	// En el servidor, la orden es la de la cuenta del servicio con la ruta del CLI instalado (fuera de su PATH); sin
+	// consola para esa cuenta (Windows Server), queda la clave de API.
+	f, _ := pr.p.o.Ficha("falso")
+	pr.p.o.OrdenConsola = func(cli string, args []string) string { return "como-servicio " + cli + " " + strings.Join(args, " ") }
+	if e := iniciar(t, pr.p, "iniciar_sesion"); !strings.HasSuffix(e.Mensaje, "Mientras, inicia sesión en una consola con como-servicio "+buscar(f)+" login") || buscar(f) == "" {
+		t.Fatalf("en el servidor, la orden como la cuenta del servicio: %+v", e)
+	}
+	pr.p.o.OrdenConsola = func(string, []string) string { return "" }
+	if e := iniciar(t, pr.p, "iniciar_sesion"); !strings.HasSuffix(e.Mensaje, "Mientras, con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)") {
+		t.Fatalf("sin consola para la cuenta del servicio, la clave de API: %+v", e)
+	}
+	pr.p.o.OrdenConsola = nil
 	// Sin versión que decir (un instalador que no la fija y la última sin consultar), el mensaje no queda con dos espacios.
 	pr.p.o.UltimaVersion = func(context.Context, string) (string, error) { return "", errors.New("sin red") }
 	if e := iniciar(t, pr.p, "instalar"); e.MotivoCodigo != CodigoVersionNoComprobada || e.Mensaje != "Falso CLI aún no está comprobado con Tramtai" {

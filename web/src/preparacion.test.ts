@@ -36,7 +36,7 @@ test('la acción principal de cada tarjeta sale de su estado y de sus versiones'
 })
 
 test('una versión no comprobada enseña el aviso; para iniciar sesión, sin el botón', () => {
-  const motivo = 'Claude Code 2.2.0 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con claude auth login'
+  const motivo = 'Claude Code 2.2.0 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con claude auth login'
   const v = versiones({ instalada: '2.2.0', comprobadas: { actualizar: true, iniciar_sesion: false, desinstalar: true }, acciones: ['actualizar', 'desinstalar'],
     motivo_codigo: 'version_no_comprobada', motivo })
   assert.deepEqual(accionPrincipal(agente('sin_sesion'), v), { aviso: motivo })
@@ -283,4 +283,14 @@ test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', ()
   const r = resumenFinal(['claude', 'codex'], {}, { claude: 'sin conexión' })
   assert.equal(r.pendientes[0].razon, t('bienvenida.noSeLanzo', { motivo: 'sin conexión' }))
   assert.equal(r.pendientes[1].razon, t('bienvenida.saltado'))
+})
+
+test('resumenFinal: sin enlace reconocido o con el inicio de sesión fallido, la razón es el mensaje con cómo hacerlo a mano', () => {
+  const mensaje = 'no se reconoció lo que escribió Codex en 30 s: inicia sesión en una consola con codex login --device-auth'
+  const r = resumenFinal(['codex', 'copilot', 'claude'], {
+    codex: { agente: 'codex', accion: 'instalar', estado: 'error', motivo_codigo: 'salida_no_reconocida', mensaje } as EstadoPreparacion,
+    copilot: { agente: 'copilot', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo', mensaje: 'falló: usa su clave de API' } as EstadoPreparacion,
+    claude: { agente: 'claude', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo' } as EstadoPreparacion,
+  })
+  assert.deepEqual(r.pendientes.map((p) => p.razon), [mensaje, 'falló: usa su clave de API', t('preparar.error.inicio_sesion_fallo')])
 })

@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -483,8 +482,6 @@ func conSCM(hacer func(*mgr.Service) error) error {
 	return hacer(s)
 }
 
-// OrdenEntrar aún no tiene procedimiento: la cuenta virtual del servicio no tiene consola y su M0 está pendiente
-// (docs/equipo/m0-agentes.md, «v0.58: servidor»).
-func OrdenEntrar(agente, _ string, _ []string) (*exec.Cmd, error) {
-	return nil, errors.New(idioma.Tf("todavía no comprobado en Windows Server para %s: el inicio de sesión con la cuenta del servicio está pendiente de comprobar (guía del servidor: docs/servidor.md); mientras, usa su clave de API (tramtai-servidor claves guardar)", agente))
-}
+// OrdenConsola es vacía: la cuenta virtual del servicio no tiene contraseña ni consola, así que nadie puede iniciar
+// sesión a mano como ella. El servicio sí lanza el inicio de sesión con su cuenta (m0.md de la v0.60, «Windows Server»).
+func OrdenConsola(string, []string) string { return "" }

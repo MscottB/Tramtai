@@ -54,11 +54,11 @@ func (s *Servicio) nuevaPreparacion() *preparar.Preparador {
 		},
 		Agentes:         agentesPreparables(),
 		BuscarVersiones: s.buscarVersiones.Load, // en marcha: Ajustes lo cambia con fijarBusquedas
+		OrdenConsola:    s.opc.OrdenConsola,
 	})
 	p.Recuperar()
 	return p
 }
-
 
 // peticionesEnCurso cuenta las peticiones sin terminar del agente en todas las instancias abiertas.
 func (s *Servicio) peticionesEnCurso(agente string) int {

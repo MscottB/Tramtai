@@ -154,9 +154,9 @@ sudo tramtai-servidor abrir               # la Web UI del servidor, ya dentro, c
 - **Los agentes los ejecuta el servicio, con su cuenta.** Por eso, en el servidor, se rechazan `sudo tramtai-servidor
   agentes` a secas (el diagnóstico, que ejecuta cada CLI), `ejecutar` sin el servicio y `servicio iniciar` en primer
   plano: con privilegios, ejecutarían como root (o como administrador) los programas que dice una configuración que la
-  cuenta del servicio puede escribir. `agentes entrar`, `agentes suscripcion` y `agentes desconectar` sí valen:
-  `entrar` lanza el CLI con la cuenta del servicio, `suscripcion` cambia la configuración y `desconectar` se lo pide al
-  servicio.
+  cuenta del servicio puede escribir. `agentes instalar|entrar|actualizar|desinstalar|versiones`, `agentes suscripcion`
+  y `agentes desconectar` sí valen: las de preparar los CLI y `desconectar` se lo piden al servicio, que lanza el CLI con
+  su cuenta, y `suscripcion` cambia la configuración.
 - **Con `--servidor`, la CLI nunca detiene ni sustituye el servicio del sistema** por ser de otra versión: avisa y remite
   a `tramtai-servidor actualizar`.
 
@@ -421,7 +421,20 @@ desde el propio equipo**: desde fuera, cualquier ruta responde 403.
 
 ### Los CLI de los agentes
 
-- Instálalos para todo el equipo (por ejemplo, `sudo npm install -g @anthropic-ai/claude-code`), o pon su ruta en
+Tramtai los instala, los conecta y los mantiene al día para la cuenta del servicio, con el instalador oficial de cada uno
+y en su carpeta (`/var/lib/tramtai` en Linux, `C:\Windows\ServiceProfiles\Tramtai` en Windows Server): desde Agentes en
+la Web UI remota o en la terminal, o con la CLI. Solo el administrador.
+
+```sh
+sudo tramtai-servidor agentes instalar claude codex   # instala y sigue con el inicio de sesión
+sudo tramtai-servidor agentes versiones               # la instalada, la última y si está comprobada con Tramtai
+sudo tramtai-servidor agentes actualizar --todos
+sudo tramtai-servidor agentes desinstalar codex       # con --borrar-datos, también su sesión y sus ajustes
+```
+
+- Cada CLI queda donde lo deja su instalador para esa cuenta (en Linux, en `/var/lib/tramtai/.local/bin`). Como queda
+  fuera del PATH del servicio, Tramtai guarda su ruta en `comandos_agentes.<agente>` y la quita al desinstalarlo.
+- Uno que ya instalaste para todo el equipo también vale: en el PATH del servicio o con su ruta en
   `comandos_agentes.<agente>`.
 - Su configuración y su sesión van en la carpeta de la cuenta del servicio, nunca en la tuya.
 
@@ -429,19 +442,23 @@ desde el propio equipo**: desde fuera, cualquier ruta responde 403.
 
 Por defecto, los agentes usan su clave de API. Tramtai **nunca guarda la credencial de sesión de Claude** (como la de
 `claude setup-token`: Anthropic lo prohíbe) ni lee lo que guarda un CLI: el inicio de sesión lo hace siempre el propio
-CLI, con la cuenta del servicio.
+CLI, que el servicio lanza con su cuenta. Tramtai enseña el enlace y el código (y, si el CLI lo pide, el campo para pegar
+el que te den) en la Web UI remota, la terminal o la CLI; no abre ningún navegador.
 
 ```sh
-sudo tramtai-servidor agentes entrar claude    # claude auth login, como la cuenta tramtai
-sudo tramtai-servidor agentes entrar codex     # codex login --device-auth, con su CODEX_HOME privado
-sudo tramtai-servidor agentes entrar copilot   # el inicio de sesión por dispositivo de Copilot
+sudo tramtai-servidor agentes entrar claude    # claude auth login
+sudo tramtai-servidor agentes entrar codex     # codex login --device-auth; su sesión, en ~/.codex del servicio
+sudo tramtai-servidor agentes entrar copilot   # copilot login --device-code
 ```
 
 - **Codex** necesita que actives el inicio por código de dispositivo en la seguridad de tu cuenta de ChatGPT (en beta).
 - **Copilot** también vale con un «fine-grained personal access token» con el permiso «Copilot Requests»:
   `sudo tramtai-servidor claves guardar COPILOT_GITHUB_TOKEN`.
-- **En Windows Server** el inicio de sesión con la cuenta del servicio está pendiente de comprobar: `agentes entrar` lo
-  dice y, mientras, usa la clave de API del agente.
+- **Si el inicio de sesión automático no se puede** (una versión del CLI aún sin comprobar con Tramtai, o una salida que
+  Tramtai no reconoce), el aviso dice cómo hacerlo a mano. En Linux da la orden como la cuenta del servicio, por ejemplo
+  `sudo -u tramtai -H env -i HOME=/var/lib/tramtai PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+  /var/lib/tramtai/.local/bin/claude auth login`. En Windows Server la cuenta virtual del servicio no tiene consola: usa
+  la clave de API del agente.
 
 **Solo en este equipo** (el servicio sin abrir a la red), la suscripción se activa como en el escritorio.
 
@@ -520,7 +537,7 @@ sudo tramtai-servidor desinstalar --borrar-datos   # también los datos, las cla
 | Un cliente no conecta al HTTPS propio | No tiene TLS 1.3. Pon un proxy delante. |
 | La CLI dice que el servidor es de otra versión | `sudo tramtai-servidor actualizar` (o `apt`/`dnf` con el paquete). La CLI no lo detiene por ti. |
 | `agentes`, `ejecutar` o `servicio iniciar` se rechazan | En el servidor, los agentes los ejecuta el servicio con su cuenta: usa la Web UI, la terminal o una API. |
-| `agentes entrar` falla en Windows Server | Su inicio de sesión con la cuenta del servicio está pendiente de comprobar: usa su clave de API (`claves guardar`). |
+| En Windows Server, el aviso dice que la cuenta del servicio no puede iniciar sesión en una consola | El inicio de sesión automático no se pudo hacer (mira el motivo) y la cuenta virtual no tiene consola para hacerlo a mano: vuelve a intentarlo o usa su clave de API (`claves guardar`). |
 | «este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)» | Lo dicen `claves guardar` y `servidor estado`: tu systemd es anterior a la 250 y la clave queda sin cifrar en ese archivo, que solo lee root. Con systemd 250 o posterior, las claves se cifran con `systemd-creds`. |
 
 Más en la Ayuda de la app (temas «Modo servidor» y «Dos entornos») y en [arquitectura](arquitectura.md#el-servidor).
@@ -633,8 +650,9 @@ everyday ones.
   apply with `tramtai-servidor restart`. They aren’t edited from the Web UI: a bad network change would lock you out.
 - **The service runs the agents, with its own account.** On the server, plain `sudo tramtai-servidor agents` (the
   diagnosis, which runs each CLI), `ejecutar` without the service and `servicio iniciar` in the foreground are refused
-  (`agents login`, `agents subscription` and `agents desconectar` do work): with privileges, they would run as root (or
-  administrator) the programs named in settings the service account can write.
+  (`agents install|login|update|uninstall|versions`, `agents subscription` and `agents desconectar` do work: they ask
+  the service, which runs the CLI with its own account, or change the settings): with privileges, they would run as root
+  (or administrator) the programs named in settings the service account can write.
 - **With `--server`, the CLI never stops or replaces the system service** for being another version: it warns you and
   points to `tramtai-servidor update`.
 
@@ -771,14 +789,24 @@ Windows the service stores them in its account’s Credential Manager, with no r
 account and administrators and, with the service open to the network, **only works from the server itself**: from
 outside, every route answers 403.
 
-**Agents’ CLIs** must be installed for the whole computer (for example `sudo npm install -g …`) or have their path in
-`comandos_agentes.<agent>`; their sessions live in the service account’s folder.
+**Agents’ CLIs:** Tramtai installs, signs in and keeps them up to date for the service account, with each one’s official
+installer and in its folder (`/var/lib/tramtai` on Linux, `C:\Windows\ServiceProfiles\Tramtai` on Windows Server), from
+Agents in the remote Web UI or the terminal, or with `sudo tramtai-servidor agents install|update|uninstall|versions`
+(administrator only). Each CLI stays where its installer puts it for that account (on Linux,
+`/var/lib/tramtai/.local/bin`); since that’s outside the service’s PATH, Tramtai saves its path in
+`comandos_agentes.<agent>` and removes it on uninstall. A CLI you installed for the whole computer works too, in the
+service’s PATH or with its path in `comandos_agentes.<agent>`. Their settings and sessions live in the service
+account’s folder.
 
 **Subscription:** by default, agents use their API key. Tramtai **never stores a Claude session key** and never reads
-what a CLI stores: the CLI signs in itself, with the service account, through `sudo tramtai-servidor agents login
-<agent>` (Codex needs device-code sign-in turned on in your ChatGPT security settings; Copilot also takes a fine-grained
-personal access token with “Copilot Requests” via `keys set COPILOT_GITHUB_TOKEN`). On Windows Server, signing in with
-the service account is still pending a check: use the agent’s API key meanwhile. Open to the network, only the
+what a CLI stores: the CLI signs in itself, run by the service with its account, through Agents or `sudo
+tramtai-servidor agents login <agent>`; Tramtai shows the link and the code and opens no browser (Codex needs
+device-code sign-in turned on in your ChatGPT security settings, and keeps its session in the service account’s
+`~/.codex`; Copilot also takes a fine-grained personal access token with “Copilot Requests” via `keys set
+COPILOT_GITHUB_TOKEN`). If automatic sign-in can’t be done (a CLI version not yet checked with Tramtai, or output Tramtai
+doesn’t recognize), the notice says how to do it by hand: on Linux, a command as the service account (`sudo -u tramtai
+-H env -i HOME=/var/lib/tramtai PATH=… <cli> <arguments>`); on Windows Server the service’s virtual account has no
+console, so use the agent’s API key. Open to the network, only the
 **personal subscription** (`agents subscription <agent> --personal`): it shows the conditions (only you, the account
 holder; you don’t hand out the keys of APIs that use that agent; ordinary use), the provider’s terms
 ([Anthropic](https://code.claude.com/docs/en/legal-and-compliance), [OpenAI](https://openai.com/policies/),
@@ -828,6 +856,7 @@ restarts.
 - **Cloudflare error 524:** the response didn’t start within 125 s; use `stream: true` or the native API.
 - **A client can’t connect to Tramtai’s own HTTPS:** it lacks TLS 1.3; put a proxy in front.
 - **The CLI says the server is another version:** `sudo tramtai-servidor update` (or `apt`/`dnf`).
-- **`agents login` fails on Windows Server:** use the agent’s API key for now.
+- **On Windows Server, the notice says the service account can’t sign in from a console:** automatic sign-in couldn’t
+  be done (see why) and the virtual account has no console to do it by hand: try again or use its API key (`keys set`).
 
 The app’s Help has the “Server mode” and “Two environments” topics.

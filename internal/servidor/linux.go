@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -497,27 +496,22 @@ func Reiniciar() error {
 	return orden("systemctl", "restart", "tramtai")
 }
 
-// pathServicio es el PATH que systemd da al servicio (la unidad no pone otro): el inicio de sesión busca el CLI donde lo
-// buscará el servicio.
+// pathServicio es el PATH que systemd da al servicio (la unidad no pone otro): la orden de la consola lanza el CLI con
+// el entorno del servicio.
 const pathServicio = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
-// buscarPrograma localiza un programa en el PATH; las pruebas lo sustituyen.
-var buscarPrograma = exec.LookPath
-
-// OrdenEntrar es el inicio de sesión del CLI de un agente (comando y args de su ficha) como la cuenta del servicio, con
-// su carpeta como HOME y un entorno limpio (env -i) que no depende de la política de sudo: el CLI guarda la sesión donde
-// la busca el servicio. En Codex con suscripción, el adaptador no pone CODEX_HOME, así que es ~/.codex de esa carpeta.
-// Tramtai no lee ni copia lo que guarde el CLI.
-func OrdenEntrar(_, comando string, args []string) (*exec.Cmd, error) {
-	sudo, err := buscarPrograma("sudo")
-	if err != nil {
-		return nil, errors.New(idioma.T("agentes entrar necesita sudo para iniciar sesión con la cuenta del servicio: instálalo y vuelve a probar"))
-	}
-	orden := []string{"-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
-	for _, nombre := range []string{"TERM", "LANG", "LC_ALL", "LC_MESSAGES"} { // el código de dispositivo se lee en la terminal, en su idioma
+// OrdenConsola es el inicio de sesión del CLI de un agente (su ruta y los argumentos de su receta) para hacerlo a mano
+// en una consola como la cuenta del servicio, con su carpeta como HOME y un entorno limpio (env -i) que no depende de la
+// política de sudo: el CLI guarda la sesión donde la busca el servicio (Codex con suscripción, en ~/.codex de esa
+// carpeta). TERM y LANG, si los tiene el servicio, van también: el inicio de sesión se ve bien en la consola y en su
+// idioma. Tramtai no lee ni copia lo que guarde el CLI.
+// shortcut: sin comillas: casa, ruta y argumentos son fijos; entrecomillar si alguno pudiera venir de configuración.
+func OrdenConsola(cli string, args []string) string {
+	orden := []string{"sudo", "-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
+	for _, nombre := range []string{"TERM", "LANG"} {
 		if valor := os.Getenv(nombre); valor != "" {
 			orden = append(orden, nombre+"="+valor)
 		}
 	}
-	return exec.Command(sudo, append(append(orden, comando), args...)...), nil
+	return strings.Join(append(append(orden, cli), args...), " ")
 }

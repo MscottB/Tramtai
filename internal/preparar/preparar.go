@@ -83,6 +83,10 @@ type Opciones struct {
 	Agentes []string
 	// BuscarVersiones es servicio.buscar_versiones_agentes: con false no se consulta nada por la red. nil: true.
 	BuscarVersiones func() bool
+	// OrdenConsola es, en el modo servidor, el inicio de sesión a mano como la cuenta del servicio (servidor.OrdenConsola)
+	// con la ruta del CLI y sus argumentos; vacía si no hay consola para esa cuenta (Windows Server). nil: el CLI tal cual,
+	// en la consola de quien usa el escritorio.
+	OrdenConsola func(cli string, args []string) string
 }
 
 // Preparador lleva una preparación por agente a la vez.
@@ -458,8 +462,8 @@ func (c *corrida) accion() error {
 		// cómo hacerlo en una consola (el panel no tiene otro sitio de donde sacar la orden).
 		version := numeroVersion(antes)
 		if !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
-				conVersionSi(c.f.Programa, version), ordenConsola(c.f))}
+			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s",
+				conVersionSi(c.f.Programa, version), c.p.aMano(c.f))}
 		}
 		return c.sesion(version)
 	}

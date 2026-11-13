@@ -35,14 +35,16 @@ func init() {
 	})
 	// El inicio de sesión (Tarea 4).
 	agregar(map[string]string{
-		"%s no inicia sesión desde Tramtai: usa su clave de API": "%s does not sign in from Tramtai: use its API key",
-		"%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s": "%s has not been checked with Tramtai yet: automatic sign-in comes back once it is. Meanwhile, you can sign in from a console with %s",
-		"no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s":                                                             "what %s wrote in %d s was not recognized: sign in from a console with %s",
-		"el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo o hazlo en una consola con %s":                               "the %s sign-in failed (it exited with code %d): try again or sign in from a console with %s",
-		"%s terminó sin dejar la sesión iniciada: inicia sesión en una consola con %s":                                                                "%s finished without leaving you signed in: sign in from a console with %s",
-		"el código pegado no es válido: una sola línea sin espacios, de %d a %d caracteres":                                                           "the pasted code is not valid: a single line without spaces, %d to %d characters",
-		"%s no está esperando ningún código": "%s is not waiting for a code",
-		"no se pudo pasar el código a %s":    "could not pass the code to %s",
+		"%s no inicia sesión desde Tramtai: usa su clave de API":                                                                      "%s does not sign in from Tramtai: use its API key",
+		"%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s":                   "%s has not been checked with Tramtai yet: automatic sign-in comes back once it is. Meanwhile, %s",
+		"no se reconoció lo que escribió %s en %d s: %s":                                                                              "what %s wrote in %d s was not recognized: %s",
+		"el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo; si no, %s":                                  "the %s sign-in failed (it exited with code %d): try again; otherwise, %s",
+		"%s terminó sin dejar la sesión iniciada: %s":                                                                                 "%s finished without leaving you signed in: %s",
+		"inicia sesión en una consola con %s":                                                                                         "sign in from a console with %s",
+		"con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)": "the service account can’t sign in from a console: use its API key (tramtai-servidor keys set)",
+		"el código pegado no es válido: una sola línea sin espacios, de %d a %d caracteres":                                           "the pasted code is not valid: a single line without spaces, %d to %d characters",
+		"%s no está esperando ningún código":                                                                                          "%s is not waiting for a code",
+		"no se pudo pasar el código a %s":                                                                                             "could not pass the code to %s",
 	})
 	// Las versiones comprobadas (Tarea 5).
 	agregar(map[string]string{

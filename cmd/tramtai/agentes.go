@@ -36,7 +36,7 @@ func adminAgentesServidor() error {
 func comandoEntrar() *cobra.Command {
 	return &cobra.Command{Use: "entrar <agente>", Aliases: []string{"login"}, Args: cobra.ExactArgs(1),
 		Short: idioma.T("Inicia sesión en el CLI del agente: enseña el enlace y el código, o pide el que te den"),
-		Long:  conSalidas(idioma.T("Inicia sesión en el CLI del agente a través del servicio, con la cuenta del servicio en el modo servidor. Enseña el enlace y el código (no abre ningún navegador) y, si el CLI espera un código, lo pide sin mostrarlo. Con una versión del CLI sin comprobar, no inicia sesión: da la orden para hacerlo en una consola.")),
+		Long:  conSalidas(idioma.T("Inicia sesión en el CLI del agente a través del servicio, con la cuenta del servicio en el modo servidor. Enseña el enlace y el código (no abre ningún navegador) y, si el CLI espera un código, lo pide sin mostrarlo. Con una versión del CLI sin comprobar, no inicia sesión: dice cómo seguir.")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if f, ok := agentes.Buscar(args[0]); !ok || len(f.InicioSesion) == 0 {
 				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)"), args[0])

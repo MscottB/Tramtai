@@ -184,7 +184,11 @@ tramtai espacio iniciar|detener [carpeta|id]
 tramtai espacio olvidar <id>       # borra sus datos en Tramtai, nunca la carpeta del proyecto
 tramtai agentes desconectar|conectar <agente>   # deja un agente fuera sin desinstalar su CLI
 tramtai agentes suscripcion <agente>            # tu suscripción, tras los riesgos (en el servidor abierto a la red: --personal [--simultaneas 1-3])
-tramtai --servidor agentes entrar <agente>      # en el servidor: el CLI inicia sesión con la cuenta del servicio
+tramtai agentes instalar <agente>...            # su CLI con el instalador oficial, y sigue con el inicio de sesión
+tramtai agentes entrar <agente>                 # el CLI inicia sesión a través del servicio (en el servidor, con su cuenta)
+tramtai agentes actualizar <agente>... | --todos
+tramtai agentes desinstalar <agente> [--borrar-datos]   # con --borrar-datos, también su sesión y sus ajustes
+tramtai agentes versiones                       # la instalada, la última y si está comprobada con Tramtai
 
 tramtai herramientas listar                          # Claude Code, Codex, Continue, opencode y Kilo: detectadas, activas, desactivadas
 tramtai herramientas activar claude-code codex       # o --todas; --modelo agente/modelo; copia del archivo antes del primer cambio

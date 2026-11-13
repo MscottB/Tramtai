@@ -452,12 +452,17 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (er
 	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
+	var ordenConsola func(string, []string) string
+	if carpetas.Servidor() { // a mano, el inicio de sesión de un CLI va como la cuenta del servicio
+		ordenConsola = servidor.OrdenConsola
+	}
 	sv, err := nuevoServicio(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), Expuesto: servidor.Expuesto(red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
-		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar"), PrepararAgentes: true})
+		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar"), PrepararAgentes: true,
+		OrdenConsola: ordenConsola})
 	if err != nil {
 		oyente.Close()
 		return err

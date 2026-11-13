@@ -875,24 +875,21 @@ func TestIdsDe(t *testing.T) {
 	}
 }
 
-// TestOrdenEntrar: el inicio de sesión del CLI va como la cuenta del servicio con un entorno limpio (env -i: HOME, el
-// PATH del servicio, TERM y el idioma: LANG, LC_ALL y LC_MESSAGES), sin depender de la política de sudo; sin sudo, lo dice.
-func TestOrdenEntrar(t *testing.T) {
-	anterior := buscarPrograma
-	t.Cleanup(func() { buscarPrograma = anterior })
-	buscarPrograma = func(nombre string) (string, error) { return "/usr/bin/" + nombre, nil }
+// TestOrdenConsola: el inicio de sesión a mano va como la cuenta del servicio, con su carpeta como HOME y el PATH del
+// servicio en un entorno limpio (env -i), sin depender de la política de sudo; con TERM y LANG si están puestas, y nada
+// más del entorno. probar-servidor.sh lanza esta misma forma con el CLI que instala el servicio.
+func TestOrdenConsola(t *testing.T) {
+	cli, args := Rutas().Datos+"/.local/bin/codex", []string{"login", "--device-auth"}
+	base := "sudo -u tramtai -H env -i HOME=" + Rutas().Datos + " PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+	t.Setenv("TERM", "")
+	t.Setenv("LANG", "")
+	t.Setenv("LC_ALL", "es_ES.UTF-8")
+	if orden, quiere := OrdenConsola(cli, args), base+" "+cli+" login --device-auth"; orden != quiere {
+		t.Fatalf("sin TERM ni LANG:\n%s\nse esperaba\n%s", orden, quiere)
+	}
 	t.Setenv("TERM", "xterm-256color")
 	t.Setenv("LANG", "es_CL.UTF-8")
-	t.Setenv("LC_ALL", "es_ES.UTF-8")
-	t.Setenv("LC_MESSAGES", "es_MX.UTF-8")
-	orden, err := OrdenEntrar("codex", "codex", []string{"login", "--device-auth"})
-	quiere := "/usr/bin/sudo -u tramtai -H env -i HOME=" + Rutas().Datos +
-		" PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin TERM=xterm-256color LANG=es_CL.UTF-8 LC_ALL=es_ES.UTF-8 LC_MESSAGES=es_MX.UTF-8 codex login --device-auth"
-	if err != nil || strings.Join(append([]string{orden.Path}, orden.Args[1:]...), " ") != quiere {
-		t.Fatalf("%v\n%v\nse esperaba\n%s", err, orden, quiere)
-	}
-	buscarPrograma = func(nombre string) (string, error) { return "", &exec.Error{Name: nombre, Err: exec.ErrNotFound} }
-	if _, err := OrdenEntrar("claude", "claude", []string{"auth", "login"}); err == nil || !strings.Contains(err.Error(), "sudo") {
-		t.Fatalf("sin sudo: %v", err)
+	if orden, quiere := OrdenConsola(cli, args), base+" TERM=xterm-256color LANG=es_CL.UTF-8 "+cli+" login --device-auth"; orden != quiere {
+		t.Fatalf("con TERM y LANG:\n%s\nse esperaba\n%s", orden, quiere)
 	}
 }

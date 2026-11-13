@@ -369,10 +369,8 @@ func init() {
 		"Servidor: %s usa tu suscripción personal (peticiones a la vez, como mucho: %d); se reinicia el servicio para aplicarlo": "Server: %s uses your personal subscription (requests at a time, at most: %d); the service restarts to apply it",
 		"tu suscripción personal en el servidor abierto a la red (exige TOTP del administrador)":                                 "your personal subscription on a server open to the network (requires the administrator’s TOTP)",
 		"peticiones a la vez con la suscripción personal, de 1 a 3":                                                              "requests at a time with the personal subscription, from 1 to 3",
-		"agentes entrar necesita sudo para iniciar sesión con la cuenta del servicio: instálalo y vuelve a probar":               "agents login needs sudo to sign in with the service account: install it and try again",
 		"%s usa tu suscripción": "%s uses your subscription",
 		"%s usa tu suscripción desde que se inicie el servicio (guardado en %s)": "%s uses your subscription once the service starts (saved in %s)",
-		"todavía no comprobado en Windows Server para %s: el inicio de sesión con la cuenta del servicio está pendiente de comprobar (guía del servidor: docs/servidor.md); mientras, usa su clave de API (tramtai-servidor claves guardar)": "not yet verified on Windows Server for %s: signing in with the service account is still to be verified (server guide: docs/servidor.md); meanwhile, use its API key (tramtai-servidor keys set)",
 
 		// Los dos entornos (v0.58): el puerto publicado, el aviso cruzado y la salida de la CLI con --servidor
 		"puerto no válido: %d": "invalid port: %d",
@@ -408,4 +406,3 @@ func init() {
 		"sí":             "yes",
 	})
 }
-
