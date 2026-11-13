@@ -138,7 +138,7 @@ export function cabecera(rel: string, actual: Actual): string {
       </div>
     </div>
     <a class="github" href="${REPO}" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="${GITHUB}"/></svg></a>
-    <a class="boton principal" href="${rel || './'}descargar.html">${svg('<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/>')}<span class="boton-texto">${bilingue('Descargar', 'Download')}</span></a>
+    <a class="boton principal" href="${rel || './'}descargar.html"${actual === 'descargar' ? ' aria-current="page"' : ''}>${svg('<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/>')}<span class="boton-texto">${bilingue('Descargar', 'Download')}</span></a>
   </div>
 </header>`
 }
@@ -467,7 +467,7 @@ function pagina404(): string {
 }
 
 function sitemap(f: Fuente): string {
-  const urls = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html',...f.temas.map((t) => `ayuda/${t.id}.html`)]
+  const urls = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html', ...f.temas.map((t) => `ayuda/${t.id}.html`)]
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${URL_SITIO}${u}</loc></url>`).join('\n')}

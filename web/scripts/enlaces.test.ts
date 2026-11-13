@@ -2,7 +2,7 @@
 // dirección de una app instalada (spec §7) se rompa en el resto de la versión.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { ANCLAS_PORTADA, URL_SITIO, destinoPortada } from './sitio.ts'
 import { temas } from '../src/ayuda/indice.ts'
 
@@ -21,13 +21,35 @@ function destino(desde: string, valor: string): { archivo: string; ancla: string
   return { archivo, ancla: url.hash.slice(1) }
 }
 
-const enlaces = (html: string) => [...html.matchAll(/\b(?:href|src)="([^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, '&')).filter((v) => v && v !== '#')
+// enlaces saca cada href y src, con comillas dobles o simples, y cada URL de un srcset.
+const enlaces = (html: string) => [...html.matchAll(/\b(href|src|srcset)=(?:"([^"]*)"|'([^']*)')/g)]
+  .flatMap((m) => (m[1] === 'srcset' ? (m[2] ?? m[3]).split(',').map((c) => c.trim().split(/\s+/)[0]) : [m[2] ?? m[3]]))
+  .map((v) => v.replace(/&amp;/g, '&')).filter((v) => v && v !== '#')
+
+// existe compara el nombre exacto de cada tramo con su carpeta: en Windows existsSync no distingue mayúsculas y GitHub Pages sí.
+const existe = (archivo: string) => {
+  let dir = new URL('./', SITIO)
+  const tramos = archivo.split('/')
+  return tramos.every((tramo, i) => {
+    if (!readdirSync(dir).includes(tramo)) return false
+    dir = new URL(tramo + (i < tramos.length - 1 ? '/' : ''), dir)
+    return true
+  })
+}
+// tieneId busca id="x" exacto (no data-id="x"), con el ancla escapada.
+const tieneId = (archivo: string, ancla: string) => new RegExp(`\\sid="${ancla.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`).test(leer(archivo))
+
+test('la prueba ve las comillas simples, los srcset, las mayúsculas y los data-id', () => {
+  assert.deepEqual(enlaces(`<a href='zzz.html'><img srcset="a.png 1x, b.png 2x" src="c.png">`), ['zzz.html', 'a.png', 'b.png', 'c.png'])
+  assert.ok(existe('ayuda/index.html') && !existe('Ayuda/index.html') && !existe('INDEX.html') && !existe('zzz.html'))
+  assert.ok(tieneId('index.html', 'descargar') && !new RegExp('\\sid="x"').test('<b data-id="x">'))
+})
 
 test('cada enlace interno lleva a un archivo que existe', () => {
   for (const pagina of todas)
     for (const valor of enlaces(leer(pagina))) {
       const d = destino(pagina, valor)
-      if (d) assert.ok(existsSync(new URL(d.archivo, SITIO)), `${pagina}: ${valor} lleva a ${d.archivo}, que no existe`)
+      if (d) assert.ok(existe(d.archivo), `${pagina}: ${valor} lleva a ${d.archivo}, que no existe`)
     }
 })
 
@@ -38,19 +60,19 @@ test('cada ancla existe en su página', () => {
       if (!d?.ancla || !d.archivo.endsWith('.html')) continue
       // Los anclajes viejos de la portada saltan a su sitio nuevo con destinoPortada, aunque ya no tengan id en index.html.
       if (d.archivo === 'index.html' && Object.hasOwn(ANCLAS_PORTADA, d.ancla)) continue
-      assert.ok(leer(d.archivo).includes(`id="${d.ancla}"`), `${pagina}: ${valor} no encuentra id="${d.ancla}" en ${d.archivo}`)
+      assert.ok(tieneId(d.archivo, d.ancla), `${pagina}: ${valor} no encuentra id="${d.ancla}" en ${d.archivo}`)
     }
 })
 
 test('las direcciones de las apps instaladas siguen', () => {
   for (const archivo of ['servidor.html', 'desarrolladores.html', 'ayuda/index.html', ...temas.map((t) => `ayuda/${t.id}.html`)])
-    assert.ok(existsSync(new URL(archivo, SITIO)), archivo)
+    assert.ok(existe(archivo), archivo)
   assert.equal(destinoPortada('#descargar'), 'descargar.html')
   assert.equal(destinoPortada('#formas'), null, 'un ancla de la portada nueva no salta')
   for (const [ancla, destinoNuevo] of Object.entries(ANCLAS_PORTADA)) {
     const d = destino('index.html', destinoNuevo)!
-    assert.ok(existsSync(new URL(d.archivo, SITIO)), `#${ancla} → ${destinoNuevo}`)
-    if (d.ancla && d.archivo !== 'index.html') assert.ok(leer(d.archivo).includes(`id="${d.ancla}"`), `#${ancla} → ${destinoNuevo}`)
+    assert.ok(existe(d.archivo), `#${ancla} → ${destinoNuevo}`)
+    if (d.ancla && d.archivo !== 'index.html') assert.ok(tieneId(d.archivo, d.ancla), `#${ancla} → ${destinoNuevo}`)
   }
 })
 

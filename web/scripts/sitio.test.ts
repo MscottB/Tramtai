@@ -191,16 +191,20 @@ test('el README y la guía del servidor tienen al día el aviso de riesgos.* (np
 })
 
 test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
-  const destinos = (html: string) => {
-    const zona = (html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '') + (html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '')
+  const destinos = (zona: string) => {
     return [...zona.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1].replace(URL_SITIO, '').replace(/^(\.\.\/|\.\/)+/, ''))
   }
   const esperados = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html', 'ayuda/empezar.html', 'https://github.com/MscottB/Tramtai',
     'https://github.com/MscottB/Tramtai/releases', 'https://github.com/MscottB/Tramtai/blob/main/LICENSE.md', 'https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md']
   const casos: [string, string][] = [...fijas, ['ayuda/agentes.html', paginas.get('ayuda/agentes.html')!], ['404.html', paginas.get('404.html')!]]
   for (const [ruta, html] of casos) {
-    const d = destinos(html)
-    for (const e of esperados) assert.ok(d.includes(e), `${ruta}: falta ${e} (hay ${d.join(', ')})`)
+    // Cada zona por separado: el logo de la barra ya lleva a Inicio, así que el pie debe llevar con su propio enlace.
+    const zonas = { barra: html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '', pie: html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '' }
+    for (const e of esperados.slice(0, 7)) {
+      assert.ok(destinos(zonas.barra).includes(e), `${ruta}: la barra no lleva a «${e}»`)
+      assert.ok(destinos(zonas.pie).includes(e), `${ruta}: el pie no lleva a «${e}»`)
+    }
+    for (const e of esperados.slice(7)) assert.ok(destinos(zonas.pie).includes(e), `${ruta}: el pie no lleva a «${e}»`)
   }
 })
 
