@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
@@ -135,7 +136,13 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 	t.Cleanup(cerrar)
 	s.ActivarGlobal()
 	s.EscribirDescriptor()
+	// Conectar comprueba /healthz con un plazo de 2 s, que con -race y la máquina cargada (todos los paquetes a la vez)
+	// a veces no llega aunque el servicio ya escuche: TestHistorialCarga fallaba con «el servicio no está en marcha».
+	// Aquí el servicio está en marcha seguro, así que se reintenta un rato.
 	cli, err := cliente.Conectar(datos)
+	for limite := time.Now().Add(20 * time.Second); err != nil && time.Now().Before(limite); time.Sleep(50 * time.Millisecond) {
+		cli, err = cliente.Conectar(datos)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

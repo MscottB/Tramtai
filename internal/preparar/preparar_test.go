@@ -547,6 +547,62 @@ func TestReservaNoSeVe(t *testing.T) {
 	}
 }
 
+// Ruling 39: una petición que entra justo entre el primer recuento (con la reserva invisible) y el momento en que la
+// reserva se ve se pilla en el segundo: la reserva se deshace con peticiones_en_curso y el instalador no llega a lanzarse.
+func TestPeticionEnLaVentanaDeLaReserva(t *testing.T) {
+	latido := filepath.Join(t.TempDir(), "latido")
+	pr := nueva(t, fichaFalsa(t, "colgar", "PREPARAR_LATIDO="+latido))
+	var mu sync.Mutex
+	peticiones, cuentas := 0, 0
+	var vistoEnSegunda string
+	// preparando del servicio: frena una petición nueva si el CLI se está instalando.
+	preparando := func() bool { e, _ := pr.p.Estado("falso"); return e.Estado == "instalando" }
+	pr.p.o.EnCurso = func(agente string) int {
+		mu.Lock()
+		defer mu.Unlock()
+		cuentas++
+		if cuentas == 1 {
+			// La cuenta da 0, pero justo después entra una petición: la reserva aún no se ve, así que no se frena.
+			if !preparando() {
+				peticiones++
+			}
+			return 0
+		}
+		e, _ := pr.p.Estado(agente)
+		vistoEnSegunda = e.Estado
+		return peticiones
+	}
+	// Alguien más mira el estado a la vez (con -race, sin carreras).
+	parar := make(chan struct{})
+	var mirando sync.WaitGroup
+	mirando.Go(func() {
+		for {
+			select {
+			case <-parar:
+				return
+			default:
+				pr.p.Estado("falso")
+			}
+		}
+	})
+	_, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"})
+	close(parar)
+	mirando.Wait()
+	if codigo(err) != CodigoPeticionesEnCurso || cuentas != 2 || peticiones != 1 {
+		t.Fatalf("la petición de la ventana se pilla en el segundo recuento: %v (cuentas %d, peticiones %d)", err, cuentas, peticiones)
+	}
+	if vistoEnSegunda != "instalando" {
+		t.Fatalf("en el segundo recuento la reserva ya se ve (preparando frena las nuevas): %q", vistoEnSegunda)
+	}
+	if e, ok := pr.p.Estado("falso"); ok {
+		t.Fatalf("la reserva se deshace: %+v", e)
+	}
+	time.Sleep(500 * time.Millisecond)
+	if _, err := os.Stat(latido); !os.IsNotExist(err) {
+		t.Fatalf("el instalador no debía lanzarse: %v", err)
+	}
+}
+
 // M7: en Windows no se puede pisar un ejecutable en marcha (copilot.exe abierto en una consola) pero sí renombrarlo:
 // colocar aparta el viejo y deja el nuevo.
 func TestColocarSobreUnoEnMarcha(t *testing.T) {

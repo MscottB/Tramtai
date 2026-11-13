@@ -217,7 +217,19 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	p.corridas.Add(1) // con el cerrojo y sin cerrado: Cerrar no puede estar esperando ya
 	estadoInicial := copia(t.g.EstadoPreparacion)
 	p.mu.Unlock()
-	if preguntar && p.o.EnCurso(agente) > 0 {
+	// Se cuenta dos veces (Ruling 39): con la reserva aún invisible, para no frenar peticiones por una preparación que se
+	// deshace; y ya visible, cuando preparando frena las nuevas, para pillar una que entrara entre medias. Un instalador
+	// nunca corre a la vez que una petición.
+	conPeticiones := false
+	if preguntar && p.o.EnCurso(agente) == 0 {
+		p.mu.Lock()
+		t.reservando, t.previo = false, nil
+		p.mu.Unlock()
+		conPeticiones = p.o.EnCurso(agente) > 0
+	} else if preguntar {
+		conPeticiones = true
+	}
+	if conPeticiones {
 		cancelar(nil)
 		p.mu.Lock()
 		if anterior != nil {
@@ -229,9 +241,6 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 		p.corridas.Done()
 		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
 	}
-	p.mu.Lock()
-	t.reservando, t.previo = false, nil
-	p.mu.Unlock()
 	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, base: ctx, pedido: pedido}
 	go func() {
 		defer p.corridas.Done()
