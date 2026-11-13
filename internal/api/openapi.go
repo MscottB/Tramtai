@@ -29,12 +29,20 @@ func (s *Servidor) openapi(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal(documentoOpenAPI, &doc) // incluido en el ejecutable y validado por las pruebas
 	doc["servers"] = []map[string]string{{"url": esquema + "://" + r.Host + prefijo + "/api/v1"}}
 	if s.Punto != nil {
-		// Un punto de acceso no registra lo que solo existe en la instancia (DELETE /trabajos).
-		for _, ops := range doc["paths"].(map[string]any) {
+		// Un punto de acceso no registra lo que solo existe en la instancia (DELETE /trabajos); una ruta que se queda sin
+		// ninguna operación (solo con sus parameters) no se describe.
+		rutas := doc["paths"].(map[string]any)
+		for ruta, ops := range rutas {
+			quedan := false
 			for metodo, op := range ops.(map[string]any) {
 				if o, ok := op.(map[string]any); ok && o["x-tramtai-solo-instancia"] == true {
 					delete(ops.(map[string]any), metodo)
+				} else if metodo != "parameters" {
+					quedan = true
 				}
+			}
+			if !quedan {
+				delete(rutas, ruta)
 			}
 		}
 	}

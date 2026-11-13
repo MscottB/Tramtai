@@ -405,6 +405,11 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	if !p.cambiar(id, nucleo.EsperandoAgente, nucleo.Ejecutando, persistencia.Cambio{}) {
 		return resultado, false, true, nil
 	}
+	// Al lanzarlo, no en la cola: su CLI pudo empezar a instalarse, actualizarse o desinstalarse mientras el trabajo
+	// esperaba. agente_no_disponible deja saltar al respaldo.
+	if err := p.preparando(c.agente); err != nil {
+		return resultado, false, false, err
+	}
 
 	limite := time.Duration(t.Solicitud.Ejecucion.TiempoLimiteSegundos) * time.Second
 	if limite == 0 {

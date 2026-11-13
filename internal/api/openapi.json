@@ -195,6 +195,66 @@
         }
       }
     },
+    "/agentes/versiones": {
+      "get": {
+        "summary": "Versiones de los CLI de los agentes",
+        "description": "Por agente con receta: la versión instalada, la última publicada, si la que usaría cada acción está comprobada y qué acciones están habilitadas. Es la última comprobación guardada (al arrancar y una vez al día); ?forzar=1 la repite ahora. Solo con la sesión de la Web UI o la clave del servicio: la clave del espacio no basta (en el servidor, la sesión es la del administrador).",
+        "operationId": "versionesAgentes",
+        "x-tramtai-solo-instancia": true,
+        "parameters": [{ "name": "forzar", "in": "query", "schema": { "type": "string", "enum": ["1"] } }],
+        "responses": {
+          "200": { "description": "Una entrada por agente", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/VersionesAgente" } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/agentes/{id}/preparacion": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "summary": "Estado de la preparación del CLI de un agente",
+        "description": "La que está en marcha o la última; null si no hubo ninguna. Un id que no es de un agente con receta da 404. Para seguirla, un sondeo corto mientras está en marcha.",
+        "operationId": "estadoPreparacion",
+        "x-tramtai-solo-instancia": true,
+        "responses": {
+          "200": { "description": "Estado o null", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/EstadoPreparacion" }, { "type": "null" }] } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "summary": "Instala, actualiza o desinstala el CLI de un agente, o inicia su sesión",
+        "description": "En segundo plano, una por agente. 409 con ya_en_curso (y el estado de la que está en marcha en preparacion) o peticiones_en_curso. Solo con la sesión de la Web UI o la clave del servicio: la clave del espacio no basta (en el servidor, la sesión es la del administrador).",
+        "operationId": "iniciarPreparacion",
+        "x-tramtai-solo-instancia": true,
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PedidoPreparacion" } } } },
+        "responses": {
+          "202": { "description": "Preparación lanzada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstadoPreparacion" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "summary": "Cancela la preparación en marcha",
+        "operationId": "cancelarPreparacion",
+        "x-tramtai-solo-instancia": true,
+        "responses": {
+          "204": { "description": "Cancelada (o no había ninguna)" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/agentes/{id}/preparacion/codigo": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "summary": "Pasa al inicio de sesión el código que pegó el usuario",
+        "description": "Solo mientras la preparación está en esperando_usuario con pide_pegar. Lo pegado va al CLI por su entrada y no vuelve en ninguna respuesta ni queda en ningún registro. Como las demás rutas de /agentes/…, solo con la sesión de la Web UI o la clave del servicio.",
+        "operationId": "codigoPreparacion",
+        "x-tramtai-solo-instancia": true,
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["codigo"], "properties": { "codigo": { "type": "string" } } } } } },
+        "responses": {
+          "204": { "description": "Pasado al CLI" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/esquemas/validar": {
       "post": {
         "summary": "Comprueba un JSON Schema sin ejecutar nada",
@@ -296,6 +356,49 @@
           "progreso": { "type": "integer", "minimum": 0, "maximum": 100 },
           "mensaje": { "type": "string", "description": "El error de la última preparación" },
           "preparar_al_iniciar": { "type": "boolean" }
+        }
+      },
+      "PedidoPreparacion": {
+        "type": "object",
+        "required": ["accion"],
+        "additionalProperties": false,
+        "properties": {
+          "accion": { "type": "string", "enum": ["instalar", "actualizar", "iniciar_sesion", "desinstalar"] },
+          "borrar_datos": { "type": "boolean", "description": "Al desinstalar, borra también la sesión y los ajustes del CLI" },
+          "confirmar": { "type": "boolean", "description": "Sigue con una versión aún no comprobada (no vale para iniciar sesión)" }
+        }
+      },
+      "EstadoPreparacion": {
+        "type": "object",
+        "required": ["agente", "accion", "estado"],
+        "properties": {
+          "agente": { "type": "string", "examples": ["claude"] },
+          "accion": { "type": "string", "enum": ["instalar", "actualizar", "iniciar_sesion", "desinstalar"] },
+          "estado": { "type": "string", "enum": ["instalando", "actualizando", "desinstalando", "comprobando", "esperando_usuario", "listo", "error", "cancelado"] },
+          "etapa": { "type": "string", "enum": ["descarga", "orden", "borrado"] },
+          "enlace": { "type": "string", "description": "El del inicio de sesión" },
+          "codigo": { "type": "string", "description": "El código de dispositivo que el usuario escribe en el enlace" },
+          "pide_pegar": { "type": "boolean", "description": "El CLI espera que se le pegue un código (preparacion/codigo)" },
+          "motivo_codigo": { "type": "string", "enum": ["version_no_comprobada", "peticiones_en_curso", "ya_en_curso", "instalador_fallo", "no_encontrado_tras_instalar", "plazo_agotado", "salida_no_reconocida", "inicio_sesion_fallo", "sin_red", "no_disponible_en_servidor", "interrumpida"] },
+          "mensaje": { "type": "string" },
+          "lineas": { "type": "array", "items": { "type": "string" }, "description": "Las últimas 20 de la salida, sin nada con forma de secreto" },
+          "version_antes": { "type": "string" },
+          "version_despues": { "type": "string" },
+          "inicio": { "type": "string", "format": "date-time" },
+          "fin": { "type": "string", "format": "date-time" }
+        }
+      },
+      "VersionesAgente": {
+        "type": "object",
+        "required": ["agente", "comprobadas", "acciones"],
+        "properties": {
+          "agente": { "type": "string" },
+          "instalada": { "type": "string" },
+          "ultima": { "type": "string", "description": "La última publicada; vacía si no se sabe" },
+          "comprobadas": { "type": "object", "additionalProperties": { "type": "boolean" }, "description": "Por acción posible, si la versión que usaría está comprobada" },
+          "acciones": { "type": "array", "items": { "type": "string" }, "description": "Las habilitadas; las de una versión sin comprobar piden confirmar" },
+          "motivo_codigo": { "type": "string", "enum": ["version_no_comprobada", "sin_red"] },
+          "motivo": { "type": "string" }
         }
       },
       "Error": {

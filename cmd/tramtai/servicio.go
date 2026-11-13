@@ -457,7 +457,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (er
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), Expuesto: servidor.Expuesto(red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
-		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
+		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar"), PrepararAgentes: true})
 	if err != nil {
 		oyente.Close()
 		return err

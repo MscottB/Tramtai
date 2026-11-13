@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -60,13 +61,27 @@ func (p *Planificador) desconectado(agente string) bool {
 	return p.opc.Desconectado != nil && p.opc.Desconectado(agente)
 }
 
-// conectados quita del respaldo los agentes desconectados (el principal se comprobó al aceptar) y devuelve cuáles quitó.
+// preparando es el error de agente no disponible si el CLI del agente se está instalando, actualizando o desinstalando
+// (Opciones.Preparando); nil si no.
+func (p *Planificador) preparando(agente string) error {
+	if p.opc.Preparando == nil || !p.opc.Preparando(agente) {
+		return nil
+	}
+	return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible,
+		idioma.Tf("%s se está instalando, actualizando o desinstalando: vuelve a intentarlo cuando termine", agentes.NombreVisible(agente)))
+}
+
+// conectados quita del respaldo los agentes desconectados y los que se están preparando (el principal se comprobó al
+// aceptar, y se vuelve a mirar al lanzarlo) y devuelve los desconectados que quitó.
 func (p *Planificador) conectados(lista []candidato) ([]candidato, []string) {
 	salida := lista[:1:1]
 	var saltados []string
 	for _, c := range lista[1:] {
 		if p.desconectado(c.agente) {
 			saltados = append(saltados, c.agente)
+			continue
+		}
+		if p.preparando(c.agente) != nil {
 			continue
 		}
 		salida = append(salida, c)

@@ -95,6 +95,9 @@ type Preparador struct {
 
 	mu     sync.Mutex
 	tareas map[string]*tarea
+	// corridas son las preparaciones en marcha, que Cerrar espera; cerrado, que ya no se lanza ninguna.
+	corridas sync.WaitGroup
+	cerrado  bool
 	// mc guarda datos/agentes/compatibilidad.json (independiente de mu: Comprobada se llama sin mu).
 	mc sync.Mutex
 }
@@ -102,12 +105,18 @@ type Preparador struct {
 type tarea struct {
 	g        guardado
 	enMarcha bool
-	cancelar context.CancelFunc
+	cancelar context.CancelCauseFunc
 	// entrada es la del inicio de sesión en marcha, donde Codigo escribe lo pegado; pegados, lo que se pegó, que el
 	// registro y las líneas tapan.
 	entrada *os.File
 	pegados []string
 }
+
+// errCerrado es la causa con que Cerrar corta las preparaciones: terminan como interrumpidas, no como canceladas.
+var errCerrado = errors.New("servicio detenido")
+
+// plazoCerrar es lo que Cerrar espera, como mucho, a que las preparaciones cortadas cierren su árbol de procesos.
+const plazoCerrar = 15 * time.Second
 
 // guardado es lo que va en <id>.json: el estado y, para Recuperar, el proceso en marcha y la ruta que puso Tramtai.
 type guardado struct {
@@ -167,6 +176,10 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	}
 	// Se reserva el agente con el cerrojo y se pregunta por las peticiones sin él (EnCurso puede llamar a Estado).
 	p.mu.Lock()
+	if p.cerrado {
+		p.mu.Unlock()
+		return contrato.EstadoPreparacion{}, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio se está deteniendo: no se lanza ninguna preparación"))
+	}
 	anterior := p.tareas[agente]
 	if anterior != nil && anterior.enMarcha {
 		defer p.mu.Unlock()
@@ -177,14 +190,15 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	}
 	ahora := time.Now()
 	// El plazo va por fases (corrida.nuevoPlazo); cancelar corta todas.
-	ctx, cancelar := context.WithCancel(context.Background())
+	ctx, cancelar := context.WithCancelCause(context.Background())
 	t := &tarea{enMarcha: true, cancelar: cancelar, g: guardado{RutaGuardada: ruta,
 		EstadoPreparacion: contrato.EstadoPreparacion{Agente: agente, Accion: pedido.Accion, Estado: estado, Inicio: &ahora}}}
 	p.tareas[agente] = t
+	p.corridas.Add(1) // con el cerrojo y sin cerrado: Cerrar no puede estar esperando ya
 	estadoInicial := copia(t.g.EstadoPreparacion)
 	p.mu.Unlock()
 	if pedido.Accion != "iniciar_sesion" && p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
-		cancelar()
+		cancelar(nil)
 		p.mu.Lock()
 		if anterior != nil {
 			p.tareas[agente] = anterior
@@ -192,11 +206,37 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 			delete(p.tareas, agente)
 		}
 		p.mu.Unlock()
+		p.corridas.Done()
 		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
 	}
 	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, base: ctx, pedido: pedido}
-	go c.correr(cancelar)
+	go func() {
+		defer p.corridas.Done()
+		c.correr(cancelar)
+	}()
 	return estadoInicial, nil
+}
+
+// Cerrar, al parar el servicio, corta las preparaciones en marcha (quedan en error con interrumpida) y espera, hasta
+// plazoCerrar, a que cierren su árbol de procesos; después no se lanza ninguna más.
+func (p *Preparador) Cerrar() {
+	p.mu.Lock()
+	p.cerrado = true
+	for _, t := range p.tareas {
+		if t.enMarcha {
+			t.cancelar(errCerrado)
+		}
+	}
+	p.mu.Unlock()
+	hecho := make(chan struct{})
+	go func() {
+		p.corridas.Wait()
+		close(hecho)
+	}()
+	select {
+	case <-hecho:
+	case <-time.After(plazoCerrar): // un árbol que no confirma su cierre: su PID queda para Recuperar
+	}
 }
 
 // disponible dice si la receta tiene la acción en este sistema.
@@ -220,7 +260,7 @@ func (p *Preparador) Cancelar(agente string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if t := p.tareas[agente]; t != nil && t.enMarcha {
-		t.cancelar()
+		t.cancelar(nil)
 	}
 	return nil
 }
@@ -347,8 +387,8 @@ func (c *corrida) anotar(texto string) {
 	c.registro = append(c.registro, time.Now().Format(time.RFC3339)+" "+c.redactar(texto))
 }
 
-func (c *corrida) correr(cancelar context.CancelFunc) {
-	defer cancelar()
+func (c *corrida) correr(cancelar context.CancelCauseFunc) {
+	defer cancelar(nil)
 	c.nuevoPlazo()
 	defer func() { c.finPlazo() }()
 	c.secretos = adaptadores.Secretos() // fuera del cerrojo: en macOS y Linux pregunta al almacén con un proceso por clave
@@ -362,6 +402,8 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	case err == nil:
 	case errors.Is(c.ctx.Err(), context.DeadlineExceeded):
 		estado, codigo, mensaje = "error", CodigoPlazoAgotado, idioma.Tf("la preparación superó su plazo de %d min y se cerró", int(math.Ceil(c.p.plazo.Minutes())))
+	case errors.Is(context.Cause(c.base), errCerrado):
+		estado, codigo, mensaje = "error", CodigoInterrumpida, idioma.T("el servicio se reinició a mitad de la preparación")
 	case c.ctx.Err() != nil:
 		estado = "cancelado"
 	case errors.As(err, &e):

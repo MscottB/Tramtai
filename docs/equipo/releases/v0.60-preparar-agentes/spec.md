@@ -176,7 +176,7 @@ anotación y el Restaurar de `internal/apuntar`, y se quita al desinstalar. Si n
 
 ## API
 
-Bajo la instancia, con la sesión de la Web UI o la clave del espacio, como el resto de `/api/v1`:
+Bajo la instancia, con la sesión de la Web UI o la clave del servicio; la clave del espacio no basta:
 
 | Ruta | Qué hace |
 |---|---|
