@@ -201,8 +201,10 @@ escribe nada en la de los CLI.
   aprobada quede guardada se comprueba en la prueba final (Ruling 10). Esa cuenta no tiene consola: donde un mensaje
   daría la orden para hacerlo a mano, remite a la clave de API.
 - **La orden para la consola** que dan los mensajes (por ejemplo, con una versión sin comprobar) es, en el servidor
-  Linux, la de la cuenta del servicio: `sudo -u <cuenta> -H env -i HOME=… <cli> …`, conservando `TERM` y `LANG`
-  (Ruling 31).
+  Linux, la de la cuenta del servicio: `sudo -u <cuenta> -H env -i HOME=… <cli> …`, conservando `TERM` y `LANG` si
+  no necesitan comillas (Ruling 31). En el escritorio es la del CLI con su nombre si la consola lo encuentra; si no (el
+  instalador de Claude y la descarga de Copilot en Windows no tocan el PATH), con su ruta completa, entre comillas si
+  lleva espacios: `& "C:\Users\Ana María\.local\bin\claude.exe" auth login` en PowerShell (en cmd, sin el `&`).
 - Solo el administrador, con su sesión (y TOTP si está activado), puede preparar agentes.
 
 ## API
@@ -224,8 +226,11 @@ un CLI, borrar su sesión o colar su código de dispositivo (Rulings 23 y 24).
   (`seguirPreparacion` en `web/src/conversor.ts`); el canal de eventos de la instancia solo lleva peticiones y no cambia.
 - Errores con código: `version_no_comprobada`, `peticiones_en_curso`, `ya_en_curso`, `instalador_fallo`,
   `no_encontrado_tras_instalar`, `plazo_agotado`, `salida_no_reconocida`, `inicio_sesion_fallo` (el inicio de sesión del
-  CLI terminó con error), `sin_red`, `no_disponible_en_servidor` e `interrumpida` (el servicio se reinició a mitad).
-  `requisito_falta` no existe: no hay requisitos (Ruling 16).
+  CLI terminó con error), `sin_red` e `interrumpida` (el servicio se reinició a mitad). `requisito_falta` no existe: no
+  hay requisitos (Ruling 16), y `no_disponible_en_servidor` es solo de las herramientas: preparar no lo da (Ruling 38).
+- **La orden a mano va aparte** en `orden_consola` (en el estado de la preparación y en las versiones) cuando el mensaje
+  dice cómo iniciar sesión a mano; las pantallas arman la frase en su idioma (Ruling 37). Vacía ahí, la cuenta del
+  servicio no tiene consola y queda la clave de API.
 - Los tipos salen de `internal/contrato` (`go generate ./internal/contrato`).
 
 ## Pantallas
@@ -268,6 +273,12 @@ un código de salida claro: 0 listo; 1 error; 2 versión sin comprobar que no se
 3 hecho, pero falta un paso (queda sin sesión, sin clave o sin usar tu suscripción, o no se pudo comprobar), con la
 orden que falta (Ruling 30); 130 cancelado. `--confirmar` se salta la pregunta de la versión sin comprobar y la de
 desinstalar, nunca el inicio de sesión ni el «acepto» de la suscripción.
+
+De paso (Ruling 36), las órdenes que la Ayuda en inglés aún citaba en español llevan su alias: `actualizar|update`,
+`conversor|converter` (`estado|status`, `preparar|prepare`), `espacio|workspace` (`iniciar|start`, `detener|stop`,
+`olvidar|forget`), `espacios|workspaces` y `proyecto|project` (con `global`, que se escribe igual: `iniciar|start`,
+`detener|stop`, `estado|status`, `abrir|open`); `servicio iniciar` admite `--open` (oculta) como `--abrir`. Los textos en
+inglés citan las órdenes con su alias.
 
 Todos los textos en español e inglés, con el glosario y `estilo-textos.test.ts`.
 

@@ -320,7 +320,8 @@ código, por sistema (`windows`, `darwin`, `linux`): nada de lo que escribe el u
 
 - `Instalar` y `Actualizar`: la orden oficial (sin entrada en `Actualizar`, se reinstala); `Descarga`, si Tramtai baja el
   binario él mismo y comprueba su suma (Copilot en Windows, con `{version}` y `{arq}`); `FijaVersion` si admiten
-  `{version}`.
+  `{version}`. La descarga no pisa el ejecutable: lo aparta a `.viejo` y pone el nuevo (`colocar`), porque Windows
+  deja renombrar un `copilot.exe` en marcha pero no reemplazarlo; el `.viejo` se borra entonces o en la próxima.
 - `Rutas`: dónde deja el ejecutable (`~` es la casa de la cuenta que corre el servicio). Si queda fuera del PATH del
   servicio, se guarda en `comandos_agentes.<agente>` y se quita al desinstalar.
 - `Borrar` (lo que se quita al desinstalar: ningún CLI tiene orden propia) y `DatosCLI` (sesión y ajustes, solo con
@@ -328,8 +329,12 @@ código, por sistema (`windows`, `darwin`, `linux`): nada de lo que escribe el u
 - `Ultima`: de dónde sale la última versión publicada (`url` con un manifiesto, `github` con `Prefijo`, o `npm`).
 - `Sesion` (`LectorSesion`, `nil` en Antigravity): argumentos, `Entorno` (por ejemplo `BROWSER` o
   `COPILOT_DEBUG_BROWSER` para que no abra el navegador del sistema), y las expresiones del enlace, el código y la
-  petición de pegar. El lector trabaja sobre el texto acumulado y sin ANSI; sin enlace ni código en 30 s,
-  `salida_no_reconocida`.
+  petición de pegar. El lector trabaja sobre el texto acumulado y sin ANSI; sin enlace ni código en 30 s desde que el
+  proceso arrancó, `salida_no_reconocida`.
+- **La orden a mano** (lector sin reconocer, inicio de sesión fallido o versión sin comprobar) sale de
+  `Preparador.ordenConsola`: en el escritorio, el CLI por su nombre si el PATH lo encuentra y, si no, su ruta completa
+  (entre comillas si hace falta; en Windows con `& ` delante, para PowerShell); en el servidor, `servidor.OrdenConsola`.
+  Va también aparte, en `orden_consola`, para que la Web UI arme la frase en su idioma (Ruling 37).
 - `Comprobadas`: las versiones probadas por acción, exactas o con comodín de parche (`2.1.*`).
 
 **La preparación** es una tarea por agente con estados (`instalando`, `actualizando`, `desinstalando`, `comprobando`,
