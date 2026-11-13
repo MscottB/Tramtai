@@ -6,7 +6,7 @@ import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, ActivarHerramientas, Capacidades, CodigosRecuperacion, EntradaRemota, EstadoServidor, EstadoTerminos, PrimerosPasos, SecretoTOTP, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, EstadoHerramienta, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, ActivarHerramientas, Capacidades, CodigosRecuperacion, EntradaRemota, EstadoServidor, EstadoTerminos, PrimerosPasos, SecretoTOTP, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, EstadoHerramienta, EstadoPreparacion, PedidoPreparacion, ResumenInstancia, VersionesAgente, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -104,6 +104,8 @@ export const api = {
   // El documento OpenAPI se reescribe tal cual (servers, operaciones) antes de guardarlo.
   openapi: () => pedir<Record<string, any>>('GET', '/api/v1/openapi.json'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
+  // buscarVersionesAgentes activa o desactiva la consulta diaria de las versiones de los CLI de los agentes.
+  buscarVersionesAgentes: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar_versiones_agentes: buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
   progresoActualizacion: () => pedir<ProgresoActualizacion>('GET', '/ui/actualizacion/progreso'),
@@ -146,6 +148,14 @@ export const api = {
   fijarPredeterminado: (modelo: string, esfuerzo?: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo, esfuerzo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<Capacidades>('GET', '/api/v1/capacidades', undefined, 60000),
+  // Preparar los CLI de los agentes: el estado (null si no hubo ninguna), lanzarla (202 con su estado), cancelarla y
+  // pasarle lo pegado. versionesAgentes lanza --version de cada CLI: se pide al abrir Agentes y con forzar al volver a
+  // comprobar, nunca en un sondeo.
+  preparacion: (agente: string) => pedir<EstadoPreparacion | null>('GET', `/api/v1/agentes/${encodeURIComponent(agente)}/preparacion`),
+  preparar: (agente: string, pedido: PedidoPreparacion) => pedir<EstadoPreparacion>('POST', `/api/v1/agentes/${encodeURIComponent(agente)}/preparacion`, pedido),
+  cancelarPreparacion: (agente: string) => pedir<void>('DELETE', `/api/v1/agentes/${encodeURIComponent(agente)}/preparacion`),
+  codigoPreparacion: (agente: string, codigo: string) => pedir<void>('POST', `/api/v1/agentes/${encodeURIComponent(agente)}/preparacion/codigo`, { codigo }),
+  versionesAgentes: (forzar = false) => pedir<VersionesAgente[]>('GET', '/api/v1/agentes/versiones' + (forzar ? '?forzar=1' : ''), undefined, 60000),
   // pasos son los Primeros pasos de Inicio, ya calculados, con los agentes que comprobó (tarda como capacidades).
   pasos: () => pedir<PrimerosPasos>('GET', '/api/v1/instancia/pasos', undefined, 60000),
   // trabajos lista los más recientes; filtro acota por API, grupo, origen, estado (en_curso, completado o con_error), texto

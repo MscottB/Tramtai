@@ -16,17 +16,26 @@ import (
 // Rutas de /ui/ de las actualizaciones y de Acerca de (rutasDeUI). La administración (rutasAdmin) las atiende igual, sin
 // sesión, para la terminal.
 
-// actualizacionUI consulta el estado de las actualizaciones (GET) o activa o desactiva su búsqueda (POST o PUT).
+// actualizacionUI consulta el estado de las actualizaciones (GET) o activa o desactiva su búsqueda (POST o PUT): buscar,
+// la de Tramtai, y buscar_versiones_agentes, la de los CLI; cambia solo la que llega.
 func (s *Servicio) actualizacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	if r.Method != http.MethodGet {
 		var peticion struct {
-			Buscar bool `json:"buscar"`
+			Buscar                 *bool `json:"buscar"`
+			BuscarVersionesAgentes *bool `json:"buscar_versiones_agentes"`
 		}
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
-		if err := s.fijarBusqueda(peticion.Buscar); err != nil {
+		var err error
+		if peticion.Buscar != nil {
+			err = s.fijarBusqueda(*peticion.Buscar)
+		}
+		if err == nil && peticion.BuscarVersionesAgentes != nil {
+			err = s.fijarBuscarVersiones(*peticion.BuscarVersionesAgentes)
+		}
+		if err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}

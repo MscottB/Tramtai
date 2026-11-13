@@ -44,7 +44,7 @@ func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) contrato
 	}
 	instalada := s.instalable()
 	hecha, fallo := s.actualizaciones.Comprobado()
-	return contrato.EstadoActualizacion{Actual: version.Version, Buscar: s.buscar.Load(), Disponible: nueva, Version: v.Etiqueta,
+	return contrato.EstadoActualizacion{Actual: version.Version, Buscar: s.buscar.Load(), BuscarVersionesAgentes: s.buscarVersiones.Load(), Disponible: nueva, Version: v.Etiqueta,
 		URL: v.Pagina, Notas: v.Notas, Instalable: nueva && instalada && v.TieneInstalador(), Comprobado: hecha.UTC(), Fallo: fallo}
 }
 

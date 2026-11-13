@@ -364,8 +364,8 @@ func TestSesionNoSeLanza(t *testing.T) {
 
 	ponerFalso(t, pr.casa)
 	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoVersionNoComprobada || len(e.Lineas) != 0 ||
-		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai" {
-		t.Fatalf("sin comprobar: %+v", e)
+		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con falso login" {
+		t.Fatalf("sin comprobar, el aviso de la tarjeta con la orden para la consola: %+v", e)
 	}
 	// Sin versión que decir (un instalador que no la fija y la última sin consultar), el mensaje no queda con dos espacios.
 	pr.p.o.UltimaVersion = func(context.Context, string) (string, error) { return "", errors.New("sin red") }

@@ -113,6 +113,7 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 - Desde la terminal: `tramtai actualizar` hace lo mismo (pide confirmación; `--si` la omite) y `tramtai actualizar --comprobar` solo informa.
 - Solo se actualiza sola una copia instalada con el instalador de Windows; una compilada a mano o en Linux y macOS muestra el aviso con el enlace de descarga.
 - Se desactiva en **Ajustes → Buscar actualizaciones** o con `servicio.buscar_actualizaciones: false`; `tramtai actualizar` sigue funcionando porque lo pides tú.
+- Las versiones nuevas de los CLI de los agentes se consultan una vez al día en su sitio oficial (GitHub, downloads.claude.ai y el servidor de actualizaciones de Antigravity), con la lista de versiones comprobadas de GitHub; se desactiva en **Ajustes → Comprobar versiones nuevas de los agentes** o con `servicio.buscar_versiones_agentes: false`, y vale sin reiniciar.
 
 ### Borrar datos
 
@@ -421,7 +422,7 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `PUT /api/v1/servicio/puerto` | Guardar `servicio.puerto` y `servicio.puerto_automatico` (`{"puerto": 18000, "automatico": true}`; con `puerto` 0 solo cambia el automático). Se aplica al reiniciar. |
 | `GET /api/v1/servicio/ajustes` | El puerto en uso, el configurado, si busca otro libre, si se reinicia desde la app y el arranque con el sistema (`autoarranque`, solo si el sistema lo admite). |
 | `PUT /api/v1/servicio/autoarranque` | `{"activo": true}` hace que la app arranque, en la bandeja, al iniciar sesión; `false` lo quita (204). |
-| `GET /api/v1/servicio/actualizacion` | El estado de las actualizaciones: la versión actual, si hay otra y si se instala desde aquí. Con `?ahora=1` consulta GitHub en el momento. `PUT` con `{"buscar": true}` o `{"buscar": false}` activa o desactiva la búsqueda automática y responde el estado (200). |
+| `GET /api/v1/servicio/actualizacion` | El estado de las actualizaciones: la versión actual, si hay otra y si se instala desde aquí. Con `?ahora=1` consulta GitHub en el momento. `PUT` con `{"buscar": true}` o `{"buscar": false}` activa o desactiva la búsqueda automática y responde el estado (200); `{"buscar_versiones_agentes": …}` hace lo mismo con la de las versiones de los CLI (`buscar_versiones_agentes` en el estado). Cambia solo lo que se envía. |
 | `POST /api/v1/servicio/actualizar` | Descarga, comprueba e instala la versión nueva en segundo plano (o se une a la que está en curso); responde su `version` (202). El avance, en `GET /api/v1/servicio/actualizacion/progreso`. |
 | `POST /api/v1/servicio/actualizar/instalar` y `/cancelar` | En la cuenta atrás antes de instalar: instala ya o cancela y borra la descarga (204); fuera de ella, 409. |
 | `GET /api/v1/servicio/actualizacion/novedades` | Lo que trae cada versión después de `desde` y hasta `hasta` (sin `hasta`, la instalada). |

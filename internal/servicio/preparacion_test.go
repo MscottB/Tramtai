@@ -359,6 +359,24 @@ func TestFijarBuscarVersiones(t *testing.T) {
 	}
 }
 
+// TestRutaBuscarVersiones: Ajustes cambia servicio.buscar_versiones_agentes con la misma ruta que la búsqueda de
+// actualizaciones, sin tocar esa, y el estado lo devuelve.
+func TestRutaBuscarVersiones(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	ruta := "/api/v1/servicio/actualizacion"
+	antes := s.buscar.Load()
+	if r, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar_versiones_agentes": false}`); r.StatusCode != 200 ||
+		!strings.Contains(cuerpo, `"buscar_versiones_agentes":false`) || s.buscarVersiones.Load() || s.buscar.Load() != antes {
+		t.Fatalf("%d %s %v %v", r.StatusCode, cuerpo, s.buscarVersiones.Load(), s.buscar.Load())
+	}
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar_versiones_agentes": true}`); !strings.Contains(cuerpo, `"buscar_versiones_agentes":true`) || !s.buscarVersiones.Load() {
+		t.Fatalf("%s", cuerpo)
+	}
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar": false}`); s.buscar.Load() || !s.buscarVersiones.Load() {
+		t.Fatalf("buscar solo cambia la de Tramtai: %s", cuerpo)
+	}
+}
+
 // guardarComando fija comandos_agentes.<agente> en la configuración global y vale al momento: el adaptador, creado con
 // el nombre del programa, llega al CLI recién instalado fuera del PATH del servicio; con "" se quita.
 func TestGuardarComando(t *testing.T) {

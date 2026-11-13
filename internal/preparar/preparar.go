@@ -448,10 +448,12 @@ func (c *corrida) accion() error {
 		if instalado == "" {
 			return &Error{CodigoNoEncontrado, idioma.Tf("no se encuentra %s", c.f.Programa)}
 		}
-		// Sin comprobar no se inicia sesión, ni con Confirmar: el inicio de sesión automático queda desactivado.
+		// Sin comprobar no se inicia sesión, ni con Confirmar: el inicio de sesión automático queda desactivado y se dice
+		// cómo hacerlo en una consola (el panel no tiene otro sitio de donde sacar la orden).
 		version := numeroVersion(antes)
 		if !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-			return c.noComprobada(version)
+			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
+				conVersionSi(c.f.Programa, version), ordenConsola(c.f))}
 		}
 		return c.sesion(version)
 	}

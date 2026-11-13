@@ -189,6 +189,7 @@ export interface AjustesServicio {
 export interface EstadoActualizacion {
   actual: string
   buscar: boolean
+  buscar_versiones_agentes: boolean
   disponible: boolean
   version: string
   url: string
