@@ -193,3 +193,6 @@ func compararVersiones(a, b string) int {
 	}
 	return 0
 }
+
+// CompararVersiones es compararVersiones para quien muestra las versiones (la CLI): negativo, 0 o positivo.
+func CompararVersiones(a, b string) int { return compararVersiones(a, b) }

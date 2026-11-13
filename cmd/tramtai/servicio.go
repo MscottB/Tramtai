@@ -581,6 +581,10 @@ func (e errConfiguracionServicio) Unwrap() error { return e.error }
 
 // codigoSalida es el código con el que termina el proceso tras un error.
 func codigoSalida(err error) int {
+	var con errConCodigo
+	if errors.As(err, &con) {
+		return con.codigo
+	}
 	if errors.Is(err, errReinicioPedido) {
 		return codigoReinicio
 	}

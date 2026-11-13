@@ -354,8 +354,6 @@ func init() {
 		"Servidor: TOTP quitado; basta la contraseña para entrar":                                                                               "Server: TOTP disabled; the password is enough to sign in",
 		// agentes entrar y agentes suscripcion (v0.58, la suscripción en el servidor)
 		"los agentes del servidor necesitan permisos de administrador: en Linux, con sudo (sudo tramtai-servidor agentes …); en Windows, desde una consola de administrador": "the server agents need administrator rights: on Linux, with sudo (sudo tramtai-servidor agents …); on Windows, from an administrator console",
-		"Inicia sesión en el CLI del agente con la cuenta del servicio (modo servidor)":                                                                                      "Signs in to the agent’s CLI with the service account (server mode)",
-		"el inicio de sesión de los agentes es del servidor: usa «tramtai --servidor agentes entrar <agente>» (o tramtai-servidor agentes entrar <agente>)":                  "signing in the agents belongs to the server: use “tramtai --server agents login <agent>” (or tramtai-servidor agents login <agent>)",
 		"%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)":                                                                     "%s does not sign in with a subscription: use its API key (tramtai-servidor keys set)",
 		"Usa tu suscripción con un agente (--personal: en el servidor abierto a la red, con sus condiciones)":                                                                "Uses your subscription with an agent (--personal: on a server open to the network, with its conditions)",
 		"--simultaneas: se admite de 1 a 3": "--simultaneas: from 1 to 3",
@@ -410,3 +408,4 @@ func init() {
 		"sí":             "yes",
 	})
 }
+
