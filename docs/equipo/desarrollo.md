@@ -342,7 +342,12 @@ código, por sistema (`windows`, `darwin`, `linux`): nada de lo que escribe el u
 árbol de procesos atado como el de las peticiones. Sobrevive a cerrar la pantalla; si el servicio se reinicia a mitad,
 queda en `error` con `interrumpida`. Guarda su estado en `datos/agentes/preparaciones/<id>.json` y las últimas líneas
 (redactadas) en `<id>.log`. No actualiza ni desinstala un agente con peticiones en curso (`peticiones_en_curso`) y,
-mientras lo instala, actualiza o desinstala, el planificador lo trata como no disponible.
+mientras lo instala, actualiza o desinstala, el planificador lo trata como no disponible. La invariante es que un
+instalador nunca corre a la vez que una petición (Ruling 39), y por eso `Iniciar` cuenta dos veces: la primera con la
+reserva invisible, para no frenar peticiones si al final no se lanza; la segunda con la reserva ya visible, porque una
+petición que entre entre medias ya no se lanza (el planificador mira `preparando` al aceptar y al lanzar) y una que
+entrara antes sale en esta cuenta. No juntes las dos: con una sola, una petición puede colarse con el instalador. El coste
+es un `agente_no_disponible` de unos milisegundos si la reserva se deshace en la segunda cuenta.
 
 **Versiones comprobadas y la lista firmada.** `Preparador.Comprobada(agente, accion, version)` mira la receta y la lista
 firmada (`URLLista`: `compatibilidad.json` y `compatibilidad.json.sig` del release fijo `compatibilidad`, firmados con la

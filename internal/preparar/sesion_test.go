@@ -114,6 +114,7 @@ func TestOrdenConsolaEscritorio(t *testing.T) {
 		{"windows", `C:\Users\ADMINI~1\bin\claude.exe`, `C:\Users\ADMINI~1\bin\claude.exe auth login`},
 		{"windows", `C:\Users\Ana María\.local\bin\claude.exe`, `& "C:\Users\Ana María\.local\bin\claude.exe" auth login`},
 		{"windows", `C:\Users\a$b\claude.exe`, "& \"C:\\Users\\a`$b\\claude.exe\" auth login"},
+		{"windows", `C:\Users\a“x”„\claude.exe`, "& \"C:\\Users\\a`“x`”`„\\claude.exe\" auth login"},
 		{"windows", "claude", "claude auth login"},
 		{"linux", "/home/ana/.local/bin/claude", "/home/ana/.local/bin/claude auth login"},
 		{"darwin", "/Users/Ana María/.local/bin/claude", "'/Users/Ana María/.local/bin/claude' auth login"},

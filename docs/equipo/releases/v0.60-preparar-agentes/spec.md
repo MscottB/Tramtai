@@ -95,7 +95,8 @@ Un paquete nuevo, `internal/preparar`, ejecuta la receta como una tarea por agen
 - **Al parar el servicio** se cancelan las preparaciones en marcha y se espera a que su árbol termine (Ruling 19); si el
   servicio se cae a mitad, al volver la preparación sale como `error` con `interrumpida`.
 - **Mientras instala, actualiza o desinstala un agente,** el servicio lo trata como no disponible: las peticiones nuevas
-  reciben el `agente_no_disponible` de siempre (Ruling 18).
+  reciben el `agente_no_disponible` de siempre (Ruling 18). Y nunca a la vez que una petición en curso: se vuelve a
+  contar con la reserva ya visible (Ruling 39).
 - **Registro corto** de cada preparación (órdenes, últimas líneas, resultado), sin secretos. «Ver registro» enseña las 20
   últimas líneas, ya tapadas, que da el estado de la última preparación; el registro entero queda en
   `datos/agentes/preparaciones/<id>.log`, sin ruta en la API (Ruling 25).

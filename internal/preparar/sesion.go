@@ -191,7 +191,8 @@ var (
 func enConsola(goos, cli string, args []string) string {
 	switch {
 	case goos == "windows" && !rutaSueltaWindows.MatchString(cli):
-		cli = `& "` + strings.NewReplacer("`", "``", "$", "`$").Replace(cli) + `"`
+		// PowerShell también cierra una cadena con las comillas tipográficas “ ” „, que NTFS admite en una carpeta.
+		cli = `& "` + strings.NewReplacer("`", "``", "$", "`$", "“", "`“", "”", "`”", "„", "`„").Replace(cli) + `"`
 	case goos != "windows" && !rutaSuelta.MatchString(cli):
 		cli = "'" + strings.ReplaceAll(cli, "'", `'\''`) + "'"
 	}
