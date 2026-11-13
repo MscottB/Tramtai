@@ -375,7 +375,7 @@ func (p *Pagina) alLanzar(m msgLanzada) tea.Cmd {
 func (p *Pagina) preguntarDesinstalar(a contrato.Adaptador, borrar bool) tea.Cmd {
 	v := p.versiones[a.Agente]
 	p.pend = &pendiente{agente: a.Agente, accion: accionDesinstalar, borrar: borrar, confirmar: confirmarDesinstalar(v)}
-	texto := p.tx("preparar.desinstalarTitulo", "agente", nombre(a.Agente)) + "\n\n" + idioma.T("Se desinstala con su orden oficial y deja de estar también fuera de Tramtai.") +
+	texto := p.tx("preparar.desinstalarTitulo", "agente", nombre(a.Agente)) + "\n\n" + idioma.T("Se desinstala borrando los archivos que dejó su instalador y deja de estar también fuera de Tramtai.") +
 		"\n\n" + p.tx("preparar.borrarDatos") + ": " + p.si(borrar)
 	if !borrar {
 		texto += "\n" + idioma.T("Para borrarlos también, cancela y pulsa X.")
@@ -687,7 +687,7 @@ func (p *Pagina) titular(agente string) string {
 
 // codigosExplicados son los códigos de error de preparar con explicación en preparar.error.*.
 var codigosExplicados = []string{"instalador_fallo", "no_encontrado_tras_instalar", "plazo_agotado", "salida_no_reconocida", "inicio_sesion_fallo", "sin_red",
-	"no_disponible_en_servidor", "interrumpida"}
+	"interrumpida"}
 
 // explicacion dice qué pasó y qué hacer (el detalle del servicio va debajo).
 func (p *Pagina) explicacion(e contrato.EstadoPreparacion) string {

@@ -7,7 +7,9 @@ import (
 	"io"
 	"math"
 	"os"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -133,7 +135,7 @@ func (c *corrida) sesionTrasInstalar() error {
 	version := numeroVersion(c.t.g.VersionDespues) // solo la escribe esta corrida
 	if !c.p.o.Comprobada(c.agente, "iniciar_sesion", version) {
 		aviso := idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s",
-			conVersionSi(c.f.Programa, version), c.p.aMano(c.f))
+			conVersionSi(c.f.Programa, version), c.aMano())
 		c.linea(aviso)
 		c.anotar(aviso)
 		c.avisoListo = &Error{CodigoVersionNoComprobada, aviso}
@@ -143,19 +145,57 @@ func (c *corrida) sesionTrasInstalar() error {
 	return c.sesion(version)
 }
 
-// aMano dice cómo iniciar sesión a mano: en el escritorio, la orden del CLI en una consola («claude auth login»); en el
-// servidor, la de Opciones.OrdenConsola con la ruta del CLI instalado (fuera del PATH del servicio), que lo hace como la
-// cuenta del servicio. Sin orden (la cuenta virtual de Windows Server no tiene consola), queda la clave de API.
+// aMano dice cómo iniciar sesión a mano, con la orden de ordenConsola. Sin orden (la cuenta virtual de Windows Server no
+// tiene consola), queda la clave de API.
 func (p *Preparador) aMano(f adaptadores.Ficha) string {
-	args := f.Receta.Sesion.Argumentos
-	orden := strings.Join(append([]string{f.Comando}, args...), " ")
-	if p.o.OrdenConsola != nil {
-		orden = p.o.OrdenConsola(cmp.Or(buscar(f), f.Comando), args)
-	}
+	orden := p.ordenConsola(f)
 	if orden == "" {
 		return idioma.T("con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)")
 	}
 	return idioma.Tf("inicia sesión en una consola con %s", orden)
+}
+
+// aMano es Preparador.aMano del CLI de la corrida; su orden va también en el estado final (OrdenConsola), para que la
+// Web UI diga cómo seguir en su idioma.
+func (c *corrida) aMano() string {
+	c.conAMano = true
+	return c.p.aMano(c.f)
+}
+
+// ordenConsola es el inicio de sesión a mano. En el escritorio, la orden del CLI en una consola («claude auth login»),
+// con su ruta completa si la consola no lo encuentra por su nombre: el instalador de Claude y la descarga de Copilot en
+// Windows no tocan el PATH (m0.md). En el servidor, la de Opciones.OrdenConsola con la ruta del CLI instalado (fuera del
+// PATH del servicio), que lo hace como la cuenta del servicio; vacía si esa cuenta no tiene consola.
+func (p *Preparador) ordenConsola(f adaptadores.Ficha) string {
+	args := f.Receta.Sesion.Argumentos
+	ruta := buscar(f)
+	if p.o.OrdenConsola != nil {
+		return p.o.OrdenConsola(cmp.Or(ruta, f.Comando), args)
+	}
+	cli := f.Comando
+	// El PATH, no ResolverPrograma: este sigue la ruta guardada en comandos_agentes, que la consola no conoce.
+	if porNombre, err := exec.LookPath(f.Comando); ruta != "" && (err != nil || !mismoArchivo(ruta, porNombre)) {
+		cli = ruta
+	}
+	return enConsola(runtime.GOOS, cli, args)
+}
+
+var (
+	rutaSuelta        = regexp.MustCompile(`^[A-Za-z0-9_.,:/@%+=~-]+$`)
+	rutaSueltaWindows = regexp.MustCompile(`^[A-Za-z0-9_.:\\/~-]+$`)
+)
+
+// enConsola junta la orden para pegarla en una consola de goos. Una ruta con espacios u otros signos va entre comillas:
+// en Windows, con «&» delante, que PowerShell (la consola de Windows 10 y 11) necesita para lanzar algo entre comillas
+// (en cmd se pega sin el «&»); fuera, entre comillas simples. Los argumentos son los de la receta, sin nada que escapar.
+func enConsola(goos, cli string, args []string) string {
+	switch {
+	case goos == "windows" && !rutaSueltaWindows.MatchString(cli):
+		cli = `& "` + strings.NewReplacer("`", "``", "$", "`$").Replace(cli) + `"`
+	case goos != "windows" && !rutaSuelta.MatchString(cli):
+		cli = "'" + strings.ReplaceAll(cli, "'", `'\''`) + "'"
+	}
+	return strings.Join(append([]string{cli}, args...), " ")
 }
 
 // sesion lanza el inicio de sesión del CLI con tuberías (el M0 no pidió pty a ninguno) y la entrada abierta para lo
@@ -186,37 +226,44 @@ func (c *corrida) sesion(version string) error {
 			g.Estado, g.Enlace, g.Codigo, g.PidePegar = "esperando_usuario", enlace, codigo, pegar
 		})
 	}}
-	// El plazo del lector cuenta desde que arranca el proceso (Copilot tarda 11 s la primera vez).
+	// El plazo del lector cuenta desde que el proceso arrancó, no desde que se pidió lanzarlo (Copilot tarda 11 s la
+	// primera vez; un antivirus que mira el ejecutable nuevo no se come el plazo). alIniciar se llama en este hilo.
 	ctx, cortar := context.WithCancelCause(c.ctx)
 	defer cortar(nil)
-	reloj := time.AfterFunc(c.p.plazoLector, func() {
-		if !x.visto() {
-			cortar(errNoReconocida)
+	var reloj *time.Timer
+	defer func() {
+		if reloj != nil {
+			reloj.Stop()
 		}
-	})
-	defer reloj.Stop()
+	}()
 	// El entorno de la receta (Copilot: COPILOT_DEBUG_BROWSER) evita que el CLI abra un navegador.
 	// Ejecutar cierra la lectura en este proceso al lanzarlo: un Codigo tardío falla.
 	salida, err := c.lanzar(ctx, procesos.Orden{Programa: ruta, Argumentos: l.Argumentos, Entorno: entornoDe(l.Entorno),
-		EntradaAbierta: lectura, Bruto: x})
+		EntradaAbierta: lectura, Bruto: x}, func() {
+		reloj = time.AfterFunc(c.p.plazoLector, func() {
+			if !x.visto() {
+				cortar(errNoReconocida)
+			}
+		})
+	})
 	if c.ctx.Err() == nil && errors.Is(context.Cause(ctx), errNoReconocida) {
 		c.anotar("marcar " + version)
 		if err := c.p.Marcar(c.agente, version); err != nil {
 			c.anotar(err.Error())
 		}
 		return &Error{CodigoSalidaNoReconocida, idioma.Tf("no se reconoció lo que escribió %s en %d s: %s",
-			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), c.p.aMano(c.f))}
+			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), c.aMano())}
 	}
 	if err != nil {
 		return err
 	}
 	if salida != 0 {
 		return &Error{CodigoInicioSesionFallo, idioma.Tf("el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo; si no, %s",
-			c.f.Programa, salida, c.p.aMano(c.f))}
+			c.f.Programa, salida, c.aMano())}
 	}
 	c.fijar(func(g *guardado) { g.Estado, g.PidePegar = "comprobando", false })
 	if c.p.o.Comprobar != nil && c.p.o.Comprobar(c.ctx, c.agente).Estado == adaptadores.SesionSin {
-		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada: %s", c.f.Programa, c.p.aMano(c.f))}
+		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada: %s", c.f.Programa, c.aMano())}
 	}
 	return nil
 }

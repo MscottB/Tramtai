@@ -442,6 +442,19 @@ func TestAgentesEntrarSinSesion(t *testing.T) {
 	}
 }
 
+// TestOrdenClaves (M4): la orden que guarda la clave es «tramtai claves guardar» en el escritorio y «tramtai-servidor
+// claves guardar» solo en el modo servidor.
+func TestOrdenClaves(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if _, err := ejecutarAdmin(t, "", "agentes", "entrar", "antigravity"); err == nil || !strings.Contains(err.Error(), "(tramtai claves guardar)") {
+		t.Fatalf("en el escritorio: %v", err)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if orden := ordenClaves(); orden != "tramtai-servidor claves guardar" {
+		t.Fatalf("en el servidor: %q", orden)
+	}
+}
+
 // TestAgentesCancelar: Ctrl+C (el contexto de la orden) cancela la preparación en el servicio y sale con 130; una que ya
 // estaba en marcha (ya_en_curso) se sigue.
 func TestAgentesCancelar(t *testing.T) {
@@ -729,7 +742,7 @@ func TestAgentesCtrlCEnPreguntas(t *testing.T) {
 	}
 }
 
-// TestAgentesNoPosible: peticiones en curso y no disponible en el servidor salen con 2; una acción ajena en marcha no se
+// TestAgentesNoPosible: peticiones en curso sale con 2; una acción ajena en marcha no se
 // adopta (2, sin cancelar); un estado «cancelado» sale con 130.
 func TestAgentesNoPosible(t *testing.T) {
 	f := &preparacionCLI{}
@@ -740,12 +753,7 @@ func TestAgentesNoPosible(t *testing.T) {
 	if _, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 2 {
 		t.Fatalf("peticiones_en_curso: %v", err)
 	}
-	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
-		return nil, &preparar.Error{Codigo: "no_disponible_en_servidor", Mensaje: "no"}
-	}
-	if _, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 2 {
-		t.Fatalf("no_disponible_en_servidor: %v", err)
-	}
+
 	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
 		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya"}
 	}

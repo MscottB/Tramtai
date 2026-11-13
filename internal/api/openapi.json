@@ -379,8 +379,9 @@
           "enlace": { "type": "string", "description": "El del inicio de sesión" },
           "codigo": { "type": "string", "description": "El código de dispositivo que el usuario escribe en el enlace" },
           "pide_pegar": { "type": "boolean", "description": "El CLI espera que se le pegue un código (preparacion/codigo)" },
-          "motivo_codigo": { "type": "string", "enum": ["version_no_comprobada", "peticiones_en_curso", "ya_en_curso", "instalador_fallo", "no_encontrado_tras_instalar", "plazo_agotado", "salida_no_reconocida", "inicio_sesion_fallo", "sin_red", "no_disponible_en_servidor", "interrumpida"] },
+          "motivo_codigo": { "type": "string", "enum": ["version_no_comprobada", "peticiones_en_curso", "ya_en_curso", "instalador_fallo", "no_encontrado_tras_instalar", "plazo_agotado", "salida_no_reconocida", "inicio_sesion_fallo", "sin_red", "interrumpida"] },
           "mensaje": { "type": "string" },
+          "orden_consola": { "type": "string", "description": "La orden para iniciar sesión a mano cuando mensaje dice cómo hacerlo (salida_no_reconocida, inicio_sesion_fallo o version_no_comprobada al iniciar sesión); vacía ahí, la cuenta del servicio no tiene consola" },
           "lineas": { "type": "array", "items": { "type": "string" }, "description": "Las últimas 20 de la salida, sin nada con forma de secreto" },
           "version_antes": { "type": "string" },
           "version_despues": { "type": "string" },
@@ -398,7 +399,8 @@
           "comprobadas": { "type": "object", "additionalProperties": { "type": "boolean" }, "description": "Por acción posible, si la versión que usaría está comprobada" },
           "acciones": { "type": "array", "items": { "type": "string" }, "description": "Las habilitadas; las de una versión sin comprobar piden confirmar" },
           "motivo_codigo": { "type": "string", "enum": ["version_no_comprobada", "sin_red"] },
-          "motivo": { "type": "string" }
+          "motivo": { "type": "string" },
+          "orden_consola": { "type": "string", "description": "La orden para iniciar sesión a mano si iniciar sesión no está comprobado; vacía entonces, la cuenta del servicio no tiene consola" }
         }
       },
       "Error": {

@@ -6,13 +6,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
@@ -60,8 +63,10 @@ func (c *corrida) descargar(d adaptadores.DescargaVerificada, version, destino s
 		}
 	}
 	// Lo que dejó una descarga cortada (el servicio cayó a mitad) no se queda.
+	// También los .viejo de colocar: uno que siga en marcha no se borra, y no pasa nada.
 	sobrantes, _ := filepath.Glob(filepath.Join(filepath.Dir(destino), ".descarga-*.zip"))
-	for _, s := range append(sobrantes, destino+".nuevo") {
+	viejos, _ := filepath.Glob(destino + ".viejo*")
+	for _, s := range append(append(sobrantes, viejos...), destino+".nuevo") {
 		_ = os.Remove(s)
 	}
 	c.anotar("GET " + url)
@@ -168,7 +173,7 @@ func extraer(f *os.File, nombre, destino string) error {
 			err = errors.New(idioma.Tf("%s es más grande de lo esperado", nombre))
 		}
 		if err == nil {
-			err = os.Rename(nuevo, destino)
+			err = colocar(nuevo, destino)
 		}
 		if err != nil {
 			os.Remove(nuevo)
@@ -177,4 +182,23 @@ func extraer(f *os.File, nombre, destino string) error {
 		return nil
 	}
 	return &Error{CodigoInstaladorFallo, idioma.Tf("la descarga no trae %s", nombre)}
+}
+
+// colocar deja nuevo en destino. En Windows no se puede reemplazar un ejecutable en marcha (copilot.exe abierto en otra
+// consola), pero sí renombrarlo: el que había pasa a destino+".viejo" y se borra ahora o, si sigue en marcha, en la
+// próxima descarga.
+func colocar(nuevo, destino string) error {
+	viejo := destino + ".viejo"
+	if err := os.Remove(viejo); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		viejo = fmt.Sprintf("%s.viejo-%d", destino, time.Now().UnixNano()) // el .viejo de antes sigue en marcha
+	}
+	if err := os.Rename(destino, viejo); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	if err := os.Rename(nuevo, destino); err != nil {
+		_ = os.Rename(viejo, destino) // vuelve el que había
+		return err
+	}
+	_ = os.Remove(viejo)
+	return nil
 }

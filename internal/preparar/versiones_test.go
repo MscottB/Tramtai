@@ -331,7 +331,8 @@ func TestIniciarConVersionNoComprobada(t *testing.T) {
 	}
 	v := unaVersion(t, pr.p, false)
 	if slices.Contains(v.Acciones, "iniciar_sesion") || v.Comprobadas["iniciar_sesion"] || v.MotivoCodigo != CodigoVersionNoComprobada ||
-		!strings.Contains(v.Motivo, "Falso CLI 1.2.3 aún no está comprobado") || !strings.Contains(v.Motivo, "falso login") {
+		!strings.Contains(v.Motivo, "Falso CLI 1.2.3 aún no está comprobado") || !strings.HasSuffix(v.Motivo, ordenFalso(pr.casa)) ||
+		v.OrdenConsola != ordenFalso(pr.casa) {
 		t.Fatalf("Versiones lo dice: %+v", v)
 	}
 }

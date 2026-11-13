@@ -390,9 +390,31 @@ func TestComandosDelSitioExisten(t *testing.T) {
 	}
 }
 
-// sinAliasIngles: órdenes de primer nivel que aún no tienen nombre en inglés; la Ayuda en inglés las cita en español.
-// shortcut: solo se comprueba que existan; cuando tengan alias, se quitan de aquí y la Ayuda en inglés pasa a usarlo.
-var sinAliasIngles = map[string]bool{"actualizar": true, "conversor": true, "espacio": true, "espacios": true, "global": true, "proyecto": true}
+// sinAliasIngles: órdenes de primer nivel sin nombre en inglés; la Ayuda en inglés las cita tal cual. «global» se escribe
+// igual en los dos idiomas (Ruling 36).
+var sinAliasIngles = map[string]bool{"global": true}
+
+// TestAliasSinChoques: dentro de cada grupo, ningún nombre ni alias de una orden es también el de otra (cobra
+// resolvería la primera sin avisar).
+func TestAliasSinChoques(t *testing.T) {
+	var revisar func(c *cobra.Command)
+	revisar = func(c *cobra.Command) {
+		vistos := map[string]string{}
+		for _, h := range c.Commands() {
+			for _, n := range append([]string{h.Name()}, h.Aliases...) {
+				if otra, ok := vistos[n]; ok {
+					t.Errorf("%s: «%s» es de %s y de %s", c.CommandPath(), n, otra, h.Name())
+				}
+				vistos[n] = h.Name()
+			}
+			revisar(h)
+		}
+	}
+	revisar(nuevaRaiz())
+	if c, _, err := nuevaRaiz().Find([]string{"service", "start"}); err != nil || c.Flags().Lookup("open") == nil || !c.Flags().Lookup("open").Hidden {
+		t.Errorf("servicio iniciar lleva --open, oculta, como --abrir: %v", err)
+	}
+}
 
 // minimoAyuda: las órdenes que cita la Ayuda entre los dos idiomas (hoy 106), con algo de margen.
 const minimoAyuda = 100

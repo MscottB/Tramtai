@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -97,6 +98,43 @@ func ponerFalso(t *testing.T, casa string) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// ordenFalso es la orden a mano del CLI falso: con su ruta completa, porque ~/bin no está en el PATH.
+func ordenFalso(casa string) string {
+	return enConsola(runtime.GOOS, filepath.Join(casa, "bin", nombreFalso()), []string{"login"})
+}
+
+// I1: en el escritorio, la orden a mano lleva la ruta completa del CLI si la consola no lo encuentra por su nombre (el
+// instalador de Claude no toca el PATH), entre comillas si hace falta; si lo encuentra, el nombre basta.
+func TestOrdenConsolaEscritorio(t *testing.T) {
+	for _, c := range []struct{ goos, cli, quiere string }{
+		{"windows", `C:\Users\ana\.local\bin\claude.exe`, `C:\Users\ana\.local\bin\claude.exe auth login`},
+		{"windows", `C:\Users\ADMINI~1\bin\claude.exe`, `C:\Users\ADMINI~1\bin\claude.exe auth login`},
+		{"windows", `C:\Users\Ana María\.local\bin\claude.exe`, `& "C:\Users\Ana María\.local\bin\claude.exe" auth login`},
+		{"windows", `C:\Users\a$b\claude.exe`, "& \"C:\\Users\\a`$b\\claude.exe\" auth login"},
+		{"windows", "claude", "claude auth login"},
+		{"linux", "/home/ana/.local/bin/claude", "/home/ana/.local/bin/claude auth login"},
+		{"darwin", "/Users/Ana María/.local/bin/claude", "'/Users/Ana María/.local/bin/claude' auth login"},
+		{"linux", "/home/o'hara/bin/claude", `'/home/o'\''hara/bin/claude' auth login`},
+	} {
+		if got := enConsola(c.goos, c.cli, []string{"auth", "login"}); got != c.quiere {
+			t.Errorf("%s %q: %q, se esperaba %q", c.goos, c.cli, got, c.quiere)
+		}
+	}
+	pr := nueva(t, fichaSesion(t, "codex", "sesion"))
+	f, _ := pr.p.o.Ficha("falso")
+	if orden := pr.p.ordenConsola(f); orden != "falso login" {
+		t.Fatalf("sin el CLI, su nombre: %q", orden)
+	}
+	ponerFalso(t, pr.casa)
+	if orden := pr.p.ordenConsola(f); orden != ordenFalso(pr.casa) || !strings.Contains(orden, pr.casa) {
+		t.Fatalf("fuera del PATH, la ruta completa: %q", orden)
+	}
+	t.Setenv("PATH", filepath.Join(pr.casa, "bin"))
+	if orden := pr.p.ordenConsola(f); orden != "falso login" {
+		t.Fatalf("en el PATH, su nombre: %q", orden)
 	}
 }
 
@@ -192,11 +230,11 @@ func TestInstalarSigueConSesion(t *testing.T) {
 	pr.p.o.Comprobada = func(_, accion, _ string) bool { return accion != "iniciar_sesion" }
 	e = iniciar(t, pr.p, "instalar")
 	if lineas := strings.Join(e.Lineas, "\n"); e.Estado != "listo" || e.Enlace != "" ||
-		!strings.Contains(lineas, "Falso CLI 1.2.3 aún no está comprobado") || !strings.Contains(lineas, "en una consola con falso login") {
+		!strings.Contains(lineas, "Falso CLI 1.2.3 aún no está comprobado") || !strings.Contains(lineas, "en una consola con "+ordenFalso(pr.casa)) {
 		t.Fatalf("sin la versión comprobada se instala, no se inicia sesión y se dice la orden para la consola: %+v", e)
 	}
 	// El estado listo lo dice también (las pantallas no cuentan el agente como listo para usar).
-	if e.MotivoCodigo != CodigoVersionNoComprobada || !strings.Contains(e.Mensaje, "en una consola con falso login") {
+	if e.MotivoCodigo != CodigoVersionNoComprobada || !strings.Contains(e.Mensaje, "en una consola con "+ordenFalso(pr.casa)) || e.OrdenConsola != ordenFalso(pr.casa) {
 		t.Fatalf("el aviso va en el estado: %+v", e)
 	}
 	// Una corrida sin aviso no hereda el de la anterior.
@@ -327,9 +365,10 @@ func TestSesionNoReconocida(t *testing.T) {
 	ponerFalso(t, pr.casa)
 	inicio := time.Now()
 	lanzarSesion(t, pr.p)
+	vivos(t, latido) // el plazo cuenta desde que arranca: late antes de que se corte
 	e := final(t, pr.p, "falso")
 	if e.Estado != "error" || e.MotivoCodigo != CodigoSalidaNoReconocida || !slices.Contains(e.Lineas, "nada que ver") ||
-		!strings.Contains(e.Mensaje, "falso login") || time.Since(inicio) > 15*time.Second {
+		!strings.Contains(e.Mensaje, ordenFalso(pr.casa)) || e.OrdenConsola != ordenFalso(pr.casa) || time.Since(inicio) > 30*time.Second {
 		t.Fatalf("estado %+v", e)
 	}
 	muertos(t, latido)
@@ -373,7 +412,7 @@ func TestSesionNoSeLanza(t *testing.T) {
 
 	ponerFalso(t, pr.casa)
 	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoVersionNoComprobada || len(e.Lineas) != 0 ||
-		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con falso login" {
+		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con "+ordenFalso(pr.casa) {
 		t.Fatalf("sin comprobar, el aviso de la tarjeta con la orden para la consola: %+v", e)
 	}
 	// En el servidor, la orden es la de la cuenta del servicio con la ruta del CLI instalado (fuera de su PATH); sin
@@ -384,7 +423,7 @@ func TestSesionNoSeLanza(t *testing.T) {
 		t.Fatalf("en el servidor, la orden como la cuenta del servicio: %+v", e)
 	}
 	pr.p.o.OrdenConsola = func(string, []string) string { return "" }
-	if e := iniciar(t, pr.p, "iniciar_sesion"); !strings.HasSuffix(e.Mensaje, "Mientras, con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)") {
+	if e := iniciar(t, pr.p, "iniciar_sesion"); !strings.HasSuffix(e.Mensaje, "Mientras, con la cuenta del servicio no se puede iniciar sesión en una consola: usa su clave de API (tramtai-servidor claves guardar)") || e.OrdenConsola != "" {
 		t.Fatalf("sin consola para la cuenta del servicio, la clave de API: %+v", e)
 	}
 	pr.p.o.OrdenConsola = nil
@@ -403,7 +442,7 @@ func TestSesionFalla(t *testing.T) {
 	ponerFalso(t, pr.casa)
 	e := iniciar(t, pr.p, "iniciar_sesion")
 	if e.Estado != "error" || e.MotivoCodigo != CodigoInicioSesionFallo || !strings.Contains(e.Mensaje, "código 1") ||
-		!strings.Contains(e.Mensaje, "falso login") || !slices.Contains(e.Lineas, "Login failed: That code wasn't accepted.") {
+		!strings.Contains(e.Mensaje, ordenFalso(pr.casa)) || e.OrdenConsola != ordenFalso(pr.casa) || !slices.Contains(e.Lineas, "Login failed: That code wasn't accepted.") {
 		t.Fatalf("estado %+v", e)
 	}
 }

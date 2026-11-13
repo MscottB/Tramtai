@@ -59,7 +59,17 @@ func falso(modo string) {
 		yo, _ := os.Executable()
 		datos, _ := os.ReadFile(yo)
 		_ = os.MkdirAll(filepath.Join(casa, "bin"), 0o700)
-		if err := os.WriteFile(filepath.Join(casa, "bin", nombreFalso()), datos, 0o700); err != nil {
+		// Como la descarga: por un temporal y colocar. En Windows el ejecutable recién usado (el inicio de sesión de la
+		// corrida anterior) puede seguir retenido un momento; se reintenta un poco.
+		destino := filepath.Join(casa, "bin", nombreFalso())
+		err := os.WriteFile(destino+".nuevo", datos, 0o700)
+		for limite := time.Now().Add(3 * time.Second); err == nil; time.Sleep(50 * time.Millisecond) {
+			if err = colocar(destino+".nuevo", destino); err == nil || time.Now().After(limite) {
+				break
+			}
+			err = nil
+		}
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
@@ -431,33 +441,13 @@ func TestDesinstalarNoBorraDatos(t *testing.T) {
 // Revisión 5: el servicio cayó con un instalador en marcha; al volver no queda huérfano y la preparación sale interrumpida.
 func TestRecuperarTrasCaida(t *testing.T) {
 	pr := nueva(t, fichaFalsa(t, "instalar"))
-	yo, _ := os.Executable()
-	type inicio struct {
-		pid   int
-		firma string
-	}
-	iniciado := make(chan inicio, 1)
-	ctx := procesos.ConAlIniciar(context.Background(), func(pid int, firma string) { iniciado <- inicio{pid, firma} })
-	terminado := make(chan struct{})
-	latido := filepath.Join(t.TempDir(), "latido")
-	go func() {
-		defer close(terminado)
-		_, _ = procesos.Ejecutar(ctx, procesos.Orden{Programa: yo, Entorno: append(os.Environ(), "PREPARAR_FALSO=colgar",
-			"PREPARAR_LATIDO="+latido)}, func(string) error { return nil })
-	}()
-	var i inicio
-	select {
-	case i = <-iniciado:
-	case <-time.After(10 * time.Second):
-		t.Fatal("el proceso no arrancó")
-	}
+	pid, firma, terminado, latido := colgado(t)
 	ahora := time.Now()
 	if err := pr.p.guardar("falso", guardado{EstadoPreparacion: contrato.EstadoPreparacion{Agente: "falso", Accion: "instalar",
-		Estado: "instalando", Inicio: &ahora}, PID: i.pid, Firma: i.firma}); err != nil {
+		Estado: "instalando", Inicio: &ahora}, PID: pid, Firma: firma}); err != nil {
 		t.Fatal(err)
 	}
 
-	vivos(t, latido, latido+".nieto")
 	p := Nuevo(pr.p.o)
 	p.Recuperar()
 	select {
@@ -470,6 +460,126 @@ func TestRecuperarTrasCaida(t *testing.T) {
 		t.Fatalf("estado %+v", e)
 	}
 	muertos(t, latido, latido+".nieto")
+}
+
+// colgado lanza fuera del preparador un instalador colgado con su nieto (como uno que dejó un servicio caído) y espera a
+// que los dos latan; terminado se cierra cuando acaba.
+func colgado(t *testing.T) (pid int, firma string, terminado chan struct{}, latido string) {
+	t.Helper()
+	yo, _ := os.Executable()
+	iniciado := make(chan struct{})
+	ctx := procesos.ConAlIniciar(context.Background(), func(p int, f string) { pid, firma = p, f; close(iniciado) })
+	terminado = make(chan struct{})
+	latido = filepath.Join(t.TempDir(), "latido")
+	go func() {
+		defer close(terminado)
+		_, _ = procesos.Ejecutar(ctx, procesos.Orden{Programa: yo, Entorno: append(os.Environ(), "PREPARAR_FALSO=colgar",
+			"PREPARAR_LATIDO="+latido)}, func(string) error { return nil })
+	}()
+	select {
+	case <-iniciado:
+	case <-time.After(10 * time.Second):
+		t.Fatal("el proceso no arrancó")
+	}
+	vivos(t, latido, latido+".nieto")
+	return pid, firma, terminado, latido
+}
+
+// M1: un proceso de la corrida anterior que no confirmó su cierre (su PID solo queda en memoria: el primer fijar de la
+// siguiente lo pisa en disco) se termina al lanzar la siguiente.
+func TestHuerfanoDeLaAnterior(t *testing.T) {
+	pr := nueva(t, fichaFalsa(t, "instalar"))
+	pid, firma, terminado, latido := colgado(t)
+	pr.p.mu.Lock()
+	pr.p.tareas["falso"] = &tarea{g: guardado{EstadoPreparacion: contrato.EstadoPreparacion{Agente: "falso", Accion: "instalar",
+		Estado: "cancelado"}, PID: pid, Firma: firma}}
+	pr.p.mu.Unlock()
+	if e := iniciar(t, pr.p, "instalar"); e.Estado != "listo" {
+		t.Fatalf("estado %+v", e)
+	}
+	select {
+	case <-terminado:
+	case <-time.After(10 * time.Second):
+		t.Fatal("el proceso de la corrida anterior sigue vivo")
+	}
+	muertos(t, latido, latido+".nieto")
+}
+
+// M2: mientras Iniciar pregunta por las peticiones en curso, Estado da la preparación anterior (o ninguna), no la que
+// quizá se deshaga: el servicio no frena peticiones por ella.
+func TestReservaNoSeVe(t *testing.T) {
+	pr := nueva(t, fichaFalsa(t, "instalar"))
+	var vistos []string
+	conPeticiones := func(agente string) int {
+		e, ok := pr.p.Estado(agente)
+		vistos = append(vistos, fmt.Sprint(ok, " ", e.Accion, " ", e.Estado))
+		return 1
+	}
+	// Alguien más mira el estado a la vez (con -race, sin carreras).
+	parar := make(chan struct{})
+	var mirando sync.WaitGroup
+	mirando.Go(func() {
+		for {
+			select {
+			case <-parar:
+				return
+			default:
+				pr.p.Estado("falso")
+			}
+		}
+	})
+	defer func() { close(parar); mirando.Wait() }()
+	pr.p.o.EnCurso = conPeticiones
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"}); codigo(err) != CodigoPeticionesEnCurso {
+		t.Fatalf("se esperaba peticiones_en_curso: %v", err)
+	}
+	pr.p.o.EnCurso = func(string) int { return 0 }
+	iniciar(t, pr.p, "instalar")
+	pr.p.o.EnCurso = conPeticiones
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "actualizar"}); codigo(err) != CodigoPeticionesEnCurso {
+		t.Fatalf("se esperaba peticiones_en_curso: %v", err)
+	}
+	if !slices.Equal(vistos, []string{"false  ", "true instalar listo"}) {
+		t.Fatalf("durante la reserva se vio %q", vistos)
+	}
+	if e, _ := pr.p.Estado("falso"); e.Accion != "instalar" || e.Estado != "listo" {
+		t.Fatalf("la reserva deshecha deja la anterior: %+v", e)
+	}
+}
+
+// M7: en Windows no se puede pisar un ejecutable en marcha (copilot.exe abierto en una consola) pero sí renombrarlo:
+// colocar aparta el viejo y deja el nuevo.
+func TestColocarSobreUnoEnMarcha(t *testing.T) {
+	dir := t.TempDir()
+	destino := filepath.Join(dir, nombreFalso())
+	yo, _ := os.Executable()
+	datos, err := os.ReadFile(yo)
+	if err == nil {
+		err = os.WriteFile(destino, datos, 0o700)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	latido := filepath.Join(dir, "latido")
+	cmd := exec.Command(destino)
+	cmd.Env = append(os.Environ(), "PREPARAR_FALSO=latir", "PREPARAR_LATIDO="+latido)
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cmd.Process.Kill(); _ = cmd.Wait() }()
+	vivos(t, latido)
+	for _, contenido := range []string{"nuevo", "otro más"} { // dos veces: el .viejo de la primera sigue en marcha
+		if err := os.WriteFile(destino+".nuevo", []byte(contenido), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := colocar(destino+".nuevo", destino); err != nil {
+			t.Fatalf("colocar sobre uno en marcha: %v", err)
+		}
+		if leido, _ := os.ReadFile(destino); string(leido) != contenido {
+			t.Fatalf("en destino quedó %q", leido)
+		}
+	}
+	vivos(t, latido) // el que estaba en marcha sigue
 }
 
 func TestRegistroRedactado(t *testing.T) {

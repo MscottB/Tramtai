@@ -9,6 +9,9 @@ import (
 	"go/token"
 	"image/color"
 	"io/fs"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1170,9 +1173,24 @@ func TestTeclaWServicioCaido(t *testing.T) {
 // TestTeclaWFalloDelEnlace: si el servicio no da el enlace, es un fallo en la línea de estado y se puede volver a pedir.
 func TestTeclaWFalloDelEnlace(t *testing.T) {
 	m, abiertas := conWeb(t, true)
-	cli, caer := prueba.ConCaida(t, m.cli)
-	m.cli = cli
-	caer(true)
+	// Solo falla la ruta del enlace (500 con su error): tirar el servicio entero cortaba también lo que la terminal pide
+	// de fondo, y la prueba dependía de qué llegaba antes.
+	destino, err := url.Parse(m.cli.Base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pasar := httputil.NewSingleHostReverseProxy(destino)
+	copia := *m.cli
+	copia.Base = prueba.Servidor(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/servicio/sesiones" {
+			pasar.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":{"codigo":"error_interno","mensaje":"sin enlace"}}`))
+	}))
+	m.cli = &copia
 	a := conducir(t, m)
 	_, cmd := m.Update(tecla("W"))
 	a.Correr(cmd)

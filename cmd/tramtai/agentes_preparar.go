@@ -115,8 +115,8 @@ func comandosPreparar() []*cobra.Command {
 	banderasConfirmar(actualizar, &confirmaActualizar)
 
 	desinstalar := &cobra.Command{Use: "desinstalar <agente>", Aliases: []string{"uninstall"}, Args: cobra.ExactArgs(1),
-		Short: idioma.T("Desinstala el CLI de un agente con su orden oficial (pregunta antes)"),
-		Long:  conSalidas(idioma.T("Desinstala el CLI de un agente con su orden oficial: deja de estar también fuera de Tramtai. Su sesión y sus ajustes se quedan, salvo con --borrar-datos.")),
+		Short: idioma.T("Desinstala el CLI de un agente borrando los archivos que dejó su instalador (pregunta antes)"),
+		Long:  conSalidas(idioma.T("Desinstala el CLI de un agente borrando los archivos que dejó su instalador: deja de estar también fuera de Tramtai. Su sesión y sus ajustes se quedan, salvo con --borrar-datos.")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return prepararAgentes(cmd, args, accionDesinstalar, borrar, confirmaDesinstalar)
 		}}
@@ -295,7 +295,7 @@ func (p *preparador) preguntar(pregunta string) bool {
 func (p *preparador) correr(id, accion string, borrar bool) error {
 	nombre := agentes.NombreVisible(id)
 	if accion == accionDesinstalar && !p.confirmar {
-		fmt.Fprintln(p.aviso, idioma.Tf("Se desinstala %s con su orden oficial y deja de estar también fuera de Tramtai.", nombre))
+		fmt.Fprintln(p.aviso, idioma.Tf("Se desinstala %s borrando los archivos que dejó su instalador y deja de estar también fuera de Tramtai.", nombre))
 		if borrar {
 			fmt.Fprintln(p.aviso, idioma.T("Se borran también su sesión y sus ajustes."))
 		}
@@ -358,7 +358,7 @@ func (p *preparador) lanzar(id string, pedido contrato.PedidoPreparacion) (contr
 		fmt.Fprintln(p.out, idioma.Tf("ya hay una preparación de %s en marcha: se sigue esa", nombre))
 		p.adoptada = true
 		return e, nil
-	case nucleo.CodigoPeticionesEnCurso, nucleo.CodigoNoDisponibleEnServidor:
+	case nucleo.CodigoPeticionesEnCurso:
 		return e, errConCodigo{salidaNoPosible, err}
 	}
 	if err != nil && p.ctx.Err() != nil {
@@ -560,7 +560,7 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 		if e.Accion == accionInstalar && agentes.AdmiteSuscripcion(id) {
 			quedaSinListo = idioma.Tf("%s está instalado (%s), pero sin iniciar sesión: inicia sesión con «tramtai agentes entrar %s».", nombre, despues, id)
 		} else if e.Accion == accionInstalar {
-			quedaSinListo = idioma.Tf("%s está instalado (%s), pero le falta su clave de API (tramtai-servidor claves guardar).", nombre, despues)
+			quedaSinListo = idioma.Tf("%s está instalado (%s), pero le falta su clave de API (%s).", nombre, despues, ordenClaves())
 		}
 		if e.Mensaje != "" {
 			fmt.Fprintln(p.aviso, limpio(e.Mensaje))
@@ -636,9 +636,6 @@ func (p *preparador) fallo(id string, e contrato.EstadoPreparacion) error {
 	} else if x := explicacion(e.MotivoCodigo); x != "" {
 		fmt.Fprintln(p.aviso, x)
 	}
-	if e.MotivoCodigo == "no_disponible_en_servidor" {
-		codigo = salidaNoPosible
-	}
 	if e.Mensaje != "" {
 		fmt.Fprintln(p.aviso, limpio(e.Mensaje))
 	}
@@ -671,8 +668,6 @@ func explicacion(codigo string) string {
 		return idioma.T("El inicio de sesión del CLI terminó con un error: vuelve a intentarlo o mira abajo cómo seguir.")
 	case "sin_red":
 		return idioma.T("No hay conexión con el sitio del CLI: revisa tu red y vuelve a intentarlo.")
-	case "no_disponible_en_servidor":
-		return idioma.T("Esto no se puede hacer con la cuenta del servicio: usa una clave de API.")
 	case "interrumpida":
 		return idioma.T("El servicio se reinició a mitad: vuelve a intentarlo.")
 	}

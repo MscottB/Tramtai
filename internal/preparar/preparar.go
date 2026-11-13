@@ -114,6 +114,10 @@ type tarea struct {
 	// registro y las líneas tapan.
 	entrada *os.File
 	pegados []string
+	// reservando: Iniciar aún pregunta por las peticiones en curso y puede deshacer la reserva. Mientras, Estado da previo
+	// (la anterior, si había), así que el servicio no frena peticiones por una preparación que quizá no empiece.
+	reservando bool
+	previo     *guardado
 }
 
 // errCerrado es la causa con que Cerrar corta las preparaciones: terminan como interrumpidas, no como canceladas.
@@ -152,6 +156,12 @@ func (p *Preparador) Estado(agente string) (contrato.EstadoPreparacion, bool) {
 	if !ok {
 		return contrato.EstadoPreparacion{}, false
 	}
+	if t.reservando {
+		if t.previo == nil {
+			return contrato.EstadoPreparacion{}, false
+		}
+		return copia(t.previo.EstadoPreparacion), true
+	}
 	return copia(t.g.EstadoPreparacion), true
 }
 
@@ -189,19 +199,25 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 		defer p.mu.Unlock()
 		return copia(anterior.g.EstadoPreparacion), &Error{CodigoYaEnCurso, idioma.Tf("ya hay una preparación de %s en marcha", f.Programa)}
 	}
+	var previo *guardado
+	huerfano := guardado{}
 	if anterior != nil {
 		ruta = anterior.g.RutaGuardada
+		previo = &anterior.g
+		// Un proceso de la anterior que no confirmó su cierre: su PID solo está aquí, y el primer fijar lo pisa en disco.
+		huerfano.PID, huerfano.Firma = anterior.g.PID, anterior.g.Firma
 	}
 	ahora := time.Now()
 	// El plazo va por fases (corrida.nuevoPlazo); cancelar corta todas.
 	ctx, cancelar := context.WithCancelCause(context.Background())
-	t := &tarea{enMarcha: true, cancelar: cancelar, g: guardado{RutaGuardada: ruta,
+	preguntar := pedido.Accion != "iniciar_sesion" && p.o.EnCurso != nil
+	t := &tarea{enMarcha: true, cancelar: cancelar, reservando: preguntar, previo: previo, g: guardado{RutaGuardada: ruta,
 		EstadoPreparacion: contrato.EstadoPreparacion{Agente: agente, Accion: pedido.Accion, Estado: estado, Inicio: &ahora}}}
 	p.tareas[agente] = t
 	p.corridas.Add(1) // con el cerrojo y sin cerrado: Cerrar no puede estar esperando ya
 	estadoInicial := copia(t.g.EstadoPreparacion)
 	p.mu.Unlock()
-	if pedido.Accion != "iniciar_sesion" && p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
+	if preguntar && p.o.EnCurso(agente) > 0 {
 		cancelar(nil)
 		p.mu.Lock()
 		if anterior != nil {
@@ -213,9 +229,15 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 		p.corridas.Done()
 		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
 	}
+	p.mu.Lock()
+	t.reservando, t.previo = false, nil
+	p.mu.Unlock()
 	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, base: ctx, pedido: pedido}
 	go func() {
 		defer p.corridas.Done()
+		if huerfano.PID != 0 {
+			procesos.TerminarHuerfano(huerfano.PID, huerfano.Firma)
+		}
 		c.correr(cancelar)
 	}()
 	return estadoInicial, nil
@@ -346,6 +368,8 @@ type corrida struct {
 	// avisoListo es el porqué de una preparación que termina en listo sin todo hecho (instalado, pero sin iniciar sesión
 	// porque la versión no está comprobada): va en MotivoCodigo y Mensaje del estado listo.
 	avisoListo *Error
+	// conAMano: el mensaje dice cómo iniciar sesión a mano (y el estado final lleva la orden).
+	conAMano bool
 }
 
 // fijar cambia el estado y lo guarda en disco, con el cerrojo tomado: la última preparación es la última que se escribe.
@@ -431,8 +455,13 @@ func (c *corrida) correr(cancelar context.CancelCauseFunc) {
 	_ = configuracion.EscribirAtomico(filepath.Join(c.p.carpeta(), c.agente+".log"), []byte(strings.Join(c.registro, "\n")+"\n"), 0o600)
 	ahora := time.Now()
 	mensaje = c.redactar(mensaje)
+	orden := ""
+	if c.conAMano && codigo != "" {
+		orden = c.p.ordenConsola(c.f)
+	}
 	c.fijar(func(g *guardado) {
 		g.Estado, g.Etapa, g.MotivoCodigo, g.Mensaje, g.Fin, g.PidePegar = estado, "", codigo, mensaje, &ahora, false
+		g.OrdenConsola = orden
 		c.t.enMarcha = false // con el estado final: quien lo ve terminado ya puede lanzar otra
 	})
 }
@@ -463,7 +492,7 @@ func (c *corrida) accion() error {
 		version := numeroVersion(antes)
 		if !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
 			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s",
-				conVersionSi(c.f.Programa, version), c.p.aMano(c.f))}
+				conVersionSi(c.f.Programa, version), c.aMano())}
 		}
 		return c.sesion(version)
 	}
@@ -613,7 +642,7 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 		return err
 	}
 	c.fijar(func(g *guardado) { g.Etapa = "orden" })
-	salida, err := c.lanzar(c.ctx, procesos.Orden{Programa: programa, Argumentos: args, Entorno: entornoDe(extra)})
+	salida, err := c.lanzar(c.ctx, procesos.Orden{Programa: programa, Argumentos: args, Entorno: entornoDe(extra)}, nil)
 	if err == nil && salida != 0 {
 		err = &Error{CodigoInstaladorFallo, idioma.Tf("%s terminó con el código %d", filepath.Base(programa), salida)}
 	}
@@ -621,12 +650,16 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 }
 
 // lanzar ejecuta la orden en la casa del usuario con el árbol de procesos atado, anota su PID y su firma para Recuperar,
-// pasa su salida a Lineas y devuelve su código de salida (quien llama dice qué significa uno distinto de 0).
-func (c *corrida) lanzar(ctx context.Context, o procesos.Orden) (int, error) {
+// pasa su salida a Lineas y devuelve su código de salida (quien llama dice qué significa uno distinto de 0). alIniciar,
+// si no es nil, se llama cuando el proceso ya arrancó.
+func (c *corrida) lanzar(ctx context.Context, o procesos.Orden, alIniciar func()) (int, error) {
 	c.anotar(strings.Join(append([]string{o.Programa}, o.Argumentos...), " "))
 	o.Directorio, _ = os.UserHomeDir()
 	ctx = procesos.ConAlIniciar(ctx, func(pid int, firma string) {
 		c.fijar(func(g *guardado) { g.PID, g.Firma = pid, firma })
+		if alIniciar != nil {
+			alIniciar()
+		}
 	})
 	r, err := procesos.Ejecutar(ctx, o, func(l string) error { c.linea(l); return nil })
 	if nucleo.CodigoDe(err) == nucleo.CodigoCancelacionNoConfirmada {
