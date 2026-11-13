@@ -5,6 +5,7 @@ const es = {
   ...ayudaEs,
   // Comunes
   'comun.cancelar': 'Cancelar',
+  'comun.despues': 'Después, cuando termine:',
   'comun.aceptar': 'Aceptar',
   'comun.eliminar': 'Eliminar',
   'comun.copiar': 'Copiar',

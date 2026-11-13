@@ -6,6 +6,7 @@ const en: Textos = {
   ...ayudaEn,
   // Common
   'comun.cancelar': 'Cancel',
+  'comun.despues': 'Then, once it finishes:',
   'comun.aceptar': 'OK',
   'comun.eliminar': 'Delete',
   'comun.copiar': 'Copy',

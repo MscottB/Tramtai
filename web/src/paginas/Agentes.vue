@@ -128,7 +128,7 @@
                suscripción personal con sus condiciones (abierto a la red), y la clave con tramtai-servidor. -->
           <template v-else-if="forma !== 'elegir' && admite(a)">
             <div class="text-body2">{{ t(forma === 'personal' ? 'agentes.servidorPersonal' : 'agentes.servidorEntrar') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+            <OrdenesCopiables :ordenes="ordenesSuscripcion(a.agente, forma)" class="q-mt-sm" />
             <div class="text-body2 q-mt-md">{{ t('agentes.servidorClave') }}</div>
             <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
           </template>
@@ -142,7 +142,8 @@
         <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
         <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
-          <div v-if="forma !== 'elegir'" class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+          <!-- Ya en suscripción, solo le falta la sesión: la primera orden (entrar), sin volver a pedir «acepto». -->
+          <OrdenesCopiables v-if="forma !== 'elegir'" :ordenes="ordenesSuscripcion(a.agente, forma).slice(0, 1)" class="q-mt-sm" />
           <q-btn v-if="puedeVolver(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
@@ -264,7 +265,8 @@ import type { Destino } from '../navegacion'
 import { adaptadoresConocidos, agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
-import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import { estadoServidor, formaSuscripcion, ordenClave, ordenesSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import OrdenesCopiables from '../componentes/OrdenesCopiables.vue'
 import { aceptarRiesgoSuscripcion } from '../suscripcion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'

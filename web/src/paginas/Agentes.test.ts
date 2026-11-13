@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { formaSuscripcion, ordenClave, ordenSuscripcion, ordenUsarSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
+import { formaSuscripcion, ordenClave, ordenesSuscripcion, ordenUsarSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
 
 const sesion = (entorno: string): Sesion => ({ instancia: 'global', csrf: 'tk', version: 'v0', local: true, entorno })
@@ -13,9 +13,24 @@ test('en el escritorio se elige la suscripción aquí; en el servidor, con su or
   assert.equal(formaSuscripcion(sesion('servidor'), servidor(false)), 'entrar')
   assert.equal(formaSuscripcion(sesion('servidor'), servidor(true)), 'personal')
   assert.equal(formaSuscripcion(sesion('servidor'), null), 'entrar', 'sin estado del servidor no se ofrece elegir aquí')
-  // En local, dos pasos: iniciar sesión en el CLI y después usar la suscripción (Ruling 34).
-  assert.equal(ordenSuscripcion('claude', 'entrar'), 'tramtai-servidor agentes entrar claude\ntramtai-servidor agentes suscripcion claude')
-  assert.equal(ordenSuscripcion('codex', 'personal'), 'tramtai-servidor agentes suscripcion codex --personal')
+  // En local, dos pasos: iniciar sesión en el CLI y después usar la suscripción (Ruling 34), cada uno su orden.
+  assert.deepEqual(ordenesSuscripcion('claude', 'entrar'), ['tramtai-servidor agentes entrar claude', 'tramtai-servidor agentes suscripcion claude'])
+  assert.deepEqual(ordenesSuscripcion('codex', 'personal'), ['tramtai-servidor agentes suscripcion codex --personal'])
+})
+
+test('dos órdenes seguidas van en dos bloques, cada uno con su copiar (Ruling 35); sin sesión, solo entrar', () => {
+  // Juntas, en cmd.exe o sh la segunda línea quedaría en el búfer y la leería la primera como respuesta.
+  const bloques = readFileSync(new URL('../componentes/OrdenesCopiables.vue', import.meta.url), 'utf8')
+  assert.match(bloques, /v-for="\(orden, i\) in ordenes"/)
+  assert.match(bloques, /\{\{ orden \}\}<q-btn[^>]*@click="copiar\(orden\)"/)
+  assert.match(bloques, /v-if="i"[^>]*>\{\{ t\('comun\.despues'\) \}\}/)
+  const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
+  assert.ok(pagina.includes('<OrdenesCopiables :ordenes="ordenesSuscripcion(a.agente, forma)"'), 'sin clave: las dos')
+  assert.ok(pagina.includes(':ordenes="ordenesSuscripcion(a.agente, forma).slice(0, 1)"'), 'sin sesión (ya en suscripción): solo entrar')
+  assert.deepEqual(ordenesSuscripcion('claude', 'entrar').slice(0, 1), ['tramtai-servidor agentes entrar claude'])
+  assert.ok(!pagina.includes('copiar(ordenesSuscripcion'), 'nunca se copian juntas')
+  const ajustes = readFileSync(new URL('./Configuracion.vue', import.meta.url), 'utf8')
+  assert.ok(ajustes.includes('<OrdenesCopiables :ordenes="f.ordenes"') && !ajustes.includes('pre-line'), 'Ajustes → Servidor, igual')
 })
 
 test('tras iniciar sesión, la suscripción que falta se activa con su orden donde no hay botón (Ruling 34)', () => {
@@ -42,7 +57,7 @@ test('«Usar mi suscripción» solo sale en una sesión de este equipo fuera del
   assert.equal(puedeElegirSuscripcion(true, sesion('servidor'), servidor(true)), false)
   // Agentes.vue decide los botones de la suscripción con ella, y en el servidor enseña la orden.
   const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
-  assert.ok(pagina.includes('puedeElegirSuscripcion(') && pagina.includes('ordenSuscripcion('))
+  assert.ok(pagina.includes('puedeElegirSuscripcion(') && pagina.includes('ordenesSuscripcion('))
 })
 
 test('volver a la clave de API sí se puede en el servidor, también desde la sesión remota, como en la terminal', () => {

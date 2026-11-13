@@ -1178,6 +1178,20 @@ body.body--dark .tablero {
   text-align: right;
   overflow-wrap: anywhere;
 }
+.ficha .bloque-codigo {
+  text-align: left;
+}
+/* Una ficha con órdenes en bloques (Ajustes → Servidor): en un móvil, la etiqueta encima y el valor debajo, a lo ancho,
+   para que las órdenes quepan sin partirse letra a letra. */
+@media (max-width: 599px) {
+  .ficha--apilable {
+    grid-template-columns: 1fr;
+  }
+  .ficha--apilable > div:nth-child(even) {
+    border-top: none;
+    text-align: left;
+  }
+}
 
 /* Leyenda de orígenes de Ajustes: cada etiqueta con lo que significa, una por línea. */
 .leyenda-origenes {
