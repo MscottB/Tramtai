@@ -3,7 +3,7 @@
 # carpeta de usuario temporal (HOME y XDG_* apuntan ahí) e imprime dónde quedó, su --version, los archivos que dejó y
 # qué archivos de arranque de la shell tocó. Con ACTUALIZAR=1 ejecuta después su orden de actualizar y, con SESION=1,
 # lanza su inicio de sesión dos veces (con tuberías y con una pseudoterminal de `script`), guarda lo que imprime en 25 s
-# y lo cierra; con DESINSTALAR=1, lo quita como lo haría la receta. Lo usa el job agentes-compatibilidad.yml:
+# y lo cierra; con DESINSTALAR=1, lo quita como lo haría la receta. Lo usó el M0:
 #   [VERSION=2.1.311] [ACTUALIZAR=1] [SESION=1] [DESINSTALAR=1] sh scripts/agentes/probar-instalacion.sh claude [carpeta]
 set -eu
 

@@ -106,6 +106,12 @@ func (p *Preparador) ultimaPublicada(ctx context.Context, agente string) (string
 	return ultima, nil
 }
 
+// UltimaPublicada es la última versión publicada del agente según la fuente de su receta, sin el gancho de Opciones (el
+// job de compatibilidad pone el suyo para GitHub y usa este para las demás fuentes).
+func (p *Preparador) UltimaPublicada(ctx context.Context, agente string) (string, error) {
+	return p.ultimaPublicada(ctx, agente)
+}
+
 // versionPara es la versión que usaría la acción: la instalada al iniciar sesión o desinstalar; la última publicada al
 // actualizar con la orden de la receta; al instalar (o reinstalar), la comprobada más reciente si el instalador la fija
 // y, si no, la última publicada. ultima solo se llama si hace falta; vacía si no se sabe.

@@ -2,7 +2,7 @@
 # carpeta de usuario temporal (USERPROFILE, HOME, APPDATA, LOCALAPPDATA y TEMP apuntan ahí) e imprime dónde quedó, su
 # --version, los archivos que dejó y si cambió el PATH de usuario del registro. Con -Actualizar ejecuta después su orden
 # de actualizar; con -ProbarSesion, lanza su inicio de sesión con tuberías, guarda lo que imprime en 25 s y lo cierra; y
-# con -Desinstalar lo quita como lo haría la receta. Lo usa el job agentes-compatibilidad.yml:
+# con -Desinstalar lo quita como lo haría la receta. Lo usó el M0:
 #   pwsh -NoProfile -File scripts/agentes/probar-instalacion.ps1 -Agente claude [-Version 2.1.311] [-Actualizar] [-ProbarSesion] [-Desinstalar]
 # Copilot va con winget (la orden oficial en Windows) o, con -Descarga, con su descarga directa de GitHub Releases
 # (copilot-win32-x64.zip y su SHA256SUMS.txt) en la carpeta donde lo deja su MSI.

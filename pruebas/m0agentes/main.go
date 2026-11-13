@@ -3,7 +3,7 @@
 // Package main es la sonda del M0 de la v0.60 en Windows Server (docs/equipo/releases/v0.60-preparar-agentes/m0.md):
 // registrada como servicio con su cuenta virtual (NT SERVICE\<nombre>), ejecuta la orden de sus argumentos con la
 // salida en un archivo y detiene el servicio cuando la orden termina. Así se ve si esa cuenta puede instalar un CLI y
-// lanzar su inicio de sesión (scripts/agentes/probar-instalacion.ps1). La usa el job agentes-compatibilidad.yml:
+// lanzar su inicio de sesión (scripts/agentes/probar-instalacion.ps1). La usó el M0:
 //
 //	go build -tags m0agentes -o C:\ProgramData\TramtaiM0Agentes\sonda.exe ./pruebas/m0agentes
 //	sc.exe create TramtaiM0Agentes binPath= "C:\ProgramData\TramtaiM0Agentes\sonda.exe <salida.log> <programa> <args…>" obj= "NT SERVICE\TramtaiM0Agentes"

@@ -1,64 +1,80 @@
-# Compatibilidad de los CLI de los agentes (v0.60). Por ahora es el M0 (docs/equipo/releases/v0.60-preparar-agentes/m0.md):
-# instala cada CLI con su instalador oficial en una carpeta de usuario temporal de Linux, macOS y Windows Server, lo
-# actualiza desde una versión fijada, lanza su inicio de sesión hasta el enlace y el código, sin cuenta (se cierra a
-# los 25 s), y lo desinstala. En Windows Server, además, lo mismo con la cuenta virtual de un servicio de prueba. La Tarea 13 le añade
-# la ejecución semanal y la lista firmada de versiones comprobadas.
+# Compatibilidad de los CLI de los agentes (spec de la v0.60 › «Versiones comprobadas»). Cada semana, y a mano, prepara
+# cada CLI con su receta en Linux, macOS y Windows Server como lo haría el servicio (cmd/compatibilidad): instala la
+# última versión, lanza su inicio de sesión hasta el enlace y el código, sin cuenta, lo cancela, lo actualiza y lo
+# desinstala. Lo que pasa en los tres sistemas se añade a la lista firmada del release fijo «compatibilidad», que
+# Tramtai lee con su búsqueda diaria de versiones (internal/preparar, LeerLista); lo que no pasa abre (o comenta) un
+# issue.
 name: Compatibilidad de los agentes
 
 on:
+  schedule:
+    - cron: '23 5 * * 1' # los lunes
   workflow_dispatch:
-  # Temporal, solo para el M0: workflow_dispatch no se puede lanzar hasta que el archivo esté en main. La Tarea 13 lo quita.
-  push:
-    branches: ['v0.60/t01-*']
-    paths: ['.github/workflows/agentes-compatibilidad.yml', 'scripts/agentes/**', 'pruebas/m0agentes/**']
 
-permissions:
-  contents: read
+# Cada job pide lo suyo: leer en la matriz, que ejecuta los instaladores de terceros; escribir en el release solo al
+# publicar; issues solo al avisar.
+permissions: {}
+
+concurrency:
+  group: agentes-compatibilidad
+  cancel-in-progress: false
 
 jobs:
-  instalar:
-    name: ${{ matrix.agente }} (${{ matrix.os }})
-    timeout-minutes: 20
+  comprobar:
+    name: Comprobar (${{ matrix.os }})
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2025]
-        agente: [claude, codex, copilot, antigravity]
-        # Una versión anterior a la última, para ver que se puede fijar y que «actualizar» sube. Antigravity no deja fijarla.
-        include:
-          - { agente: claude, version: 2.1.311 }
-          - { agente: codex, version: 0.167.1 }
-          - { agente: copilot, version: 1.0.108 }
     runs-on: ${{ matrix.os }}
-    # Los valores de la matriz llegan a los run: por el entorno, nunca pegados en la orden.
-    env:
-      AGENTE: ${{ matrix.agente }}
-      VERSION: ${{ matrix.version }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Instalar, actualizar e iniciar sesión (Linux y macOS)
+      # Sin caché: los instaladores son código de terceros y la caché de Go la leen otros jobs (también el que firma).
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      # El resultado se escribe tras cada agente: con el plazo agotado, lo hecho se sube igual. GITHUB_TOKEN (de solo
+      # lectura, como el job) es para consultar la última versión en la API de GitHub sin su límite por IP: el programa lo
+      # quita de su entorno al arrancar y nunca llega a un instalador ni a un CLI (Ruling 33).
+      - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI
         if: runner.os != 'Windows'
+        timeout-minutes: 75
         env:
-          ACTUALIZAR: '1'
-          SESION: '1'
-          DESINSTALAR: '1'
-        run: sh scripts/agentes/probar-instalacion.sh "$AGENTE" "$RUNNER_TEMP/casa"
-      - name: Instalar, actualizar e iniciar sesión (Windows Server)
+          GITHUB_TOKEN: ${{ github.token }}
+        run: go run ./cmd/compatibilidad comprobar "$RUNNER_TEMP/resultado/$RUNNER_OS.json"
+      # En Windows, desde cmd, como el servicio: bash pondría el tar de Git delante (el instalador de Codex falla) y
+      # pwsh pasaría su PSModulePath al powershell de los instaladores (el de Claude no encuentra Get-FileHash).
+      - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI (Windows)
         if: runner.os == 'Windows'
-        run: ./scripts/agentes/probar-instalacion.ps1 -Agente $env:AGENTE -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion -Desinstalar
-      # Copilot sin winget (no está para la cuenta de un servicio): su descarga directa de GitHub Releases.
-      - name: Copilot por su descarga directa (Windows Server)
-        if: runner.os == 'Windows' && matrix.agente == 'copilot'
-        run: ./scripts/agentes/probar-instalacion.ps1 -Agente copilot -Descarga -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa-descarga" -Actualizar -ProbarSesion -Desinstalar
+        timeout-minutes: 75
+        shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: go run ./cmd/compatibilidad comprobar "%RUNNER_TEMP%\resultado\%RUNNER_OS%.json"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: resultado-${{ runner.os }}
+          path: ${{ runner.temp }}/resultado/
+          retention-days: 7
 
-  # ¿Puede la cuenta virtual de un servicio (como la de Tramtai en modo servidor) instalar cada CLI y lanzar su inicio
-  # de sesión? Cada agente, con su servicio y su cuenta (NT SERVICE\TramtaiM0<agente>), en su perfil de verdad.
-  cuenta-virtual:
-    name: Cuenta virtual de un servicio (Windows Server)
-    timeout-minutes: 60
-    runs-on: windows-2025
+  # Solo en main (la ejecución semanal y la manual): una rama no publica la lista ni abre issues.
+  publicar:
+    name: Juntar, firmar y publicar la lista
+    needs: comprobar
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }} # un sistema sin resultado también se avisa
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      fallos: ${{ steps.juntar.outputs.fallos }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -66,28 +82,122 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-          cache-dependency-path: '**/go.sum'
-      - name: Sonda
-        run: New-Item -ItemType Directory -Force C:\ProgramData\TramtaiM0Agentes | Out-Null; go build -tags m0agentes -o C:\ProgramData\TramtaiM0Agentes\sonda.exe ./pruebas/m0agentes
-      - name: Instalar e iniciar sesión con la cuenta virtual
+          cache: false
+      # Cada sistema en su carpeta: juntar recibe un resultado por sistema y comprueba que es de ese sistema.
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: resultado-*
+          path: resultados
+      # La lista publicada se amplía solo si su firma vale: nunca se vuelve a firmar algo que no firmó este job. Sin el
+      # release se empieza de cero; con el release, la lista y su firma tienen que estar y valer, y cualquier otro fallo
+      # de la consulta para el job: empezar de cero bajaría la version publicada.
+      - name: Bajar la lista publicada
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $dir = 'C:\ProgramData\TramtaiM0Agentes'
-          Copy-Item scripts\agentes\probar-instalacion.ps1 $dir
-          $pwsh = (Get-Command pwsh).Source
-          foreach ($a in 'claude', 'codex', 'copilot', 'antigravity') {
-            $n = "TramtaiM0$a"
-            $log = "$dir\$a.log"
-            $bin = "`"$dir\sonda.exe`" `"$log`" `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$dir\probar-instalacion.ps1`" -Agente $a -SinAislar -Actualizar -ProbarSesion -Desinstalar$(if ($a -eq 'copilot') { ' -Descarga' })"
-            sc.exe create $n binPath= $bin obj= "NT SERVICE\$n" | Out-Null
-            icacls $dir /grant "NT SERVICE\${n}:(OI)(CI)M" | Out-Null
-            sc.exe start $n | Out-Null
-            $limite = (Get-Date).AddMinutes(12)
-            while ((Get-Service $n).Status -ne 'Stopped' -and (Get-Date) -lt $limite) { Start-Sleep 5 }
-            if ((Get-Service $n).Status -ne 'Stopped') { sc.exe stop $n | Out-Null; Start-Sleep 5 }
-            Write-Host "`n################ $a ($n)"
-            if (Test-Path $log) { Get-Content $log } else { Write-Host 'sin registro: el servicio no llegó a escribirlo' }
-            Write-Host "`n--- perfil C:\Windows\ServiceProfiles\$n"
-            Get-ChildItem "C:\Windows\ServiceProfiles\$n" -Recurse -Force -Depth 5 -File -ErrorAction SilentlyContinue |
-              Select-Object -First 60 | ForEach-Object { '{0,12}  {1}' -f $_.Length, $_.FullName }
-            sc.exe delete $n | Out-Null
-          }
+          mkdir anterior
+          if salida=$(gh release view compatibilidad --json name 2>&1); then
+            gh release download compatibilidad -p compatibilidad.json -p compatibilidad.json.sig -D anterior
+            test -f anterior/compatibilidad.json
+            test -f anterior/compatibilidad.json.sig
+            go run ./scripts/firmar -comprobar anterior/compatibilidad.json
+          elif [ "$salida" != 'release not found' ]; then
+            echo "$salida"
+            exit 1
+          fi
+      - name: Juntar
+        id: juntar
+        run: |
+          go build -o "$RUNNER_TEMP/compatibilidad" ./cmd/compatibilidad
+          pares=()
+          for par in linux:Linux darwin:macOS windows:Windows; do
+            ruta="resultados/resultado-${par#*:}/${par#*:}.json"
+            if [ -f "$ruta" ]; then pares+=("${par%%:*}=$ruta"); fi
+          done
+          set +e
+          "$RUNNER_TEMP/compatibilidad" juntar anterior/compatibilidad.json nueva/compatibilidad.json "${pares[@]}" > fallos.md
+          codigo=$?
+          set -e
+          # La última versión de Antigravity sale del manifiesto que usan sus instaladores (DOWNLOAD_BASE_URL), sin
+          # documentar (Ruling 12 de la v0.60): se avisa si deja de responder o si los instaladores cambian de sitio.
+          manifiesto=$(grep -o 'https://antigravity-cli-auto-updater[^"]*' internal/agentes/antigravity/ficha.go || true)
+          if [ -z "$manifiesto" ]; then
+            echo "- **antigravity**: no se encuentra la URL del manifiesto en internal/agentes/antigravity/ficha.go; ajusta esta comprobación" >> fallos.md
+          else
+            base=${manifiesto%%/manifests/*}
+            curl -fsS --max-time 30 "$manifiesto" | grep '"version"' > /dev/null ||
+              echo "- **antigravity**: el manifiesto $manifiesto no responde con su versión; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
+            for guion in install.sh install.ps1; do
+              curl -fsSL --max-time 30 "https://antigravity.google/cli/$guion" | grep -F "$base" > /dev/null ||
+                echo "- **antigravity**: $guion ya no descarga de $base; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
+            done
+          fi
+          cat fallos.md
+          if [ -s fallos.md ]; then echo 'fallos=si' >> "$GITHUB_OUTPUT"; fi
+          if [ "$codigo" -ne 0 ] && [ "$codigo" -ne 2 ]; then exit "$codigo"; fi
+          if [ -f nueva/compatibilidad.json ]; then cat nueva/compatibilidad.json; else echo 'Nada nuevo: no se publica.'; fi
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() && steps.juntar.outputs.fallos == 'si' }}
+        with:
+          name: fallos
+          path: fallos.md
+          retention-days: 7
+      - name: Firmar la lista
+        if: hashFiles('nueva/compatibilidad.json') != ''
+        working-directory: nueva
+        env:
+          FIRMA_ACTUALIZACIONES: ${{ secrets.FIRMA_ACTUALIZACIONES }}
+        run: go run ../scripts/firmar compatibilidad.json
+      - name: Comprobar la firma con las claves públicas de la app
+        if: hashFiles('nueva/compatibilidad.json') != ''
+        working-directory: nueva
+        run: go run ../scripts/firmar -comprobar compatibilidad.json
+      # Previa, para que no cuente como versión de Tramtai (releases/latest y la lista de novedades la saltan).
+      - name: Publicar en el release compatibilidad
+        if: hashFiles('nueva/compatibilidad.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view compatibilidad > /dev/null 2>&1 ||
+            gh release create compatibilidad --prerelease --title 'Versiones comprobadas de los CLI de los agentes' \
+              --notes 'Lista firmada que publica cada semana el workflow «Compatibilidad de los agentes». No es una versión de Tramtai.'
+          gh release upload compatibilidad nueva/compatibilidad.json nueva/compatibilidad.json.sig --clobber
+
+  # También si publicar falló (la lista no salió) o ningún sistema dejó resultado.
+  avisar:
+    name: Avisar de lo que no pasó
+    needs: publicar
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (needs.publicar.result == 'failure' || needs.publicar.outputs.fallos == 'si') }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v8
+        if: needs.publicar.outputs.fallos == 'si'
+        with:
+          name: fallos
+      # Un solo issue abierto: si ya lo hay, se comenta.
+      - name: Abrir o comentar el issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EJECUCION: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PUBLICAR: ${{ needs.publicar.result }}
+        run: |
+          titulo='Compatibilidad de los agentes: algo no pasa con la receta'
+          {
+            echo "La [comprobación de esta semana]($EJECUCION) encontró esto (no se añadió a la lista firmada):"
+            if [ "$PUBLICAR" = failure ]; then
+              echo
+              echo '- El job «Juntar, firmar y publicar la lista» falló: la lista no se publicó. Mira la ejecución.'
+            fi
+            if [ -f fallos.md ]; then echo; cat fallos.md; fi
+          } > cuerpo.md
+          numero=$(gh issue list --state open --search "\"$titulo\" in:title" --json number,title \
+            -q ".[] | select(.title == \"$titulo\") | .number" | head -n 1)
+          if [ -n "$numero" ]; then
+            gh issue comment "$numero" --body-file cuerpo.md
+          else
+            gh issue create --title "$titulo" --body-file cuerpo.md
+          fi
