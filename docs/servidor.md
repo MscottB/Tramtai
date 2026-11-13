@@ -474,7 +474,7 @@ Después, cuando termine:
 sudo tramtai-servidor agentes suscripcion claude    # enseña los riesgos 1 y 2 y pide «acepto»
 ```
 
-Hasta entonces, `agentes entrar` sale con el código 3 y te da esa orden. Agentes y Ajustes → Servidor enseñan las dos (en la Web UI,
+Hasta entonces, `agentes entrar` sale con el código 3 y te da esa orden. En este caso, Agentes y Ajustes → Servidor enseñan las dos (en la Web UI,
 cada una con su botón de copiar).
 
 **Abierto a la red,** solo la **suscripción personal**, por agente, también después de `agentes entrar`:
