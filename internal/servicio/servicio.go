@@ -99,6 +99,9 @@ type Opciones struct {
 	// PrepararAgentes crea la preparación de los CLI de los agentes (internal/preparar): /api/v1/agentes/{id}/preparacion
 	// y la comprobación diaria de sus versiones. false en las pruebas que no la usan: no lanza ni consulta nada.
 	PrepararAgentes bool
+	// OrdenConsola es, en el modo servidor, el inicio de sesión a mano como la cuenta del servicio
+	// (preparar.Opciones.OrdenConsola); nil fuera de él.
+	OrdenConsola func(cli string, args []string) string
 	// Preparacion, si no es nil, es la preparación de los CLI en lugar de la real: las pruebas de las pantallas ponen una
 	// que no instala nada.
 	Preparacion Preparacion
