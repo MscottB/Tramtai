@@ -294,6 +294,12 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.pend = nil
 	case tea.KeyPressMsg:
 		return p, p.tecla(m)
+	default:
+		if p.pegando { // lo que no es una tecla (el pegado de Ctrl+V de textinput) es del campo
+			var cmd tea.Cmd
+			p.pegar, cmd = p.pegar.Update(msg)
+			return p, cmd
+		}
 	}
 	return p, nil
 }

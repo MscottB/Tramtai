@@ -255,7 +255,7 @@ func (p *Pagina) teclasPreparar() []pagina.Tecla {
 			t = append(t, pagina.Tecla{Tecla: "e", Accion: idioma.T("pegar código")})
 		}
 	}
-	if p.hayEnMarcha() {
+	if e, ok := p.estados[p.foco]; ok && enMarcha(e) {
 		t = append(t, pagina.Tecla{Tecla: "k", Accion: idioma.T("cancela")})
 	}
 	return t
@@ -271,25 +271,6 @@ func (p *Pagina) hayEnMarcha() bool {
 	return false
 }
 
-// objetivo es el agente de la preparación en marcha a la que se refiere k: la que se enseña o, si esa no lo está, la
-// primera que lo esté.
-func (p *Pagina) objetivo() (string, bool) {
-	if e, ok := p.estados[p.foco]; ok && enMarcha(e) {
-		return p.foco, true
-	}
-	ids := make([]string, 0, len(p.estados))
-	for id := range p.estados {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	for _, id := range ids {
-		if enMarcha(p.estados[id]) {
-			return id, true
-		}
-	}
-	return "", false
-}
-
 // noDisponible es el aviso de una tecla de preparar que no vale para este agente ahora.
 func noDisponible() tea.Cmd {
 	return comp.Aviso(idioma.T("Esta acción no está disponible ahora para este agente"), comp.Advertencia)
@@ -298,7 +279,7 @@ func noDisponible() tea.Cmd {
 // pedir lanza una acción de preparar sobre el agente elegido si el servicio la habilita.
 func (p *Pagina) pedir(a contrato.Adaptador, accion string) tea.Cmd {
 	o := p.opcionesDe(a)
-	valida := map[string]bool{accionInstalar: o.instalar, accionIniciar: o.iniciar, accionActualizar: o.actualizar, accionDesinstalar: o.desinstalar}[accion]
+	valida := map[string]bool{accionInstalar: o.instalar, accionIniciar: o.iniciar, accionActualizar: o.actualizar}[accion] // desinstalar va por pedirDesinstalar
 	if !valida {
 		return noDisponible()
 	}
@@ -364,6 +345,9 @@ func (p *Pagina) alLanzar(m msgLanzada) tea.Cmd {
 	}
 	p.estados[m.agente] = m.e
 	p.sincronizarCampo()
+	if m.Gen != p.gen { // oculta: Mostrar retoma el seguimiento y refresca
+		return nil
+	}
 	if enMarcha(m.e) {
 		return p.sondear()
 	}
@@ -418,8 +402,8 @@ func (p *Pagina) seguir() tea.Cmd {
 
 // cancelar corta la preparación en marcha.
 func (p *Pagina) cancelar() tea.Cmd {
-	agente, ok := p.objetivo()
-	if !ok {
+	agente := p.foco
+	if e, ok := p.estados[agente]; !ok || !enMarcha(e) {
 		return nil
 	}
 	c, o := p.c, p.origen()
@@ -616,8 +600,9 @@ func nuevoCampo() textinput.Model {
 // teclaCampo atiende una tecla con el campo para pegar a la vista: Intro envía, Esc suelta el foco.
 func (p *Pagina) teclaCampo(k tea.KeyPressMsg) tea.Cmd {
 	switch k.String() {
-	case "esc":
+	case "esc": // lo escrito no se queda en el campo
 		p.pegando = false
+		p.pegar.Reset()
 		p.pegar.Blur()
 		return nil
 	case "enter":
@@ -751,8 +736,9 @@ func (p *Pagina) panel(ancho int) []string {
 			texto(plano, p.tx("preparar.abrirAjustesSeguridad")+": "+aviso.enlace)
 		}
 		if enlace := enlaceSeguro(e.Enlace); enlace != "" {
-			// Entero y partido en líneas del ancho de la terminal: así se selecciona y se copia.
-			l = append(l, strings.Split(ansi.Hardwrap(enlace, ancho, true), "\n")...)
+			// Entero y sin saltos propios: la terminal lo parte sola y al copiarlo sale entero. Con OSC 8 es también un
+			// hipervínculo (solo para un enlace que ya pasó enlaceSeguro).
+			l = append(l, "\x1b]8;;"+enlace+"\x1b\\"+enlace+"\x1b]8;;\x1b\\")
 		}
 		if e.Codigo != "" {
 			l = append(l, tenue(idioma.T("Código")+": ")+s.Titulo.Render(limpio(e.Codigo)))

@@ -1,6 +1,7 @@
 package agentes_test
 
 import (
+	"errors"
 	"maps"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"tramtai/internal/preparar"
 	"tramtai/internal/servicio"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
 	"tramtai/internal/tui/paginas/prueba"
 )
@@ -231,8 +233,9 @@ func TestPrepararEsperaSinPegar(t *testing.T) {
 	}
 	f.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "esperando_usuario", Enlace: "https://claude.example/oauth/authorize?code=true&client_id=" + strings.Repeat("a", 120)})
 	tic(t, a, r)
-	if v := strings.ReplaceAll(a.Vista(), "\n", ""); !strings.Contains(v, strings.Repeat("a", 120)) {
-		t.Fatalf("el enlace largo se parte en líneas, entero:\n%s", a.Vista())
+	enlace := "https://claude.example/oauth/authorize?code=true&client_id=" + strings.Repeat("a", 120)
+	if v := a.Vista(); !strings.Contains(v, enlace) || !strings.Contains(v, "\x1b]8;;"+enlace+"\x1b\\"+enlace+"\x1b]8;;\x1b\\") {
+		t.Fatalf("el enlace va entero, sin saltos propios, y como hipervínculo OSC 8:\n%s", v)
 	}
 }
 
@@ -430,9 +433,8 @@ func TestPrepararEnElServidor(t *testing.T) {
 	a.HastaVer("Para la cuenta del servicio (")
 }
 
-// TestPrepararEscCierraLoTerminado: Esc quita primero la preparación que terminó y solo después sale de la página; con el
-// campo para pegar, Esc suelta el foco y e lo recupera.
-func TestPrepararEscCierraLoTerminado(t *testing.T) {
+// TestPrepararEscSueltaElCampo: con el campo para pegar, Esc suelta el foco y borra lo escrito, y e lo recupera vacío.
+func TestPrepararEscSueltaElCampo(t *testing.T) {
 	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinSesion}, nil,
 		versiones("claude", "2.1.0", "", map[string]bool{"iniciar_sesion": true}, "iniciar_sesion"))
 	a.Pulsar("down", "s")
@@ -442,15 +444,28 @@ func TestPrepararEscCierraLoTerminado(t *testing.T) {
 	if !a.P.EnCampo() {
 		t.Fatal("el campo para pegar tiene el foco")
 	}
+	a.Pegar("secreto-456")
 	a.Pulsar("esc")
 	if a.P.EnCampo() || !strings.Contains(pie(a), "e pegar código") {
 		t.Fatalf("Esc suelta el campo y e lo recupera: %v %s", a.P.EnCampo(), pie(a))
 	}
 	a.Pulsar("e")
-	if !a.P.EnCampo() {
-		t.Fatal("e vuelve al campo")
+	if !a.P.EnCampo() || strings.Contains(a.Vista(), "*") {
+		t.Fatalf("e vuelve a un campo vacío:\n%s", a.Vista())
 	}
-	a.Pulsar("esc")
+	a.Pulsar("enter")
+	a.Asentar()
+	if len(f.Codigos()) != 0 {
+		t.Fatalf("lo escrito antes de soltar el campo no se envía: %q", f.Codigos())
+	}
+}
+
+// TestPrepararEscCierraLoTerminado: Esc quita primero la preparación que terminó y solo después sale de la página.
+func TestPrepararEscCierraLoTerminado(t *testing.T) {
+	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinSesion}, nil,
+		versiones("claude", "2.1.0", "", map[string]bool{"iniciar_sesion": true}, "iniciar_sesion"))
+	a.Pulsar("down", "s")
+	esperar(t, a, f, 1)
 	f.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "listo"})
 	tic(t, a, r)
 	quiere(t, a.Vista(), "Sesión iniciada en Claude: ya puedes usarlo.")
@@ -460,4 +475,71 @@ func TestPrepararEscCierraLoTerminado(t *testing.T) {
 	noQuiere(t, a.Vista(), "Sesión iniciada en Claude")
 	a.Pulsar("esc")
 	a.Hasta(func() bool { return len(a.Fuera) > 0 })
+}
+
+// TestPrepararCancelaSoloLaQueSeVe: con dos preparaciones en marcha, k cancela solo la que se enseña (la última lanzada), y
+// el pie ofrece k solo mientras esa está en marcha.
+func TestPrepararCancelaSoloLaQueSeVe(t *testing.T) {
+	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinCLI, "codex": sinCLI}, nil,
+		versiones("claude", "", "", map[string]bool{"instalar": true}, "instalar"),
+		versiones("codex", "", "", map[string]bool{"instalar": true}, "instalar"))
+	a.Pulsar("down", "i")
+	esperar(t, a, f, 1)
+	a.Pulsar("down", "i")
+	esperar(t, a, f, 2)
+	a.HastaVer("Instalando Codex…")
+	a.Pulsar("k")
+	a.Hasta(func() bool { return len(f.Canceladas()) == 1 })
+	if c := f.Canceladas(); c[0] != "codex" {
+		t.Fatalf("cancela la que se enseña: %v", c)
+	}
+	tic(t, a, r)
+	noQuiere(t, pie(a), "k cancela")
+	a.Pulsar("k")
+	a.Asentar()
+	if len(f.Canceladas()) != 1 {
+		t.Fatalf("sin la preparación del foco en marcha, k no cancela otra: %v", f.Canceladas())
+	}
+}
+
+// TestPrepararOcultaNoSondea: con la página oculta no se consulta el estado, ni siquiera tras una acción que el servicio
+// aceptó a destiempo; al mostrarla vuelve el seguimiento.
+func TestPrepararOcultaNoSondea(t *testing.T) {
+	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinCLI}, nil,
+		versiones("claude", "", "", map[string]bool{"instalar": true}, "instalar"))
+	o := a.P.(pagina.Ocultable)
+	a.Pulsar("down")
+	cmds := a.Retener(func() { a.Pulsar("i") })
+	o.Ocultar()
+	a.Soltar(cmds) // la respuesta llega con la página oculta
+	esperar(t, a, f, 1)
+	antes := f.Consultas("claude")
+	r.Pasar(10 * agentes.CadaSondeo)
+	a.Asentar()
+	if r.Esperando() != 0 || f.Consultas("claude") != antes {
+		t.Fatalf("oculta, no sondea: %d esperas, %d→%d consultas", r.Esperando(), antes, f.Consultas("claude"))
+	}
+	a.Correr(o.Mostrar())
+	tic(t, a, r)
+	if f.Consultas("claude") <= antes {
+		t.Fatal("al mostrarla vuelve a consultar")
+	}
+	quiere(t, a.Vista(), "Instalando Claude…")
+}
+
+// TestPrepararFalloAlEnviarElCodigo: si el servicio rechaza el código, se avisa con su mensaje y lo pegado no vuelve a verse.
+func TestPrepararFalloAlEnviarElCodigo(t *testing.T) {
+	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinSesion}, func(f *prueba.Preparacion) {
+		f.ErrCodigo = errors.New("el código no vale")
+	}, versiones("claude", "2.1.0", "", map[string]bool{"iniciar_sesion": true}, "iniciar_sesion"))
+	a.Pulsar("down", "s")
+	esperar(t, a, f, 1)
+	f.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "esperando_usuario", Enlace: "https://claude.example/a", PidePegar: true})
+	tic(t, a, r)
+	a.Pegar("secreto-789")
+	fuera := a.HastaSalir(func() { a.Pulsar("enter") }, prueba.HayAviso)
+	av, _ := aviso(fuera)
+	if !strings.Contains(av.Texto, "el código no vale") || strings.Contains(av.Texto, "secreto") || strings.Contains(a.Vista(), "secreto") {
+		t.Fatalf("aviso %q:\n%s", av.Texto, a.Vista())
+	}
 }

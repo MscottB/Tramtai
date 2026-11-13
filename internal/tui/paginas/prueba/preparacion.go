@@ -20,6 +20,8 @@ type Pedido struct {
 type Preparacion struct {
 	// Regla, si no es nil, decide qué pasa con un pedido en lugar del estado inicial de siempre.
 	Regla func(Pedido) (contrato.EstadoPreparacion, error)
+	// ErrCodigo, si no es nil, es lo que contesta Codigo.
+	ErrCodigo error
 
 	mu         sync.Mutex
 	estados    map[string]contrato.EstadoPreparacion
@@ -82,7 +84,7 @@ func (f *Preparacion) Codigo(agente, codigo string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.codigos = append(f.codigos, Pedido{Agente: agente, PedidoPreparacion: contrato.PedidoPreparacion{Accion: codigo}})
-	return nil
+	return f.ErrCodigo
 }
 
 // Versiones apunta si se pidió forzando y da las que fijó la prueba.
