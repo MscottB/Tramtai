@@ -50,6 +50,7 @@
   --fuente: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
   --serifa: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   --mono: 'Tramtai Mono', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
+  /* El orden no fuerza el oscuro: manda la preferencia del sistema, salvo que se elija Claro u Oscuro (abajo). */
   color-scheme: dark light;
 }
 /* Tema: el del sistema, salvo que se elija Claro u Oscuro (data-tema en <html>, ver sitio.js). */
@@ -209,7 +210,7 @@ section { padding: 72px 0; }
    pantalla hasta 11 px y, si aun así no cabe, la pantalla se desplaza dentro de su marco. */
 .terminal-figura { margin: 0; }
 .terminal-figura figcaption { margin-top: 12px; font-size: .9rem; }
-.ventana-terminal { width: fit-content; max-width: 100%; border: 1px solid var(--borde-fuerte); border-radius: var(--radio); overflow: hidden; background: light-dark(#ffffff, #0b0d10); color: light-dark(#0f1b1e, #e5edf0); box-shadow: var(--sombra); }
+.ventana-terminal { width: fit-content; max-width: 100%; border: 1px solid var(--borde-fuerte); border-radius: var(--radio); overflow: hidden; background: light-dark(#ffffff, #0b0d10); color: var(--texto); box-shadow: var(--sombra); }
 .ventana-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 6px 12px; background: var(--superficie-suave); border-bottom: 1px solid var(--borde); }
 .ventana-semaforo { display: inline-flex; gap: 6px; }
 .ventana-semaforo span { width: 12px; height: 12px; border-radius: 50%; background: var(--borde-fuerte); }

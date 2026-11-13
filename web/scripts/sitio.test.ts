@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
@@ -299,6 +299,23 @@ test('no queda Overpass', () => {
 
 test('cada letra lleva su licencia', () => {
   for (const f of ['INTER-OFL.txt', 'INSTRUMENT-OFL.txt', 'CASCADIA-OFL.txt']) assert.ok(existsSync(new URL('../../site/' + f, import.meta.url)), f)
+})
+
+const html_ = readdirSync(new URL('../../site/', import.meta.url), { recursive: true }).filter((f) => String(f).endsWith('.html')).map((f) => [String(f), leer(String(f))] as const)
+test('ninguna página usa var(--titulo)', () => {
+  for (const [ruta, html] of html_) assert.doesNotMatch(html, /var\(--titulo\)/, ruta)
+})
+
+// Inter e Instrument Serif llevan las letras de letras-caracteres.txt (receta en docs/equipo/desarrollo.md). El código, la
+// terminal (<pre>, <code>) y los scripts los pinta Tramtai Mono: van aparte.
+test('cada carácter del sitio está en el subconjunto de las letras', () => {
+  const lista = new Set(readFileSync(new URL('letras-caracteres.txt', import.meta.url), 'utf8'))
+  const entidades: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" }
+  for (const [ruta, html] of html_) {
+    const texto = html.replace(/<(pre|code|script|style)\b[\s\S]*?<\/\1>/g, ' ').replace(/<[^>]*>/g, ' ').replace(/&[#\w]+;/g, (e) => entidades[e] ?? e)
+    const faltan = [...new Set(texto)].filter((c) => !lista.has(c) && !/\s/.test(c))
+    assert.deepEqual(faltan, [], `${ruta}: rehaz las letras con estos caracteres`)
+  }
 })
 
 test('reducir movimiento para lo vivo', () => {
