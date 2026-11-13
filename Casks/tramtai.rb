@@ -1,9 +1,9 @@
-# Generado por scripts/paquetes.ps1 al publicar v0.59.0+12112026; no lo edites a mano.
+# Generado por scripts/paquetes.ps1 al publicar v0.60.0+13112026; no lo edites a mano.
 cask "tramtai" do
-  version "0.59.0"
-  sha256 "eb6a669345c290067b26c7fb8e0fd17174859d365a316e56a7bab9abe506580f"
+  version "0.60.0"
+  sha256 "b8a45fe2f0e3c1935983117e5838b059eeb13ad3ee3b713ee7d4957483af1404"
 
-  url "https://github.com/MscottB/Tramtai/releases/download/v0.59.0%2B12112026/Tramtai-v0.59.0%2B12112026-macos.dmg"
+  url "https://github.com/MscottB/Tramtai/releases/download/v0.60.0%2B13112026/Tramtai-v0.60.0%2B13112026-macos.dmg"
   name "Tramtai"
   desc "Tus agentes de IA (Claude Code, Codex, la API de Gemini) como una API local compatible con OpenAI y Anthropic"
   homepage "https://mscottb.github.io/Tramtai/"
