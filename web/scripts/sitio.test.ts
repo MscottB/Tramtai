@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
@@ -281,6 +281,29 @@ test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absoluta
   assert.match(html, /<meta name="robots" content="noindex">/)
   for (const u of [URL_SITIO, URL_SITIO + 'ayuda/', URL_SITIO + '#descargar']) assert.ok(html.includes(`href="${u}"`), u)
   assert.doesNotMatch(html, /(href|src)="(?!https?:|#)/, 'en una ruta cualquiera, lo relativo no carga')
+})
+
+// v0.61 (spec §1): Inter e Instrument Serif alojadas, con su licencia; Cascadia (la terminal) no cuenta para el tope.
+const estilo = leer('estilo.css')
+test('las letras de Inicio no pasan de 150 KB', () => {
+  const letras = [...estilo.matchAll(/@font-face \{[^}]*url\('([^']+)'\)/g)].map((m) => m[1]).filter((f) => f !== 'cascadia.woff2')
+  assert.ok(letras.length >= 2, letras.join(', '))
+  const total = letras.reduce((s, f) => s + statSync(new URL('../../site/' + f, import.meta.url)).size, 0)
+  assert.ok(total <= 150 * 1024, `${Math.round(total / 1024)} KB`)
+})
+
+test('no queda Overpass', () => {
+  assert.doesNotMatch(estilo, /overpass/i)
+  for (const [ruta, html] of todas) assert.doesNotMatch(html, /overpass/i, ruta)
+})
+
+test('cada letra lleva su licencia', () => {
+  for (const f of ['INTER-OFL.txt', 'INSTRUMENT-OFL.txt', 'CASCADIA-OFL.txt']) assert.ok(existsSync(new URL('../../site/' + f, import.meta.url)), f)
+})
+
+test('reducir movimiento para lo vivo', () => {
+  const bloques = estilo.split('@media (prefers-reduced-motion: reduce)').slice(1)
+  assert.ok(bloques.some((b) => /^[^@]*\.vivo/.test(b)))
 })
 
 test('las tablas no pierden su semántica y las capturas de la Ayuda declaran su tamaño', () => {

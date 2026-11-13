@@ -94,7 +94,7 @@
   if (!navigator.clipboard) return;
   var copiar = '<span lang="es">Copiar</span><span lang="en">Copy</span>';
   var copiado = '<span lang="es">Copiado</span><span lang="en">Copied</span>';
-  document.querySelectorAll('pre.codigo').forEach(function (pre) {
+  document.querySelectorAll('pre.codigo, pre.bloque-codigo').forEach(function (pre) {
     var boton = document.createElement('button');
     boton.type = 'button';
     boton.className = 'copiar';
@@ -112,6 +112,16 @@
     });
     pre.appendChild(boton);
   });
+})();
+
+// Lo vivo (estilo.css) arranca su animación cuando entra en pantalla: .visto, una sola vez. Sin observador, ya.
+(function () {
+  var vivos = document.querySelectorAll('.vivo');
+  if (!('IntersectionObserver' in window)) return vivos.forEach(function (v) { v.classList.add('visto'); });
+  var vigia = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('visto'); vigia.unobserve(e.target); } });
+  }, { threshold: 0.25 });
+  vivos.forEach(function (v) { vigia.observe(v); });
 })();
 
 // Índice de la ayuda: marca la sección que se está leyendo.
