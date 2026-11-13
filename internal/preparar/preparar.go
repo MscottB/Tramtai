@@ -73,10 +73,16 @@ type Opciones struct {
 	// Comprobar es ComprobarSesion del agente: tras instalar, si ya hay sesión no se inicia otra; al terminar el inicio
 	// de sesión, la confirma. nil: no se comprueba.
 	Comprobar func(ctx context.Context, agente string) adaptadores.SesionCLI
-	// UltimaVersion da la última versión publicada, para una Descarga sin versión fijada (Copilot en Windows).
+	// UltimaVersion da la última versión publicada (vacía con error si no se sabe). nil: la del preparador, desde la
+	// FuenteVersion de la receta.
 	UltimaVersion func(ctx context.Context, agente string) (string, error)
-	// Comprobada dice si la versión está comprobada para la acción (Tarea 5); nil deja pasar todas.
+	// Comprobada dice si la versión está comprobada para la acción. nil: Preparador.Comprobada (receta, lista firmada y
+	// marcas locales).
 	Comprobada func(agente, accion, version string) bool
+	// Agentes son los ids del catálogo, en el orden en que los devuelve Versiones.
+	Agentes []string
+	// BuscarVersiones es servicio.buscar_versiones_agentes: con false no se consulta nada por la red. nil: true.
+	BuscarVersiones func() bool
 }
 
 // Preparador lleva una preparación por agente a la vez.
@@ -89,6 +95,8 @@ type Preparador struct {
 
 	mu     sync.Mutex
 	tareas map[string]*tarea
+	// mc guarda datos/agentes/compatibilidad.json (independiente de mu: Comprobada se llama sin mu).
+	mc sync.Mutex
 }
 
 type tarea struct {
@@ -111,7 +119,14 @@ type guardado struct {
 
 // Nuevo crea el preparador; Recuperar recoge lo que dejó un servicio anterior.
 func Nuevo(o Opciones) *Preparador {
-	return &Preparador{o: o, plazo: plazoPreparacion, plazoLector: 30 * time.Second, cliente: clienteHTTPS(), tareas: map[string]*tarea{}}
+	p := &Preparador{o: o, plazo: plazoPreparacion, plazoLector: 30 * time.Second, cliente: clienteHTTPS(), tareas: map[string]*tarea{}}
+	if p.o.Comprobada == nil {
+		p.o.Comprobada = p.Comprobada
+	}
+	if p.o.UltimaVersion == nil {
+		p.o.UltimaVersion = p.ultimaPublicada
+	}
+	return p
 }
 
 func (p *Preparador) carpeta() string { return filepath.Join(p.o.Datos, "agentes", "preparaciones") }
@@ -371,12 +386,12 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 }
 
 // conVersionSi es el programa con su versión, si se sabe («Claude Code 2.1.311» o «Claude Code»).
-func (c *corrida) conVersionSi(version string) string {
-	return strings.TrimSpace(c.f.Programa + " " + version)
+func conVersionSi(programa, version string) string {
+	return strings.TrimSpace(programa + " " + version)
 }
 
 func (c *corrida) noComprobada(version string) *Error {
-	return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai", c.conVersionSi(version))}
+	return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai", conVersionSi(c.f.Programa, version))}
 }
 
 // accion ejecuta lo pedido.
@@ -391,8 +406,9 @@ func (c *corrida) accion() error {
 		if instalado == "" {
 			return &Error{CodigoNoEncontrado, idioma.Tf("no se encuentra %s", c.f.Programa)}
 		}
+		// Sin comprobar no se inicia sesión, ni con Confirmar: el inicio de sesión automático queda desactivado.
 		version := numeroVersion(antes)
-		if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
+		if !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
 			return c.noComprobada(version)
 		}
 		return c.sesion(version)
@@ -401,21 +417,19 @@ func (c *corrida) accion() error {
 	orden, hayOrden := c.r.Actualizar[runtime.GOOS]
 	actualizar := c.pedido.Accion == "actualizar" && hayOrden && instalado != ""
 	descarga, hayDescarga := c.r.Descarga[runtime.GOOS]
-	// version es la que se instala si se sabe (la última publicada, para una descarga sin versión fijada; la Tarea 5 pone
-	// aquí la comprobada) o la que se desinstala.
-	version := ""
-	switch {
-	case c.pedido.Accion == "desinstalar":
-		version = numeroVersion(antes)
-	case !actualizar && hayDescarga:
-		var err error
-		if version, err = c.ultimaVersion(); err != nil {
-			return err
-		}
+	// version es la que se instala (la comprobada más reciente si el instalador la fija; si no, la última publicada), a la
+	// que se actualiza o la que se desinstala; vacía si no se sabe.
+	version := c.p.versionPara(c.agente, c.r, c.pedido.Accion, numeroVersion(antes), c.ultimaSi)
+	if version == "" && hayDescarga && !actualizar && c.pedido.Accion != "desinstalar" {
+		return &Error{CodigoSinRed, idioma.Tf("no se pudo consultar la última versión de %s", c.f.Programa)}
 	}
-	// Tarea 5: la versión debe estar comprobada para esta acción, salvo que el usuario confirme.
-	if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
+	// La versión debe estar comprobada para esta acción, salvo que el usuario confirme (se avisa antes).
+	if !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
 		return c.noComprobada(version)
+	}
+	// Solo se pasa a la orden si el instalador la fija; si no, instala la que dé.
+	if !c.r.FijaVersion && !hayDescarga {
+		version = ""
 	}
 	switch {
 	case c.pedido.Accion == "desinstalar":
@@ -445,17 +459,18 @@ func (c *corrida) accion() error {
 	return c.sesionTrasInstalar()
 }
 
-func (c *corrida) ultimaVersion() (string, error) {
-	if c.p.o.UltimaVersion == nil {
-		return "", &Error{CodigoSinRed, idioma.Tf("no se pudo consultar la última versión de %s", c.f.Programa)}
+// ultimaSi es la última versión publicada, consultada ahora, o vacía si no se pudo saber (sin red o sin búsqueda).
+func (c *corrida) ultimaSi() string {
+	if !c.p.buscaVersiones() { // también si el gancho es del servicio
+		return ""
 	}
-	ctx, cancelar := context.WithTimeout(c.ctx, 10*time.Second)
+	ctx, cancelar := context.WithTimeout(c.ctx, plazoVersion)
 	defer cancelar()
 	version, err := c.p.o.UltimaVersion(ctx, c.agente)
-	if err != nil || version == "" {
-		return "", &Error{CodigoSinRed, idioma.Tf("no se pudo consultar la última versión de %s", c.f.Programa)}
+	if err != nil {
+		return ""
 	}
-	return version, nil
+	return version
 }
 
 func (c *corrida) version(ruta string) string {

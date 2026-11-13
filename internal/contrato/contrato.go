@@ -338,3 +338,19 @@ type EstadoPreparacion struct {
 	Inicio         *time.Time `json:"inicio,omitempty"`
 	Fin            *time.Time `json:"fin,omitempty"`
 }
+
+// VersionesAgente es lo que GET /api/v1/agentes/versiones dice de un agente (internal/preparar).
+type VersionesAgente struct {
+	Agente string `json:"agente"`
+	// Instalada es la versión del CLI instalado (vacía si no está); Ultima, la última publicada (vacía si no se sabe).
+	Instalada string `json:"instalada,omitempty"`
+	Ultima    string `json:"ultima,omitempty"`
+	// Comprobadas dice, por cada acción posible ahora, si la versión que usaría está comprobada.
+	Comprobadas map[string]bool `json:"comprobadas"`
+	// Acciones son las habilitadas ahora. Instalar, actualizar o desinstalar una versión sin comprobar (Comprobadas en
+	// false) siguen habilitadas pero piden confirmar; iniciar sesión con una sin comprobar no está.
+	Acciones []string `json:"acciones"`
+	// MotivoCodigo y Motivo dicen por qué falta alguna o qué hay que avisar antes.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'sin_red'"`
+	Motivo       string `json:"motivo,omitempty"`
+}

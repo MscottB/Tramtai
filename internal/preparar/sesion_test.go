@@ -2,7 +2,9 @@ package preparar
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -312,13 +314,13 @@ func TestSesionNoReconocida(t *testing.T) {
 	}
 	latido := filepath.Join(t.TempDir(), "latido")
 	pr := nueva(t, fichaSesion(t, "copilot", "sesion", "PREPARAR_SALIDA="+otra, "PREPARAR_LATIDO="+latido))
-	pr.p.plazoLector = 2 * time.Second
+	pr.p.plazoLector = 5 * time.Second // con -race en Windows, 2 s no siempre llegan a la primera línea
 	ponerFalso(t, pr.casa)
 	inicio := time.Now()
 	lanzarSesion(t, pr.p)
 	e := final(t, pr.p, "falso")
 	if e.Estado != "error" || e.MotivoCodigo != CodigoSalidaNoReconocida || !slices.Contains(e.Lineas, "nada que ver") ||
-		!strings.Contains(e.Mensaje, "falso login") || time.Since(inicio) > 10*time.Second {
+		!strings.Contains(e.Mensaje, "falso login") || time.Since(inicio) > 15*time.Second {
 		t.Fatalf("estado %+v", e)
 	}
 	muertos(t, latido)
@@ -365,7 +367,8 @@ func TestSesionNoSeLanza(t *testing.T) {
 		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai" {
 		t.Fatalf("sin comprobar: %+v", e)
 	}
-	// Sin versión que decir (un instalador que no la fija), el mensaje no queda con dos espacios.
+	// Sin versión que decir (un instalador que no la fija y la última sin consultar), el mensaje no queda con dos espacios.
+	pr.p.o.UltimaVersion = func(context.Context, string) (string, error) { return "", errors.New("sin red") }
 	if e := iniciar(t, pr.p, "instalar"); e.MotivoCodigo != CodigoVersionNoComprobada || e.Mensaje != "Falso CLI aún no está comprobado con Tramtai" {
 		t.Fatalf("sin versión: %+v", e)
 	}
