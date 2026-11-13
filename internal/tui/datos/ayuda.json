@@ -109,7 +109,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.",
+      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles, c comprueba, d conecta o desconecta, a cambia la autenticación; i instala, s inicia sesión, u actualiza, x desinstala y l enseña el registro.",
       "bloques": [
         {
           "tipo": "web",
@@ -1731,7 +1731,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.",
+      "terminal": "In the terminal: 2 opens Agents. Enter shows the details, c checks, d connects or disconnects, a switches authentication; i installs, s signs in, u updates, x uninstalls and l shows the log.",
       "bloques": [
         {
           "tipo": "web",

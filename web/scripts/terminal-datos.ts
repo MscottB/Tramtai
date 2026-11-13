@@ -42,6 +42,19 @@ export const CLAVES_AGENTES: string[] = [
   'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
   'agentes.servidorEntrar', 'agentes.servidorPersonal', 'agentes.servidorClave',
   'comun.si', 'comun.no', 'comun.cargando',
+  // Preparar los CLI desde la página (instalar, iniciar sesión, actualizar, desinstalar): los mismos textos que el panel de la Web UI.
+  'preparar.instalar', 'preparar.iniciarSesion', 'preparar.volverAIniciar', 'preparar.actualizar', 'preparar.desinstalar', 'preparar.verRegistro',
+  'preparar.hayNueva', 'preparar.instalarTexto', 'preparar.instalarTextoClave', 'preparar.cuentaServicio', 'preparar.empezando',
+  'preparar.esperaCodigo', 'preparar.esperaPegar', 'preparar.avisoCodex', 'preparar.abrirAjustesSeguridad', 'preparar.pegar',
+  'preparar.enviar', 'preparar.seguir', 'preparar.listoSinSesion', 'preparar.cancelado', 'preparar.noComprobadaTitulo',
+  'preparar.registroTitulo', 'preparar.sinRegistro', 'preparar.desinstalarTitulo', 'preparar.borrarDatos',
+  ...['instalando', 'actualizando', 'desinstalando', 'comprobando'].map((e) => 'preparar.estado.' + e),
+  ...['descarga', 'orden', 'borrado'].map((e) => 'preparar.etapa.' + e),
+  ...['instalar', 'actualizar', 'iniciar_sesion', 'desinstalar'].map((a) => 'preparar.listo.' + a),
+  ...['instalar', 'actualizar', 'iniciar_sesion', 'desinstalar'].map((a) => 'preparar.fallo.' + a),
+  ...['instalar', 'actualizar', 'desinstalar', 'iniciar_sesion'].map((a) => 'preparar.noComprobada.' + a),
+  ...['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
+    'no_disponible_en_servidor', 'interrumpida'].map((c) => 'preparar.error.' + c),
 ]
 
 // CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los
@@ -185,6 +198,7 @@ export const CLAVES_AJUSTES: string[] = [
   'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
   ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),
   'origen.internoDetalle', 'origen.proyectoDetalle', 'origen.localDetalle', 'origen.entornoDetalle',
+  'versionesAgentes.titulo', 'versionesAgentes.texto',
   ...['servicio', 'predeterminados', 'modelos', 'agentes', 'concurrencia', 'retencion', 'archivos', 'compatibilidad', 'otros'].map((s) => 'seccion.' + s),
   'predeterminado.titulo', 'predeterminado.texto', 'predeterminado.proyecto', 'predeterminado.guardado', 'predeterminado.esfuerzoGuardado',
   'historialAjustes.titulo', 'historialAjustes.texto', 'historialAjustes.respuestas', 'historialAjustes.respuestasHint',

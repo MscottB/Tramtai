@@ -565,7 +565,7 @@ const ayudaEs = {
   'ayuda.sinResultados.terminal': 'Nada coincide con «{texto}». Prueba con otra palabra, o pulsa w para buscar en la Ayuda del sitio.',
   // En la terminal: cómo se hace cada tema allí, con sus teclas. Solo lo enseña la Ayuda de la terminal.
   'ayuda.empezar.terminal': 'En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda y Esc vuelve. Ctrl+E cambia de espacio, W abre la Web UI en el navegador y q sale.',
-  'ayuda.agentes.terminal': 'En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.',
+  'ayuda.agentes.terminal': 'En la terminal: 2 abre Agentes. Enter enseña los detalles, c comprueba, d conecta o desconecta, a cambia la autenticación; i instala, s inicia sesión, u actualiza, x desinstala y l enseña el registro.',
   'ayuda.probar.terminal': 'En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje y c cancela la petición; k enseña el código y g guarda la prueba como API.',
   'ayuda.conectar.terminal': 'En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio y a Herramientas (tema «Conectar tus herramientas»).',
   'ayuda.conectarHerramientas.terminal': 'En la terminal: Mis APIs (4), ← → a Herramientas. Espacio activa o desactiva; Enter reactiva una desactualizada; t activa todas y T las desactiva; m cambia el modelo; R restaura; o olvida; r refresca.',

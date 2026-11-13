@@ -48,6 +48,9 @@ var receta = adaptadores.Receta{
 		Argumentos: []string{"login", "--device-auth"},
 		Enlace:     regexp.MustCompile(`(https://auth\.openai\.com/codex/device)`),
 		Codigo:     regexp.MustCompile(`one-time code[^\n]*\n\s*([A-Z0-9]{4}-[A-Z0-9]{5})\b`),
+		// ChatGPT pide activar una vez el código de dispositivo en sus ajustes de seguridad (Ruling 8 de la v0.60).
+		Aviso:       "preparar.avisoCodex",
+		AvisoEnlace: "https://chatgpt.com/#settings/Security",
 	},
 	Comprobadas: map[string][]string{
 		"instalar":       {"0.167.1", "0.167.2"},
