@@ -284,3 +284,13 @@ test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', ()
   assert.equal(r.pendientes[0].razon, t('bienvenida.noSeLanzo', { motivo: 'sin conexión' }))
   assert.equal(r.pendientes[1].razon, t('bienvenida.saltado'))
 })
+
+test('resumenFinal: sin enlace reconocido o con el inicio de sesión fallido, la razón es el mensaje con cómo hacerlo a mano', () => {
+  const mensaje = 'no se reconoció lo que escribió Codex en 30 s: inicia sesión en una consola con codex login --device-auth'
+  const r = resumenFinal(['codex', 'copilot', 'claude'], {
+    codex: { agente: 'codex', accion: 'instalar', estado: 'error', motivo_codigo: 'salida_no_reconocida', mensaje } as EstadoPreparacion,
+    copilot: { agente: 'copilot', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo', mensaje: 'falló: usa su clave de API' } as EstadoPreparacion,
+    claude: { agente: 'claude', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo' } as EstadoPreparacion,
+  })
+  assert.deepEqual(r.pendientes.map((p) => p.razon), [mensaje, 'falló: usa su clave de API', t('preparar.error.inicio_sesion_fallo')])
+})

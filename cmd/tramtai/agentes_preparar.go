@@ -526,7 +526,7 @@ func avisoNoComprobada(accion, id string) string {
 	case accion == accionDesinstalar:
 		return titulo + " " + idioma.T("Si sigues, se desinstala igualmente.")
 	case accion == accionIniciar:
-		return titulo + " " + idioma.T("El inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión a mano como se explica abajo.")
+		return titulo + " " + idioma.T("El inicio de sesión automático vuelve cuando lo esté. Mientras, mira abajo cómo seguir.")
 	}
 	return titulo
 }
@@ -611,9 +611,9 @@ func explicacion(codigo string) string {
 	case "plazo_agotado":
 		return idioma.T("Tardó demasiado y se cerró: vuelve a intentarlo.")
 	case "salida_no_reconocida":
-		return idioma.T("Tramtai no reconoció lo que escribió el CLI: inicia sesión a mano como se explica abajo.")
+		return idioma.T("Tramtai no reconoció lo que escribió el CLI: mira abajo cómo seguir.")
 	case "inicio_sesion_fallo":
-		return idioma.T("El inicio de sesión del CLI terminó con un error: vuelve a intentarlo o inicia sesión a mano como se explica abajo.")
+		return idioma.T("El inicio de sesión del CLI terminó con un error: vuelve a intentarlo o mira abajo cómo seguir.")
 	case "sin_red":
 		return idioma.T("No hay conexión con el sitio del CLI: revisa tu red y vuelve a intentarlo.")
 	case "no_disponible_en_servidor":

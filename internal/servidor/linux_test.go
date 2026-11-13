@@ -876,14 +876,20 @@ func TestIdsDe(t *testing.T) {
 }
 
 // TestOrdenConsola: el inicio de sesión a mano va como la cuenta del servicio, con su carpeta como HOME y el PATH del
-// servicio en un entorno limpio (env -i), sin depender de la política de sudo. Lo del entorno de quien la escribe no
-// entra. probar-servidor.sh lanza esta misma forma con el CLI que instala el servicio.
+// servicio en un entorno limpio (env -i), sin depender de la política de sudo; con TERM y LANG si están puestas, y nada
+// más del entorno. probar-servidor.sh lanza esta misma forma con el CLI que instala el servicio.
 func TestOrdenConsola(t *testing.T) {
+	cli, args := Rutas().Datos+"/.local/bin/codex", []string{"login", "--device-auth"}
+	base := "sudo -u tramtai -H env -i HOME=" + Rutas().Datos + " PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+	t.Setenv("TERM", "")
+	t.Setenv("LANG", "")
+	t.Setenv("LC_ALL", "es_ES.UTF-8")
+	if orden, quiere := OrdenConsola(cli, args), base+" "+cli+" login --device-auth"; orden != quiere {
+		t.Fatalf("sin TERM ni LANG:\n%s\nse esperaba\n%s", orden, quiere)
+	}
+	t.Setenv("TERM", "xterm-256color")
 	t.Setenv("LANG", "es_CL.UTF-8")
-	orden := OrdenConsola(Rutas().Datos+"/.local/bin/codex", []string{"login", "--device-auth"})
-	quiere := "sudo -u tramtai -H env -i HOME=" + Rutas().Datos + " PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin " +
-		Rutas().Datos + "/.local/bin/codex login --device-auth"
-	if orden != quiere {
-		t.Fatalf("%s\nse esperaba\n%s", orden, quiere)
+	if orden, quiere := OrdenConsola(cli, args), base+" TERM=xterm-256color LANG=es_CL.UTF-8 "+cli+" login --device-auth"; orden != quiere {
+		t.Fatalf("con TERM y LANG:\n%s\nse esperaba\n%s", orden, quiere)
 	}
 }

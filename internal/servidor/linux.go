@@ -503,8 +503,15 @@ const pathServicio = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 // OrdenConsola es el inicio de sesión del CLI de un agente (su ruta y los argumentos de su receta) para hacerlo a mano
 // en una consola como la cuenta del servicio, con su carpeta como HOME y un entorno limpio (env -i) que no depende de la
 // política de sudo: el CLI guarda la sesión donde la busca el servicio (Codex con suscripción, en ~/.codex de esa
-// carpeta). Tramtai no lee ni copia lo que guarde el CLI.
+// carpeta). TERM y LANG, si los tiene el servicio, van también: el inicio de sesión se ve bien en la consola y en su
+// idioma. Tramtai no lee ni copia lo que guarde el CLI.
+// shortcut: sin comillas: casa, ruta y argumentos son fijos; entrecomillar si alguno pudiera venir de configuración.
 func OrdenConsola(cli string, args []string) string {
-	orden := []string{"sudo", "-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio, cli}
-	return strings.Join(append(orden, args...), " ")
+	orden := []string{"sudo", "-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
+	for _, nombre := range []string{"TERM", "LANG"} {
+		if valor := os.Getenv(nombre); valor != "" {
+			orden = append(orden, nombre+"="+valor)
+		}
+	}
+	return strings.Join(append(append(orden, cli), args...), " ")
 }

@@ -198,6 +198,36 @@ func TestOpcionesExpuesto(t *testing.T) {
 	}
 }
 
+// TestOpcionesOrdenConsola: el servicio recibe la orden de la consola de la cuenta del servicio (servidor.OrdenConsola)
+// solo en el modo servidor; en el escritorio, nil (el inicio de sesión a mano es el CLI tal cual).
+func TestOpcionesOrdenConsola(t *testing.T) {
+	anterior, nuevo0, admin0 := dirDatos, nuevoServicio, esAdministrador
+	t.Cleanup(func() { dirDatos, nuevoServicio, esAdministrador = anterior, nuevo0, admin0 })
+	esAdministrador = func() bool { return false } // el servicio del servidor corre con su cuenta, no como administrador
+	var recibido []bool
+	nuevoServicio = func(o servicio.Opciones) (*servicio.Servicio, error) {
+		recibido = append(recibido, o.OrdenConsola != nil)
+		return nil, errors.New("parada de la prueba")
+	}
+	for _, servidorModo := range []bool{false, true} {
+		datos := t.TempDir()
+		dirDatos = func() (string, error) { return datos, nil }
+		global := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(global, []byte("servicio:\n  host: 127.0.0.1\n  puerto: 17391\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+		t.Setenv("TRAMTAI_SERVIDOR", map[bool]string{false: "", true: "1"}[servidorModo])
+		recibido = nil
+		if err := iniciarServicio(&cobra.Command{}, "", false); err == nil || !strings.Contains(err.Error(), "parada de la prueba") {
+			t.Fatalf("servidor %v: %v", servidorModo, err)
+		}
+		if !slices.Equal(recibido, []bool{servidorModo}) {
+			t.Errorf("servidor %v: OrdenConsola puesta %v", servidorModo, recibido)
+		}
+	}
+}
+
 // letsencryptConfig es una configuración válida con Let's Encrypt integrado.
 const letsencryptConfig = "servicio:\n  puerto: 443\n  dominios: [tramtai.ejemplo.org]\n  tls:\n    modo: letsencrypt\n    letsencrypt:\n      correo: admin@ejemplo.org\n"
 
