@@ -432,6 +432,7 @@ const en: Textos = {
   'agentes.almacenFalta': 'To store it encrypted, install secret-tool (libsecret-tools package). Meanwhile, set {variable} in the environment Tramtai starts with.',
   'agentes.sinAlmacen': 'This system has no encrypted store: set {variable} in the environment Tramtai starts with.',
   'agentes.copiarComando': 'Copy the command',
+  'agentes.copiarOrden': 'Copy “{orden}”',
   'agentes.cambiarAClave': 'Use an API key instead',
   'agentes.cambiarASuscripcion': 'Use my subscription instead',
   'agentes.confirmarTitulo': 'Use your subscription with {agente}',

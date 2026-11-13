@@ -433,6 +433,7 @@ const es = {
   'agentes.almacenFalta': 'Para guardarla cifrada instala secret-tool (paquete libsecret-tools). Mientras, define {variable} en el entorno con el que arranca Tramtai.',
   'agentes.sinAlmacen': 'Este sistema no tiene almacén cifrado: define {variable} en el entorno con el que arranca Tramtai.',
   'agentes.copiarComando': 'Copiar el comando',
+  'agentes.copiarOrden': 'Copiar «{orden}»',
   'agentes.cambiarAClave': 'Usar clave de API en su lugar',
   'agentes.cambiarASuscripcion': 'Usar mi suscripción en su lugar',
   'agentes.confirmarTitulo': 'Usar tu suscripción con {agente}',

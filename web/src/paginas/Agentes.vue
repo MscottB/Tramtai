@@ -118,23 +118,24 @@
                 <div class="opcion full-height">
                   <div class="text-weight-medium"><q-icon name="o_key" class="q-mr-xs" />{{ t('agentes.opcionClave') }}</div>
                   <div class="text-caption texto-suave q-mt-xs">{{ t('agentes.opcionClaveTexto') }}</div>
-                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
                   <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
                 </div>
               </div>
             </div>
           </template>
-          <!-- En el servidor, en lugar de «Usar mi suscripción»: la orden del inicio de sesión del CLI (en local) o de la
-               suscripción personal con sus condiciones (abierto a la red), y la clave con tramtai-servidor. -->
+          <!-- En el servidor, en lugar de «Usar mi suscripción»: las dos órdenes, el inicio de sesión del CLI y después
+               la suscripción (en local), o la suscripción personal con sus condiciones (abierto a la red), y la clave con
+               tramtai-servidor. Cada botón de copiar dice qué orden copia. -->
           <template v-else-if="forma !== 'elegir' && admite(a)">
             <div class="text-body2">{{ t(forma === 'personal' ? 'agentes.servidorPersonal' : 'agentes.servidorEntrar') }}</div>
             <OrdenesCopiables :ordenes="ordenesSuscripcion(a.agente, forma)" class="q-mt-sm" />
             <div class="text-body2 q-mt-md">{{ t('agentes.servidorClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
           </template>
           <template v-else>
             <div class="text-body2">{{ t('agentes.soloClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
             <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
           </template>
         </template>

@@ -6,7 +6,7 @@
     <template v-for="(orden, i) in ordenes" :key="orden">
       <div v-if="i" class="text-caption texto-suave">{{ t('comun.despues') }}</div>
       <div class="bloque-codigo">{{ orden }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar"
-        :aria-label="t('agentes.copiarComando')" @click="copiar(orden)" /></div>
+        :aria-label="t('agentes.copiarOrden', { orden })" @click="copiar(orden)" /></div>
     </template>
   </div>
 </template>

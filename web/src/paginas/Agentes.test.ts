@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { formaSuscripcion, ordenClave, ordenesSuscripcion, ordenUsarSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
+import es from '../idiomas/es.ts'
+import en from '../idiomas/en.ts'
 
 const sesion = (entorno: string): Sesion => ({ instancia: 'global', csrf: 'tk', version: 'v0', local: true, entorno })
 const servidor = (expuesto: boolean): EstadoServidor => ({ tls: 'ninguno', dominios: [], confiables: [], administrador: true, totp: true, expuesto, suscripciones: [] })
@@ -31,6 +33,20 @@ test('dos órdenes seguidas van en dos bloques, cada uno con su copiar (Ruling 3
   assert.ok(!pagina.includes('copiar(ordenesSuscripcion'), 'nunca se copian juntas')
   const ajustes = readFileSync(new URL('./Configuracion.vue', import.meta.url), 'utf8')
   assert.ok(ajustes.includes('<OrdenesCopiables :ordenes="f.ordenes"') && !ajustes.includes('pre-line'), 'Ajustes → Servidor, igual')
+})
+
+test('cada botón de copiar dice qué orden copia: en la tarjeta del servidor no hay dos con el mismo nombre (WCAG 2.4.6)', () => {
+  const bloques = readFileSync(new URL('../componentes/OrdenesCopiables.vue', import.meta.url), 'utf8')
+  assert.ok(bloques.includes(`:aria-label="t('agentes.copiarOrden', { orden })"`))
+  const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
+  assert.ok(!pagina.includes("t('agentes.copiarComando')"), 'Agentes: ningún copiar con el nombre genérico')
+  assert.ok(pagina.includes(`:aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))"`))
+  // Servidor en local, sin clave: entrar, suscripcion y la clave, tres botones seguidos.
+  const ordenes = [...ordenesSuscripcion('claude', 'entrar'), ordenClave(sesion('servidor'), 'ANTHROPIC_API_KEY')]
+  for (const textos of [es, en]) {
+    const nombres = ordenes.map((orden) => textos['agentes.copiarOrden'].replace('{orden}', orden))
+    assert.equal(new Set(nombres).size, ordenes.length, nombres.join(' | '))
+  }
 })
 
 test('tras iniciar sesión, la suscripción que falta se activa con su orden donde no hay botón (Ruling 34)', () => {
