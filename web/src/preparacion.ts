@@ -112,6 +112,33 @@ export async function prepararAgentes(c: Corrida, agentes: string[], desde: numb
   return 'listo'
 }
 
+// opcionesParada: qué ofrece el panel cuando la tanda se paró en el agente i. Con varios agentes, Reintentar (ese agente) y
+// Saltar (seguir con el siguiente), y se enseñan los que faltan; con uno solo, nada de eso salvo que sea una tanda (la
+// bienvenida), donde también se reintenta.
+export const opcionesParada = (agentes: string[], i: number, tanda = false) =>
+  ({ reintentar: agentes.length > 1 || tanda, saltar: agentes.length > 1, pendientes: agentes.slice(i + 1) })
+
+// siguienteTrasSaltar: el agente que sigue al saltar el i de n, o 'fin' si era el último.
+export const siguienteTrasSaltar = (i: number, n: number): number | 'fin' => (i + 1 < n ? i + 1 : 'fin')
+// CODIGOS_EXPLICADOS: los códigos de error de preparar con explicación en preparar.error.* (uno nuevo del servicio se
+// queda con su detalle).
+export const CODIGOS_EXPLICADOS = ['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
+  'no_disponible_en_servidor', 'interrumpida']
+
+// resumenFinal separa los agentes que quedaron listos de verdad de los que no, con el porqué de cada uno. Un agente que va
+// solo con clave (Antigravity) instalado aún no se puede usar; fallos trae por qué no se lanzó uno (sin estado).
+export function resumenFinal(agentes: string[], estados: Record<string, EstadoPreparacion | null | undefined>, fallos: Record<string, string> = {}) {
+  const sinClave = (a: string) => !!fichaDe(a) && !conSesion(a)
+  const listos = agentes.filter((a) => listoParaUsar(estados[a]) && !sinClave(a))
+  const pendientes = agentes.filter((a) => !listos.includes(a)).map((agente) => {
+    const e = estados[agente]
+    const razon = !e ? (fallos[agente] ? t('bienvenida.noSeLanzo', { motivo: fallos[agente] }) : t('bienvenida.saltado'))
+      : e.estado === 'cancelado' ? t('bienvenida.cancelado') : listoParaUsar(e) ? t('bienvenida.faltaClave')
+        : e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(('preparar.error.' + e.motivo_codigo) as Clave) : e.mensaje || t('bienvenida.sinTerminar')
+    return { agente, razon }
+  })
+  return { listos, pendientes }
+}
 // ordenSeguir repite, con confirmar, la acción que se paró por una versión sin comprobar: la de su estado (quien muestra
 // el panel puede haberlo pasado a solo mirar).
 export const ordenSeguir = (e: EstadoPreparacion, borrarDatos = false): Orden => ({ accion: e.accion, borrar_datos: borrarDatos, confirmar: true })

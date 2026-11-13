@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accionPrincipal, confirmarDesinstalar, conReintentos, listoParaUsar, masNueva, ordenSeguir, pideSeguir, prepararAgentes, seguirPreparacion,
+import { accionPrincipal, confirmarDesinstalar, conReintentos, listoParaUsar, masNueva, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, resumenFinal, seguirPreparacion, siguienteTrasSaltar,
   versionNueva, vistaEspera, type Corrida } from './preparacion.ts'
 import { fichas, type FichaAgente } from './agentes.ts'
 import { t } from './i18n.ts'
@@ -214,4 +214,73 @@ test('masNueva compara versiones por números', () => {
   assert.equal(masNueva('2.10.0', '2.9.9'), true)
   assert.equal(masNueva('2.1.288', '2.1.288'), false)
   assert.equal(masNueva('0.167.2', '0.170.0'), false)
+})
+
+test('opcionesParada: con varios agentes se ofrece Reintentar y Saltar y se enseñan los pendientes; con uno, nada de eso', () => {
+  assert.deepEqual(opcionesParada(['claude', 'codex', 'copilot'], 1), { reintentar: true, saltar: true, pendientes: ['copilot'] })
+  assert.deepEqual(opcionesParada(['claude', 'codex'], 1), { reintentar: true, saltar: true, pendientes: [] })
+  assert.deepEqual(opcionesParada(['claude'], 0), { reintentar: false, saltar: false, pendientes: [] })
+  // desde la bienvenida (tanda), un solo agente también se reintenta, pero no se salta
+  assert.deepEqual(opcionesParada(['claude'], 0, true), { reintentar: true, saltar: false, pendientes: [] })
+})
+
+test('siguienteTrasSaltar: el índice del siguiente, o fin si era el último', () => {
+  assert.equal(siguienteTrasSaltar(0, 3), 1)
+  assert.equal(siguienteTrasSaltar(1, 3), 2)
+  assert.equal(siguienteTrasSaltar(2, 3), 'fin')
+  assert.equal(siguienteTrasSaltar(0, 1), 'fin')
+})
+
+test('Reintentar vuelve a pedir el mismo agente y Saltar sigue con el siguiente', async () => {
+  const agentes = ['claude', 'codex', 'copilot']
+  const guiones: Record<string, Array<Partial<EstadoPreparacion>>> = {
+    claude: [{ estado: 'listo' }],
+    codex: [{ estado: 'error', motivo_codigo: 'sin_red' }],
+    copilot: [{ estado: 'listo' }],
+  }
+  const { api, pedidos } = falsa(guiones)
+  const { c, fines } = corrida(api)
+  const orden = { accion: 'instalar', borrar_datos: false, confirmar: false } as const
+  assert.equal(await prepararAgentes(c, agentes, 0, orden, orden), 'parado')
+  // Reintentar: codex otra vez, ahora bien, y sigue con copilot.
+  guiones.codex = [{ estado: 'listo' }]
+  assert.equal(await prepararAgentes(c, agentes, 1, orden, orden), 'listo')
+  assert.deepEqual(pedidos.map((p) => `${p.agente}:${p.confirmar}`), ['claude:false', 'codex:false', 'codex:false', 'copilot:false'])
+  // Saltar: si codex falla de nuevo, se sigue desde copilot sin volver a pedir codex.
+  guiones.codex = [{ estado: 'error' }]
+  pedidos.length = 0
+  fines.length = 0
+  assert.equal(await prepararAgentes(c, agentes, 1, orden, orden), 'parado')
+  assert.equal(await prepararAgentes(c, agentes, 2, orden, orden), 'listo')
+  assert.deepEqual(pedidos.map((p) => p.agente), ['codex', 'copilot'])
+  assert.deepEqual(fines, ['codex:error', 'copilot:listo'])
+})
+
+test('resumenFinal: separa los que quedaron listos de verdad de los que no, con el porqué', () => {
+  const e = (agente: string, extra: Partial<EstadoPreparacion>) => ({ agente, accion: 'instalar', estado: 'listo', ...extra } as EstadoPreparacion)
+  const r = resumenFinal(['claude', 'codex', 'copilot', 'antigravity'], {
+    claude: e('claude', {}),
+    codex: e('codex', { estado: 'error', motivo_codigo: 'sin_red' }),
+    copilot: e('copilot', { motivo_codigo: 'version_no_comprobada', mensaje: 'Instalado, sin sesión.' }),
+  })
+  assert.deepEqual(r.listos, ['claude'])
+  assert.deepEqual(r.pendientes.map((p) => p.agente), ['codex', 'copilot', 'antigravity'])
+  assert.equal(r.pendientes[0].razon, t('preparar.error.sin_red'))
+  assert.equal(r.pendientes[1].razon, 'Instalado, sin sesión.')
+  assert.equal(r.pendientes[2].razon, t('bienvenida.saltado'))
+})
+
+test('resumenFinal: un agente que va con clave (Antigravity) instalado no está listo para usar: falta su clave', () => {
+  const r = resumenFinal(['claude', 'antigravity'], {
+    claude: { agente: 'claude', accion: 'instalar', estado: 'listo' } as EstadoPreparacion,
+    antigravity: { agente: 'antigravity', accion: 'instalar', estado: 'listo' } as EstadoPreparacion,
+  })
+  assert.deepEqual(r.listos, ['claude'])
+  assert.deepEqual(r.pendientes, [{ agente: 'antigravity', razon: t('bienvenida.faltaClave') }])
+})
+
+test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', () => {
+  const r = resumenFinal(['claude', 'codex'], {}, { claude: 'sin conexión' })
+  assert.equal(r.pendientes[0].razon, t('bienvenida.noSeLanzo', { motivo: 'sin conexión' }))
+  assert.equal(r.pendientes[1].razon, t('bienvenida.saltado'))
 })
