@@ -30,32 +30,18 @@ func adminAgentesServidor() error {
 	return nil
 }
 
-// comandoEntrar lanza el inicio de sesión del CLI del agente con la cuenta del servicio, con la terminal conectada: el
-// CLI hace su propio flujo y guarda su sesión (spec §5). Solo en modo servidor.
+// comandoEntrar inicia sesión en el CLI del agente a través del servicio, también fuera del modo servidor: enseña el
+// enlace y el código (o pide el código que te den, sin mostrarlo) y deja que el CLI haga su propio flujo y guarde su
+// sesión (spec §5).
 func comandoEntrar() *cobra.Command {
 	return &cobra.Command{Use: "entrar <agente>", Aliases: []string{"login"}, Args: cobra.ExactArgs(1),
-		Short: idioma.T("Inicia sesión en el CLI del agente con la cuenta del servicio (modo servidor)"),
+		Short: idioma.T("Inicia sesión en el CLI del agente: enseña el enlace y el código, o pide el que te den"),
+		Long:  conSalidas(idioma.T("Inicia sesión en el CLI del agente a través del servicio, con la cuenta del servicio en el modo servidor. Enseña el enlace y el código (no abre ningún navegador) y, si el CLI espera un código, lo pide sin mostrarlo. Con una versión del CLI sin comprobar, no inicia sesión: da la orden para hacerlo en una consola.")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !carpetas.Servidor() {
-				return errors.New(idioma.T("el inicio de sesión de los agentes es del servidor: usa «tramtai --servidor agentes entrar <agente>» (o tramtai-servidor agentes entrar <agente>)"))
-			}
-			if err := adminAgentesServidor(); err != nil {
-				return err
-			}
-			f, ok := agentes.Buscar(args[0])
-			if !ok || len(f.InicioSesion) == 0 {
+			if f, ok := agentes.Buscar(args[0]); !ok || len(f.InicioSesion) == 0 {
 				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)"), args[0])
 			}
-			c, err := configuracion.CargarConfiguracion("", agentes.Internos()) // la global, como el servicio
-			if err != nil {
-				return err
-			}
-			orden, err := servidor.OrdenEntrar(f.Nombre, c.Texto("comandos_agentes."+f.Nombre), f.InicioSesion)
-			if err != nil {
-				return err
-			}
-			orden.Stdin, orden.Stdout, orden.Stderr = cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr()
-			return orden.Run()
+			return prepararAgentes(cmd, args, accionIniciar, false, false)
 		}}
 }
 

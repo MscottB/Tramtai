@@ -90,6 +90,7 @@ func comandoAgentes() *cobra.Command {
 		&cobra.Command{Use: "conectar <agente>", Short: idioma.T("Vuelve a conectar un agente desconectado"), Args: cobra.ExactArgs(1), RunE: conexion(true)},
 		comandoEntrar(), comandoSuscripcion(),
 	)
+	grupo.AddCommand(comandosPreparar()...)
 	return grupo
 }
 
