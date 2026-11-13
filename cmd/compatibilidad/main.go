@@ -147,14 +147,22 @@ func comprobar(ctx context.Context, fichas []adaptadores.Ficha, ultima func(cont
 // comprobarAgente instala el CLI y, sin cuenta, sigue con su inicio de sesión hasta el enlace y el código y lo cancela;
 // después lo actualiza y lo desinstala. Se para en lo primero que no pasa.
 func comprobarAgente(ctx context.Context, p *preparar.Preparador, f adaptadores.Ficha) comprobacion {
-	c := comprobacion{Acciones: map[string]bool{}}
+	// Todas empiezan sin pasar: las que quedan por detrás de un fallo tampoco pasaron en este sistema. Actualizar, tras
+	// instalar, siempre se puede (sin orden propia es reinstalar); desinstalar, si hay algo que borrar.
+	l := f.Receta.Sesion
+	c := comprobacion{Acciones: map[string]bool{"instalar": false, "actualizar": false}}
+	if l != nil {
+		c.Acciones["iniciar_sesion"] = false
+	}
+	if len(f.Receta.Borrar[runtime.GOOS]) > 0 {
+		c.Acciones["desinstalar"] = false
+	}
 	fallo := func(accion, porque string, e contrato.EstadoPreparacion) {
 		c.Acciones[accion] = false
 		texto := strings.TrimSpace(fmt.Sprintf("%s: %s %s %s %s", accion, e.Estado, e.MotivoCodigo, e.Mensaje, porque))
 		lineas := e.Lineas[max(len(e.Lineas)-10, 0):]
 		c.Fallo = tapar(strings.Join(append([]string{texto}, lineas...), "\n"), e.Codigo)
 	}
-	l := f.Receta.Sesion
 	var desde time.Time
 	enEnlace := func(e contrato.EstadoPreparacion) bool {
 		if l == nil || e.Estado != "esperando_usuario" {
@@ -195,9 +203,8 @@ func comprobarAgente(ctx context.Context, p *preparar.Preparador, f adaptadores.
 			return c
 		}
 	}
-	// Actualizar, tras instalar, siempre se puede (sin orden propia es reinstalar); desinstalar, si hay algo que borrar.
 	for _, accion := range []string{"actualizar", "desinstalar"} {
-		if accion == "desinstalar" && len(f.Receta.Borrar[runtime.GOOS]) == 0 {
+		if _, toca := c.Acciones[accion]; !toca {
 			continue
 		}
 		e, err := correr(ctx, p, f.Nombre, accion, nil)
@@ -352,12 +359,20 @@ func cmpVersion(c comprobacion) string {
 	return c.Ultima
 }
 
-// sumar añade versiones a las de la acción, ordenadas y sin repetir.
+// reVersion es la forma de una versión de la lista: exacta (2.1.311, 1.0.0-beta) o con comodín de parche (2.1.*).
+var reVersion = regexp.MustCompile(`^[0-9]+(\.[0-9A-Za-z-]+)*(\.\*)?$`)
+
+// sumar añade versiones a las de la acción, ordenadas y sin repetir; una con otra forma no se firma (y se cae de la
+// lista anterior: la primera lista publicada traía «1.0.111.», con el punto que Copilot pone tras su versión).
 func sumar(l *lista, id, accion string, versiones ...string) {
 	if l.Agentes[id] == nil {
 		l.Agentes[id] = map[string][]string{}
 	}
-	todas := slices.Concat(l.Agentes[id][accion], versiones)
+	todas := slices.DeleteFunc(slices.Concat(l.Agentes[id][accion], versiones), func(v string) bool { return !reVersion.MatchString(v) })
+	if len(todas) == 0 {
+		delete(l.Agentes[id], accion)
+		return
+	}
 	slices.SortFunc(todas, preparar.CompararVersiones)
 	l.Agentes[id][accion] = slices.Compact(todas)
 }

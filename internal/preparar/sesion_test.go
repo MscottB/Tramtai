@@ -448,3 +448,19 @@ func TestLectorEscapesRarosYTope(t *testing.T) {
 		t.Error("lo que pasa del tope no se mira")
 	}
 }
+
+// El número sale de lo que imprime --version, sin el punto final de una frase (Copilot, en el job de compatibilidad).
+func TestNumeroVersion(t *testing.T) {
+	for texto, numero := range map[string]string{
+		"2.1.311 (Claude Code)":       "2.1.311",
+		"codex-cli 0.169.0":           "0.169.0",
+		"GitHub Copilot CLI 1.0.111.": "1.0.111",
+		"agy 1.5.8\n":                 "1.5.8",
+		"falso 2.0.0-beta.1":          "2.0.0-beta.1",
+		"sin versión":                 "",
+	} {
+		if got := numeroVersion(texto); got != numero {
+			t.Errorf("numeroVersion(%q) = %q, se esperaba %q", texto, got, numero)
+		}
+	}
+}

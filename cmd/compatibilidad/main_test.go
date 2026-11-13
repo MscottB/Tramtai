@@ -172,7 +172,8 @@ func TestCompatibilidad(t *testing.T) {
 	}
 	l = leerLista(t, segunda)
 	if l.Version != 2 || slices.Contains(l.Agentes["falso"]["iniciar_sesion"], "1.2.4") ||
-		!slices.Contains(l.Agentes["falso"]["instalar"], "1.2.4") || !slices.Contains(l.Agentes["falso"]["iniciar_sesion"], "1.2.3") {
+		!slices.Contains(l.Agentes["falso"]["instalar"], "1.2.4") || !slices.Contains(l.Agentes["falso"]["iniciar_sesion"], "1.2.3") ||
+		slices.Contains(l.Agentes["falso"]["desinstalar"], "1.2.4") { // tras el fallo no se siguió: desinstalar no se probó
 		t.Fatalf("lista = %+v; se esperaba la version 2 con 1.2.4 sin iniciar sesión", l)
 	}
 
@@ -218,5 +219,31 @@ func TestTapar(t *testing.T) {
 	if strings.Contains(texto, "1A2B-3C4D") || strings.Contains(texto, "QWER-TYUIO") || strings.Contains(texto, "code=1") ||
 		!strings.Contains(texto, "https://github.com/login/device") || !strings.Contains(texto, "2026-11-13") {
 		t.Fatalf("tapar = %q", texto)
+	}
+}
+
+// Una versión con otra forma no se firma: se cae de la lista anterior y la nueva sube de version.
+func TestJuntarDescartaVersionesMalFormadas(t *testing.T) {
+	antes := sistemas
+	sistemas = []string{"linux"}
+	t.Cleanup(func() { sistemas = antes })
+	dir := t.TempDir()
+	anterior := filepath.Join(dir, "anterior.json")
+	if err := escribirJSON(anterior, lista{Version: 1, Agentes: map[string]map[string][]string{
+		"falso": {"instalar": {"1.0.0", "1.0.111."}, "iniciar_sesion": {"1.0.111."}}}}); err != nil {
+		t.Fatal(err)
+	}
+	r := filepath.Join(dir, "linux.json")
+	if err := escribirJSON(r, resultado{Sistema: "linux", Agentes: map[string]comprobacion{"falso": {Ultima: "1.0.0", Version: "1.0.0",
+		Acciones: map[string]bool{"instalar": true}}}}); err != nil {
+		t.Fatal(err)
+	}
+	nueva := filepath.Join(dir, "nueva.json")
+	if c, salida := juntarCon(t, fichaFalsa(t, "instalar", "sesion"), anterior, nueva, r); c != 0 {
+		t.Fatalf("juntar = %d, %q", c, salida)
+	}
+	l := leerLista(t, nueva)
+	if l.Version != 2 || !slices.Equal(l.Agentes["falso"]["instalar"], []string{"1.0.0"}) || l.Agentes["falso"]["iniciar_sesion"] != nil {
+		t.Fatalf("lista = %+v; se esperaba la version 2 sin 1.0.111.", l)
 	}
 }

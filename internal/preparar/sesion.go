@@ -40,8 +40,9 @@ const maximoLector = 64 << 10
 // (color), las demás de escape de dos o tres bytes (ESC ( B…) y el CR de las líneas con CRLF.
 var escapes = regexp.MustCompile(`\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b[ -/]*[0-Z\\^-~]|\r`)
 
-// reNumero saca el número de versión de lo que imprime --version («2.1.311 (Claude Code)» → 2.1.311).
-var reNumero = regexp.MustCompile(`\d+\.\d+\.\d+[0-9A-Za-z.-]*`)
+// reNumero saca el número de versión de lo que imprime --version («2.1.311 (Claude Code)» → 2.1.311), sin el punto que
+// cierra una frase («GitHub Copilot CLI 1.0.111.» → 1.0.111).
+var reNumero = regexp.MustCompile(`\d+\.\d+\.\d+(?:[.-][0-9A-Za-z]+)*`)
 
 func numeroVersion(texto string) string { return reNumero.FindString(texto) }
 

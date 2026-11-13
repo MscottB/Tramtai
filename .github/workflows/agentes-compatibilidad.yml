@@ -43,9 +43,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      # pwsh también en Linux y macOS: en Windows, bash pondría el tar de Git delante, y el instalador de Codex fallaría.
       - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI
-        shell: bash
-        run: go run ./cmd/compatibilidad comprobar "$RUNNER_TEMP/resultado/$RUNNER_OS.json"
+        shell: pwsh
+        run: go run ./cmd/compatibilidad comprobar "$env:RUNNER_TEMP/resultado/$env:RUNNER_OS.json"
       - uses: actions/upload-artifact@v7
         with:
           name: resultado-${{ runner.os }}
