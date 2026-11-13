@@ -440,7 +440,7 @@ const en: Textos = {
     'Each provider’s terms may not allow using a personal subscription in an automated way or to power other apps, and the provider could limit or suspend your account. That risk is yours. For your apps, an API key is recommended. More in Tramtai’s terms of use (github.com/MscottB/Tramtai/blob/main/TERMINOS.md).',
   'agentes.aceptoRiesgo': 'I understand the risk and accept the terms of use',
   'agentes.faltaAceptar': 'To use your subscription, tick that you understand the risk and accept the terms.',
-  'agentes.servidorEntrar': 'On the server, the agent’s own CLI signs in with the service account. Run on the server:',
+  'agentes.servidorEntrar': 'On the server, the agent’s CLI signs in with the service account and then your subscription is put to use (it shows you the risk first). Run on the server:',
   'agentes.servidorPersonal': 'This server is open to the network: your subscription only works as personal (only you use it, you don’t hand out the keys of the APIs that use it, ordinary use) and it requires two-step verification. Turn it on on the server, which shows you the conditions first:',
   'agentes.servidorClave': 'Or store its API key on the server (it asks for it without showing it):',
   'agentes.suscripcionActivada': '{agente} now uses your subscription',

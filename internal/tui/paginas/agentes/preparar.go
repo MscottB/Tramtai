@@ -793,11 +793,8 @@ func (p *Pagina) panel(ancho int) []string {
 		texto(plano, p.tx("preparar.faltaSuscripcionTexto"))
 		if p.c.Entorno == "servidor" {
 			texto(plano, p.tx("preparar.suscripcionConOrden"))
-			orden := "tramtai-servidor agentes suscripcion " + g
-			if p.servidor != nil && p.servidor.Expuesto {
-				orden += " --personal"
-			}
-			l = append(l, "  "+orden)
+			ordenes := p.ordenesSuscripcion(g)
+			l = append(l, "  "+ordenes[len(ordenes)-1]) // la sesión ya está iniciada: solo falta la suscripción
 		} else {
 			texto(plano, idioma.T("Pulsa a para usar tu suscripción (antes te enseña el riesgo)."))
 		}

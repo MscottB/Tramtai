@@ -51,7 +51,8 @@ test('Ajustes → Servidor: cada dato con la orden (o la clave de config.yaml) q
   for (const f of filas) assert.ok(f.orden || f.clave || f.nota, `${f.etiqueta} dice cómo se cambia`)
 
   const sinNada = filasServidor({ ...e, tls: 'ninguno', dominios: [], vence_certificado: undefined, administrador: false, expuesto: false, suscripciones: [] }, String, String)
-  assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.orden, 'tramtai-servidor agentes entrar <agente>', 'en local: el inicio de sesión del CLI')
+  assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.orden, 'tramtai-servidor agentes entrar <agente>\ntramtai-servidor agentes suscripcion <agente>',
+    'en local: el inicio de sesión del CLI y después la suscripción')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.vence'), undefined, 'sin certificado propio no hay vencimiento')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.administrador')?.orden, 'tramtai-servidor administrador contraseña')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.valor, t('servidor.sinSuscripciones'))

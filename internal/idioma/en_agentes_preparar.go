@@ -27,6 +27,7 @@ func init() {
 		"%s tiene la sesión iniciada, pero falta un paso: usar tu suscripción.":                                                                                                                                                   "%s is signed in, but one step is missing: use your subscription.",
 		"Escribe «acepto» para activarla ahora (o pulsa Enter para dejarlo): ":                                                                                                                                                    "Type “accept” to enable it now (or press Enter to leave it): ",
 		"%s usa tu suscripción: ya puedes usarlo.":                                                               "%s uses your subscription: you can use it now.",
+		"no se pudo comprobar si falta usar tu suscripción en %s: míralo con «tramtai agentes»":                  "could not check whether %s still needs your subscription: look with “tramtai agents”",
 		"falta usar tu suscripción en %s: %s":                                                                    "%s still needs your subscription: %s",
 		"La preparación de %s sigue en marcha: la lanzó otra pantalla; cancélala desde allí":                     "The preparation of %s is still in progress: another screen started it; cancel it from there",
 		"ya hay otra preparación de %s en marcha (%s): espera a que termine o cancélala desde donde la lanzaste": "there is already another preparation of %s in progress (%s): wait for it to finish or cancel it where you started it",

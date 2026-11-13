@@ -541,10 +541,12 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 	antes, despues := cmp.Or(e.VersionAntes, sinDato), cmp.Or(e.VersionDespues, sinDato)
 	switch e.Estado {
 	case "listo":
-		if e.MotivoCodigo == "" && p.faltaSuscripcion(id, e.Accion) {
-			return p.ofrecerSuscripcion(id, e)
-		}
 		if e.MotivoCodigo == "" {
+			if falta, err := p.faltaSuscripcion(id, e.Accion); err != nil {
+				return p.sinComprobar(id, err)
+			} else if falta {
+				return p.ofrecerSuscripcion(id)
+			}
 			fmt.Fprintln(p.out, map[string]string{
 				accionInstalar:    idioma.Tf("%s está instalado (%s).", nombre, despues),
 				accionActualizar:  idioma.Tf("%s está actualizado: antes %s, ahora %s.", nombre, antes, despues),
@@ -579,26 +581,35 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 
 // faltaSuscripcion: inició sesión bien (al entrar, o al instalar), pero Tramtai aún usa el agente con clave de API y no
 // hay ninguna guardada (falta_clave, según la comprobación del servicio): falta usar la suscripción. No se cambia sola,
-// para no saltarse el aviso de riesgo (Ruling 34). Si la comprobación falla, se da por listo, como antes.
-func (p *preparador) faltaSuscripcion(id, accion string) bool {
+// para no saltarse el aviso de riesgo (Ruling 34). Si la comprobación falla, el error: no se sabe si está listo.
+func (p *preparador) faltaSuscripcion(id, accion string) (bool, error) {
 	if (accion != accionIniciar && accion != accionInstalar) || !agentes.AdmiteSuscripcion(id) {
-		return false
+		return false, nil
 	}
 	r, err := p.c.Capacidades(p.ctx, espacioPreparar)
 	i := slices.IndexFunc(r.Adaptadores, func(a contrato.Adaptador) bool { return a.Agente == id })
-	return err == nil && i >= 0 && r.Adaptadores[i].Estado == contrato.AgenteFaltaClave
+	return err == nil && i >= 0 && r.Adaptadores[i].Estado == contrato.AgenteFaltaClave, err
+}
+
+// sinComprobar: tras iniciar sesión no se pudo comprobar el agente; sin saber si falta usar la suscripción, no se da por
+// listo (3), y se dice cómo mirarlo.
+func (p *preparador) sinComprobar(id string, err error) error {
+	if p.ctx.Err() != nil {
+		return p.salirCancelado()
+	}
+	fmt.Fprintln(p.aviso, nucleo.MensajeDe(err))
+	return conCodigo(salidaFalta, idioma.Tf("no se pudo comprobar si falta usar tu suscripción en %s: míralo con «tramtai agentes»", agentes.NombreVisible(id)))
 }
 
 // ofrecerSuscripcion dice que falta usar la suscripción y la orden que lo hace. Fuera del servidor ofrece hacerlo ahí
 // mismo, con la misma aceptación del riesgo que «agentes suscripcion» (--confirmar no se la salta): con «acepto» queda
-// listo (0); si no, sale con 3. En el servidor, la orden decide si va como personal.
-func (p *preparador) ofrecerSuscripcion(id string, e contrato.EstadoPreparacion) error {
+// listo (0); si no, sale con 3. En el servidor no pregunta: da la orden (abierto a la red, la personal, con sus
+// condiciones).
+func (p *preparador) ofrecerSuscripcion(id string) error {
 	nombre := agentes.NombreVisible(id)
 	fmt.Fprintln(p.out, idioma.Tf("%s tiene la sesión iniciada, pero falta un paso: usar tu suscripción.", nombre))
-	orden := "tramtai agentes suscripcion " + id
-	if carpetas.Servidor() {
-		orden = "tramtai-servidor agentes suscripcion " + id
-	} else {
+	orden := ordenSuscripcionCLI(id)
+	if !carpetas.Servidor() {
 		riesgosSuscripcion(p.aviso, id)
 		linea := p.responder(idioma.T("Escribe «acepto» para activarla ahora (o pulsa Enter para dejarlo): "))
 		if p.ctx.Err() != nil {

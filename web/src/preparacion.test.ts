@@ -304,6 +304,16 @@ test('resumenFinal: con la sesión iniciada pero sin usar la suscripción falta 
   assert.deepEqual(r.pendientes, [{ agente: 'claude', razon: t('bienvenida.faltaSuscripcion'), suscripcion: true }])
 })
 
+test('resumenFinal: tras «Usar mi suscripción» el agente pasa de «falta un paso» a listo', () => {
+  const estados = { claude: { agente: 'claude', accion: 'iniciar_sesion', estado: 'listo' } as EstadoPreparacion }
+  const antes = resumenFinal(['claude'], estados, {}, [conClave('falta_clave')])
+  assert.equal(listoParaUsar(estados.claude, conClave('falta_clave')), false)
+  assert.deepEqual(antes, { listos: [], pendientes: [{ agente: 'claude', razon: t('bienvenida.faltaSuscripcion'), suscripcion: true }] })
+  const despues = resumenFinal(['claude'], estados, {}, [agente('listo')])
+  assert.equal(listoParaUsar(estados.claude, agente('listo')), true)
+  assert.deepEqual(despues, { listos: ['claude'], pendientes: [] })
+})
+
 test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', () => {
   const r = resumenFinal(['claude', 'codex'], {}, { claude: 'sin conexión' })
   assert.equal(r.pendientes[0].razon, t('bienvenida.noSeLanzo', { motivo: 'sin conexión' }))

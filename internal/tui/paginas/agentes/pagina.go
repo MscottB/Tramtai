@@ -110,7 +110,11 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 	if p.registro != "" {
 		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}}
 	}
-	fijas := []pagina.Tecla{{Tecla: "c", Accion: idioma.T("comprobar")}, {Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")},
+	autenticacion := idioma.T("autenticación")
+	if p.c.Entorno != "servidor" && p.faltaSuscripcion(p.foco) { // a va al agente del panel: el pie dice cuál
+		autenticacion = idioma.Tf("usar tu suscripción (%s)", nombre(p.foco))
+	}
+	fijas := []pagina.Tecla{{Tecla: "c", Accion: idioma.T("comprobar")}, {Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: autenticacion},
 		{Tecla: "p", Accion: p.tx("menu.ejecutar")}}
 	if p.detalle != "" {
 		return slices.Concat([]pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}}, p.teclasPreparar(), fijas)
@@ -497,7 +501,7 @@ func (p *Pagina) alternarAutenticacion(a contrato.Adaptador) tea.Cmd {
 		return p.autenticar(a.Agente, "clave_api")
 	}
 	if p.c.Entorno == "servidor" { // la suscripción del servidor la inicia el CLI, o es la personal: con su orden
-		return comp.Aviso(idioma.Tf("En el servidor, la suscripción se hace con: %s", p.ordenSuscripcion(a.Agente)), comp.Info)
+		return comp.Aviso(idioma.Tf("En el servidor, la suscripción se hace con: %s", strings.Join(p.ordenesSuscripcion(a.Agente), "; ")), comp.Info)
 	}
 	if est != contrato.AgenteListo && est != contrato.AgenteFaltaClave {
 		return comp.Aviso(idioma.T("En su estado actual solo se puede usar la clave de API"), comp.Advertencia)

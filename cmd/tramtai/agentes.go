@@ -122,6 +122,21 @@ func riesgosSuscripcion(out io.Writer, agente string) {
 	}
 }
 
+// ordenSuscripcionCLI es la orden que activa la suscripción de un agente: en el servidor, con tramtai-servidor y, si
+// está abierto a la red, la personal (sin --personal la rechazaría).
+func ordenSuscripcionCLI(agente string) string {
+	if !carpetas.Servidor() {
+		return "tramtai agentes suscripcion " + agente
+	}
+	orden := "tramtai-servidor agentes suscripcion " + agente
+	if c, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
+		if red, err := entradaServidor(c); err == nil && servidor.Expuesto(red) {
+			orden += " --personal"
+		}
+	}
+	return orden
+}
+
 // comprobarSuscripcionServidor, en el servidor y antes de preguntar nada, mira la configuración que quedaría: sin
 // --personal y expuesto, el servicio la rechazaría (409); con --personal, que el servicio siga arrancando (regla 4: sin
 // TOTP no arrancaría, y reiniciarlo lo dejaría caído). Si no, lo dice sin escribir nada.

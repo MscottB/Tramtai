@@ -68,8 +68,11 @@ export const puedeElegirSuscripcion = (admite: boolean, s: Sesion | null | undef
 // sesión remota del administrador (como en la terminal): no abre nada nuevo.
 export const puedeVolverAClave = (admite: boolean, s: Sesion | null | undefined) => admite && (!!s?.local || esServidor(s))
 
+// ordenSuscripcion son las órdenes de la suscripción en el servidor, una por línea: abierto a la red, la personal; en
+// local, iniciar sesión en el CLI y después usar la suscripción (sin ese paso sigue con clave de API, Ruling 34).
 export function ordenSuscripcion(agente: string, forma: FormaSuscripcion) {
-  return forma === 'personal' ? `tramtai-servidor agentes suscripcion ${agente} --personal` : `tramtai-servidor agentes entrar ${agente}`
+  return forma === 'personal' ? `tramtai-servidor agentes suscripcion ${agente} --personal`
+    : `tramtai-servidor agentes entrar ${agente}\ntramtai-servidor agentes suscripcion ${agente}`
 }
 
 // ordenUsarSuscripcion activa la suscripción de un agente con su aviso de riesgo, donde la Web UI no ofrece el botón (en
@@ -112,7 +115,7 @@ export function filasServidor(e: EstadoServidor, fecha: (iso: string) => string,
     valor: e.suscripciones.length
       ? e.suscripciones.map((s) => t(s.personal ? 'servidor.suscripcionPersonal' : 'servidor.suscripcionLocal', { agente: nombre(s.agente), n: s.simultaneas })).join(' · ')
       : t('servidor.sinSuscripciones'),
-    // Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
+    // Como en Agentes: en local, el inicio de sesión del CLI y la suscripción; abierto a la red, la suscripción personal.
     orden: ordenSuscripcion('<agente>', e.expuesto ? 'personal' : 'entrar'),
   })
   return filas

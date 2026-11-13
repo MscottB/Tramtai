@@ -385,6 +385,8 @@ func TestPrepararFaltaSuscripcion(t *testing.T) {
 	tic(t, a, r)
 	a.HastaVer("Claude tiene la sesión iniciada, pero falta un paso", "Pulsa a para usar tu suscripción")
 	noQuiere(t, a.Vista(), "ya puedes usarlo")
+	quiere(t, pie(a), "a usar tu suscripción (Claude)") // el pie dice a qué agente va, aunque el cursor esté en otro
+	noQuiere(t, pie(a), "a autenticación")
 	fuera := a.Pulsar("a") // el cursor sigue en el simulado, que va primero
 	if q, ok := pregunta(fuera); !ok || !strings.Contains(q.Texto, "Usar tu suscripción con Claude") || !strings.Contains(q.Texto, "Ese riesgo es tuyo") {
 		t.Fatalf("pide aceptar el riesgo de Claude: %+v", fuera)

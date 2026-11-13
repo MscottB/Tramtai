@@ -13,7 +13,8 @@ test('en el escritorio se elige la suscripción aquí; en el servidor, con su or
   assert.equal(formaSuscripcion(sesion('servidor'), servidor(false)), 'entrar')
   assert.equal(formaSuscripcion(sesion('servidor'), servidor(true)), 'personal')
   assert.equal(formaSuscripcion(sesion('servidor'), null), 'entrar', 'sin estado del servidor no se ofrece elegir aquí')
-  assert.equal(ordenSuscripcion('claude', 'entrar'), 'tramtai-servidor agentes entrar claude')
+  // En local, dos pasos: iniciar sesión en el CLI y después usar la suscripción (Ruling 34).
+  assert.equal(ordenSuscripcion('claude', 'entrar'), 'tramtai-servidor agentes entrar claude\ntramtai-servidor agentes suscripcion claude')
   assert.equal(ordenSuscripcion('codex', 'personal'), 'tramtai-servidor agentes suscripcion codex --personal')
 })
 

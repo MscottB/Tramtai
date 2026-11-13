@@ -406,7 +406,7 @@ func TestConfiguracionServidorSoloLectura(t *testing.T) {
 	ir(t, a, tx("servidor.titulo"))
 	v := strings.Join(strings.Fields(a.Vista()), " ")
 	for _, quiero := range []string{tx("servidor.https") + ": " + tx("servidor.tlsNinguno"), tx("servidor.enConfig") + " servicio.tls.modo", tx("servidor.dominios"),
-		"tramtai-servidor agentes entrar <agente>", // en local, el inicio de sesión del CLI
+		"tramtai-servidor agentes entrar <agente>", "tramtai-servidor agentes suscripcion <agente>", // en local, la sesión del CLI y la suscripción
 		tx("servidor.administrador") + ": " + tx("servidor.sinAdministrador"), "tramtai-servidor administrador contraseña",
 		tx("servidor.cambiaEn")[:strings.Index(tx("servidor.cambiaEn"), "config.yaml")]} { // las órdenes largas se parten por el guion
 		if !strings.Contains(v, quiero) {

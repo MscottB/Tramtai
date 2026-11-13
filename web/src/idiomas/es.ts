@@ -442,7 +442,7 @@ const es = {
   'agentes.aceptoRiesgo': 'Entiendo el riesgo y acepto los términos de uso',
   'agentes.faltaAceptar': 'Para usar tu suscripción tienes que marcar que entiendes el riesgo y aceptas los términos.',
   // En el servidor, en lugar de «Usar mi suscripción»: la orden que inicia sesión con el CLI o activa la personal.
-  'agentes.servidorEntrar': 'En el servidor, la suscripción la inicia el propio CLI con la cuenta del servicio. Ejecuta en el servidor:',
+  'agentes.servidorEntrar': 'En el servidor, el CLI inicia sesión con la cuenta del servicio y después se usa tu suscripción (antes te enseña el riesgo). Ejecuta en el servidor:',
   'agentes.servidorPersonal': 'Este servidor está abierto a la red: tu suscripción solo vale como personal (solo la usas tú, no repartes las claves de las APIs que la usan, uso ordinario) y pide la verificación en dos pasos. Se activa en el servidor, que antes te enseña las condiciones:',
   'agentes.servidorClave': 'O guarda su clave de API en el servidor (la pide sin mostrarla):',
   'agentes.suscripcionActivada': '{agente} usa ahora tu suscripción',

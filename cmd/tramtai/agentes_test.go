@@ -632,6 +632,47 @@ func TestAgentesFaltaSuscripcion(t *testing.T) {
 	}
 }
 
+// TestAgentesFaltaSuscripcionSinComprobar: si no se puede comprobar el agente tras iniciar sesión, no se da por listo: lo
+// dice, con cómo mirarlo, y sale con 3.
+func TestAgentesFaltaSuscripcionSinComprobar(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo"))}
+	ts := servicioConPreparacion(t, f)
+	siguiente := ts.Config.Handler
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/capacidades") {
+			http.Error(w, "fallo", http.StatusInternalServerError)
+			return
+		}
+		siguiente.ServeHTTP(w, r)
+	})
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 3 || strings.Contains(salidaTexto, "ya puedes usarlo") || !strings.Contains(err.Error(), "no se pudo comprobar si falta usar tu suscripción") ||
+		!strings.Contains(err.Error(), "tramtai agentes") {
+		t.Fatalf("sin comprobar: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesFaltaSuscripcionServidor: en el servidor no se pregunta (la suscripción del servidor tiene sus condiciones):
+// sale con 3 y da la orden de tramtai-servidor; abierto a la red, la personal.
+func TestAgentesFaltaSuscripcionServidor(t *testing.T) {
+	modo := adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo")), registro: map[string]adaptadores.Adaptador{"claude": conModo{modo: modo}}}
+	servicioConPreparacion(t, f)
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	for config, orden := range map[string]string{"": "tramtai-servidor agentes suscripcion claude", "servicio:\n  proxy:\n    confiables: [10.0.0.0/8]\n": "tramtai-servidor agentes suscripcion claude --personal"} {
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		salidaTexto, err := ejecutarAdmin(t, "acepto\n", "agentes", "entrar", "claude")
+		if salida(err) != 3 || strings.Contains(salidaTexto, "acepto") || !strings.HasSuffix(err.Error(), orden) || modo.Valor() != adaptadores.AutenticacionClaveAPI {
+			t.Fatalf("%q: %v\n%s", orden, err, salidaTexto)
+		}
+	}
+}
+
 // TestAgentesCodigoFallido: si el envío del código falla, la orden lo dice y vuelve a pedirlo.
 func TestAgentesCodigoFallido(t *testing.T) {
 	f := &preparacionCLI{falloCodigo: 1}

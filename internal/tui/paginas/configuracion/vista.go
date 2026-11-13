@@ -212,12 +212,12 @@ func (p *Pagina) lineasServidor() []string {
 		}
 		suscripciones = strings.Join(partes, " · ")
 	}
-	// Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
-	suscribir := "tramtai-servidor agentes entrar <agente>"
+	// Como en Agentes: en local, el inicio de sesión del CLI y después la suscripción; abierto a la red, la personal.
+	l = append(l, p.tx("servidor.suscripciones")+": "+suscripciones)
 	if s.Expuesto {
-		suscribir = "tramtai-servidor agentes suscripcion <agente> --personal"
+		return append(l, orden("tramtai-servidor agentes suscripcion <agente> --personal"))
 	}
-	return append(l, p.tx("servidor.suscripciones")+": "+suscripciones, orden(suscribir))
+	return append(l, orden("tramtai-servidor agentes entrar <agente>"), orden("tramtai-servidor agentes suscripcion <agente>"))
 }
 
 // detallesDatos son cuántas peticiones terminadas y cuántas APIs hay para borrar, como las casillas de la Web UI.
