@@ -367,6 +367,9 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 			return p.alternarConexion(a)
 		}
 	case "a":
+		if f, ok := p.adaptador(p.foco); ok && p.faltaSuscripcion(p.foco) && p.c.Entorno != "servidor" { // la que ofrece el panel
+			return p.alternarAutenticacion(f)
+		}
 		if hay {
 			return p.alternarAutenticacion(a)
 		}

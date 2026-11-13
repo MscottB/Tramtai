@@ -370,6 +370,39 @@ func TestPrepararSigueLaQueEstabaEnMarcha(t *testing.T) {
 	quiere(t, a.Vista(), "Claude está instalado (2.1.0).")
 }
 
+// TestPrepararFaltaSuscripcion (Ruling 34): con la sesión iniciada, un agente que Tramtai aún usa con clave de API y sin
+// clave no está listo: el panel lo dice y la tecla a (aunque el cursor esté en otro agente) pide aceptar el riesgo y activa
+// la suscripción. Con su clave guardada sí está listo.
+func TestPrepararFaltaSuscripcion(t *testing.T) {
+	sinClave := detectado(adaptadores.Estado{Autenticacion: "clave_api", Problema: "falta ANTHROPIC_API_KEY", ProblemaCodigo: adaptadores.ProblemaFaltaClave})
+	enMarcha := func(f *prueba.Preparacion) {
+		f.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "comprobando"})
+	}
+	v := versiones("claude", "2.1.0", "", map[string]bool{"iniciar_sesion": true}, "iniciar_sesion", "desinstalar")
+	a, f, r := preparando(t, map[string]adaptadores.Adaptador{"claude": sinClave}, enMarcha, v)
+	a.HastaVer("Comprobando Claude…")
+	f.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "listo"})
+	tic(t, a, r)
+	a.HastaVer("Claude tiene la sesión iniciada, pero falta un paso", "Pulsa a para usar tu suscripción")
+	noQuiere(t, a.Vista(), "ya puedes usarlo")
+	fuera := a.Pulsar("a") // el cursor sigue en el simulado, que va primero
+	if q, ok := pregunta(fuera); !ok || !strings.Contains(q.Texto, "Usar tu suscripción con Claude") || !strings.Contains(q.Texto, "Ese riesgo es tuyo") {
+		t.Fatalf("pide aceptar el riesgo de Claude: %+v", fuera)
+	}
+	// Al confirmar lo pide al servicio para claude (el de prueba no sabe cambiarlo y contesta por claude, no por el simulado).
+	if av, ok := aviso(a.HastaSalir(func() { a.Entregar(comp.Confirmado{}) }, prueba.HayAviso)); !ok || !strings.Contains(av.Texto, "claude") {
+		t.Fatalf("al confirmar lo pide para claude: %+v", av)
+	}
+
+	conClave := detectado(adaptadores.Estado{Autenticacion: "clave_api"})
+	b, g, s := preparando(t, map[string]adaptadores.Adaptador{"claude": conClave}, enMarcha, v)
+	b.HastaVer("Comprobando Claude…")
+	g.Fijar("claude", contrato.EstadoPreparacion{Accion: "iniciar_sesion", Estado: "listo"})
+	tic(t, b, s)
+	b.HastaVer("Sesión iniciada en Claude: ya puedes usarlo.")
+	noQuiere(t, b.Vista(), "falta un paso")
+}
+
 // TestPrepararPeticionesEnCurso: si el agente tiene peticiones en curso, el servicio no instala y la página lo dice.
 func TestPrepararPeticionesEnCurso(t *testing.T) {
 	a, _, _ := preparando(t, map[string]adaptadores.Adaptador{"claude": listoCLI}, func(f *prueba.Preparacion) {

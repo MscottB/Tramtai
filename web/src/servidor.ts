@@ -72,6 +72,11 @@ export function ordenSuscripcion(agente: string, forma: FormaSuscripcion) {
   return forma === 'personal' ? `tramtai-servidor agentes suscripcion ${agente} --personal` : `tramtai-servidor agentes entrar ${agente}`
 }
 
+// ordenUsarSuscripcion activa la suscripción de un agente con su aviso de riesgo, donde la Web UI no ofrece el botón (en
+// el servidor, o desde otro equipo); abierto a la red, como personal.
+export const ordenUsarSuscripcion = (agente: string, s: Sesion | null | undefined, e: EstadoServidor | null) =>
+  `${esServidor(s) ? 'tramtai-servidor' : 'tramtai'} agentes suscripcion ${agente}${formaSuscripcion(s, e) === 'personal' ? ' --personal' : ''}`
+
 // ordenClave guarda la clave que falta: la del servidor la pide tramtai-servidor en el propio servidor.
 export const ordenClave = (s: Sesion | null | undefined, variable: string) => `${esServidor(s) ? 'tramtai-servidor' : 'tramtai'} claves guardar ${variable}`
 

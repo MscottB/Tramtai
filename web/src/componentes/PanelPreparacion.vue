@@ -44,6 +44,20 @@
       <div v-else-if="estados[agente]?.estado === 'listo' && estados[agente]!.mensaje" class="aviso text-body2 romper">{{ estados[agente]!.mensaje }}</div>
       <div v-if="fallos[agente]" class="text-body2" role="alert">{{ fallos[agente] }}</div>
 
+      <!-- Inició sesión, pero Tramtai aún lo usa con clave de API y no hay ninguna: «Usar mi suscripción» ahí mismo, con su
+           aviso de riesgo; donde no hay botón (el servidor, otro equipo), la orden. -->
+      <template v-if="falta(agente)">
+        <div class="text-body2">{{ t('preparar.faltaSuscripcionTexto') }}</div>
+        <div v-if="puedeElegirSuscripcion(true, sesion, estadoServidor)">
+          <q-btn unelevated no-caps color="primary" icon="o_person" :label="t('agentes.usarSuscripcion')" :loading="activando === agente" @click="activar(agente)" />
+        </div>
+        <template v-else>
+          <div class="text-body2">{{ t('preparar.suscripcionConOrden') }}</div>
+          <div class="bloque-codigo">{{ ordenUsarSuscripcion(agente, sesion, estadoServidor) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar"
+            :aria-label="t('agentes.copiarComando')" @click="copiar(ordenUsarSuscripcion(agente, sesion, estadoServidor))" /></div>
+        </template>
+      </template>
+
       <!-- Las últimas líneas de la salida, tal cual y con los enlaces resaltados (sin enlaces que se abran solos). -->
       <div v-if="estados[agente]?.lineas?.length && (estados[agente]!.estado === 'error' || enMarcha(estados[agente]))"
         class="bloque-codigo sin-ajuste text-caption registro-preparacion" role="log" :aria-label="t('preparar.registro')" tabindex="0">
@@ -67,11 +81,12 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { EstadoPreparacion } from '../api/tipos'
-import { nombreAgente } from '../agentes'
+import { adaptadoresConocidos, nombreAgente, refrescarAgentes } from '../agentes'
 import { sesion } from '../estado'
 import { sinDato } from '../formato'
-import { esServidor } from '../servidor'
-import { AVISOS_SESION, CODIGOS_EXPLICADOS, enMarcha, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
+import { esServidor, estadoServidor, ordenUsarSuscripcion, puedeElegirSuscripcion } from '../servidor'
+import { usarSuscripcion } from '../suscripcion'
+import { AVISOS_SESION, CODIGOS_EXPLICADOS, conSesion, enMarcha, faltaSuscripcion, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -119,7 +134,33 @@ const corrida: Corrida = {
   lanzada: (agente) => emit('lanzada', agente),
   cambio: (agente, e) => (estados[agente] = e),
   fallo: (agente, e) => (fallos[agente] = mensajeError(e)),
-  fin: (agente, e) => emit('fin', agente, e, fallos[agente]),
+  fin: (agente, e) => {
+    if (e?.estado === 'listo' && !e.motivo_codigo && conSesion(agente) && (e.accion === 'instalar' || e.accion === 'iniciar_sesion')) {
+      comprobaciones = Promise.all([comprobaciones, comprobarModo(agente)]).then(() => {})
+    }
+    emit('fin', agente, e, fallos[agente])
+  },
+}
+
+// Tras iniciar sesión se vuelven a comprobar los agentes: hasta saber si falta usar la suscripción (Ruling 34), el panel
+// dice «Comprobando» y la tanda no se da por acabada.
+const comprobando = reactive<Record<string, boolean>>({})
+let comprobaciones = Promise.resolve()
+async function comprobarModo(agente: string) {
+  comprobando[agente] = true
+  await refrescarAgentes()
+  comprobando[agente] = false
+}
+const adaptador = (agente: string) => adaptadoresConocidos.value?.find((a) => a.agente === agente)
+const falta = (agente: string) => !comprobando[agente] && faltaSuscripcion(estados[agente], adaptador(agente))
+const activando = ref('')
+async function activar(agente: string) {
+  activando.value = agente
+  try {
+    await usarSuscripcion(agente)
+  } finally {
+    activando.value = ''
+  }
 }
 
 // correr recorre los agentes desde uno.
@@ -130,6 +171,8 @@ async function correr(desde: number, primera: Orden) {
   try {
     const resultado = await prepararAgentes(corrida, props.agentes, desde, primera, ordenInicial())
     if (resultado === 'cortado') return
+    await comprobaciones
+    if (!vivo) return
     terminado.value = true
     if (resultado === 'listo') avisarListo()
     else paradaEn.value = props.agentes.indexOf(actual.value)
@@ -195,7 +238,7 @@ watch(() => estados[actual.value]?.estado, (estado) => estado !== 'esperando_usu
 
 // k da por buena una clave armada con un estado o un código del contrato.
 const k = (clave: string) => clave as Clave
-const girando = (agente: string) => enMarcha(estados[agente]) || (agente === actual.value && corriendo.value && !estados[agente] && !fallos[agente])
+const girando = (agente: string) => enMarcha(estados[agente]) || !!comprobando[agente] || (agente === actual.value && corriendo.value && !estados[agente] && !fallos[agente])
 
 function titular(agente: string): string {
   const e = estados[agente]
@@ -206,6 +249,8 @@ function titular(agente: string): string {
     case 'esperando_usuario':
       return t(e.pide_pegar ? 'preparar.esperaPegar' : 'preparar.esperaCodigo', { agente: nombre })
     case 'listo': {
+      if (comprobando[agente]) return t('preparar.estado.comprobando', { agente: nombre })
+      if (falta(agente)) return t('preparar.faltaSuscripcion', { agente: nombre })
       const versiones = { agente: nombre, antes: e.version_antes || sinDato(), despues: e.version_despues || sinDato() }
       return e.motivo_codigo && e.accion === 'instalar' ? t('preparar.listoSinSesion', versiones) : t(k(`preparar.listo.${e.accion}`), versiones)
     }
@@ -226,12 +271,12 @@ function explicacion(e: EstadoPreparacion): string {
 
 function icono(agente: string) {
   const e = estados[agente]
-  if (e?.estado === 'listo') return e.motivo_codigo ? 'o_warning' : 'o_check_circle'
+  if (e?.estado === 'listo') return e.motivo_codigo || falta(agente) ? 'o_warning' : 'o_check_circle'
   return e?.estado === 'cancelado' ? 'o_block' : pideSeguir(e) ? 'o_warning' : 'o_error'
 }
 function color(agente: string) {
   const e = estados[agente]
-  if (e?.estado === 'listo') return e.motivo_codigo ? 'warning' : 'positive'
+  if (e?.estado === 'listo') return e.motivo_codigo || falta(agente) ? 'warning' : 'positive'
   return e?.estado === 'cancelado' ? 'neutro' : pideSeguir(e) ? 'warning' : 'negative'
 }
 

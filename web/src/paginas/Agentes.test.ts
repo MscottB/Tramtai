@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
+import { formaSuscripcion, ordenClave, ordenSuscripcion, ordenUsarSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
 
 const sesion = (entorno: string): Sesion => ({ instancia: 'global', csrf: 'tk', version: 'v0', local: true, entorno })
@@ -15,6 +15,17 @@ test('en el escritorio se elige la suscripción aquí; en el servidor, con su or
   assert.equal(formaSuscripcion(sesion('servidor'), null), 'entrar', 'sin estado del servidor no se ofrece elegir aquí')
   assert.equal(ordenSuscripcion('claude', 'entrar'), 'tramtai-servidor agentes entrar claude')
   assert.equal(ordenSuscripcion('codex', 'personal'), 'tramtai-servidor agentes suscripcion codex --personal')
+})
+
+test('tras iniciar sesión, la suscripción que falta se activa con su orden donde no hay botón (Ruling 34)', () => {
+  assert.equal(ordenUsarSuscripcion('claude', { ...sesion('escritorio'), local: false }, null), 'tramtai agentes suscripcion claude')
+  assert.equal(ordenUsarSuscripcion('claude', sesion('servidor'), servidor(false)), 'tramtai-servidor agentes suscripcion claude')
+  assert.equal(ordenUsarSuscripcion('codex', sesion('servidor'), servidor(true)), 'tramtai-servidor agentes suscripcion codex --personal')
+  // El panel de preparación y la bienvenida ofrecen el mismo aviso de riesgo que Agentes (suscripcion.ts), o esa orden.
+  for (const archivo of ['../componentes/PanelPreparacion.vue', '../componentes/DialogoBienvenida.vue', './Agentes.vue']) {
+    const fuente = readFileSync(new URL(archivo, import.meta.url), 'utf8')
+    assert.ok(fuente.includes("from '../suscripcion'"), archivo)
+  }
 })
 
 test('la clave que falta se guarda con tramtai-servidor en el servidor', () => {

@@ -163,6 +163,28 @@ type opciones struct {
 // conSesion: el agente inicia sesión con su CLI (su ficha admite la suscripción); si no, va con clave (Antigravity).
 func conSesion(agente string) bool { return catalogo.AdmiteSuscripcion(agente) }
 
+// trasSesion: la preparación del agente terminó bien con la sesión iniciada (al entrar, o al instalar) en un agente que
+// admite la suscripción.
+func trasSesion(agente string, e contrato.EstadoPreparacion) bool {
+	return e.Estado == "listo" && e.MotivoCodigo == "" && (e.Accion == accionIniciar || e.Accion == accionInstalar) && conSesion(agente)
+}
+
+// faltaSuscripcion: inició sesión, pero Tramtai aún usa el agente con clave de API y no hay ninguna guardada (falta_clave):
+// falta usar la suscripción, con su aviso de riesgo (tecla a). No se cambia sola, para no saltarse ese aviso (Ruling 34).
+func (p *Pagina) faltaSuscripcion(agente string) bool {
+	a, ok := p.adaptador(agente)
+	return ok && trasSesion(agente, p.estados[agente]) && a.Estado == contrato.AgenteFaltaClave
+}
+
+// adaptador es el agente tal como lo contó la última comprobación.
+func (p *Pagina) adaptador(agente string) (contrato.Adaptador, bool) {
+	i := slices.IndexFunc(p.agentes, func(a contrato.Adaptador) bool { return a.Agente == agente })
+	if i < 0 {
+		return contrato.Adaptador{}, false
+	}
+	return p.agentes[i], true
+}
+
 // avisoNoComprobada es el aviso de una acción con la versión sin comprobar (para iniciar sesión, el motivo del servicio,
 // que trae la orden para la consola).
 func (p *Pagina) avisoNoComprobada(accion, agente string, v contrato.VersionesAgente) string {
@@ -637,6 +659,12 @@ func (p *Pagina) titular(agente string) string {
 	case "esperando_usuario":
 		return p.tx(map[bool]string{true: "preparar.esperaPegar", false: "preparar.esperaCodigo"}[e.PidePegar], "agente", n)
 	case "listo":
+		if trasSesion(agente, e) && p.cargando { // hasta la comprobación que sigue no se sabe si falta usar la suscripción
+			return p.tx("preparar.estado.comprobando", "agente", n)
+		}
+		if p.faltaSuscripcion(agente) {
+			return p.tx("preparar.faltaSuscripcion", "agente", n)
+		}
 		versiones := []string{"agente", n, "antes", cmp.Or(e.VersionAntes, idioma.T("Sin dato")), "despues", cmp.Or(e.VersionDespues, idioma.T("Sin dato"))}
 		if e.MotivoCodigo != "" && e.Accion == accionInstalar {
 			return p.tx("preparar.listoSinSesion", versiones...)
@@ -705,7 +733,7 @@ func (p *Pagina) panel(ancho int) []string {
 		if p.fallos[g] == "" {
 			icono, tono = s.Iconos.Activo, s.Acento
 		}
-	case e.Estado == "listo" && e.MotivoCodigo == "", e.Estado == "esperando_usuario":
+	case e.Estado == "listo" && e.MotivoCodigo == "" && !p.faltaSuscripcion(g), e.Estado == "esperando_usuario":
 		icono, tono = s.Iconos.Ok, s.Exito
 		if e.Estado == "esperando_usuario" {
 			icono, tono = s.Iconos.Activo, s.Acento
@@ -760,6 +788,19 @@ func (p *Pagina) panel(ancho int) []string {
 	}
 	if f := p.fallos[g]; f != "" {
 		texto(plano, f)
+	}
+	if p.faltaSuscripcion(g) { // la tecla a la activa, con su aviso de riesgo; en el servidor, su orden
+		texto(plano, p.tx("preparar.faltaSuscripcionTexto"))
+		if p.c.Entorno == "servidor" {
+			texto(plano, p.tx("preparar.suscripcionConOrden"))
+			orden := "tramtai-servidor agentes suscripcion " + g
+			if p.servidor != nil && p.servidor.Expuesto {
+				orden += " --personal"
+			}
+			l = append(l, "  "+orden)
+		} else {
+			texto(plano, idioma.T("Pulsa a para usar tu suscripción (antes te enseña el riesgo)."))
+		}
 	}
 	if n := len(e.Lineas); n > 0 && (e.Estado == "error" || enMarcha(e)) {
 		for _, linea := range e.Lineas[max(n-3, 0):] {

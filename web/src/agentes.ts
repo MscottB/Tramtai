@@ -201,6 +201,8 @@ export function fijarDisponibilidad(adaptadores: Adaptador[]) {
     a.estado === 'desconectado' ? t('modelo.desconectado') : a.estado === 'no_instalado' ? t('modelo.noInstalado')
       : a.estado === 'falta_clave' || a.estado === 'sin_sesion' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
 }
+// refrescarAgentes vuelve a comprobar los agentes ahora (tarda: ejecuta cada CLI); si falla, se queda lo que había.
+export const refrescarAgentes = () => api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {})
 export function cargarDisponibilidad() {
   disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {
     disponibilidad = undefined // sin respuesta no se marca nada: se vuelve a pedir la próxima vez

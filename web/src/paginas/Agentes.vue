@@ -261,10 +261,11 @@ import type { Adaptador, EstadoPreparacion, VersionesAgente } from '../api/tipos
 import { accionPrincipal, confirmarDesinstalar, conSesion, enMarcha, trozos, versionNueva, type Accion } from '../preparacion'
 import { sesion } from '../estado'
 import type { Destino } from '../navegacion'
-import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
+import { adaptadoresConocidos, agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
 import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import { aceptarRiesgoSuscripcion } from '../suscripcion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -364,16 +365,8 @@ async function cargar() {
 }
 
 // La suscripción solo se activa si el usuario acepta el riesgo con los términos del proveedor (TERMINOS.md, punto 4).
-function confirmarSuscripcion(a: Adaptador) {
-  $q.dialog({ title: t('agentes.confirmarTitulo', { agente: nombreAgente(a.agente) }),
-    message: t('agentes.confirmarSuscripcion', { cli: cli(a) }) + '\n\n' + t('agentes.riesgoSuscripcion'),
-    style: 'white-space: pre-line',
-    options: { type: 'checkbox', model: [], items: [{ label: t('agentes.aceptoRiesgo'), value: 'acepto' }] },
-    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('agentes.usarSuscripcion'), unelevated: true, noCaps: true } })
-    .onOk((elegidas: string[]) => {
-      if (elegidas.includes('acepto')) cambiar(a, 'suscripcion')
-      else avisarError(new Error(t('agentes.faltaAceptar')))
-    })
+async function confirmarSuscripcion(a: Adaptador) {
+  if (await aceptarRiesgoSuscripcion(a.agente)) cambiar(a, 'suscripcion')
 }
 
 // conectar conecta o desconecta el agente en todos los espacios (al desconectar, pide confirmación).
@@ -453,6 +446,8 @@ watch(() => instalados.value.map((a) => a.agente), (ahora, antes) => {
     else if (!ahora.includes(agente) && antes?.includes(agente)) otrosAbierto.value = true
   }
 })
+// Una comprobación hecha fuera de la página (el panel, tras «Usar mi suscripción») también pone las tarjetas al día.
+watch(adaptadoresConocidos, (lista) => lista && (adaptadores.value = lista))
 // alTerminar refresca las tarjetas.
 function alTerminar() {
   cargar()

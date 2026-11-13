@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accionPrincipal, confirmarDesinstalar, conReintentos, listoParaUsar, masNueva, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, resumenFinal, seguirPreparacion, siguienteTrasSaltar,
+import { accionPrincipal, confirmarDesinstalar, conReintentos, faltaSuscripcion, listoParaUsar, masNueva, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, resumenFinal, seguirPreparacion, siguienteTrasSaltar,
   versionNueva, vistaEspera, type Corrida } from './preparacion.ts'
 import { fichas, type FichaAgente } from './agentes.ts'
 import { t } from './i18n.ts'
@@ -71,6 +71,24 @@ test('un listo que no inició sesión (versión sin comprobar) no cuenta como li
   assert.equal(listoParaUsar({ agente: 'claude', accion: 'instalar', estado: 'listo' }), true)
   assert.equal(listoParaUsar({ agente: 'claude', accion: 'instalar', estado: 'listo', motivo_codigo: 'version_no_comprobada', mensaje: '…' }), false)
   assert.equal(listoParaUsar({ agente: 'claude', accion: 'instalar', estado: 'error' }), false)
+})
+
+// conClave: el agente en modo clave de API tal como lo cuenta el servicio (falta_clave: sin clave guardada).
+const conClave = (estado: Adaptador['estado'], id = 'claude'): Adaptador => ({ ...agente(estado, id), autenticacion: 'clave_api' })
+
+test('con la sesión iniciada pero aún con clave de API y sin clave, falta usar la suscripción: no está listo (Ruling 34)', () => {
+  const sesion: EstadoPreparacion = { agente: 'claude', accion: 'iniciar_sesion', estado: 'listo' }
+  const instalado: EstadoPreparacion = { agente: 'claude', accion: 'instalar', estado: 'listo' }
+  for (const e of [sesion, instalado]) {
+    assert.equal(faltaSuscripcion(e, conClave('falta_clave')), true, e.accion)
+    assert.equal(listoParaUsar(e, conClave('falta_clave')), false, e.accion)
+  }
+  assert.equal(listoParaUsar(sesion, conClave('listo')), true, 'con su clave guardada sí está listo')
+  assert.equal(listoParaUsar(sesion, agente('listo')), true, 'ya en suscripción')
+  assert.equal(listoParaUsar(sesion), true, 'sin saber cómo está el agente, como antes')
+  assert.equal(faltaSuscripcion({ ...sesion, estado: 'error' }, conClave('falta_clave')), false)
+  assert.equal(faltaSuscripcion({ ...sesion, accion: 'actualizar' }, conClave('falta_clave')), false)
+  assert.equal(faltaSuscripcion({ ...instalado, agente: 'antigravity' }, conClave('falta_clave', 'antigravity')), false, 'Antigravity va con clave')
 })
 
 test('con esperando_usuario el panel enseña el enlace, el código y el campo para pegar; el enlace se abre aparte con «Abrir»', () => {
@@ -277,6 +295,13 @@ test('resumenFinal: un agente que va con clave (Antigravity) instalado no está 
   })
   assert.deepEqual(r.listos, ['claude'])
   assert.deepEqual(r.pendientes, [{ agente: 'antigravity', razon: t('bienvenida.faltaClave') }])
+})
+
+test('resumenFinal: con la sesión iniciada pero sin usar la suscripción falta un paso; con clave guardada, listo', () => {
+  const e = (agente: string) => ({ agente, accion: 'instalar', estado: 'listo' } as EstadoPreparacion)
+  const r = resumenFinal(['claude', 'codex'], { claude: e('claude'), codex: e('codex') }, {}, [conClave('falta_clave'), conClave('listo', 'codex')])
+  assert.deepEqual(r.listos, ['codex'])
+  assert.deepEqual(r.pendientes, [{ agente: 'claude', razon: t('bienvenida.faltaSuscripcion'), suscripcion: true }])
 })
 
 test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', () => {
