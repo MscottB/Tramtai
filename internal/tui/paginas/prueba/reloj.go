@@ -61,6 +61,13 @@ func (r *Reloj) Pasar(d time.Duration) {
 	r.esperas = quedan
 }
 
+// Esperando son las esperas que aún no vencieron.
+func (r *Reloj) Esperando() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.esperas)
+}
+
 // Pedidas son las esperas que se le han pedido, en orden.
 func (r *Reloj) Pedidas() []time.Duration {
 	r.mu.Lock()

@@ -99,6 +99,9 @@ type Opciones struct {
 	// PrepararAgentes crea la preparación de los CLI de los agentes (internal/preparar): /api/v1/agentes/{id}/preparacion
 	// y la comprobación diaria de sus versiones. false en las pruebas que no la usan: no lanza ni consulta nada.
 	PrepararAgentes bool
+	// Preparacion, si no es nil, es la preparación de los CLI en lugar de la real: las pruebas de las pantallas ponen una
+	// que no instala nada.
+	Preparacion Preparacion
 	// Almacen guarda las claves de las herramientas (Claude Code, Codex); nil = el almacén del sistema (credenciales). Las
 	// pruebas no tocan el del equipo.
 	Almacen Almacen
@@ -260,9 +263,12 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		}
 	}
 	// Antes de abrir ningún oyente: lo que dejó a medias el servicio anterior ya está recogido.
+	s.buscarVersiones.Store(opc.Config.Booleano("servicio.buscar_versiones_agentes"))
 	if opc.PrepararAgentes {
-		s.buscarVersiones.Store(opc.Config.Booleano("servicio.buscar_versiones_agentes"))
 		s.preparar = s.nuevaPreparacion()
+	}
+	if opc.Preparacion != nil {
+		s.preparar = opc.Preparacion
 	}
 	// Con proxies de confianza, la CLI no comparte oyente con el proxy, que puede estar en 127.0.0.1 (R35).
 	if opc.TLS != nil || len(opc.Confiables) > 0 {

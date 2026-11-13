@@ -107,6 +107,12 @@ func (p *Pagina) fila(a contrato.Adaptador) string {
 	if a.Version != "" {
 		resto = append(resto, a.Version)
 	}
+	if n := versionNueva(p.versiones[a.Agente]); n != "" {
+		resto = append(resto, e.Tenue.Render(idioma.Tf("nueva %s", n)))
+	}
+	if x, ok := p.estados[a.Agente]; ok && enMarcha(x) && x.Estado != "esperando_usuario" { // lo que se está haciendo con su CLI, en lugar de lo de siempre
+		resto = []string{e.Acento.Render(p.tx("preparar.estado."+x.Estado, "agente", nombre(a.Agente)))}
+	}
 	f, _ := catalogo.Buscar(a.Agente)
 	return pagina.Rellenar(e.Linea(f.ColorClaro, f.ColorOscuro).Render(codigo(a.Agente)), 3) + " " + pagina.Rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
 		pagina.Rellenar(tono.Render(icono+" "+p.etiqueta(est)), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
@@ -118,20 +124,36 @@ func (p *Pagina) Vista() string {
 	if e == nil {
 		return ""
 	}
+	if p.registro != "" { // el registro de la última preparación del agente
+		cabecera := e.Titulo.Render(e.Recortar(p.tx("preparar.registroTitulo", "agente", nombre(p.registro)), ancho))
+		return cabecera + "\n\n" + p.visor.Vista()
+	}
 	if p.detalle != "" {
 		a, _ := p.elegido()
 		cabecera := e.Titulo.Render(e.Recortar(nombre(a.Agente), ancho)) + " " + e.Tenue.Render(e.Iconos.Separador+" "+p.etiqueta(a.Estado))
-		return cabecera + "\n\n" + p.visor.Vista()
+		// La preparación que se sigue va entre la cabecera y el detalle, que cede ese alto.
+		panel := p.panel(ancho)
+		cuerpo := cabecera + "\n"
+		if len(panel) > 0 {
+			cuerpo += "\n" + strings.Join(panel, "\n") + "\n"
+		}
+		p.visor.Tamano(ancho, max(alto-2-len(panel)-min(len(panel), 1), 1))
+		return cuerpo + "\n" + p.visor.Vista()
 	}
 	if v, ok := e.Preambulo(p.lengua, ancho, p.sinServ, !p.cargado && p.err == ""); ok {
 		return v
 	}
 	var lineas []string // el título ya está en la cabecera de la app
-	if alto >= 12 {
+	panel := p.panel(ancho)
+	if alto >= 12 && len(panel) == 0 { // con una preparación a la vista, el sitio es para ella
 		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.tx("agentes.subtitulo"), ancho)))
 	}
 	if p.err != "" {
 		lineas = append(lineas, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
+	}
+	if len(panel) > 0 {
+		lineas = append(lineas, panel...)
+		lineas = append(lineas, "")
 	}
 	if p.cargado {
 		lineas = append(lineas, e.Recortar(p.resumen(), ancho), "")
@@ -200,6 +222,14 @@ func (p *Pagina) textoDetalle(a contrato.Adaptador) string {
 	if cli != nombre(a.Agente) {
 		add(cli, "")
 	}
+	// Lo de preparar su CLI: la versión nueva y el aviso de una versión sin comprobar.
+	o := p.opcionesDe(a)
+	if n := versionNueva(p.versiones[a.Agente]); n != "" {
+		add(p.tx("preparar.hayNueva", "ultima", n, "instalada", p.versiones[a.Agente].Instalada), "")
+	}
+	if o.aviso != "" {
+		add(o.aviso, "")
+	}
 	switch est {
 	case contrato.AgenteDesconectado:
 		add(p.tx("agentes.desconectadoTexto"))
@@ -232,6 +262,9 @@ func (p *Pagina) textoDetalle(a contrato.Adaptador) string {
 	case contrato.AgenteSinSesion:
 		add(a.Problema)
 	case contrato.AgenteNoInstalado:
+		if o.instalar {
+			add(p.tx(map[bool]string{true: "preparar.instalarTexto", false: "preparar.instalarTextoClave"}[conSesion(a.Agente)]))
+		}
 		add(idioma.Tf("Instala su CLI y pulsa c para volver a comprobar. Si está en otra ruta, indícala en comandos_agentes.%s.", a.Agente))
 		if f, ok := catalogo.Buscar(a.Agente); ok && f.URLInstalacion != "" {
 			add(p.tx("agentes.comoInstalar") + ": " + f.URLInstalacion)

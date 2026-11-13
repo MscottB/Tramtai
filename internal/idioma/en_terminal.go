@@ -65,6 +65,16 @@ func init() {
 		"En su estado actual solo se puede usar la clave de API":              "In its current state only the API key can be used",
 		"Este agente aún no está listo para probar":                           "This agent is not ready to try yet",
 
+		// Agentes: preparar sus CLI (instalar, iniciar sesión, actualizar, desinstalar); el resto sale de los textos de la Web UI.
+		"deja el campo":              "leave the field",
+		"pegar código":               "paste code",
+		"nueva %s":                   "new %s",
+		"desinstalar y borrar sus datos": "uninstall and delete its data",
+		"versiones de los agentes":   "agent versions",
+		"Esta acción no está disponible ahora para este agente": "This action is not available for this agent right now",
+		"Se desinstala con su orden oficial y deja de estar también fuera de Tramtai.": "It is uninstalled with its official command and is no longer available outside Tramtai either.",
+		"Para borrarlos también, cancela y pulsa X.":                                   "To delete them too, cancel and press X.",
+
 		// Inicio: los textos, contadores y pasos salen de los de la Web UI; aquí solo lo propio de la terminal.
 		"desplaza": "scroll",
 		"Sin conexión en vivo · reconectando…": "No live connection · reconnecting…",

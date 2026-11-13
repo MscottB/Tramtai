@@ -514,6 +514,37 @@ func TestBuscarAhora(t *testing.T) {
 	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return !e.Buscar })
 }
 
+// TestBuscarVersionesAgentes: Actualizaciones enseña también «Comprobar versiones nuevas de los agentes» y v lo cambia en
+// el servicio, sin tocar la búsqueda de Tramtai.
+func TestBuscarVersionesAgentes(t *testing.T) {
+	cli, id := conVersion(t)
+	a := abierta(t, cli, id)
+	todoTramtai(t, a)
+	ir(t, a, tx("actualizacion.ajustesTitulo"))
+	a.HastaVer(tx("versionesAgentes.titulo"))
+	if !slices.ContainsFunc(a.P.Teclas(), func(k pagina.Tecla) bool { return k.Tecla == "v" }) {
+		t.Fatalf("el pie dice qué tecla lo cambia: %+v", a.P.Teclas())
+	}
+	estado := func() contrato.EstadoActualizacion {
+		e, err := cli.Actualizacion(context.Background(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	if e := estado(); !e.BuscarVersionesAgentes || !e.Buscar {
+		t.Fatalf("de serie, las dos búsquedas están activas: %+v", e)
+	}
+	a.Pulsar("v")
+	a.Hasta(func() bool { return !estado().BuscarVersionesAgentes })
+	if !estado().Buscar {
+		t.Fatal("v no toca la búsqueda de Tramtai")
+	}
+	a.HastaVer("[ ] " + tx("versionesAgentes.titulo"))
+	a.Pulsar("v")
+	a.Hasta(func() bool { return estado().BuscarVersionesAgentes })
+}
+
 // TestReiniciarTrasElPuerto: con un servicio que se puede reiniciar, guardar otro puerto pregunta si se reinicia ahora,
 // como la Web UI; cancelar no reinicia, y R lo vuelve a ofrecer mientras el puerto configurado no es el que se usa.
 // Confirmado, se pide el reinicio al servicio (el de la prueba solo lo apunta).

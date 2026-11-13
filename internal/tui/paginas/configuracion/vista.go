@@ -151,6 +151,8 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		if !p.act.Comprobado.IsZero() {
 			b.lineas = append(b.lineas, e.Tenue.Render(p.tx("actualizacion.comprobado", "hora", p.act.Comprobado.Local().Format("15:04"))))
 		}
+		// Los CLI de los agentes se comprueban aparte de Tramtai: su propio ajuste (servicio.buscar_versiones_agentes).
+		b.lineas = append(b.lineas, "", casilla(p.act.BuscarVersionesAgentes)+" "+p.tx("versionesAgentes.titulo"), e.Tenue.Render(p.tx("versionesAgentes.texto")))
 		return b
 	case secArranque:
 		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: p.tx("arranque." + cmpOr(p.ajustes.ModoArranque, "no")),

@@ -567,7 +567,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.sinResultados.terminal': 'Nothing matches “{texto}”. Try another word, or press w to search the Help on the website.',
   // In the terminal: how each topic is done there, with its keys. Only the terminal Help shows it.
   'ayuda.empezar.terminal': 'In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens help and Esc goes back. Ctrl+E switches workspace, W opens the Web UI in the browser and q quits.',
-  'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.',
+  'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows the details, c checks, d connects or disconnects, a switches authentication; i installs, s signs in, u updates, x uninstalls and l shows the log.',
   'ayuda.probar.terminal': 'In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message and c cancels the request; k shows the code and g saves the test as an API.',
   'ayuda.conectar.terminal': 'In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key and to Tools (topic “Connect your tools”).',
   'ayuda.conectarHerramientas.terminal': 'In the terminal: My APIs (4), ← → to Tools. Space turns on or off; Enter turns on again an out-of-date tool; t turns on all and T turns them off; m changes model; R restores; o forgets; r refreshes.',

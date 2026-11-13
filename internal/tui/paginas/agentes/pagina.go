@@ -6,7 +6,9 @@ package agentes
 import (
 	"slices"
 	"strings"
+	"time"
 
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 
 	catalogo "tramtai/internal/agentes"
@@ -42,8 +44,11 @@ type (
 	}
 )
 
-// pendiente es lo que la página va a hacer si el usuario confirma.
-type pendiente struct{ agente, accion string }
+// pendiente es lo que la página va a hacer si el usuario confirma; borrar y confirmar son los de desinstalar.
+type pendiente struct {
+	agente, accion    string
+	borrar, confirmar bool
+}
 
 const (
 	accionDesconectar = "desconectar"
@@ -71,24 +76,56 @@ type Pagina struct {
 	modelos  map[string][]string
 	errModel map[string]string
 	servidor *contrato.EstadoServidor // nil fuera del servidor
+
+	// Preparar los CLI (preparar.go): las versiones, el estado de cada preparación que se sigue y cuál se enseña.
+	espera      func(time.Duration) <-chan time.Time
+	versiones   map[string]contrato.VersionesAgente
+	estados     map[string]contrato.EstadoPreparacion
+	fallos      map[string]string // por qué no se pudo pedir o consultar una preparación
+	acciones    map[string]string // la acción que se pidió a cada agente
+	borrado     map[string]bool   // si se pidió desinstalar borrando también sus datos (para «Seguir»)
+	errConsulta map[string]int    // consultas seguidas que fallaron
+	foco        string            // el agente cuya preparación se enseña
+	sondeando   bool              // hay una espera de consulta en marcha
+	cuenta      string            // en el servidor, la cuenta del sistema para la que se prepara
+	pegar       textinput.Model   // el código que pega el usuario; nunca se guarda fuera de él
+	pegando     bool              // el campo tiene el foco
+	hayCampo    bool              // el CLI espera un código pegado
+	registro    string            // el agente cuyo registro se ve, "" si ninguno
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
 func Nueva(lengua string) pagina.Pagina {
-	return &Pagina{lengua: lengua, modelos: map[string][]string{}, errModel: map[string]string{}}
+	return &Pagina{lengua: lengua, modelos: map[string][]string{}, errModel: map[string]string{}, espera: time.After, pegar: nuevoCampo()}
 }
 
 func (p *Pagina) Titulo() string { return datos.Texto(p.lengua, "menu.agentes") }
 func (p *Pagina) Ayuda() string  { return pagina.PaginaAgentes }
-func (p *Pagina) EnCampo() bool  { return false }
+func (p *Pagina) EnCampo() bool  { return p.pegando }
 
 func (p *Pagina) Teclas() []pagina.Tecla {
-	if p.detalle != "" {
-		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "c", Accion: idioma.T("comprobar")},
-			{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
+	if p.pegando {
+		return []pagina.Tecla{{Tecla: "Enter", Accion: strings.ToLower(p.tx("preparar.enviar"))}, {Tecla: "Esc", Accion: idioma.T("deja el campo")}}
 	}
-	return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("detalles")}, {Tecla: "← →", Accion: idioma.T("filtro")}, {Tecla: "c", Accion: idioma.T("comprobar")},
-		{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
+	if p.registro != "" {
+		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}}
+	}
+	fijas := []pagina.Tecla{{Tecla: "c", Accion: idioma.T("comprobar")}, {Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")},
+		{Tecla: "p", Accion: p.tx("menu.ejecutar")}}
+	if p.detalle != "" {
+		return slices.Concat([]pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}}, p.teclasPreparar(), fijas)
+	}
+	arriba := []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("detalles")}}
+	if p.cerrable() {
+		arriba = append(arriba, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("cierra")})
+	}
+	return slices.Concat(arriba, p.teclasPreparar(), []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("filtro")}}, fijas)
+}
+
+// cerrable dice si se enseña una preparación que terminó: Esc la quita antes de salir de la página.
+func (p *Pagina) cerrable() bool {
+	e, ok := p.estados[p.foco]
+	return p.foco != "" && !p.pegando && ((ok && !enMarcha(e)) || (!ok && p.fallos[p.foco] != ""))
 }
 
 // Iniciar empieza de cero: «Cargando…» hasta que llegue la comprobación.
@@ -105,7 +142,22 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.visor.Tamano(c.Ancho, max(c.Alto-2, 1))
 	p.cargado, p.sinServ, p.err, p.detalle, p.pend, p.ocupado = false, false, "", "", nil, false
 	p.modelos, p.errModel = map[string][]string{}, map[string]string{} // el catálogo es del espacio: el de antes no se ve
-	return p.comprobar()
+	p.versiones, p.estados, p.fallos = map[string]contrato.VersionesAgente{}, map[string]contrato.EstadoPreparacion{}, map[string]string{}
+	p.acciones, p.borrado, p.errConsulta = map[string]string{}, map[string]bool{}, map[string]int{}
+	p.foco, p.registro, p.cuenta, p.sondeando, p.hayCampo = "", "", "", false, false
+	p.sincronizarCampo()
+	return tea.Batch(p.comprobar(), p.cargarVersiones(false, true), p.cargarCuenta())
+}
+
+// Ocultar deja de seguir las preparaciones mientras la página no se ve (lo que llegue a destiempo se descarta); Mostrar las
+// retoma donde estaban.
+func (p *Pagina) Ocultar() { p.gen++; p.sondeando = false }
+
+func (p *Pagina) Mostrar() tea.Cmd {
+	if p.c.Cli == nil {
+		return nil
+	}
+	return tea.Batch(p.comprobar(), p.cargarVersiones(false, true), p.consultar(), p.sondear())
 }
 
 // comprobar pide el estado de todos los agentes (la API ejecuta cada CLI, así que tarda).
@@ -181,6 +233,49 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo)
 		}
 		return p, tea.Batch(comp.Aviso(m.exito, comp.Exito), p.comprobar())
+	case msgVersiones:
+		return p, p.alCargarVersiones(m)
+	case msgCuenta:
+		if p.vigente(m.origen) {
+			p.cuenta = m.cuenta
+		}
+	case msgLanzada:
+		return p, p.alLanzar(m)
+	case msgSondeo:
+		if !p.vigente(m.origen) {
+			return p, nil
+		}
+		p.sondeando = false
+		return p, p.consultar()
+	case msgEstados:
+		if !p.vigente(m.origen) {
+			return p, nil
+		}
+		return p, p.aplicar(m)
+	case msgRegistro:
+		if !p.vigente(m.origen) {
+			return p, nil
+		}
+		if m.err != nil {
+			return p, p.falloSimple(m.err)
+		}
+		p.registro = m.agente
+		p.visor.Tamano(p.c.Ancho, max(p.c.Alto-2, 1))
+		p.visor.Poner(p.textoRegistro(m.e))
+	case msgCodigo:
+		if m.DelEspacio(p.c) && m.err != nil {
+			return p, p.falloSimple(m.err)
+		}
+	case msgCancelada:
+		if m.DelEspacio(p.c) && m.err != nil {
+			return p, p.falloSimple(m.err)
+		}
+	case tea.PasteMsg:
+		if p.pegando {
+			var cmd tea.Cmd
+			p.pegar, cmd = p.pegar.Update(m)
+			return p, cmd
+		}
 	case comp.Confirmado:
 		pend := p.pend
 		p.pend = nil
@@ -192,6 +287,8 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, p.conectar(pend.agente, false)
 		case accionSuscripcion:
 			return p, p.autenticar(pend.agente, "suscripcion")
+		case accionDesinstalar:
+			return p, p.lanzar(pend.agente, accionDesinstalar, pend.borrar, pend.confirmar)
 		}
 	case comp.Cancelado:
 		p.pend = nil
@@ -204,6 +301,18 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 // tecla atiende una tecla: primero las de la página y, si no, la lista o el visor.
 func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
+	if p.pegando {
+		return p.teclaCampo(k)
+	}
+	if p.registro != "" { // el registro de una preparación: solo se lee
+		if t == "esc" {
+			p.registro = ""
+			p.refrescar()
+			return nil
+		}
+		p.visor.Update(k)
+		return nil
+	}
 	a, hay := p.elegido()
 	switch t {
 	case "esc":
@@ -211,12 +320,38 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 			p.detalle = ""
 			return nil
 		}
+		if p.cerrable() {
+			p.foco = ""
+			return nil
+		}
 		return pagina.Atras
 	case "c", "r":
 		if p.cargando {
 			return nil
 		}
-		return p.comprobar()
+		return tea.Batch(p.comprobar(), p.cargarVersiones(true, false))
+	case "i", "s", "u":
+		if hay {
+			return p.pedir(a, map[string]string{"i": accionInstalar, "s": accionIniciar, "u": accionActualizar}[t])
+		}
+	case "x", "X":
+		if hay {
+			return p.pedirDesinstalar(a, t == "X")
+		}
+	case "l":
+		if hay {
+			return p.verRegistro(a)
+		}
+	case "y":
+		return p.seguir()
+	case "k":
+		return p.cancelar()
+	case "e":
+		if e, ok := p.estados[p.foco]; ok && e.Estado == "esperando_usuario" && e.PidePegar {
+			p.pegando = true
+			p.pegar.Focus()
+			return nil
+		}
 	case "enter":
 		if p.detalle == "" && hay {
 			return p.abrir(a)

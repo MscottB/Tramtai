@@ -23,6 +23,9 @@ type preparacion interface {
 	Cerrar()
 }
 
+// Preparacion es la preparación que se le da a Opciones.Preparacion.
+type Preparacion = preparacion
+
 // agentesPreparables son los ids del catálogo con receta, en su orden.
 func agentesPreparables() []string {
 	var ids []string
