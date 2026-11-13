@@ -37,14 +37,16 @@ const (
 	CodigoInterrumpida        = "interrumpida"
 )
 
-// plazoPreparacion acota instalar, actualizar y desinstalar: un instalador colgado termina en plazo_agotado.
+// plazoPreparacion acota instalar, actualizar, desinstalar e iniciar sesión (cada una por su lado, también el inicio de
+// sesión que sigue a instalar): un instalador colgado termina en plazo_agotado.
 const plazoPreparacion = 15 * time.Minute
 
 // maximoLineas son las que se enseñan y se guardan de la salida.
 const maximoLineas = 20
 
-// estadoDe es el estado en marcha de cada acción que ejecuta este paquete (iniciar_sesion es de la Tarea 4).
-var estadoDe = map[string]string{"instalar": "instalando", "actualizar": "actualizando", "desinstalar": "desinstalando"}
+// estadoDe es el estado con que empieza cada acción.
+var estadoDe = map[string]string{"instalar": "instalando", "actualizar": "actualizando", "desinstalar": "desinstalando",
+	"iniciar_sesion": "comprobando"}
 
 // enMarcha dice si un estado es de una preparación que no ha terminado.
 func enMarcha(estado string) bool {
@@ -63,11 +65,13 @@ type Opciones struct {
 	Datos string
 	// Ficha da la ficha de un id del catálogo; un id que no está se rechaza.
 	Ficha func(id string) (adaptadores.Ficha, bool)
-	// EnCurso son las peticiones en curso del agente: con alguna no se instala, actualiza ni desinstala.
+	// EnCurso son las peticiones en curso del agente: con alguna no se instala, actualiza ni desinstala (sí se inicia
+	// sesión).
 	EnCurso func(agente string) int
 	// Guardar fija (o quita, con "") comandos_agentes.<agente>.
 	Guardar func(agente, ruta string) error
-	// Comprobar es ComprobarSesion del agente (lo usa el inicio de sesión).
+	// Comprobar es ComprobarSesion del agente: tras instalar, si ya hay sesión no se inicia otra; al terminar el inicio
+	// de sesión, la confirma. nil: no se comprueba.
 	Comprobar func(ctx context.Context, agente string) adaptadores.SesionCLI
 	// UltimaVersion da la última versión publicada, para una Descarga sin versión fijada (Copilot en Windows).
 	UltimaVersion func(ctx context.Context, agente string) (string, error)
@@ -77,9 +81,11 @@ type Opciones struct {
 
 // Preparador lleva una preparación por agente a la vez.
 type Preparador struct {
-	o       Opciones
-	plazo   time.Duration
-	cliente *http.Client
+	o     Opciones
+	plazo time.Duration
+	// plazoLector es lo que se espera al enlace (y al código) del inicio de sesión antes de salida_no_reconocida.
+	plazoLector time.Duration
+	cliente     *http.Client
 
 	mu     sync.Mutex
 	tareas map[string]*tarea
@@ -89,6 +95,10 @@ type tarea struct {
 	g        guardado
 	enMarcha bool
 	cancelar context.CancelFunc
+	// entrada es la del inicio de sesión en marcha, donde Codigo escribe lo pegado; pegados, lo que se pegó, que el
+	// registro y las líneas tapan.
+	entrada *os.File
+	pegados []string
 }
 
 // guardado es lo que va en <id>.json: el estado y, para Recuperar, el proceso en marcha y la ruta que puso Tramtai.
@@ -101,7 +111,7 @@ type guardado struct {
 
 // Nuevo crea el preparador; Recuperar recoge lo que dejó un servicio anterior.
 func Nuevo(o Opciones) *Preparador {
-	return &Preparador{o: o, plazo: plazoPreparacion, cliente: clienteHTTPS(), tareas: map[string]*tarea{}}
+	return &Preparador{o: o, plazo: plazoPreparacion, plazoLector: 30 * time.Second, cliente: clienteHTTPS(), tareas: map[string]*tarea{}}
 }
 
 func (p *Preparador) carpeta() string { return filepath.Join(p.o.Datos, "agentes", "preparaciones") }
@@ -129,6 +139,9 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	if !ok || f.Receta == nil {
 		return contrato.EstadoPreparacion{}, errors.New(idioma.Tf("agente desconocido o sin receta: %s", agente))
 	}
+	if pedido.Accion == "iniciar_sesion" && f.Receta.Sesion == nil {
+		return contrato.EstadoPreparacion{}, errors.New(idioma.Tf("%s no inicia sesión desde Tramtai: usa su clave de API", f.Programa))
+	}
 	estado, ok := estadoDe[pedido.Accion]
 	if !ok || !disponible(f.Receta, pedido.Accion) {
 		return contrato.EstadoPreparacion{}, errors.New(idioma.Tf("acción no disponible para %s en este sistema: %s", agente, pedido.Accion))
@@ -148,13 +161,14 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 		ruta = anterior.g.RutaGuardada
 	}
 	ahora := time.Now()
-	ctx, cancelar := context.WithTimeout(context.Background(), p.plazo)
+	// El plazo va por fases (corrida.nuevoPlazo); cancelar corta todas.
+	ctx, cancelar := context.WithCancel(context.Background())
 	t := &tarea{enMarcha: true, cancelar: cancelar, g: guardado{RutaGuardada: ruta,
 		EstadoPreparacion: contrato.EstadoPreparacion{Agente: agente, Accion: pedido.Accion, Estado: estado, Inicio: &ahora}}}
 	p.tareas[agente] = t
 	estadoInicial := copia(t.g.EstadoPreparacion)
 	p.mu.Unlock()
-	if p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
+	if pedido.Accion != "iniciar_sesion" && p.o.EnCurso != nil && p.o.EnCurso(agente) > 0 {
 		cancelar()
 		p.mu.Lock()
 		if anterior != nil {
@@ -165,7 +179,7 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 		p.mu.Unlock()
 		return contrato.EstadoPreparacion{}, &Error{CodigoPeticionesEnCurso, idioma.Tf("%s tiene peticiones en curso: espera a que terminen", f.Programa)}
 	}
-	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, ctx: ctx, pedido: pedido}
+	c := &corrida{p: p, t: t, agente: agente, f: f, r: f.Receta, base: ctx, pedido: pedido}
 	go c.correr(cancelar)
 	return estadoInicial, nil
 }
@@ -174,8 +188,11 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 func disponible(r *adaptadores.Receta, accion string) bool {
 	_, instalar := r.Instalar[runtime.GOOS]
 	_, descarga := r.Descarga[runtime.GOOS]
-	if accion == "desinstalar" {
+	switch accion {
+	case "desinstalar":
 		return len(r.Borrar[runtime.GOOS]) > 0
+	case "iniciar_sesion":
+		return r.Sesion != nil
 	}
 	return instalar || descarga // actualizar sin orden propia (o sin el CLI) es volver a instalar
 }
@@ -219,6 +236,8 @@ func (p *Preparador) Recuperar() {
 				ahora := time.Now()
 				g.Estado, g.MotivoCodigo, g.Mensaje, g.Fin = "error", CodigoInterrumpida,
 					idioma.T("el servicio se reinició a mitad de la preparación"), &ahora
+				// El inicio de sesión murió con el servicio: su enlace y su código ya no sirven.
+				g.Enlace, g.Codigo, g.PidePegar = "", "", false
 			}
 			g.PID, g.Firma = 0, ""
 		}
@@ -253,10 +272,13 @@ type corrida struct {
 	p *Preparador
 	t *tarea
 	// agente es el id con que se pidió: la única clave del estado, los archivos y las opciones.
-	agente   string
-	f        adaptadores.Ficha
-	r        *adaptadores.Receta
+	agente string
+	f      adaptadores.Ficha
+	r      *adaptadores.Receta
+	// base se corta al cancelar; ctx es la fase en curso (base con su plazo), finPlazo la cierra.
+	base     context.Context
 	ctx      context.Context
+	finPlazo context.CancelFunc
 	pedido   contrato.PedidoPreparacion
 	secretos []string
 	registro []string // órdenes y resultado, para <id>.log
@@ -277,13 +299,25 @@ func (c *corrida) fijar(cambiar func(g *guardado)) {
 // con usuario y contraseña: el registro y las líneas los tapan aunque no sean claves conocidas.
 var formaSecreto = regexp.MustCompile(`\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[0-9A-Za-z_-]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|npm_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|ya29\.[0-9A-Za-z_-]{10,}|glpat-[0-9A-Za-z_-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+)|(?i:bearer\s+)[A-Za-z0-9._~+/-]{16,}=*|://[^/@\s:]+:[^/@\s]+@`)
 
+// redactar tapa los secretos y lo pegado al inicio de sesión. No se llama con el cerrojo tomado.
 func (c *corrida) redactar(texto string) string {
-	return formaSecreto.ReplaceAllString(adaptadores.RedactarCon(texto, c.secretos...), "[REDACTADO]")
+	c.p.mu.Lock()
+	pegados := c.t.pegados
+	c.p.mu.Unlock()
+	return formaSecreto.ReplaceAllString(adaptadores.RedactarCon(texto, append(slices.Clone(c.secretos), pegados...)...), "[REDACTADO]")
 }
 
-// linea añade una línea de la salida, sin secretos, a las últimas.
+// nuevoPlazo empieza una fase con su propio plazo (instalar y el inicio de sesión que le sigue tienen 15 min cada uno).
+func (c *corrida) nuevoPlazo() {
+	if c.finPlazo != nil {
+		c.finPlazo()
+	}
+	c.ctx, c.finPlazo = context.WithTimeout(c.base, c.p.plazo)
+}
+
+// linea añade una línea de la salida, sin escapes ANSI ni secretos, a las últimas.
 func (c *corrida) linea(texto string) {
-	if texto = strings.TrimSpace(c.redactar(texto)); texto == "" {
+	if texto = strings.TrimSpace(c.redactar(escapes.ReplaceAllString(texto, ""))); texto == "" {
 		return
 	}
 	c.p.mu.Lock()
@@ -300,6 +334,8 @@ func (c *corrida) anotar(texto string) {
 
 func (c *corrida) correr(cancelar context.CancelFunc) {
 	defer cancelar()
+	c.nuevoPlazo()
+	defer func() { c.finPlazo() }()
 	c.secretos = adaptadores.Secretos() // fuera del cerrojo: en macOS y Linux pregunta al almacén con un proceso por clave
 	c.fijar(func(*guardado) {})
 	c.anotar(c.pedido.Accion + " " + c.agente)
@@ -327,10 +363,20 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	c.anotar(strings.TrimSpace(estado + " " + codigo + " " + mensaje))
 	_ = configuracion.EscribirAtomico(filepath.Join(c.p.carpeta(), c.agente+".log"), []byte(strings.Join(c.registro, "\n")+"\n"), 0o600)
 	ahora := time.Now()
+	mensaje = c.redactar(mensaje)
 	c.fijar(func(g *guardado) {
-		g.Estado, g.Etapa, g.MotivoCodigo, g.Mensaje, g.Fin = estado, "", codigo, c.redactar(mensaje), &ahora
+		g.Estado, g.Etapa, g.MotivoCodigo, g.Mensaje, g.Fin, g.PidePegar = estado, "", codigo, mensaje, &ahora, false
 		c.t.enMarcha = false // con el estado final: quien lo ve terminado ya puede lanzar otra
 	})
+}
+
+// conVersionSi es el programa con su versión, si se sabe («Claude Code 2.1.311» o «Claude Code»).
+func (c *corrida) conVersionSi(version string) string {
+	return strings.TrimSpace(c.f.Programa + " " + version)
+}
+
+func (c *corrida) noComprobada(version string) *Error {
+	return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai", c.conVersionSi(version))}
 }
 
 // accion ejecuta lo pedido.
@@ -341,6 +387,16 @@ func (c *corrida) accion() error {
 		antes = c.version(instalado)
 	}
 	c.fijar(func(g *guardado) { g.VersionAntes = antes })
+	if c.pedido.Accion == "iniciar_sesion" {
+		if instalado == "" {
+			return &Error{CodigoNoEncontrado, idioma.Tf("no se encuentra %s", c.f.Programa)}
+		}
+		version := numeroVersion(antes)
+		if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
+			return c.noComprobada(version)
+		}
+		return c.sesion(version)
+	}
 	// Actualizar sin orden propia, o sin el CLI instalado, es volver a instalar.
 	orden, hayOrden := c.r.Actualizar[runtime.GOOS]
 	actualizar := c.pedido.Accion == "actualizar" && hayOrden && instalado != ""
@@ -350,7 +406,7 @@ func (c *corrida) accion() error {
 	version := ""
 	switch {
 	case c.pedido.Accion == "desinstalar":
-		version = antes
+		version = numeroVersion(antes)
 	case !actualizar && hayDescarga:
 		var err error
 		if version, err = c.ultimaVersion(); err != nil {
@@ -359,7 +415,7 @@ func (c *corrida) accion() error {
 	}
 	// Tarea 5: la versión debe estar comprobada para esta acción, salvo que el usuario confirme.
 	if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-		return &Error{CodigoVersionNoComprobada, idioma.Tf("%s %s aún no está comprobado con Tramtai", c.f.Programa, version)}
+		return c.noComprobada(version)
 	}
 	switch {
 	case c.pedido.Accion == "desinstalar":
@@ -383,7 +439,10 @@ func (c *corrida) accion() error {
 	} else if err := c.ejecutar(c.r.Instalar[runtime.GOOS], version); err != nil {
 		return err
 	}
-	return c.encontrar()
+	if err := c.encontrar(); err != nil {
+		return err
+	}
+	return c.sesionTrasInstalar()
 }
 
 func (c *corrida) ultimaVersion() (string, error) {
@@ -481,13 +540,22 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 		return err
 	}
 	c.fijar(func(g *guardado) { g.Etapa = "orden" })
-	c.anotar(strings.Join(append([]string{programa}, args...), " "))
-	casa, _ := os.UserHomeDir()
-	ctx := procesos.ConAlIniciar(c.ctx, func(pid int, firma string) {
+	salida, err := c.lanzar(c.ctx, procesos.Orden{Programa: programa, Argumentos: args, Entorno: entornoDe(extra)})
+	if err == nil && salida != 0 {
+		err = &Error{CodigoInstaladorFallo, idioma.Tf("%s terminó con el código %d", filepath.Base(programa), salida)}
+	}
+	return err
+}
+
+// lanzar ejecuta la orden en la casa del usuario con el árbol de procesos atado, anota su PID y su firma para Recuperar,
+// pasa su salida a Lineas y devuelve su código de salida (quien llama dice qué significa uno distinto de 0).
+func (c *corrida) lanzar(ctx context.Context, o procesos.Orden) (int, error) {
+	c.anotar(strings.Join(append([]string{o.Programa}, o.Argumentos...), " "))
+	o.Directorio, _ = os.UserHomeDir()
+	ctx = procesos.ConAlIniciar(ctx, func(pid int, firma string) {
 		c.fijar(func(g *guardado) { g.PID, g.Firma = pid, firma })
 	})
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: programa, Argumentos: args, Directorio: casa, Entorno: entornoDe(extra)},
-		func(l string) error { c.linea(l); return nil })
+	r, err := procesos.Ejecutar(ctx, o, func(l string) error { c.linea(l); return nil })
 	if nucleo.CodigoDe(err) == nucleo.CodigoCancelacionNoConfirmada {
 		c.sinConfirmar = nucleo.MensajeDe(err) // su PID y su firma se quedan: Recuperar lo terminará
 	} else {
@@ -499,13 +567,11 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 	}
 	switch {
 	case c.ctx.Err() != nil:
-		return c.ctx.Err()
+		return r.CodigoSalida, c.ctx.Err()
 	case err != nil:
-		return &Error{CodigoInstaladorFallo, nucleo.MensajeDe(err)}
-	case r.CodigoSalida != 0:
-		return &Error{CodigoInstaladorFallo, idioma.Tf("%s terminó con el código %d", filepath.Base(programa), r.CodigoSalida)}
+		return r.CodigoSalida, &Error{CodigoInstaladorFallo, nucleo.MensajeDe(err)}
 	}
-	return nil
+	return r.CodigoSalida, nil
 }
 
 // resolver localiza el programa de una orden: el CLI del agente (su Comando) por buscar, no por el PATH del servicio, que

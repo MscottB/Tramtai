@@ -329,7 +329,7 @@ type EstadoPreparacion struct {
 	Codigo    string `json:"codigo,omitempty"`
 	PidePegar bool   `json:"pide_pegar,omitempty"`
 	// MotivoCodigo es el código del error (estado error) y Mensaje, el texto legible.
-	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'"`
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'"`
 	Mensaje      string `json:"mensaje,omitempty"`
 	// Lineas son las últimas 20 de la salida, sin nada con forma de secreto.
 	Lineas         []string   `json:"lineas,omitempty"`
