@@ -9,7 +9,7 @@ export const servidor: Tema = {
   resumen: 'ayuda.servidor.resumen',
   terminal: 'ayuda.servidor.terminal',
   conDiagrama: false,
-  relacionados: ['entornos', 'ajustes', 'claves'],
+  relacionados: ['entornos', 'ajustes', 'claves', 'preparar'],
   bloques: [
     { tipo: 'pasos', pasos: ['ayuda.servidor.paso1', 'ayuda.servidor.paso2', 'ayuda.servidor.paso3', 'ayuda.servidor.paso4'] },
     { tipo: 'captura', id: 'servidor', alt: 'ayuda.servidor.captura' },
@@ -28,6 +28,8 @@ export const servidor: Tema = {
         { id: 'servidor-mismo-equipo', pregunta: 'ayuda.servidor.pMismo', respuesta: 'ayuda.servidor.rMismo' },
         { id: 'servidor-claves', pregunta: 'ayuda.servidor.pClaves', respuesta: 'ayuda.servidor.rClaves' },
         { id: 'servidor-agentes', pregunta: 'ayuda.servidor.pAgentes', respuesta: 'ayuda.servidor.rAgentes' },
+        { id: 'servidor-preparar', pregunta: 'ayuda.servidor.pPreparar', respuesta: 'ayuda.servidor.rPreparar', tema: 'preparar' },
+        { id: 'servidor-sesion-a-mano', pregunta: 'ayuda.servidor.pAMano', respuesta: 'ayuda.servidor.rAMano' },
         { id: 'servidor-herramientas', pregunta: 'ayuda.servidor.pHerramientas', respuesta: 'ayuda.servidor.rHerramientas', tema: 'conectar-herramientas' },
         { id: 'servidor-suscripcion', pregunta: 'ayuda.servidor.pSuscripcion', respuesta: 'ayuda.servidor.rSuscripcion' },
         { id: 'servidor-codex', pregunta: 'ayuda.servidor.pCodex', respuesta: 'ayuda.servidor.rCodex' },

@@ -9,7 +9,7 @@
       </q-card-section>
 
       <q-card-section v-if="fase === 'oferta' && opciones.length" class="q-pt-none">
-        <div class="aviso">
+        <div class="aviso" data-captura="preparar">
           <div class="text-weight-medium">{{ t('bienvenida.agentesTitulo') }}</div>
           <div class="text-body2 q-mt-xs">{{ t('bienvenida.agentesTexto') }}</div>
           <div v-if="cuenta" class="text-caption texto-suave q-mt-xs"><q-icon name="o_dns" class="q-mr-xs" aria-hidden="true" />{{ t('preparar.cuentaServicio', { cuenta }) }}</div>

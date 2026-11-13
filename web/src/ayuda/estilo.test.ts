@@ -125,8 +125,8 @@ test('Servidor tiene el aviso con riesgos.1 a riesgos.5, Dos entornos su tabla y
   }
 })
 
-test('están los 19 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 19)
+test('están los 20 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 20)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 

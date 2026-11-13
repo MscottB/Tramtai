@@ -27,7 +27,7 @@
           "tipo": "pasos",
           "lineas": [
             "Instala Tramtai: instalador o portable en Windows, Homebrew o .dmg en macOS, .deb o .rpm en Linux.",
-            "En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.",
+            "En Agentes, prepara un agente: Tramtai instala su CLI y te ayuda a iniciar sesión (tu suscripción, uso personal), o le pones una clave de API.",
             "En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.",
             "En Mis APIs copia la URL y crea la clave del espacio (se ve una vez), y ponlas en tu app (tema «Conectar mi app»)."
           ]
@@ -59,6 +59,10 @@
         {
           "tipo": "preguntas",
           "pares": [
+            [
+              "¿Tengo que instalar los agentes aparte?",
+              "No: la primera vez, si no tienes ningún agente listo, Tramtai ofrece «Prepara tus agentes» y los instala uno tras otro. Después, desde Agentes (tema «Preparar tus agentes»)."
+            ],
             [
               "¿Necesito una clave para entrar?",
               "No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps."
@@ -123,8 +127,8 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Abre Agentes: cada uno dice si está listo o qué le falta, y cómo instalarlo si no está.",
-            "Con tu suscripción: inicia sesión en su CLI (por ejemplo, copilot login) y pulsa «Usar mi suscripción».",
+            "Abre Agentes: cada uno dice si está listo o qué le falta; si no está instalado, «Instalar» lo instala (tema «Preparar tus agentes»).",
+            "Con tu suscripción: inicia sesión en su CLI desde su tarjeta (Tramtai te enseña el enlace y el código) y pulsa «Usar mi suscripción».",
             "Con una clave: «tramtai claves guardar ANTHROPIC_API_KEY» la guarda cifrada y vale sin reiniciar.",
             "En Ajustes elige el modelo y el esfuerzo que se usan cuando una petición no los dice."
           ]
@@ -142,7 +146,7 @@
           "pares": [
             [
               "¿Qué agentes puedo usar?",
-              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
+              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con «Instalar»."
             ],
             [
               "¿Suscripción o clave de API?",
@@ -193,6 +197,141 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "preparar",
+      "titulo": "Preparar tus agentes",
+      "pagina": "agentes",
+      "resumen": "Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+      "terminal": "En la terminal: 2 abre Agentes. i instala, s inicia sesión, u actualiza, x desinstala (X borra también sus datos), y sigue, k cancela, l enseña el registro, c comprueba y e vuelve al código.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+          "lineas": [
+            "1. Instalar · Con el instalador oficial del CLI, para tu usuario (o para la cuenta del servicio).",
+            "2. Iniciar sesión · Tramtai lanza el del propio CLI y te enseña su enlace y su código.",
+            "3. Al día · Avisa de cada versión nueva; actualizar o desinstalar es un clic."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». La primera vez, si no tienes ningún agente listo, Tramtai te lo ofrece con «Prepara tus agentes».",
+            "Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve. Sigue solo en cuanto lo apruebas.",
+            "Para usar tu suscripción, elige «Usar mi suscripción» en la tarjeta del agente; si no, ponle su clave de API. Antigravity va siempre con clave.",
+            "Si hay una versión nueva, la tarjeta lo dice y «Actualizar» la instala. En «⋯» están Comprobar versión, Actualizar, Desinstalar y Ver registro."
+          ]
+        },
+        {
+          "tipo": "pantalla"
+        },
+        {
+          "tipo": "web",
+          "titulo": "La bienvenida ofrece preparar tus agentes: marcas los que quieres y Tramtai los instala uno tras otro",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Cómo inicia sesión"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "Con un enlace en tu navegador; si te da un código, lo pegas en Tramtai."
+            ],
+            [
+              "Codex",
+              "Con un código de dispositivo, que activas una vez en ChatGPT › Seguridad («Abrir los ajustes de seguridad de ChatGPT»)."
+            ],
+            [
+              "GitHub Copilot",
+              "Con un código de dispositivo de GitHub, que escribes en github.com/login/device."
+            ],
+            [
+              "Antigravity",
+              "No inicia sesión: solo se instala, y después le pones la clave de la Gemini API."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai nunca lee ni guarda tu sesión: la guarda el propio CLI. De su salida solo toma el enlace y el código, y lo que pegas va al CLI sin quedar en el registro."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Versiones comprobadas",
+          "lineas": [
+            "Tramtai instala, actualiza e inicia sesión de forma automática solo con versiones de cada CLI que ya comprobó: que su instalador y su inicio de sesión siguen como espera.",
+            "Con una versión sin comprobar, el inicio de sesión automático sale desactivado en ese agente, con la orden para hacerlo en una consola; instalar, actualizar o desinstalar piden confirmar.",
+            "El uso normal del agente sigue igual: sus peticiones funcionan con las comprobaciones de siempre. Solo se desactiva la preparación automática.",
+            "La lista se pone al día sola: cada semana se prueban las versiones nuevas y se publica una lista firmada que Tramtai lee una vez al día. Una versión que entra se habilita sola."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Con la CLI de Tramtai",
+          "lineas": [
+            "«tramtai agentes instalar claude codex» los instala y sigue con el inicio de sesión; «tramtai agentes entrar codex» solo inicia sesión. Enseñan el enlace y el código y piden el que te den.",
+            "«tramtai agentes actualizar --todos» actualiza los que tienen una versión nueva; «tramtai agentes desinstalar codex» pregunta antes (con --borrar-datos, también su sesión y ajustes).",
+            "«tramtai agentes versiones» enseña la instalada, la última y si está comprobada. Con --confirmar no pregunta antes de seguir con una versión sin comprobar.",
+            "Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar que no se confirmó, o acción que ahora no se puede; 3 hecho, pero falta un paso (sin sesión o sin clave); 130 cancelado."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Dónde queda instalado cada CLI?",
+              "Donde lo deja su instalador oficial, para tu usuario: sirve también fuera de Tramtai. Si queda fuera del PATH del servicio, Tramtai guarda su ruta en comandos_agentes."
+            ],
+            [
+              "¿Necesito Node o npm?",
+              "No: los cuatro se instalan con su instalador oficial, sin Node. GitHub Copilot, en Windows, se descarga de GitHub y Tramtai comprueba su suma antes de instalarlo."
+            ],
+            [
+              "¿Puedo cerrar la pantalla mientras se instala?",
+              "Sí: la preparación sigue en el servicio y, al volver a Agentes, ves dónde va. Instalar, actualizar o iniciar sesión se cortan a los 15 minutos."
+            ],
+            [
+              "¿Por qué sale desactivado el inicio de sesión automático?",
+              "Porque esa versión del CLI aún no está comprobada con Tramtai. El aviso trae la orden para hacerlo en una consola, y vuelve solo cuando la versión entra en la lista."
+            ],
+            [
+              "¿Y si el inicio de sesión no avanza?",
+              "Si el CLI escribe algo que Tramtai no reconoce, lo cancela, enseña sus últimas líneas con el enlace resaltado y la orden para la consola, y aparta esa versión hasta que la lista la confirme."
+            ],
+            [
+              "¿A qué sitios se conecta para ver las versiones?",
+              "Una vez al día, al sitio oficial de cada CLI (GitHub, downloads.claude.ai y el servidor de actualizaciones de Antigravity) y al release «compatibilidad» de Tramtai en GitHub. No envía datos tuyos."
+            ],
+            [
+              "¿Cómo desactivo esa consulta?",
+              "En Ajustes, «Comprobar versiones nuevas de los agentes» (v en la terminal), o con servicio.buscar_versiones_agentes: false. Siguen valiendo las versiones comprobadas que trae Tramtai."
+            ],
+            [
+              "¿Por qué no se actualiza ahora?",
+              "Porque el agente tiene peticiones en curso: espera a que terminen y vuelve a intentarlo. Mientras se actualiza, ese agente no está disponible para peticiones nuevas."
+            ],
+            [
+              "¿Desinstalar borra mi sesión?",
+              "No, salvo que marques «Borrar también su sesión y ajustes». Pide confirmación porque el CLI deja de estar también fuera de Tramtai."
+            ],
+            [
+              "¿Y en el modo servidor?",
+              "Se hace igual, con la cuenta del servicio: desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes …». Solo el administrador."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
         }
       ]
     },
@@ -1294,6 +1433,14 @@
               "El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale."
             ],
             [
+              "¿Cómo instalo los agentes en el servidor?",
+              "Desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes instalar»: Tramtai instala, actualiza y desinstala sus CLI con la cuenta del servicio. Solo el administrador."
+            ],
+            [
+              "¿Y si el inicio de sesión no se puede hacer desde Tramtai?",
+              "En Linux, el aviso da la orden para hacerlo como la cuenta del servicio. En Windows Server esa cuenta no tiene consola: a mano no se puede, así que usa la clave de API del agente."
+            ],
+            [
               "¿Puedo conectar mis herramientas?",
               "Aquí no: el modo servidor no ofrece Claude Code, Codex, Continue, opencode ni Kilo Code. Conéctalas desde Tramtai con tu usuario normal, fuera del modo servidor."
             ],
@@ -1649,7 +1796,7 @@
           "tipo": "pasos",
           "lineas": [
             "Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.",
-            "In Agents, connect an agent with your subscription (personal use) or with an API key.",
+            "In Agents, set up an agent: Tramtai installs its CLI and helps you sign in (your subscription, personal use), or you give it an API key.",
             "In the Playground, type a message, pick agent and model and watch the response live.",
             "In My APIs copy the URL and create the workspace key (shown only once), and put them in your app (topic “Connect my app”)."
           ]
@@ -1681,6 +1828,10 @@
         {
           "tipo": "preguntas",
           "pares": [
+            [
+              "Do I have to install the agents separately?",
+              "No: the first time, if no agent is ready, Tramtai offers “Set up your agents” and installs them one after another. Later, from Agents (topic “Set up your agents”)."
+            ],
             [
               "Do I need a key to get in?",
               "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps."
@@ -1745,8 +1896,8 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Open Agents: each one says whether it is ready or what it is missing, and how to install it.",
-            "With your subscription: sign in to its CLI (for example, copilot login) and click “Use my subscription”.",
+            "Open Agents: each one says whether it is ready or what it is missing; if it isn’t installed, “Install” installs it (topic “Set up your agents”).",
+            "With your subscription: sign in to its CLI from its card (Tramtai shows you the link and the code) and click “Use my subscription”.",
             "With a key: “tramtai claves guardar ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
             "In Settings pick the model and effort used when a request does not say."
           ]
@@ -1764,7 +1915,7 @@
           "pares": [
             [
               "Which agents can I use?",
-              "Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. The ones not installed appear at the end of Agents, with their link."
+              "Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. The ones not installed appear at the end of Agents, with “Install”."
             ],
             [
               "Subscription or API key?",
@@ -1815,6 +1966,141 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "preparar",
+      "titulo": "Set up your agents",
+      "pagina": "agentes",
+      "resumen": "Tramtai installs each agent’s CLI, helps you sign in and keeps it up to date, only with checked versions.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+      "terminal": "In the terminal: 2 opens Agents. i installs, s signs in, u updates, x uninstalls (X also deletes its data), y continues, k cancels, l shows the log, c checks and e goes back to the code.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+          "lineas": [
+            "1. Install · With the CLI’s official installer, for your user (or for the service account).",
+            "2. Sign in · Tramtai runs the CLI’s own sign-in and shows you its link and code.",
+            "3. Up to date · It tells you about each new version; updating or uninstalling takes one click."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In Agents, open “Other agents you can install” and click “Install”. The first time, if no agent is ready yet, Tramtai offers it with “Set up your agents”.",
+            "Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back. It carries on as soon as you approve.",
+            "To use your subscription, pick “Use my subscription” on the agent’s card; otherwise, give it its API key. Antigravity always uses a key.",
+            "When there is a new version, the card says so and “Update” installs it. Under “⋯” you have Check version, Update, Uninstall and View log."
+          ]
+        },
+        {
+          "tipo": "pantalla"
+        },
+        {
+          "tipo": "web",
+          "titulo": "The welcome offers to set up your agents: you tick the ones you want and Tramtai installs them one after another",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "How it signs in"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "With a link in your browser; if it gives you a code, you paste it into Tramtai."
+            ],
+            [
+              "Codex",
+              "With a device code, which you turn on once in ChatGPT › Security (“Open ChatGPT security settings”)."
+            ],
+            [
+              "GitHub Copilot",
+              "With a GitHub device code, which you enter at github.com/login/device."
+            ],
+            [
+              "Antigravity",
+              "It doesn’t sign in: it is only installed, and then you add its Gemini API key."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai never reads or stores your session: the CLI keeps it. From its output it only takes the link and the code, and what you paste goes to the CLI without reaching the log."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Checked versions",
+          "lineas": [
+            "Tramtai installs, updates and signs in automatically only with CLI versions it has already checked: that their installer and sign-in still work as it expects.",
+            "With an unchecked version, automatic sign-in is turned off for that agent, with the command to do it in a console; installing, updating or uninstalling ask you to confirm.",
+            "Using the agent works as usual: its requests run with the usual checks. Only the automatic setup is turned off.",
+            "The list updates itself: every week the new versions are tested and a signed list is published, which Tramtai reads once a day. A version that gets in is turned on by itself."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "With the Tramtai CLI",
+          "lineas": [
+            "“tramtai agents install claude codex” installs them and goes on with sign-in; “tramtai agents login codex” only signs in. They show the link and the code and ask for the one you get.",
+            "“tramtai agents update --all” updates the ones with a new version; “tramtai agents uninstall codex” asks first (with --delete-data, its session and settings too).",
+            "“tramtai agents versions” shows the installed version, the latest and whether it is checked. With --confirm it doesn’t ask before going on with an unchecked version.",
+            "Exit codes: 0 ready; 1 error; 2 unchecked version that wasn’t confirmed, or an action not possible now; 3 done, but a step is missing (no session or no key); 130 canceled."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Where does each CLI get installed?",
+              "Where its official installer puts it, for your user: it also works outside Tramtai. If it ends up outside the service’s PATH, Tramtai saves its path in comandos_agentes."
+            ],
+            [
+              "Do I need Node or npm?",
+              "No: all four are installed with their official installer, without Node. GitHub Copilot, on Windows, is downloaded from GitHub and Tramtai checks its checksum before installing it."
+            ],
+            [
+              "Can I close the screen while it installs?",
+              "Yes: the setup keeps going in the service and, when you come back to Agents, you see where it is. Installing, updating or signing in stop after 15 minutes."
+            ],
+            [
+              "Why is automatic sign-in turned off?",
+              "Because that CLI version hasn’t been checked with Tramtai yet. The notice has the command to do it in a console, and it comes back by itself once the version is on the list."
+            ],
+            [
+              "What if sign-in doesn’t move on?",
+              "If the CLI writes something Tramtai doesn’t recognize, it cancels, shows its last lines with the link highlighted and the console command, and sets that version aside until the list confirms it."
+            ],
+            [
+              "Which sites does it connect to for the versions?",
+              "Once a day, to each CLI’s official site (GitHub, downloads.claude.ai and the Antigravity update server) and to Tramtai’s “compatibilidad” release on GitHub. It sends none of your data."
+            ],
+            [
+              "How do I turn that check off?",
+              "In Settings, “Check for new agent versions” (v in the terminal), or with servicio.buscar_versiones_agentes: false. The checked versions Tramtai ships with still apply."
+            ],
+            [
+              "Why won’t it update now?",
+              "Because the agent has requests in progress: wait for them to finish and try again. While it updates, that agent isn’t available for new requests."
+            ],
+            [
+              "Does uninstalling delete my session?",
+              "No, unless you tick “Also delete its session and settings”. It asks you to confirm because the CLI also stops being there outside Tramtai."
+            ],
+            [
+              "And in server mode?",
+              "It works the same, with the service account: from Agents in the remote Web UI, the terminal or “tramtai-servidor agents …”. Administrator only."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
         }
       ]
     },
@@ -2914,6 +3200,14 @@
             [
               "Who runs the agents?",
               "The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works."
+            ],
+            [
+              "How do I install the agents on the server?",
+              "From Agents in the remote Web UI, the terminal or “tramtai-servidor agents install”: Tramtai installs, updates and uninstalls their CLIs with the service account. Administrator only."
+            ],
+            [
+              "What if sign-in can’t be done from Tramtai?",
+              "On Linux, the notice gives the command to do it as the service account. On Windows Server that account has no console: it can’t be done by hand, so use the agent’s API key."
             ],
             [
               "Can I connect my tools?",

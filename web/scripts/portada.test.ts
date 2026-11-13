@@ -64,15 +64,17 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
 
 const VENTAJAS = [
   ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
+  // v0.60: la de preparar los agentes.
+  ['Tramtai instala y conecta tus agentes', 'instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.'],
   ['Sin tocar tu código', 'con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.'],
   ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
   ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.'],
   ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
   ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
 ]
-test('la línea de ventajas: seis paradas con el texto de la spec, en los dos idiomas y en el acento', () => {
+test('la línea de ventajas: siete paradas con el texto de la spec, en los dos idiomas y en el acento', () => {
   const paradas = porQue.match(/<li class="parada parada-ventaja">[\s\S]*?<\/li>/g) ?? []
-  assert.equal(paradas.length, 6)
+  assert.equal(paradas.length, 7)
   paradas.forEach((p, i) => {
     assert.match(p, /lang="es"[\s\S]*lang="en"/)
     assert.ok(p.includes(`<h3 class="parada-titulo"><span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
@@ -84,10 +86,10 @@ test('la línea de ventajas: seis paradas con el texto de la spec, en los dos id
     const ingles = p.match(/<p class="parada-texto">[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
     assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
   })
-  // Dos listas de tres, independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
+  // Dos listas (de cuatro y de tres desde la v0.60), independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
   const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
-  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [3, 3])
-  assert.match(listas[1], /^<ol class="ventajas-linea" start="4">/)
+  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [4, 3])
+  assert.match(listas[1], /^<ol class="ventajas-linea" start="5">/)
   // Las paradas son las del plano (.parada): una sola estación y la vía de 3 px de las secuencias, en el acento; el color
   // de línea es de los agentes (M4).
   assert.doesNotMatch(css, /\.parada-ventaja/)

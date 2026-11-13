@@ -24,7 +24,33 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   { id: 'marca', pagina: 'inicio', servidor: true, cabecera: true, ancho: 720 },
   { id: 'servidor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'servidor' }, servidor: true },
   { id: 'seguridad', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'seguridad' }, servidor: true },
+  // La oferta «Prepara tus agentes» de la bienvenida: sale si la bienvenida no tiene respuesta y ningún agente está listo
+  // (SIMULAR con tramtai.capturas.sinListos; no se instala ni se quita ningún CLI).
+  { id: 'preparar', pagina: 'inicio', guardado: { 'tramtai.bienvenida': 'pendiente', 'tramtai.capturas.sinListos': true } },
 ]
+
+// SIMULAR corre en cada página antes que la app (Page.addScriptToEvaluateOnNewDocument) y cambia lo que el servicio
+// responde de los agentes, sin tocar ningún CLI real: en Agentes, Antigravity sale sin instalar, para que se vea
+// «Instalar» (el ancla agentes.instalar) en cualquier equipo; con tramtai.capturas.sinListos en localStorage, ningún
+// agente está listo y la bienvenida ofrece prepararlos (la captura preparar).
+export const SIMULAR = `(() => {
+  const original = window.fetch
+  window.fetch = async (...args) => {
+    const r = await original(...args)
+    const url = String(args[0]?.url ?? args[0])
+    // los agentes llegan con las capacidades (Agentes, Probar) y con los primeros pasos (Inicio)
+    const capacidades = ['/api/v1/capacidades', '/api/v1/instancia/pasos'].some((r) => url.includes(r)), versiones = url.includes('/api/v1/agentes/versiones')
+    if (!r.ok || !(capacidades || versiones)) return r
+    const enAgentes = location.hash.startsWith('#agentes'), sinListos = localStorage.getItem('tramtai.capturas.sinListos') !== null
+    const datos = await r.clone().json()
+    if (capacidades)
+      for (const a of datos.adaptadores)
+        if ((enAgentes && a.agente === 'antigravity') || (sinListos && a.estado === 'listo')) Object.assign(a, { estado: 'no_instalado', version_detectada: '' })
+    if (versiones && enAgentes)
+      for (const v of datos) if (v.agente === 'antigravity') Object.assign(v, { instalada: undefined, acciones: ['instalar'], comprobadas: { instalar: true }, motivo_codigo: undefined, motivo: undefined })
+    return new Response(JSON.stringify(datos), { status: r.status, statusText: r.statusText, headers: r.headers })
+  }
+})()`
 
 // POR_SACAR son las capturas de la Ayuda que un tema ya cita y todavía no se han sacado, con el motivo: mientras tanto el tema sale
 // sin imagen (la Web UI y el sitio la omiten). Al sacarla (npm run capturas) la entrada sobra y la prueba lo avisa.
@@ -130,6 +156,20 @@ export interface AnclaCaptura { ancla: string; id: string; pagina: string; prepa
 const PREPARAR: Record<string, string> = {
   // el detalle de un trabajo es el panel que se abre al pulsar una fila del Historial
   'historial.detalle': `(() => { const fila = document.querySelector('[data-recorrido="historial.lista"] tbody tr'); fila?.click(); return !!fila })()`,
+  // los que faltan por instalar van plegados: se despliegan para que se vea su «Instalar»
+  'agentes.instalar': `(() => {
+    const e = document.querySelector('[data-recorrido="agentes.instalar"]')
+    if (e?.querySelector('.q-expansion-item--expanded .q-btn')?.getBoundingClientRect().height) return true
+    if (e && !e.querySelector('.q-expansion-item--expanded')) e.querySelector('.q-item')?.click()
+    return false
+  })()`,
+  // lo de preparar un agente está en su tarjeta desplegada: se abre la primera si no hay ninguna abierta (pulsar otra vez
+  // la cerraría) y se espera a que lleguen sus versiones
+  'agentes.preparar': `(() => {
+    if ([...document.querySelectorAll('[data-recorrido="agentes.preparar"]')].some((e) => e.getBoundingClientRect().height > 0)) return true
+    if (!document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item--expanded')) document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item .q-item')?.click()
+    return false
+  })()`,
 }
 export const ANCLAS: AnclaCaptura[] = []
 for (const tema of temas)

@@ -93,7 +93,13 @@ desde los mismos datos.
   `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda. Las de la Ayuda
   más anchas que su columna del sitio salen reducidas a `ANCHO_AYUDA` (736 px), y las de la portada a 640, 960 y 1440 px.
   Si una captura muestra una ruta del equipo (la carpeta personal, la temporal o la del repositorio), el script se para
-  (`rutaPrivada` en `capturas-lista.ts`).
+  (`rutaPrivada` en `capturas-lista.ts`). Una pantalla de la portada sale sola con `-- --solo portada-<nombre>`
+  (`portada-agentes`).
+- **Los agentes en la demo:** las capturas no instalan ni quitan ningún CLI. `SIMULAR` (`capturas-lista.ts`) corre en
+  cada página antes que la app y cambia lo que el servicio responde de los agentes: en Agentes, Antigravity sale sin
+  instalar (así se ve «Instalar», el ancla `agentes.instalar`, en cualquier equipo), y con
+  `tramtai.capturas.sinListos` en `localStorage` ningún agente está listo, para la oferta «Prepara tus agentes» de la
+  bienvenida (la captura `preparar`).
 - **Demo de la portada:** sale en la corrida completa y sola con `npm run capturas -- --bienvenida`; lanza la bienvenida de verdad (acepta la oferta de la primera
   vez y pulsa «Siguiente») y saca una pantalla completa de 1440×900 por paso, con la ventana del recorrido encima, en
   claro y oscuro y en español e inglés: `site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp` (`BIENVENIDA` en `capturas-lista.ts`, uno
@@ -144,6 +150,8 @@ página (`web/src/ayuda/temas/<id>.ts`). No hay otra lista de pasos que tocar.
   el texto a 200). Cada página tiene de 3 a 5 pasos. Con `bienvenida: true` el paso entra también en la bienvenida, que
   los toma en el orden del menú (Inicio, Agentes, Probar, Mis APIs, Espacios) más un cierre; hoy son 14 pasos y
   `anclas.test.ts` fija su orden.
+- **Dos temas en una página:** Agentes tiene «Agentes y modelos» y «Preparar tus agentes». Su **?** abre el primero de
+  `indice.ts` y su recorrido junta los pasos de los dos, en ese orden.
 - **Un ancla:** el atributo `data-recorrido="<pagina>.<nombre>"` en el elemento del `.vue` que señala el paso (minúsculas
   y guiones; `app.<nombre>` para lo que está en todas las páginas, como el selector de espacio o el «?», que viven en
   `App.vue` o `componentes/CabeceraPagina.vue`).
@@ -286,6 +294,80 @@ Conservan lo que no es suyo: comentarios y orden en JSON/JSONC; en TOML y YAML, 
    `docs/equipo/releases/v0.59-herramientas-y-sitio/m0.md`, con `HOME`, `CLAUDE_CONFIG_DIR` y `CODEX_HOME` temporales y
    nunca el Tramtai instalado ni el puerto 17373).
 
+### Preparar los CLI de los agentes: `internal/preparar`
+
+Desde la v0.60, Tramtai instala, conecta, actualiza y desinstala los CLI de Claude Code, Codex, GitHub Copilot y
+Antigravity. La Web UI (Agentes y la bienvenida), la terminal y la CLI (`tramtai agentes instalar|entrar|actualizar|
+desinstalar|versiones`, alias `install|login|update|uninstall|versions`) usan las mismas rutas del servicio
+(`internal/servicio/preparacion.go`), y estas llaman a `internal/preparar`, el único código que lanza instaladores. La
+spec y las decisiones están en `docs/equipo/releases/v0.60-preparar-agentes/` (`spec.md`, `m0.md`).
+
+**Rutas** (con la sesión de la Web UI o la clave del servicio; la clave del espacio no basta: 403 `no_autorizado`):
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/v1/agentes/{id}/preparacion` | Estado de la última preparación del agente, o `null` |
+| `POST /api/v1/agentes/{id}/preparacion` | `{"accion": "instalar"\|"actualizar"\|"iniciar_sesion"\|"desinstalar", "borrar_datos": false, "confirmar": false}` (202) |
+| `POST /api/v1/agentes/{id}/preparacion/codigo` | `{"codigo": "…"}`: lo pegado, al CLI por su entrada; nunca se registra |
+| `DELETE /api/v1/agentes/{id}/preparacion` | Cancela y cierra el árbol de procesos |
+| `GET /api/v1/agentes/versiones` | Por agente: instalada, última, comprobadas por acción y acciones habilitadas; `?forzar=1` repite la consulta |
+
+Los tipos salen de `internal/contrato` (`go generate ./internal/contrato`). Las pantallas siguen el estado con un sondeo
+corto (`seguirPreparacion` en `web/src/preparacion.ts`), como el conversor.
+
+**La receta** (`adaptadores.Receta`, en la ficha de cada agente, `internal/agentes/<nombre>/ficha.go`) es fija en el
+código, por sistema (`windows`, `darwin`, `linux`): nada de lo que escribe el usuario entra en una orden.
+
+- `Instalar` y `Actualizar`: la orden oficial (sin entrada en `Actualizar`, se reinstala); `Descarga`, si Tramtai baja el
+  binario él mismo y comprueba su suma (Copilot en Windows, con `{version}` y `{arq}`); `FijaVersion` si admiten
+  `{version}`.
+- `Rutas`: dónde deja el ejecutable (`~` es la casa de la cuenta que corre el servicio). Si queda fuera del PATH del
+  servicio, se guarda en `comandos_agentes.<agente>` y se quita al desinstalar.
+- `Borrar` (lo que se quita al desinstalar: ningún CLI tiene orden propia) y `DatosCLI` (sesión y ajustes, solo con
+  «Borrar también su sesión y ajustes»). Desinstalar se niega si la ruta pasa por un enlace o una junction.
+- `Ultima`: de dónde sale la última versión publicada (`url` con un manifiesto, `github` con `Prefijo`, o `npm`).
+- `Sesion` (`LectorSesion`, `nil` en Antigravity): argumentos, `Entorno` (por ejemplo `BROWSER` o
+  `COPILOT_DEBUG_BROWSER` para que no abra el navegador del sistema), y las expresiones del enlace, el código y la
+  petición de pegar. El lector trabaja sobre el texto acumulado y sin ANSI; sin enlace ni código en 30 s,
+  `salida_no_reconocida`.
+- `Comprobadas`: las versiones probadas por acción, exactas o con comodín de parche (`2.1.*`).
+
+**La preparación** es una tarea por agente con estados (`instalando`, `actualizando`, `desinstalando`, `comprobando`,
+`esperando_usuario`, `listo`, `error`, `cancelado`), una a la vez por agente (`ya_en_curso`), plazo de 15 minutos y el
+árbol de procesos atado como el de las peticiones. Sobrevive a cerrar la pantalla; si el servicio se reinicia a mitad,
+queda en `error` con `interrumpida`. Guarda su estado en `datos/agentes/preparaciones/<id>.json` y las últimas líneas
+(redactadas) en `<id>.log`. No actualiza ni desinstala un agente con peticiones en curso (`peticiones_en_curso`) y,
+mientras lo instala, actualiza o desinstala, el planificador lo trata como no disponible.
+
+**Versiones comprobadas y la lista firmada.** `Preparador.Comprobada(agente, accion, version)` mira la receta y la lista
+firmada (`URLLista`: `compatibilidad.json` y `compatibilidad.json.sig` del release fijo `compatibilidad`, firmados con la
+clave de `internal/actualizacion`), salvo que la versión esté marcada como no compatible en este equipo (`Marcar`, cuando
+el lector falla en una versión comprobada). Lo bajado y las marcas quedan en `datos/agentes/compatibilidad.json`. La lista
+se lee con la consulta diaria de versiones (`servicio.buscar_versiones_agentes`, `true` por defecto); una lista cuya firma
+no vale se rechaza.
+
+**El job semanal** (`.github/workflows/agentes-compatibilidad.yml`, los lunes y a mano con `workflow_dispatch`) corre
+`go run ./cmd/compatibilidad comprobar <resultado.json>` en Linux, macOS y Windows: con las fichas reales y el mismo
+`Preparador` que el servicio, instala la última versión de cada CLI, lanza su inicio de sesión hasta el enlace y el código
+(sin cuenta) y lo cancela, actualiza y desinstala. `cmd/compatibilidad juntar` añade a la lista publicada las versiones
+que pasaron en los tres sistemas, sube `version` y solo escribe si cambia algo; el job la firma con
+`FIRMA_ACTUALIZACIONES`, comprueba la firma y la sube al release. Si algo falla, abre o comenta un issue con lo que hay
+que ajustar en la receta. Un límite de la API de GitHub cuenta como «sin concluir»: la versión no entra ni sale.
+
+**Añadir una versión comprobada a mano** (si el job no puede, o para una versión de Tramtai):
+1. Lo normal es lanzar el job a mano (Actions › «Compatibilidad de los agentes» › Run workflow): prueba y publica.
+2. Para que viaje con Tramtai, añádela a `Comprobadas` de la receta, en las acciones que probaste, y publica la versión.
+3. Solo si hace falta corregir la lista publicada sin el job: baja `compatibilidad.json` del release, añade la versión
+   en `agentes.<id>.<accion>`, sube `version` en 1, fírmala (`go run ./scripts/firmar compatibilidad.json` con
+   `FIRMA_ACTUALIZACIONES` en el entorno), comprueba la firma (`go run ./scripts/firmar -comprobar compatibilidad.json`)
+   y sube los dos archivos con `gh release upload compatibilidad compatibilidad.json compatibilidad.json.sig --clobber`.
+
+**Pruebas:** CLI falsos que imitan el instalador y el inicio de sesión (con las salidas reales del M0 en
+`internal/agentes/<nombre>/testdata/sesion-*.txt`), sin red ni CLI reales. Una prueba con un CLI real se hace como en el
+M0: copia de Tramtai en `bin/`, puerto 17388, `HOME`, `USERPROFILE`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME` y `COPILOT_HOME`
+temporales, y nunca con el Tramtai instalado ni el puerto 17373. Los textos de la CLI y del servicio van con `idioma.T`
+(`internal/idioma/en_preparar.go`), los de la Web UI en `preparar.*` y `bienvenida.*`, y la Ayuda es el tema `preparar`.
+
 ### Ejemplos de la guía
 
 `go test -tags ejemplos -run TestEjemplos -v ./internal/api/` ejecuta `docs/ejemplos` contra un agente simulado (el
@@ -316,6 +398,8 @@ internal/documentos/   cargas, formatos admitidos, conversión con markitdown y 
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/apuntar/      apunta Claude Code, Codex, Continue y opencode/Kilo a Tramtai: copias, anotación y un Formato por tipo de archivo
+internal/preparar/     instala, conecta, actualiza y desinstala los CLI de los agentes con su receta; versiones comprobadas
+cmd/compatibilidad/    el job semanal que prueba los CLI y arma la lista firmada de versiones comprobadas
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
 internal/configuracion/ configuración por capas y perfiles; edición de config.yaml y local.yaml y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)

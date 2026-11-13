@@ -31,6 +31,11 @@ sin conexión. Lo que no cabe en texto (capturas, diagramas, el recorrido guiado
 El pie de cada página dice sus teclas. Las acciones que borran, cancelan o desconectan (eliminar o cancelar una petición,
 vaciar el historial, desconectar un agente) piden confirmación con `s` (`y` en inglés); Enter no confirma.
 
+- **Agentes (2):** `i` instala el CLI del agente elegido, `s` inicia sesión, `u` actualiza, `x` desinstala (`X` borra
+  también su sesión y sus ajustes; las dos piden confirmación), `y` sigue con una versión sin comprobar, `k` cancela la
+  preparación, `l` enseña su registro, `c` vuelve a comprobar y `e` vuelve al campo del código. El enlace y el código se
+  ven como texto que se puede seleccionar. En **Ajustes**, `v` activa o desactiva «Comprobar versiones nuevas de los
+  agentes».
 - **Solo con la terminal:** `tramtai servicio iniciar -d` deja el servicio en segundo plano sin abrir la app, y
   `tramtai terminal` lo administra entero. Sirve también por SSH: entra al equipo donde corre Tramtai y ábrela allí.
 - **Si el servicio se detiene:** ninguna página se cierra; la línea de estado dice «El servicio no responde · r
@@ -55,7 +60,8 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 - **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (las peticiones terminadas y sus archivos).
 - **Mis APIs:** URL, clave y ejemplos; APIs por aplicación con grupos que se activan o detienen juntos.
 - **Espacios:** el global y los proyectos, con activar, detener, confiar, buscar y olvidar.
-- **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
+- **Agentes:** el estado de cada uno y, para su CLI, **Instalar**, **Iniciar sesión**, **Actualizar** y, en **⋯**, Comprobar versión, Desinstalar y Ver registro (ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes)).
+- **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en Windows, Linux y macOS entra solo si el navegador es de tu mismo usuario del sistema. Si no, la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
 
@@ -199,6 +205,12 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones;
 ```
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
+- **Los CLI de los agentes:** `tramtai agentes instalar|entrar|actualizar|desinstalar|versiones` tienen alias en inglés
+  (`install`, `login`, `update --all`, `uninstall --delete-data`, `versions`). Enseñan el progreso, el enlace y el código
+  (no abren ningún navegador) y piden sin mostrarlo el código que te den. Con una versión sin comprobar preguntan antes de
+  seguir (`--confirmar` no pregunta; el inicio de sesión no se salta nunca). Códigos de salida: 0 listo; 1 error; 2
+  versión sin comprobar que no se confirmó, o acción que ahora no se puede; 3 hecho, pero falta un paso (sin sesión o sin
+  clave); 130 cancelado (Ctrl+C).
 - **¿Sigue en marcha?** `tramtai abrir` y la app de escritorio dejan el servicio en segundo plano: sigue atendiendo a tus aplicaciones aunque cierres la terminal o la ventana. La cabecera de la Web UI muestra «En marcha» o «Sin conexión», y `tramtai servicio estado` lo confirma.
 - **Puerto:** `servicio.puerto` (17373). Si al iniciar está ocupado y `servicio.puerto_automatico` está activado (lo está por defecto), Tramtai usa el siguiente libre y lo avisa en el registro; la CLI y la app de escritorio lo encuentran solas (la ventana de la app vuelve a entrar en la nueva dirección en unos segundos, cambie como cambie el puerto), pero tus aplicaciones deben usar la nueva dirección. Con `servicio.puerto_automatico: false` no arranca y explica cómo elegir otro. Se cambia en **Ajustes → Puerto del servicio** o con `tramtai servicio puerto <número>`: ambos comprueban que esté libre y se aplica al reiniciar (en Ajustes, con «Reiniciar ahora»; la página sigue al servicio a su nuevo puerto).
 - **Iniciar, reiniciar y detener:** desde la Web UI, el indicador «En marcha» tiene «Reiniciar el servicio» y «Detener el servicio…» (solo en este equipo y con confirmación). Iniciarlo no puede hacerse desde la página, porque es el propio servicio el que la sirve: se inicia con `tramtai abrir`, con `tramtai servicio iniciar -d` o desde la bandeja de la app de escritorio (Iniciar el servicio). La página se reconecta sola cuando vuelve.

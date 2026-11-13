@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Set up your agents · Tramtai">Preparar tus agentes · Tramtai</title>
+<meta name="description" content="Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/preparar.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/preparar.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Preparar tus agentes · Tramtai">
+<meta property="og:description" content="Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../estilo.css">
+<script src="../sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+</head>
+<body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a href="../#terminal">Terminal</a>
+        <a href="../#servidor"><span lang="es">Servidor</span><span lang="en">Server</span></a>
+        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
+    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+    <li><a href="#s-versiones"><span lang="es">Versiones comprobadas</span><span lang="en">Checked versions</span></a></li>
+    <li><a href="#s-cli"><span lang="es">Con la CLI de Tramtai</span><span lang="en">With the Tramtai CLI</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
+<article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<header>
+  <h1><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></h1>
+  <p class="entradilla"><span lang="es">Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.</span><span lang="en">Tramtai installs each agent’s CLI, helps you sign in and keeps it up to date, only with checked versions.</span></p>
+</header>
+
+<section id="s-diagrama"><h2><span lang="es">Cómo funciona</span><span lang="en">How it works</span></h2>
+<ol class="diagrama" style="--paradas: 3">
+  <li><strong>1. <span lang="es">Instalar</span><span lang="en">Install</span></strong><span><span lang="es">Con el instalador oficial del CLI, para tu usuario (o para la cuenta del servicio).</span><span lang="en">With the CLI’s official installer, for your user (or for the service account).</span></span></li>
+  <li><strong>2. <span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></strong><span><span lang="es">Tramtai lanza el del propio CLI y te enseña su enlace y su código.</span><span lang="en">Tramtai runs the CLI’s own sign-in and shows you its link and code.</span></span></li>
+  <li><strong>3. <span lang="es">Al día</span><span lang="en">Up to date</span></strong><span><span lang="es">Avisa de cada versión nueva; actualizar o desinstalar es un clic.</span><span lang="en">It tells you about each new version; updating or uninstalling takes one click.</span></span></li>
+</ol>
+</section>
+
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
+<ol class="pasos">
+  <li><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». La primera vez, si no tienes ningún agente listo, Tramtai te lo ofrece con «Prepara tus agentes».</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. The first time, if no agent is ready yet, Tramtai offers it with “Set up your agents”.</span></li>
+  <li><span lang="es">Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve. Sigue solo en cuanto lo apruebas.</span><span lang="en">Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back. It carries on as soon as you approve.</span></li>
+  <li><span lang="es">Para usar tu suscripción, elige «Usar mi suscripción» en la tarjeta del agente; si no, ponle su clave de API. Antigravity va siempre con clave.</span><span lang="en">To use your subscription, pick “Use my subscription” on the agent’s card; otherwise, give it its API key. Antigravity always uses a key.</span></li>
+  <li><span lang="es">Si hay una versión nueva, la tarjeta lo dice y «Actualizar» la instala. En «⋯» están Comprobar versión, Actualizar, Desinstalar y Ver registro.</span><span lang="en">When there is a new version, the card says so and “Update” installs it. Under “⋯” you have Check version, Update, Uninstall and View log.</span></li>
+</ol>
+</section>
+
+<section id="s-recorrido"><h2><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></h2>
+<ol class="pasos recorrido-pasos">
+  <li><div><strong><span lang="es">Instalar desde aquí</span><span lang="en">Install from here</span></strong> <span lang="es">Aquí están los agentes que aún no tienes: «Instalar» los instala con su instalador oficial y sigue con el inicio de sesión, sin abrir otra consola.</span><span lang="en">Here are the agents you don’t have yet: “Install” installs them with their official installer and goes on with sign-in, with no other console.</span><figure class="captura captura-paso"><img class="solo-claro" lang="es" src="capturas/recorrido-agentes-instalar.claro.es.webp" width="736" height="162" loading="lazy" alt="Captura de pantalla: Instalar desde aquí" style="max-width: 736px"><img class="solo-claro" lang="en" src="capturas/recorrido-agentes-instalar.claro.en.webp" width="736" height="162" loading="lazy" alt="Screenshot: Install from here" style="max-width: 736px"><img class="solo-oscuro" lang="es" src="capturas/recorrido-agentes-instalar.oscuro.es.webp" width="736" height="162" loading="lazy" alt="Captura de pantalla: Instalar desde aquí" style="max-width: 736px"><img class="solo-oscuro" lang="en" src="capturas/recorrido-agentes-instalar.oscuro.en.webp" width="736" height="162" loading="lazy" alt="Screenshot: Install from here" style="max-width: 736px"></figure></div></li>
+  <li><div><strong><span lang="es">Mantenerlos al día</span><span lang="en">Keep them up to date</span></strong> <span lang="es">En la tarjeta de un agente ves si hay una versión nueva y la acción que toca; en «⋯», comprobar la versión, actualizar, desinstalar y su registro.</span><span lang="en">On an agent’s card you see whether there is a new version and the action that applies; under “⋯”, check the version, update, uninstall and its log.</span><figure class="captura captura-paso"><img class="solo-claro" lang="es" src="capturas/recorrido-agentes-preparar.claro.es.webp" width="736" height="67" loading="lazy" alt="Captura de pantalla: Mantenerlos al día" style="max-width: 736px"><img class="solo-claro" lang="en" src="capturas/recorrido-agentes-preparar.claro.en.webp" width="736" height="67" loading="lazy" alt="Screenshot: Keep them up to date" style="max-width: 736px"><img class="solo-oscuro" lang="es" src="capturas/recorrido-agentes-preparar.oscuro.es.webp" width="736" height="67" loading="lazy" alt="Captura de pantalla: Mantenerlos al día" style="max-width: 736px"><img class="solo-oscuro" lang="en" src="capturas/recorrido-agentes-preparar.oscuro.en.webp" width="736" height="67" loading="lazy" alt="Screenshot: Keep them up to date" style="max-width: 736px"></figure></div></li>
+</ol>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/preparar.claro.es.webp" width="526" height="267" loading="lazy" alt="La bienvenida ofrece preparar tus agentes: marcas los que quieres y Tramtai los instala uno tras otro"><img class="solo-claro" lang="en" src="capturas/preparar.claro.en.webp" width="526" height="267" loading="lazy" alt="The welcome offers to set up your agents: you tick the ones you want and Tramtai installs them one after another"><img class="solo-oscuro" lang="es" src="capturas/preparar.oscuro.es.webp" width="526" height="267" loading="lazy" alt="La bienvenida ofrece preparar tus agentes: marcas los que quieres y Tramtai los instala uno tras otro"><img class="solo-oscuro" lang="en" src="capturas/preparar.oscuro.en.webp" width="526" height="267" loading="lazy" alt="The welcome offers to set up your agents: you tick the ones you want and Tramtai installs them one after another"></figure>
+</section>
+
+<section id="s-tabla"><h2><span lang="es">De un vistazo</span><span lang="en">At a glance</span></h2>
+<div class="tabla"><table>
+  <thead><tr><th></th><th><span lang="es">Cómo inicia sesión</span><span lang="en">How it signs in</span></th></tr></thead>
+  <tbody>
+    <tr><th scope="row"><span lang="es">Claude Code</span><span lang="en">Claude Code</span></th><td><span lang="es">Con un enlace en tu navegador; si te da un código, lo pegas en Tramtai.</span><span lang="en">With a link in your browser; if it gives you a code, you paste it into Tramtai.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Codex</span><span lang="en">Codex</span></th><td><span lang="es">Con un código de dispositivo, que activas una vez en ChatGPT › Seguridad («Abrir los ajustes de seguridad de ChatGPT»).</span><span lang="en">With a device code, which you turn on once in ChatGPT › Security (“Open ChatGPT security settings”).</span></td></tr>
+    <tr><th scope="row"><span lang="es">GitHub Copilot</span><span lang="en">GitHub Copilot</span></th><td><span lang="es">Con un código de dispositivo de GitHub, que escribes en github.com/login/device.</span><span lang="en">With a GitHub device code, which you enter at github.com/login/device.</span></td></tr>
+    <tr><th scope="row"><span lang="es">Antigravity</span><span lang="en">Antigravity</span></th><td><span lang="es">No inicia sesión: solo se instala, y después le pones la clave de la Gemini API.</span><span lang="en">It doesn’t sign in: it is only installed, and then you add its Gemini API key.</span></td></tr>
+  </tbody>
+</table></div>
+
+<p class="aviso"><span lang="es">Tramtai nunca lee ni guarda tu sesión: la guarda el propio CLI. De su salida solo toma el enlace y el código, y lo que pegas va al CLI sin quedar en el registro.</span><span lang="en">Tramtai never reads or stores your session: the CLI keeps it. From its output it only takes the link and the code, and what you paste goes to the CLI without reaching the log.</span></p>
+</section>
+
+<section id="s-versiones"><h2><span lang="es">Versiones comprobadas</span><span lang="en">Checked versions</span></h2>
+<ol class="pasos">
+  <li><span lang="es">Tramtai instala, actualiza e inicia sesión de forma automática solo con versiones de cada CLI que ya comprobó: que su instalador y su inicio de sesión siguen como espera.</span><span lang="en">Tramtai installs, updates and signs in automatically only with CLI versions it has already checked: that their installer and sign-in still work as it expects.</span></li>
+  <li><span lang="es">Con una versión sin comprobar, el inicio de sesión automático sale desactivado en ese agente, con la orden para hacerlo en una consola; instalar, actualizar o desinstalar piden confirmar.</span><span lang="en">With an unchecked version, automatic sign-in is turned off for that agent, with the command to do it in a console; installing, updating or uninstalling ask you to confirm.</span></li>
+  <li><span lang="es">El uso normal del agente sigue igual: sus peticiones funcionan con las comprobaciones de siempre. Solo se desactiva la preparación automática.</span><span lang="en">Using the agent works as usual: its requests run with the usual checks. Only the automatic setup is turned off.</span></li>
+  <li><span lang="es">La lista se pone al día sola: cada semana se prueban las versiones nuevas y se publica una lista firmada que Tramtai lee una vez al día. Una versión que entra se habilita sola.</span><span lang="en">The list updates itself: every week the new versions are tested and a signed list is published, which Tramtai reads once a day. A version that gets in is turned on by itself.</span></li>
+</ol>
+</section>
+
+<section id="s-cli"><h2><span lang="es">Con la CLI de Tramtai</span><span lang="en">With the Tramtai CLI</span></h2>
+<ol class="pasos">
+  <li><span lang="es">«tramtai agentes instalar claude codex» los instala y sigue con el inicio de sesión; «tramtai agentes entrar codex» solo inicia sesión. Enseñan el enlace y el código y piden el que te den.</span><span lang="en">“tramtai agents install claude codex” installs them and goes on with sign-in; “tramtai agents login codex” only signs in. They show the link and the code and ask for the one you get.</span></li>
+  <li><span lang="es">«tramtai agentes actualizar --todos» actualiza los que tienen una versión nueva; «tramtai agentes desinstalar codex» pregunta antes (con --borrar-datos, también su sesión y ajustes).</span><span lang="en">“tramtai agents update --all” updates the ones with a new version; “tramtai agents uninstall codex” asks first (with --delete-data, its session and settings too).</span></li>
+  <li><span lang="es">«tramtai agentes versiones» enseña la instalada, la última y si está comprobada. Con --confirmar no pregunta antes de seguir con una versión sin comprobar.</span><span lang="en">“tramtai agents versions” shows the installed version, the latest and whether it is checked. With --confirm it doesn’t ask before going on with an unchecked version.</span></li>
+  <li><span lang="es">Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar que no se confirmó, o acción que ahora no se puede; 3 hecho, pero falta un paso (sin sesión o sin clave); 130 cancelado.</span><span lang="en">Exit codes: 0 ready; 1 error; 2 unchecked version that wasn’t confirmed, or an action not possible now; 3 done, but a step is missing (no session or no key); 130 canceled.</span></li>
+</ol>
+</section>
+
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
+<details id="preparar-donde"><summary><span lang="es">¿Dónde queda instalado cada CLI?</span><span lang="en">Where does each CLI get installed?</span></summary><p><span lang="es">Donde lo deja su instalador oficial, para tu usuario: sirve también fuera de Tramtai. Si queda fuera del PATH del servicio, Tramtai guarda su ruta en comandos_agentes.</span><span lang="en">Where its official installer puts it, for your user: it also works outside Tramtai. If it ends up outside the service’s PATH, Tramtai saves its path in comandos_agentes.</span></p></details>
+<details id="preparar-node"><summary><span lang="es">¿Necesito Node o npm?</span><span lang="en">Do I need Node or npm?</span></summary><p><span lang="es">No: los cuatro se instalan con su instalador oficial, sin Node. GitHub Copilot, en Windows, se descarga de GitHub y Tramtai comprueba su suma antes de instalarlo.</span><span lang="en">No: all four are installed with their official installer, without Node. GitHub Copilot, on Windows, is downloaded from GitHub and Tramtai checks its checksum before installing it.</span></p></details>
+<details id="preparar-cerrar"><summary><span lang="es">¿Puedo cerrar la pantalla mientras se instala?</span><span lang="en">Can I close the screen while it installs?</span></summary><p><span lang="es">Sí: la preparación sigue en el servicio y, al volver a Agentes, ves dónde va. Instalar, actualizar o iniciar sesión se cortan a los 15 minutos.</span><span lang="en">Yes: the setup keeps going in the service and, when you come back to Agents, you see where it is. Installing, updating or signing in stop after 15 minutes.</span></p></details>
+<details id="preparar-desactivada"><summary><span lang="es">¿Por qué sale desactivado el inicio de sesión automático?</span><span lang="en">Why is automatic sign-in turned off?</span></summary><p><span lang="es">Porque esa versión del CLI aún no está comprobada con Tramtai. El aviso trae la orden para hacerlo en una consola, y vuelve solo cuando la versión entra en la lista.</span><span lang="en">Because that CLI version hasn’t been checked with Tramtai yet. The notice has the command to do it in a console, and it comes back by itself once the version is on the list.</span></p></details>
+<details id="preparar-no-avanza"><summary><span lang="es">¿Y si el inicio de sesión no avanza?</span><span lang="en">What if sign-in doesn’t move on?</span></summary><p><span lang="es">Si el CLI escribe algo que Tramtai no reconoce, lo cancela, enseña sus últimas líneas con el enlace resaltado y la orden para la consola, y aparta esa versión hasta que la lista la confirme.</span><span lang="en">If the CLI writes something Tramtai doesn’t recognize, it cancels, shows its last lines with the link highlighted and the console command, and sets that version aside until the list confirms it.</span></p></details>
+<details id="preparar-sitios"><summary><span lang="es">¿A qué sitios se conecta para ver las versiones?</span><span lang="en">Which sites does it connect to for the versions?</span></summary><p><span lang="es">Una vez al día, al sitio oficial de cada CLI (GitHub, downloads.claude.ai y el servidor de actualizaciones de Antigravity) y al release «compatibilidad» de Tramtai en GitHub. No envía datos tuyos.</span><span lang="en">Once a day, to each CLI’s official site (GitHub, downloads.claude.ai and the Antigravity update server) and to Tramtai’s “compatibilidad” release on GitHub. It sends none of your data.</span></p></details>
+<details id="preparar-sin-consulta"><summary><span lang="es">¿Cómo desactivo esa consulta?</span><span lang="en">How do I turn that check off?</span></summary><p><span lang="es">En Ajustes, «Comprobar versiones nuevas de los agentes» (v en la terminal), o con servicio.buscar_versiones_agentes: false. Siguen valiendo las versiones comprobadas que trae Tramtai.</span><span lang="en">In Settings, “Check for new agent versions” (v in the terminal), or with servicio.buscar_versiones_agentes: false. The checked versions Tramtai ships with still apply.</span></p></details>
+<details id="preparar-peticiones"><summary><span lang="es">¿Por qué no se actualiza ahora?</span><span lang="en">Why won’t it update now?</span></summary><p><span lang="es">Porque el agente tiene peticiones en curso: espera a que terminen y vuelve a intentarlo. Mientras se actualiza, ese agente no está disponible para peticiones nuevas.</span><span lang="en">Because the agent has requests in progress: wait for them to finish and try again. While it updates, that agent isn’t available for new requests.</span></p></details>
+<details id="preparar-desinstalar"><summary><span lang="es">¿Desinstalar borra mi sesión?</span><span lang="en">Does uninstalling delete my session?</span></summary><p><span lang="es">No, salvo que marques «Borrar también su sesión y ajustes». Pide confirmación porque el CLI deja de estar también fuera de Tramtai.</span><span lang="en">No, unless you tick “Also delete its session and settings”. It asks you to confirm because the CLI also stops being there outside Tramtai.</span></p></details>
+<details id="preparar-servidor"><summary><span lang="es">¿Y en el modo servidor?</span><span lang="en">And in server mode?</span></summary><p><span lang="es">Se hace igual, con la cuenta del servicio: desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes …». Solo el administrador.</span><span lang="en">It works the same, with the service account: from Agents in the remote Web UI, the terminal or “tramtai-servidor agents …”. Administrator only.</span> <a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span> →</a></p></details>
+</section>
+
+<p class="aviso"><span lang="es">En la terminal: 2 abre Agentes. i instala, s inicia sesión, u actualiza, x desinstala (X borra también sus datos), y sigue, k cancela, l enseña el registro, c comprueba y e vuelve al código.</span><span lang="en">In the terminal: 2 opens Agents. i installs, s signs in, u updates, x uninstalls (X also deletes its data), y continues, k cancels, l shows the log, c checks and e goes back to the code.</span></p>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="agentes.html"><strong><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></strong><span><span lang="es">Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.</span><span lang="en">Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.</span></span></a>
+  <a class="tarjeta-tema" href="empezar.html"><strong><span lang="es">Empezar</span><span lang="en">Get started</span></strong><span><span lang="es">Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.</span><span lang="en">Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.</span></span></a>
+  <a class="tarjeta-tema" href="servidor.html"><strong><span lang="es">Modo servidor</span><span lang="en">Server mode</span></strong><span><span lang="es">Un Tramtai del sistema que arranca con el equipo, sin iniciar sesión, y se abre desde otros equipos por HTTPS.</span><span lang="en">A system-wide Tramtai that starts with the computer, with nobody signed in, and opens from other computers over HTTPS.</span></span></a>
+</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+</body>
+</html>

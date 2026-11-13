@@ -40,7 +40,7 @@
             <div class="q-px-md q-pb-md">
         <!-- Su CLI, desde aquí: la versión nueva, la acción principal de preparar (o el aviso si su versión no está
              comprobada), «⋯» con el resto y, mientras se prepara, su panel. -->
-        <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md">
+        <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md" data-recorrido="agentes.preparar">
           <PanelPreparacion v-if="paneles[a.agente]" :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion"
             :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
           <template v-else>
@@ -185,7 +185,7 @@
       <q-card v-if="filtro === 'instalar' && !otros.length">
         <EstadoVacio :titulo="t('agentes.sinResultados')" :accion="t('historial.quitarFiltros')" @accion="quitarFiltros" />
       </q-card>
-      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
+      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'" data-recorrido="agentes.instalar">
         <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
           :label="t('agentes.otros', { n: otros.length })" :caption="t('agentes.otrosTexto')" @update:model-value="(v: boolean) => (otrosAbierto = v)">
           <q-list separator>
