@@ -24,6 +24,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/contrato"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
 
@@ -343,8 +344,8 @@ func TestCerrar(t *testing.T) {
 	if g, err := pr.p.leer("falso"); err != nil || g.MotivoCodigo != CodigoInterrumpida || g.PID != 0 {
 		t.Fatalf("en disco: %+v %v", g, err)
 	}
-	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"}); err == nil {
-		t.Fatal("tras Cerrar no se lanza ninguna preparación")
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"}); nucleo.CodigoDe(err) != nucleo.CodigoServicioDetenido {
+		t.Fatalf("tras Cerrar no se lanza ninguna preparación: %v", err)
 	}
 	pr.p.Cerrar() // dos veces, o sin nada en marcha, no espera
 }

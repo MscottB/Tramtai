@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"os"
@@ -24,6 +25,7 @@ type preparacionFalsa struct {
 	estados   map[string]contrato.EstadoPreparacion
 	pedidos   int
 	versiones []bool // el forzar de cada llamada a Versiones
+	espera    chan struct{}
 	cerrada   bool
 }
 
@@ -50,11 +52,16 @@ func (f *preparacionFalsa) Cancelar(string) error { return nil }
 
 func (f *preparacionFalsa) Codigo(string, string) error { return nil }
 
+// Versiones espera, si hay espera, a que la prueba la cierre: así se ve si otra llamada se cuela mientras tanto.
 func (f *preparacionFalsa) Versiones(_ context.Context, forzar bool) []contrato.VersionesAgente {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.versiones = append(f.versiones, forzar)
-	return []contrato.VersionesAgente{{Agente: "claude", Instalada: strings.Repeat("1.", len(f.versiones)) + "0"}}
+	n, espera := len(f.versiones), f.espera
+	f.mu.Unlock()
+	if espera != nil {
+		<-espera
+	}
+	return []contrato.VersionesAgente{{Agente: "claude", Instalada: strings.Repeat("1.", n) + "0"}}
 }
 
 func (f *preparacionFalsa) Cerrar() {
@@ -98,8 +105,8 @@ func entrarLocal(t *testing.T, s *Servicio, base string) *navegador {
 }
 
 // TestPrepararSoloAdministradorEnServidor: en el servidor solo el administrador prepara agentes (su sesión, que exige
-// TOTP si lo tiene, o la clave del servicio en el propio servidor); sin nada, 401; con la clave de una app, 403. Fuera del
-// servidor, la clave del espacio también vale, como el resto de /api/v1.
+// TOTP si lo tiene, o la clave del servicio en el propio servidor); sin nada, 401; con la clave de una app, 403, también
+// fuera del servidor (Ruling 23).
 func TestPrepararSoloAdministradorEnServidor(t *testing.T) {
 	almacen := almacenFalso(t)
 	secreto, _ := totp.Generar()
@@ -145,10 +152,20 @@ func TestPrepararSoloAdministradorEnServidor(t *testing.T) {
 		t.Errorf("preparaciones lanzadas: %d", f.pedidos)
 	}
 
+	// Ruling 23: también fuera del servidor, la clave del espacio (la de las apps) no basta.
 	s.opc.Entorno = "escritorio"
-	if r, cuerpo := pedir(t, ts.URL, "POST", rutaPreparacion, clave, instalar); r.StatusCode != 202 {
+	if r, cuerpo := pedir(t, ts.URL, "POST", rutaPreparacion, clave, instalar); r.StatusCode != 403 || !strings.Contains(cuerpo, `"codigo":"no_autorizado"`) {
 		t.Errorf("fuera del servidor, con la clave del espacio: %d %s", r.StatusCode, cuerpo)
 	}
+	if f.pedidos != 2 {
+		t.Errorf("preparaciones lanzadas: %d", f.pedidos)
+	}
+}
+
+// pedirAdmin pide con la clave del servicio en el espacio global, como la CLI y la terminal.
+func pedirAdmin(t *testing.T, s *Servicio, base, metodo, ruta, cuerpo string) (*http.Response, string) {
+	t.Helper()
+	return pedir(t, base, metodo, ruta, s.tokenAdmin, cuerpo, "Tramtai-Instancia", "global")
 }
 
 // TestPrepararCSRF: con la sesión de la Web UI, lo que cambia algo exige X-CSRF-Token, como el resto de rutas. Lo pegado
@@ -253,11 +270,12 @@ func TestVersionesAgentesGuardadas(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	f := nuevaPreparacionFalsa()
 	s.preparar = f
-	global, _ := s.ActivarGlobal()
-	clave := claveDe(t, s, global)
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
 	versiones := func(ruta string) string {
 		t.Helper()
-		r, cuerpo := pedir(t, ts.URL, "GET", ruta, clave, "")
+		r, cuerpo := pedirAdmin(t, s, ts.URL, "GET", ruta, "")
 		if r.StatusCode != 200 {
 			t.Fatalf("%s: %d %s", ruta, r.StatusCode, cuerpo)
 		}
@@ -267,6 +285,9 @@ func TestVersionesAgentesGuardadas(t *testing.T) {
 	if segunda := versiones("/api/v1/agentes/versiones"); segunda != primera || len(f.llamadas()) != 1 {
 		t.Fatalf("la segunda es la guardada: %s / %s (%v)", primera, segunda, f.llamadas())
 	}
+	s.muVersiones.Lock()
+	s.versionesEn = s.versionesEn.Add(-forzarCada - time.Second) // forzar repite solo pasado forzarCada
+	s.muVersiones.Unlock()
 	versiones("/api/v1/agentes/versiones?forzar=1")
 	s.muVersiones.Lock()
 	fin := s.versionesEn.Add(time.Nanosecond) // terminó justo después de la última comprobación
@@ -277,6 +298,64 @@ func TestVersionesAgentesGuardadas(t *testing.T) {
 	versiones("/api/v1/agentes/versiones")
 	if l := f.llamadas(); len(l) != 3 || l[0] || !l[1] || l[2] {
 		t.Fatalf("llamadas a Versiones (forzar): %v", l)
+	}
+}
+
+// TestVersionesUnaALaVez: muchos ?forzar=1 a la vez lanzan una sola comprobación y todos reciben su resultado; uno más
+// antes de un minuto da la guardada y, pasado el minuto, se repite.
+func TestVersionesUnaALaVez(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	f := nuevaPreparacionFalsa()
+	f.espera = make(chan struct{})
+	s.preparar = f
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	const ruta = "/api/v1/agentes/versiones?forzar=1"
+	cuerpos := make([]string, 8)
+	var grupo sync.WaitGroup
+	for i := range cuerpos {
+		grupo.Go(func() { _, cuerpos[i] = pedirAdmin(t, s, ts.URL, "GET", ruta, "") })
+	}
+	for len(f.llamadas()) == 0 {
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(300 * time.Millisecond) // las demás llegan mientras la primera sigue en marcha
+	close(f.espera)
+	grupo.Wait()
+	for _, cuerpo := range cuerpos {
+		if cuerpo != cuerpos[0] || !strings.Contains(cuerpo, `"instalada":"1.0"`) {
+			t.Fatalf("todas reciben la misma: %q", cuerpos)
+		}
+	}
+	if l := f.llamadas(); len(l) != 1 {
+		t.Fatalf("una sola comprobación: %v", l)
+	}
+	pedirAdmin(t, s, ts.URL, "GET", ruta, "")
+	if l := f.llamadas(); len(l) != 1 {
+		t.Fatalf("antes de un minuto, la guardada: %v", l)
+	}
+	s.muVersiones.Lock()
+	s.versionesEn = s.versionesEn.Add(-forzarCada - time.Second)
+	s.muVersiones.Unlock()
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "GET", ruta, ""); !strings.Contains(cuerpo, `"instalada":"1.1.0"`) || len(f.llamadas()) != 2 {
+		t.Fatalf("pasado el minuto se repite: %s %v", cuerpo, f.llamadas())
+	}
+}
+
+// TestFijarBuscarVersiones: servicio.buscar_versiones_agentes se guarda en la configuración global y vale en marcha (es
+// lo que lee la preparación antes de consultar la red).
+func TestFijarBuscarVersiones(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	global, _ := configuracion.RutaGlobal()
+	for _, buscar := range []bool{false, true} {
+		if err := s.fijarBuscarVersiones(buscar); err != nil {
+			t.Fatal(err)
+		}
+		texto, _ := os.ReadFile(global)
+		if s.buscarVersiones.Load() != buscar || !strings.Contains(string(texto), "buscar_versiones_agentes: "+map[bool]string{true: "true", false: "false"}[buscar]) {
+			t.Fatalf("%v: %v %s", buscar, s.buscarVersiones.Load(), texto)
+		}
 	}
 }
 
@@ -325,17 +404,18 @@ func TestPreparacionDeVerdad(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.preparar = s.nuevaPreparacion()
-	global, _ := s.ActivarGlobal()
-	clave := claveDe(t, s, global)
-	if r, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/agentes/codex/preparacion", clave, ""); r.StatusCode != 200 ||
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	if r, cuerpo := pedirAdmin(t, s, ts.URL, "GET", "/api/v1/agentes/codex/preparacion", ""); r.StatusCode != 200 ||
 		!strings.Contains(cuerpo, `"estado":"error"`) || !strings.Contains(cuerpo, `"motivo_codigo":"interrumpida"`) {
 		t.Fatalf("la que quedó a medias: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/agentes/claude/preparacion/codigo", clave, `{"codigo":"pegado-secreto-123"}`); r.StatusCode != 400 ||
+	if r, cuerpo := pedirAdmin(t, s, ts.URL, "POST", "/api/v1/agentes/claude/preparacion/codigo", `{"codigo":"pegado-secreto-123"}`); r.StatusCode != 400 ||
 		strings.Contains(cuerpo, "pegado-secreto") {
 		t.Fatalf("código sin inicio de sesión: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/agentes/antigravity/preparacion", clave, `{"accion":"iniciar_sesion"}`); r.StatusCode != 400 {
+	if r, cuerpo := pedirAdmin(t, s, ts.URL, "POST", "/api/v1/agentes/antigravity/preparacion", `{"accion":"iniciar_sesion"}`); r.StatusCode != 400 {
 		t.Fatalf("Antigravity no inicia sesión: %d %s", r.StatusCode, cuerpo)
 	}
 }

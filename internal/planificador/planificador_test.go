@@ -1579,6 +1579,58 @@ func TestNotaRespaldoDesconectadoSoloSiSeHubieraProbado(t *testing.T) {
 	}
 }
 
+// iniciarPreparando es iniciarVarios con Opciones.Preparando.
+func iniciarPreparando(t *testing.T, alm *persistencia.Almacen, lista map[string]adaptadores.Adaptador, preparando func(string) bool) *Planificador {
+	t.Helper()
+	limites := map[string]int{}
+	for nombre := range lista {
+		limites[nombre] = 2
+	}
+	opc := opciones()
+	opc.Preparando = preparando
+	p := Nuevo(alm, lista, NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	return p
+}
+
+// Ruling 18: un agente cuyo CLI se está preparando no se acepta como principal, el respaldo lo salta y, si empezó a
+// prepararse mientras su trabajo esperaba, al lanzarlo da agente_no_disponible y salta al respaldo.
+func TestAgentePreparando(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarPreparando(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}, func(a string) bool { return a == "simulado" })
+	if _, _, err := p.Enviar(ctx, solicitud("hola"), ""); nucleo.CodigoDe(err) != nucleo.CodigoAgenteNoDisponible {
+		t.Fatalf("el principal se rechaza al aceptar: %v", err)
+	}
+
+	alm = abrir(t)
+	var n atomic.Int32
+	p = iniciarPreparando(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)},
+		"codex": adaptadores.Simulado{Respuesta: "no"}, "otro": primeroBien{&n}}, func(a string) bool { return a == "codex" })
+	if tr := esperar(t, alm, enviar(t, p, conRespaldo("codex", "otro")), nucleo.Completado); tr.Salida != "ok" || tr.Solicitud.Agente != "otro" {
+		t.Fatalf("el respaldo que se prepara se salta: %+v", tr)
+	}
+
+	// El principal pasa al aceptar y se está preparando al lanzarlo.
+	alm = abrir(t)
+	var vistas atomic.Int32
+	n.Store(0)
+	p = iniciarPreparando(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "no"}, "otro": primeroBien{&n}},
+		func(a string) bool { return a == "simulado" && vistas.Add(1) > 1 })
+	if tr := esperar(t, alm, enviar(t, p, conRespaldo("otro")), nucleo.Completado); tr.Salida != "ok" || tr.Solicitud.Agente != "otro" {
+		t.Fatalf("al lanzarlo salta al respaldo: %+v", tr)
+	}
+	alm = abrir(t)
+	vistas.Store(0)
+	p = iniciarPreparando(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "no"}},
+		func(a string) bool { return a == "simulado" && vistas.Add(1) > 1 })
+	if tr := esperar(t, alm, enviar(t, p, solicitud("hola")), nucleo.Fallido); tr.CodigoError != nucleo.CodigoAgenteNoDisponible {
+		t.Fatalf("sin respaldo, agente_no_disponible: %s %q", tr.CodigoError, tr.MensajeError)
+	}
+}
+
 func TestSaludMarcaFalloAutenticacion(t *testing.T) {
 	alm := abrir(t)
 	salud := adaptadores.NuevaSalud()

@@ -14,6 +14,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/contrato"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/preparar"
 )
 
@@ -140,6 +141,10 @@ func TestPrepararRutas(t *testing.T) {
 			t.Errorf("%s: el estado de la que está en marcha: %s", codigo, cuerpo)
 		}
 	}
+	f.err = nucleo.NuevoError(nucleo.CodigoServicioDetenido, "deteniendo")
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/agentes/codex/preparacion", `{"accion":"instalar"}`); r.StatusCode != 503 || !strings.Contains(cuerpo, "servicio_detenido") {
+		t.Errorf("tras Cerrar: %d %s", r.StatusCode, cuerpo)
+	}
 	f.err = errors.New("acción no disponible")
 	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/agentes/codex/preparacion", `{"accion":"bailar"}`); r.StatusCode != 400 || !strings.Contains(cuerpo, "solicitud_invalida") {
 		t.Errorf("error de entrada: %d %s", r.StatusCode, cuerpo)
@@ -178,7 +183,7 @@ func TestPrepararCodigoNoSeDevuelve(t *testing.T) {
 	pedir(t, ts, "POST", "/api/v1/agentes/claude/preparacion", `{"accion":"iniciar_sesion"}`)
 	const pegado = "abc-12345#estado-secreto"
 	var respuestas []string
-	for i, cuerpo := range []string{`{"codigo":"` + pegado + `"}`, `{"codigo":"corto"}`, `{"codigo":"` + pegado + `"`, `{"codigo":"` + pegado + `","x":1}`} {
+	for i, cuerpo := range []string{`{"codigo":"` + pegado + `"}`, `{"codigo":"corto"}`, `{"codigo":"` + pegado + `"`, `{"codigo":"` + pegado + `","x":1}`, `{"codigo": 12345678}`} {
 		r, respuesta := pedir(t, ts, "POST", "/api/v1/agentes/claude/preparacion/codigo", cuerpo)
 		respuestas = append(respuestas, respuesta)
 		if quiere := map[bool]int{true: 204, false: 400}[i == 0]; r.StatusCode != quiere {
@@ -193,7 +198,7 @@ func TestPrepararCodigoNoSeDevuelve(t *testing.T) {
 		respuestas = append(respuestas, cuerpo)
 	}
 	for _, texto := range append(respuestas, registro.String()) {
-		if strings.Contains(texto, "abc-12345") || strings.Contains(texto, "corto") || strings.Contains(texto, "estado-secreto") {
+		if strings.Contains(texto, "abc-12345") || strings.Contains(texto, "corto") || strings.Contains(texto, "estado-secreto") || strings.Contains(texto, "12345678") {
 			t.Errorf("lo pegado vuelve: %s", texto)
 		}
 	}

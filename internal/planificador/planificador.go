@@ -230,9 +230,8 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoAgenteDesconectado,
 			idioma.Tf("el agente %s está desconectado: conéctalo en Agentes o elige otro", solicitud.Agente))
 	}
-	if p.opc.Preparando != nil && p.opc.Preparando(solicitud.Agente) {
-		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible,
-			idioma.Tf("%s se está instalando, actualizando o desinstalando: vuelve a intentarlo cuando termine", agentes.NombreVisible(solicitud.Agente)))
+	if err := p.preparando(solicitud.Agente); err != nil {
+		return nucleo.Trabajo{}, false, err
 	}
 	for _, e := range solicitud.Respaldo {
 		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {

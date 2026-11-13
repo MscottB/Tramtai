@@ -178,7 +178,7 @@ func (p *Preparador) Iniciar(agente string, pedido contrato.PedidoPreparacion) (
 	p.mu.Lock()
 	if p.cerrado {
 		p.mu.Unlock()
-		return contrato.EstadoPreparacion{}, errors.New(idioma.T("el servicio se está deteniendo: no se lanza ninguna preparación"))
+		return contrato.EstadoPreparacion{}, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio se está deteniendo: no se lanza ninguna preparación"))
 	}
 	anterior := p.tareas[agente]
 	if anterior != nil && anterior.enMarcha {

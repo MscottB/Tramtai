@@ -31,11 +31,15 @@ func agentePreparable(w http.ResponseWriter, r *http.Request) (string, bool) {
 }
 
 // errorPreparacion responde un fallo de la preparación: 409 con su código (con ya_en_curso, también el estado de la que
-// está en marcha); un error sin código es de la entrada (acción desconocida, código pegado que no vale), 400. Ninguno
-// repite lo pegado.
+// está en marcha); uno del servicio (servicio_detenido tras Cerrar), con el suyo; uno sin código es de la entrada
+// (acción desconocida, código pegado que no vale), 400. Ninguno repite lo pegado.
 func errorPreparacion(w http.ResponseWriter, r *http.Request, estado contrato.EstadoPreparacion, err error) {
 	var e *preparar.Error
-	if !errors.As(err, &e) {
+	switch {
+	case nucleo.CodigoDe(err) != "":
+		EscribirError(w, r, err)
+		return
+	case !errors.As(err, &e):
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error()))
 		return
 	}
@@ -100,8 +104,8 @@ func (s *Servidor) codigoPreparacion(w http.ResponseWriter, r *http.Request) {
 	var cuerpo struct {
 		Codigo string `json:"codigo"`
 	}
-	if err := LeerJSON(w, r, &cuerpo); err != nil {
-		EscribirError(w, r, err)
+	if LeerJSON(w, r, &cuerpo) != nil { // un mensaje fijo: el del decodificador podría citar lo pegado
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("cuerpo no válido: envía el código pegado en el campo codigo")))
 		return
 	}
 	if err := s.Preparacion.Codigo(id, cuerpo.Codigo); err != nil {

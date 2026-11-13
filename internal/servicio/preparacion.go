@@ -50,10 +50,23 @@ func (s *Servicio) nuevaPreparacion() *preparar.Preparador {
 			return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
 		},
 		Agentes:         agentesPreparables(),
-		BuscarVersiones: func() bool { return s.opc.Config.Booleano("servicio.buscar_versiones_agentes") },
+		BuscarVersiones: s.buscarVersiones.Load, // en marcha: Ajustes lo cambia con fijarBuscarVersiones
 	})
 	p.Recuperar()
 	return p
+}
+
+// fijarBuscarVersiones guarda servicio.buscar_versiones_agentes en la configuración global y lo aplica sin reiniciar.
+func (s *Servicio) fijarBuscarVersiones(buscar bool) error {
+	ruta, err := configuracion.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.buscar_versiones_agentes", buscar); err != nil {
+		return err
+	}
+	s.buscarVersiones.Store(buscar)
+	return nil
 }
 
 // peticionesEnCurso cuenta las peticiones sin terminar del agente en todas las instancias abiertas.
@@ -106,31 +119,56 @@ func (s *Servicio) guardarComando(agente, ruta string) error {
 	return nil
 }
 
-// versionesAgentes da la última comprobación de las versiones de los CLI. La repite con forzar, si aún no hay ninguna o
-// si alguna preparación terminó después (la versión instalada cambió): cada una lanza --version de cada CLI y, sin red,
-// espera hasta 10 s, así que no se repite en cada sondeo.
+// forzarCada es lo mínimo entre dos comprobaciones forzadas: antes, ?forzar=1 da la guardada.
+const forzarCada = time.Minute
+
+// calculoVersiones es una comprobación de versiones en marcha: quien la pide mientras tanto espera a listo y recibe su
+// lista.
+type calculoVersiones struct {
+	listo chan struct{}
+	lista []contrato.VersionesAgente
+}
+
+// versionesAgentes da la última comprobación de las versiones de los CLI. La repite si aún no hay ninguna, si alguna
+// preparación terminó después (la versión instalada cambió) o con forzar, si la guardada tiene más de forzarCada: cada
+// una lanza --version de cada CLI y, sin red, espera hasta 10 s, así que no se repite en cada sondeo.
 func (s *Servicio) versionesAgentes(ctx context.Context, forzar bool) []contrato.VersionesAgente {
 	s.muVersiones.Lock()
 	lista, en := s.versiones, s.versionesEn
 	s.muVersiones.Unlock()
-	if lista != nil && !forzar && !s.preparadoDesde(en) {
+	if lista != nil && !s.preparadoDesde(en) && (!forzar || time.Since(en) < forzarCada) {
 		return lista
 	}
 	return s.calcularVersiones(ctx, forzar)
 }
 
-// calcularVersiones pide las versiones a la preparación y guarda el resultado, si no se cortó a medias.
+// calcularVersiones pide las versiones a la preparación y guarda el resultado, si no se cortó a medias. Solo hay una en
+// marcha: quien llega mientras tanto (forzando o no) espera a esa y recibe su resultado.
 func (s *Servicio) calcularVersiones(ctx context.Context, forzar bool) []contrato.VersionesAgente {
-	en := time.Now()
-	lista := s.preparar.Versiones(ctx, forzar)
-	if ctx.Err() == nil {
-		s.muVersiones.Lock()
-		if en.After(s.versionesEn) {
-			s.versiones, s.versionesEn = lista, en
-		}
+	s.muVersiones.Lock()
+	if c := s.calculo; c != nil {
+		guardada := s.versiones
 		s.muVersiones.Unlock()
+		select {
+		case <-c.listo:
+			return c.lista
+		case <-ctx.Done():
+			return guardada
+		}
 	}
-	return lista
+	c := &calculoVersiones{listo: make(chan struct{})}
+	s.calculo = c
+	s.muVersiones.Unlock()
+	en := time.Now()
+	c.lista = s.preparar.Versiones(ctx, forzar)
+	s.muVersiones.Lock()
+	if ctx.Err() == nil && en.After(s.versionesEn) {
+		s.versiones, s.versionesEn = c.lista, en
+	}
+	s.calculo = nil
+	s.muVersiones.Unlock()
+	close(c.listo)
+	return c.lista
 }
 
 // preparadoDesde dice si alguna preparación terminó después de en.

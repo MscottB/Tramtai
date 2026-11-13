@@ -198,7 +198,7 @@
     "/agentes/versiones": {
       "get": {
         "summary": "Versiones de los CLI de los agentes",
-        "description": "Por agente con receta: la versión instalada, la última publicada, si la que usaría cada acción está comprobada y qué acciones están habilitadas. Es la última comprobación guardada (al arrancar y una vez al día); ?forzar=1 la repite ahora. Solo con la clave de la instancia; en el servidor, solo el administrador.",
+        "description": "Por agente con receta: la versión instalada, la última publicada, si la que usaría cada acción está comprobada y qué acciones están habilitadas. Es la última comprobación guardada (al arrancar y una vez al día); ?forzar=1 la repite ahora. Solo con la sesión de la Web UI o la clave del servicio: la clave del espacio no basta (en el servidor, la sesión es la del administrador).",
         "operationId": "versionesAgentes",
         "x-tramtai-solo-instancia": true,
         "parameters": [{ "name": "forzar", "in": "query", "schema": { "type": "string", "enum": ["1"] } }],
@@ -222,7 +222,7 @@
       },
       "post": {
         "summary": "Instala, actualiza o desinstala el CLI de un agente, o inicia su sesión",
-        "description": "En segundo plano, una por agente. 409 con ya_en_curso (y el estado de la que está en marcha en preparacion) o peticiones_en_curso. Solo con la clave de la instancia; en el servidor, solo el administrador.",
+        "description": "En segundo plano, una por agente. 409 con ya_en_curso (y el estado de la que está en marcha en preparacion) o peticiones_en_curso. Solo con la sesión de la Web UI o la clave del servicio: la clave del espacio no basta (en el servidor, la sesión es la del administrador).",
         "operationId": "iniciarPreparacion",
         "x-tramtai-solo-instancia": true,
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PedidoPreparacion" } } } },
@@ -245,7 +245,7 @@
       "parameters": [{ "$ref": "#/components/parameters/Id" }],
       "post": {
         "summary": "Pasa al inicio de sesión el código que pegó el usuario",
-        "description": "Solo mientras la preparación está en esperando_usuario con pide_pegar. Lo pegado va al CLI por su entrada y no vuelve en ninguna respuesta ni queda en ningún registro.",
+        "description": "Solo mientras la preparación está en esperando_usuario con pide_pegar. Lo pegado va al CLI por su entrada y no vuelve en ninguna respuesta ni queda en ningún registro. Como las demás rutas de /agentes/…, solo con la sesión de la Web UI o la clave del servicio.",
         "operationId": "codigoPreparacion",
         "x-tramtai-solo-instancia": true,
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["codigo"], "properties": { "codigo": { "type": "string" } } } } } },
@@ -361,6 +361,7 @@
       "PedidoPreparacion": {
         "type": "object",
         "required": ["accion"],
+        "additionalProperties": false,
         "properties": {
           "accion": { "type": "string", "enum": ["instalar", "actualizar", "iniciar_sesion", "desinstalar"] },
           "borrar_datos": { "type": "boolean", "description": "Al desinstalar, borra también la sesión y los ajustes del CLI" },

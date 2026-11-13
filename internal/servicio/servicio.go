@@ -185,10 +185,14 @@ type Servicio struct {
 
 	// preparar instala, actualiza y desinstala los CLI de los agentes para todo el servicio; nil sin PrepararAgentes.
 	// versiones es su última comprobación de versiones (versionesEn, cuándo empezó), que se sirve sin repetirla.
-	preparar    preparacion
-	muVersiones sync.Mutex
-	versiones   []contrato.VersionesAgente
-	versionesEn time.Time
+	// buscarVersiones es servicio.buscar_versiones_agentes, en marcha (fijarBuscarVersiones); calculo, la comprobación en
+	// marcha, que comparten quienes la piden a la vez.
+	preparar        preparacion
+	buscarVersiones atomic.Bool
+	muVersiones     sync.Mutex
+	versiones       []contrato.VersionesAgente
+	versionesEn     time.Time
+	calculo         *calculoVersiones
 
 	local    net.Listener // con TLS propio: el oyente HTTP de 127.0.0.1 para los clientes de este equipo; nil sin TLS
 	localSrv *http.Server
@@ -255,6 +259,11 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 			s.conversor.Preparar()
 		}
 	}
+	// Antes de abrir ningún oyente: lo que dejó a medias el servicio anterior ya está recogido.
+	if opc.PrepararAgentes {
+		s.buscarVersiones.Store(opc.Config.Booleano("servicio.buscar_versiones_agentes"))
+		s.preparar = s.nuevaPreparacion()
+	}
 	// Con proxies de confianza, la CLI no comparte oyente con el proxy, que puede estar en 127.0.0.1 (R35).
 	if opc.TLS != nil || len(opc.Confiables) > 0 {
 		if s.local, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
@@ -266,9 +275,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	var vigilancia context.Context
 	vigilancia, s.pararVigilancia = context.WithCancel(context.Background())
 	s.fondo.Go(func() { s.vigilarEnFondo(vigilancia) }) // Cerrar la para y la espera
-	// Antes de abrir la API: lo que dejó a medias el servicio anterior ya está recogido.
-	if opc.PrepararAgentes {
-		s.preparar = s.nuevaPreparacion()
+	if s.preparar != nil {
 		s.fondo.Go(func() { s.buscarVersionesAgentes(vigilancia) })
 	}
 	return s, nil

@@ -96,4 +96,10 @@ func TestOpenAPIServers(t *testing.T) {
 	if url, trabajos := servidores(t, cuerpo); url != tp.URL+"/p/demo/api/v1" || trabajos["delete"] != nil || trabajos["post"] == nil {
 		t.Fatalf("punto: %s, delete %v", url, trabajos["delete"] != nil)
 	}
+	// Las rutas que solo tiene la instancia (preparar agentes) no quedan descritas sin operaciones.
+	for _, ruta := range []string{`"/agentes/{id}/preparacion"`, `"/agentes/versiones"`, `"/agentes/{id}/preparacion/codigo"`} {
+		if strings.Contains(cuerpo, ruta) {
+			t.Errorf("punto: %s sigue en la descripción", ruta)
+		}
+	}
 }
