@@ -400,11 +400,14 @@ const minimoAyuda = 100
 var (
 	spanAyuda = regexp.MustCompile(`(?s)<span lang="(es|en)">(.*?)</span>`)
 	citaAyuda = regexp.MustCompile(`[«“]([^«»“”]*)[»”]`)
+	// opcionAyuda es una opción de la CLI que el sitio envuelve para que no se parta tras el guion.
+	opcionAyuda = regexp.MustCompile(`<span class="opcion-cli">([^<]*)</span>`)
 )
 
 // citasDeAyuda saca de una página de la Ayuda lo citado entre comillas en cada <span lang>, con su idioma: las órdenes
 // que la Ayuda pone en una frase. ordenDeLinea decide después cuáles son órdenes de Tramtai.
 func citasDeAyuda(pagina string) (citas []struct{ texto, lang string }) {
+	pagina = opcionAyuda.ReplaceAllString(pagina, "$1")
 	for _, s := range spanAyuda.FindAllStringSubmatch(pagina, -1) {
 		texto := html.UnescapeString(etiquetaSitio.ReplaceAllString(s[2], ""))
 		for _, c := range citaAyuda.FindAllStringSubmatch(texto, -1) {
@@ -416,12 +419,14 @@ func citasDeAyuda(pagina string) (citas []struct{ texto, lang string }) {
 
 // TestCitasDeAyuda: cada cita lleva el idioma de su <span>, sin etiquetas y con las entidades resueltas.
 func TestCitasDeAyuda(t *testing.T) {
-	pagina := `<li><span lang="es">«tramtai agentes entrar codex» y «Instalar»</span><span lang="en">“tramtai agents login <a>codex</a>” &amp; “x &lt;id&gt;”</span></li>`
+	pagina := `<li><span lang="es">«tramtai agentes entrar codex» y «Instalar»</span><span lang="en">“tramtai agents login <a>codex</a>” &amp; “x &lt;id&gt;”</span></li>` +
+		`<li><span lang="es">«tramtai agentes versiones <span class="opcion-cli">--comprobar</span>» y «a»</span></li>`
 	var r []string
 	for _, c := range citasDeAyuda(pagina) {
 		r = append(r, c.lang+":"+c.texto)
 	}
-	quiere := []string{"es:tramtai agentes entrar codex", "es:Instalar", "en:tramtai agents login codex", "en:x <id>"}
+	quiere := []string{"es:tramtai agentes entrar codex", "es:Instalar", "en:tramtai agents login codex", "en:x <id>",
+		"es:tramtai agentes versiones --comprobar", "es:a"}
 	if !slices.Equal(r, quiere) {
 		t.Errorf("%q, quería %q", r, quiere)
 	}
