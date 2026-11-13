@@ -10,10 +10,6 @@ on:
   schedule:
     - cron: '23 5 * * 1' # los lunes
   workflow_dispatch:
-  # TEMPORAL (Tarea 13): workflow_dispatch no se puede lanzar hasta que el archivo esté en main. Se quita antes del PR.
-  push:
-    branches: ['v0.60/t13-*']
-    paths: ['.github/workflows/agentes-compatibilidad.yml']
 
 # Cada job pide lo suyo: leer en la matriz, que ejecuta los instaladores de terceros; escribir en el release solo al
 # publicar; issues solo al avisar.
