@@ -22,10 +22,10 @@
       </q-card-section>
 
       <q-card-section v-if="fase === 'preparando'" class="q-pt-none">
-        <PanelPreparacion :agentes="lanzados" accion="instalar" @fin="(a, e) => (estados[a] = e)" @listo="alAcabar" @cerrar="alAcabar" />
+        <PanelPreparacion :agentes="lanzados" accion="instalar" tanda @fin="alFin" @listo="alAcabar" @cerrar="alAcabar" />
       </q-card-section>
 
-      <q-card-section v-if="fase === 'resumen'" class="q-pt-none column q-gutter-y-sm" role="status">
+      <q-card-section v-if="fase === 'resumen'" ref="cajaResumen" tabindex="-1" class="q-pt-none column q-gutter-y-sm" role="status">
         <div v-if="resumen.listos.length" class="text-body1 text-weight-medium">{{ t('bienvenida.listo', { agentes: resumen.listos.map(nombreAgente).join(', ') }) }}</div>
         <div v-else class="text-body1 text-weight-medium">{{ t('bienvenida.ninguno') }}</div>
         <template v-if="resumen.pendientes.length">
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { api } from '../api/cliente'
 import type { EstadoPreparacion } from '../api/tipos'
 import { adaptadoresConocidos, nombreAgente } from '../agentes'
@@ -63,17 +63,25 @@ const emit = defineEmits<{ 'update:modelValue': [abierto: boolean]; cerrada: [he
 
 const fase = ref<'oferta' | 'preparando' | 'resumen'>('oferta')
 const hecha = ref(false)
-const opciones = computed(() => opcionesAgentes(adaptadoresConocidos.value))
+// opciones se fijan al abrir el diálogo (App espera a conocer los agentes): si cambian después, no aparece ni desaparece nada
+// con el diálogo abierto y los botones no se mueven.
+const opciones = ref<ReturnType<typeof opcionesAgentes>>([])
 const elegidos = reactive<Record<string, boolean>>({})
-watch(opciones, (o) => o.forEach((x) => (elegidos[x.agente] ??= x.marcado)), { immediate: true })
 const marcados = computed(() => opciones.value.filter((o) => elegidos[o.agente]).map((o) => o.agente))
 // lanzados: los agentes de esta preparación, fijos aunque las opciones cambien mientras se instalan.
 const lanzados = ref<string[]>([])
 const estados = reactive<Record<string, EstadoPreparacion | null>>({})
-const resumen = computed(() => resumenFinal(lanzados.value, estados))
+// motivos: por qué no se pudo lanzar un agente (sin estado).
+const motivos = reactive<Record<string, string>>({})
+const resumen = computed(() => resumenFinal(lanzados.value, estados, motivos))
+const cajaResumen = ref<{ $el: HTMLElement } | null>(null)
 // cuenta: en el servidor se prepara para la cuenta del servicio, y la bienvenida lo dice antes de empezar.
 const cuenta = ref('')
 watch(() => props.modelValue, (abierto) => {
+  if (abierto) {
+    opciones.value = opcionesAgentes(adaptadoresConocidos.value)
+    opciones.value.forEach((x) => (elegidos[x.agente] ??= x.marcado))
+  }
   if (abierto && esServidor(sesion.value) && !cuenta.value) api.acerca().then((a) => (cuenta.value = a.cuenta ?? '')).catch(() => {})
 }, { immediate: true })
 
@@ -83,9 +91,17 @@ function preparar() {
   marcarBienvenida('hecha')
   fase.value = 'preparando'
 }
-function alAcabar(finales?: Record<string, EstadoPreparacion | null>) {
+function alFin(agente: string, e: EstadoPreparacion | null, fallo?: string) {
+  estados[agente] = e
+  if (fallo) motivos[agente] = fallo
+  else delete motivos[agente]
+}
+// alAcabar pasa al resumen y le lleva el foco: el lector lo anuncia.
+async function alAcabar(finales?: Record<string, EstadoPreparacion | null>) {
   if (finales) Object.assign(estados, finales)
   fase.value = 'resumen'
+  await nextTick()
+  cajaResumen.value?.$el.focus()
 }
 function empezar() {
   hecha.value = true

@@ -311,6 +311,7 @@
 import { computed, markRaw, nextTick, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
+import { adaptadoresConocidos } from './agentes'
 import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
 import { alCerrarBienvenida, entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
 import { pasosBienvenida, pasosDePagina } from './recorrido'
@@ -583,14 +584,18 @@ function examinar() {
 const enlaceProfundo = entradaPorEnlace(location.hash)
 let bienvenidaOfrecida = false
 const bienvenidaAbierta = ref(false)
+// Se espera a conocer los agentes (para la oferta de prepararlos); si la comprobación tarda más del plazo, se abre sin ella.
+const plazoAgentes = ref(false)
+let temporizadorAgentes = 0
 // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer (si ya hizo algo, ya quedó marcada hecha).
 function alCerrarDialogoBienvenida(hecha: boolean) {
   const respuesta = alCerrarBienvenida(hecha)
   if (respuesta) marcarBienvenida(respuesta)
 }
 const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value || pantallaTerm.value !== 'app')
-watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], ([conSesion, pag, ocupado, enMarcha]) => {
-  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha })) return
+watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo, () => adaptadoresConocidos.value !== null, plazoAgentes], ([conSesion, pag, ocupado, enMarcha, conocidos, plazo]) => {
+  if (conSesion && !temporizadorAgentes) temporizadorAgentes = window.setTimeout(() => (plazoAgentes.value = true), 8000)
+  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha, agentesConocidos: conocidos, plazoAgotado: plazo })) return
   bienvenidaOfrecida = true
   bienvenidaAbierta.value = true
 }, { immediate: true })

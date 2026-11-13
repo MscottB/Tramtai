@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { alCerrarBienvenida, entradaPorEnlace, leerBienvenida, ofrecerBienvenida, opcionesAgentes } from './bienvenida.ts'
 
-const limpio = { sesion: true, pagina: 'inicio', entradaPorEnlace: false, estado: null, yaOfrecida: false, otroDialogo: false, recorridoActivo: false } as const
+const limpio = { sesion: true, pagina: 'inicio', entradaPorEnlace: false, estado: null, yaOfrecida: false, otroDialogo: false, recorridoActivo: false, agentesConocidos: true, plazoAgotado: false } as const
 
 test('ofrecerBienvenida: el caso limpio la ofrece', () => {
   assert.equal(ofrecerBienvenida(limpio), true)
@@ -62,4 +62,9 @@ test('opcionesAgentes: con uno listo, o sin saber aún cómo están, no se ofrec
 
 test('opcionesAgentes: solo los agentes que el servicio conoce', () => {
   assert.deepEqual(opcionesAgentes([ad('claude', 'sin_sesion')]).map((o) => o.agente), ['claude'])
+})
+
+test('ofrecerBienvenida: espera a conocer los agentes, y pasado el plazo se abre sin la oferta', () => {
+  assert.equal(ofrecerBienvenida({ ...limpio, agentesConocidos: false }), false, 'aún no se sabe cómo están los agentes')
+  assert.equal(ofrecerBienvenida({ ...limpio, agentesConocidos: false, plazoAgotado: true }), true, 'la comprobación no llegó a tiempo')
 })

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accionPrincipal, confirmarDesinstalar, conReintentos, listoParaUsar, masNueva, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, resumenFinal, seguirPreparacion,
+import { accionPrincipal, confirmarDesinstalar, conReintentos, listoParaUsar, masNueva, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, resumenFinal, seguirPreparacion, siguienteTrasSaltar,
   versionNueva, vistaEspera, type Corrida } from './preparacion.ts'
 import { fichas, type FichaAgente } from './agentes.ts'
 import { t } from './i18n.ts'
@@ -220,6 +220,15 @@ test('opcionesParada: con varios agentes se ofrece Reintentar y Saltar y se ense
   assert.deepEqual(opcionesParada(['claude', 'codex', 'copilot'], 1), { reintentar: true, saltar: true, pendientes: ['copilot'] })
   assert.deepEqual(opcionesParada(['claude', 'codex'], 1), { reintentar: true, saltar: true, pendientes: [] })
   assert.deepEqual(opcionesParada(['claude'], 0), { reintentar: false, saltar: false, pendientes: [] })
+  // desde la bienvenida (tanda), un solo agente también se reintenta, pero no se salta
+  assert.deepEqual(opcionesParada(['claude'], 0, true), { reintentar: true, saltar: false, pendientes: [] })
+})
+
+test('siguienteTrasSaltar: el índice del siguiente, o fin si era el último', () => {
+  assert.equal(siguienteTrasSaltar(0, 3), 1)
+  assert.equal(siguienteTrasSaltar(1, 3), 2)
+  assert.equal(siguienteTrasSaltar(2, 3), 'fin')
+  assert.equal(siguienteTrasSaltar(0, 1), 'fin')
 })
 
 test('Reintentar vuelve a pedir el mismo agente y Saltar sigue con el siguiente', async () => {
@@ -259,4 +268,19 @@ test('resumenFinal: separa los que quedaron listos de verdad de los que no, con 
   assert.equal(r.pendientes[0].razon, t('preparar.error.sin_red'))
   assert.equal(r.pendientes[1].razon, 'Instalado, sin sesión.')
   assert.equal(r.pendientes[2].razon, t('bienvenida.saltado'))
+})
+
+test('resumenFinal: un agente que va con clave (Antigravity) instalado no está listo para usar: falta su clave', () => {
+  const r = resumenFinal(['claude', 'antigravity'], {
+    claude: { agente: 'claude', accion: 'instalar', estado: 'listo' } as EstadoPreparacion,
+    antigravity: { agente: 'antigravity', accion: 'instalar', estado: 'listo' } as EstadoPreparacion,
+  })
+  assert.deepEqual(r.listos, ['claude'])
+  assert.deepEqual(r.pendientes, [{ agente: 'antigravity', razon: t('bienvenida.faltaClave') }])
+})
+
+test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', () => {
+  const r = resumenFinal(['claude', 'codex'], {}, { claude: 'sin conexión' })
+  assert.equal(r.pendientes[0].razon, t('bienvenida.noSeLanzo', { motivo: 'sin conexión' }))
+  assert.equal(r.pendientes[1].razon, t('bienvenida.saltado'))
 })

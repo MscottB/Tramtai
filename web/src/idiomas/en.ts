@@ -761,6 +761,8 @@ const en: Textos = {
   'bienvenida.irAgentes': 'Go to Agents',
   'preparar.saltar': 'Skip',
   'preparar.pendientes': 'Still to do: {agentes}',
+  'bienvenida.faltaClave': 'Its key is missing: add it in Agents.',
+  'bienvenida.noSeLanzo': 'It could not be started: {motivo}',
   'bienvenida.repetir': 'Take the guided tour',
   'escritorio.salirTitulo': 'Quit Tramtai',
   'escritorio.salirTexto': 'Quitting stops the service: apps connected to your APIs will stop working until you open Tramtai again.',

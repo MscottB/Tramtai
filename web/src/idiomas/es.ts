@@ -772,6 +772,8 @@ const es = {
   'bienvenida.irAgentes': 'Ir a Agentes',
   'preparar.saltar': 'Saltar',
   'preparar.pendientes': 'Faltan: {agentes}',
+  'bienvenida.faltaClave': 'Falta su clave: ponla en Agentes.',
+  'bienvenida.noSeLanzo': 'No se pudo lanzar: {motivo}',
   'bienvenida.repetir': 'Haz el recorrido de Tramtai',
   'escritorio.salirTitulo': 'Salir de Tramtai',
   'escritorio.salirTexto': 'Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai.',

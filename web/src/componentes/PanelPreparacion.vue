@@ -71,15 +71,16 @@ import { nombreAgente } from '../agentes'
 import { sesion } from '../estado'
 import { sinDato } from '../formato'
 import { esServidor } from '../servidor'
-import { AVISOS_SESION, CODIGOS_EXPLICADOS, enMarcha, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
+import { AVISOS_SESION, CODIGOS_EXPLICADOS, enMarcha, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
-const props = defineProps<{ agentes: string[]; accion?: Accion; borrarDatos?: boolean; confirmar?: boolean }>()
+const props = defineProps<{ agentes: string[]; accion?: Accion; borrarDatos?: boolean; confirmar?: boolean; tanda?: boolean }>()
+// tanda (prop): viene de una tanda (la bienvenida), donde un solo agente también se reintenta.
 // lanzada: el servicio aceptó la acción del agente (quien muestra el panel ya no debe repetirla si lo vuelve a montar);
-// fin: la de un agente terminó (como sea); listo: acabó la tanda (todos en listo, o los que quedaron saltados), con el estado
+// fin: la de un agente terminó (como sea; si no se pudo ni lanzar, con el motivo); listo: acabó la tanda (todos en listo, o los que quedaron saltados), con el estado
 // de cada uno (un listo con motivo no está listo para usar, ver listoParaUsar); cerrar: el usuario cierra el panel.
-const emit = defineEmits<{ lanzada: [agente: string]; fin: [agente: string, estado: EstadoPreparacion | null]; listo: [estados: Record<string, EstadoPreparacion | null>]; cerrar: [] }>()
+const emit = defineEmits<{ lanzada: [agente: string]; fin: [agente: string, estado: EstadoPreparacion | null, fallo?: string]; listo: [estados: Record<string, EstadoPreparacion | null>]; cerrar: [] }>()
 
 const estados = reactive<Record<string, EstadoPreparacion | null>>({})
 const fallos = reactive<Record<string, string>>({})
@@ -92,7 +93,7 @@ const terminado = ref(false)
 const paradaEn = ref(-1)
 const parada = computed(() => {
   if (!terminado.value || paradaEn.value < 0) return null
-  const o = opcionesParada(props.agentes, paradaEn.value)
+  const o = opcionesParada(props.agentes, paradaEn.value, props.tanda)
   return { ...o, reintentar: o.reintentar && !!props.accion }
 })
 const corriendo = ref(false)
@@ -118,7 +119,7 @@ const corrida: Corrida = {
   lanzada: (agente) => emit('lanzada', agente),
   cambio: (agente, e) => (estados[agente] = e),
   fallo: (agente, e) => (fallos[agente] = mensajeError(e)),
-  fin: (agente, e) => emit('fin', agente, e),
+  fin: (agente, e) => emit('fin', agente, e, fallos[agente]),
 }
 
 // correr recorre los agentes desde uno.
@@ -145,8 +146,8 @@ function reintentar() {
   void enfocarEstado()
 }
 function saltar() {
-  const siguiente = paradaEn.value + 1
-  if (siguiente < props.agentes.length) return void correr(siguiente, ordenInicial())
+  const siguiente = siguienteTrasSaltar(paradaEn.value, props.agentes.length)
+  if (siguiente !== 'fin') return void correr(siguiente, ordenInicial())
   paradaEn.value = -1
   avisarListo()
 }
