@@ -73,6 +73,8 @@ func falso(modo string) {
 	case "clave":
 		fmt.Println("tu clave es " + claveFalsa)
 		instalar()
+	case "sesion", "sesion-trozos":
+		falsoSesion(modo)
 	case "actualizar":
 		fmt.Println("actualizado")
 	case "fallar":
@@ -159,6 +161,13 @@ func nueva(t *testing.T, f adaptadores.Ficha) *prueba {
 			return nil
 		},
 		UltimaVersion: func(context.Context, string) (string, error) { return "1.2.3", nil },
+		// El inicio de sesión falso deja ~/.falso-sesion al terminar bien.
+		Comprobar: func(context.Context, string) adaptadores.SesionCLI {
+			if _, err := os.Stat(filepath.Join(pr.casa, ".falso-sesion")); err == nil {
+				return adaptadores.SesionCLI{Estado: adaptadores.SesionOK}
+			}
+			return adaptadores.SesionCLI{Estado: adaptadores.SesionSin}
+		},
 	})
 	return pr
 }
@@ -575,7 +584,10 @@ func TestVersionNoValidaNoLanza(t *testing.T) {
 }
 
 func TestFormaSecreto(t *testing.T) {
-	c := &corrida{}
+	c := &corrida{p: &Preparador{}, t: &tarea{pegados: []string{"abc-123#estado"}}}
+	if tapado := c.redactar("pegaste abc-123#estado"); strings.Contains(tapado, "abc-123") {
+		t.Errorf("lo pegado se tapa: %q", tapado)
+	}
 	for _, secreto := range []string{claveFalsa, "ghp_" + strings.Repeat("a1", 15), "npm_" + strings.Repeat("Ab1", 12),
 		"AKIAABCDEFGHIJKLMNOP", "ya29.a0AfH6SMBx-abc_def", "glpat-" + strings.Repeat("x9", 10), "AIza" + strings.Repeat("B", 35),
 		"xoxb-1234567890-abc", "eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.firma", "Bearer abcdefghijklmnop1234"} {

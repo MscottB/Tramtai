@@ -33,4 +33,14 @@ func init() {
 		"%s es más grande de lo esperado":                           "%s is larger than expected",
 		"la descarga no trae %s":                                    "the download does not contain %s",
 	})
+	// El inicio de sesión (Tarea 4).
+	agregar(map[string]string{
+		"%s no inicia sesión desde Tramtai: usa su clave de API":                                         "%s does not sign in from Tramtai: use its API key",
+		"%s %s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté": "%s %s has not been checked with Tramtai yet: automatic sign-in comes back once it is",
+		"no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s":                "what %s wrote in %d s was not recognized: sign in from a console with %s",
+		"%s terminó sin dejar la sesión iniciada":                                                        "%s finished without leaving you signed in",
+		"el código pegado no es válido: una sola línea sin espacios, de hasta %d caracteres":             "the pasted code is not valid: a single line without spaces, up to %d characters",
+		"%s no está esperando ningún código":                                                             "%s is not waiting for a code",
+		"no se pudo pasar el código a %s":                                                                "could not pass the code to %s",
+	})
 }

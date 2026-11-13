@@ -40,8 +40,10 @@ var receta = adaptadores.Receta{
 	Ultima:      adaptadores.FuenteVersion{Tipo: "url", Nombre: "https://downloads.claude.ai/claude-code-releases/latest"},
 	Sesion: &adaptadores.LectorSesion{
 		Argumentos: []string{"auth", "login"},
-		Enlace:     regexp.MustCompile(`visit: (https://\S+)`),
-		PidePegar:  regexp.MustCompile(`Paste code here if prompted >`),
+		// Con BROWSER a un programa que no existe no abre el navegador y su salida no cambia (m0.md).
+		Entorno:   []string{"BROWSER=tramtai-no-abrir-navegador"},
+		Enlace:    regexp.MustCompile(`visit: (https://\S+)`),
+		PidePegar: regexp.MustCompile(`Paste code here if prompted >`),
 	},
 	Comprobadas: map[string][]string{
 		"instalar":       {"2.1.311", "2.1.323"},
