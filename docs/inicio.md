@@ -61,21 +61,24 @@ La página **Agentes** dice qué falta en cada uno.
 para tu usuario (sirven también fuera de Tramtai), y sin Node:
 
 - **La primera vez,** si ningún agente está listo, la bienvenida ofrece **Prepara tus agentes**: marca los que quieres
-  (Claude Code y Codex vienen marcados) y Tramtai los instala uno tras otro, con su inicio de sesión.
+  (Claude Code y Codex vienen marcados) y Tramtai los instala uno tras otro, con su inicio de sesión. El resumen dice
+  cuáles quedaron listos; si a uno le falta usar tu suscripción, lo dice («Falta un paso: usar tu suscripción.») con el
+  botón **Usar mi suscripción** al lado.
 - **En Agentes,** «Otros agentes que puedes instalar» tiene **Instalar**. Al terminar, Tramtai lanza el inicio de sesión
   del propio CLI y te enseña su enlace y su código (o un campo para pegar el que te den); sigue solo en cuanto lo
-  apruebas. Codex usa un código de dispositivo, que activas una vez en los ajustes de seguridad de ChatGPT; Antigravity
-  no inicia sesión: va con la clave de la Gemini API.
+  apruebas. Al terminar, el mismo panel ofrece **Usar mi suscripción** (antes te enseña el riesgo): hasta entonces el
+  agente sigue con clave de API y no está listo. Codex usa un código de dispositivo, que activas una vez en los ajustes
+  de seguridad de ChatGPT; Antigravity no inicia sesión: va con la clave de la Gemini API.
 - **Mantenerlos:** la tarjeta de cada agente avisa de una versión nueva y la instala con **Actualizar**; en **⋯** están
   Comprobar versión, Actualizar, Desinstalar y Ver registro. Desinstalar pide confirmación y no borra su sesión ni sus
   ajustes salvo que marques «Borrar también su sesión y ajustes».
-- **Desde la terminal** (`2`, Agentes): `i` instala, `s` inicia sesión, `u` actualiza, `x` desinstala y `l` enseña el
-  registro. **Desde la CLI:**
+- **Desde la terminal** (`2`, Agentes): `i` instala, `s` inicia sesión (y después `a` usa tu suscripción), `u`
+  actualiza, `x` desinstala y `l` enseña el registro. **Desde la CLI:**
 
 ```powershell
 tramtai agentes instalar claude codex     # los instala y sigue con el inicio de sesión (install)
-tramtai agentes entrar copilot            # solo el inicio de sesión: enseña el enlace y el código (login)
-tramtai agentes versiones                 # la instalada, la última y si está comprobada (versions)
+tramtai agentes entrar copilot            # solo el inicio de sesión; si falta, pide «acepto» para tu suscripción (login)
+tramtai agentes versiones --comprobar     # la instalada, la última y si está comprobada, consultadas ahora (versions --check)
 tramtai agentes actualizar --todos        # los que tienen una versión nueva (update --all)
 tramtai agentes desinstalar codex         # pregunta antes; --borrar-datos borra también su sesión (uninstall)
 ```
@@ -107,7 +110,7 @@ tramtai claves listar                      # de dónde sale cada una, sin mostra
 - **Variable de entorno:** si existe una con el mismo nombre, tiene prioridad sobre el almacén, pero el servicio solo la ve si arranca con ella. En macOS, una variable de `~/.zshrc` no llega al servicio que inicia la app o el arranque automático: usa el Llavero. En Linux sin `secret-tool`, la variable es la única opción.
 - La página **Agentes** dice dónde queda la clave en tu sistema.
 
-**Tu suscripción** (Claude Pro/Max, cuenta de ChatGPT o GitHub Copilot), solo para uso **personal y local**. Con la sesión del CLI iniciada, lo más fácil es el botón **Usar mi suscripción** de la página Agentes: lo aplica al momento, sin reiniciar. Equivale a escribir esto en la configuración global `config.yaml` (ver [configuración](#configuración)):
+**Tu suscripción** (Claude Pro/Max, cuenta de ChatGPT o GitHub Copilot), solo para uso **personal y local**. Con la sesión del CLI iniciada, lo más fácil es el botón **Usar mi suscripción**: lo ofrece el propio panel al terminar de iniciar sesión (y la bienvenida), y está en la tarjeta del agente en Agentes; lo aplica al momento, sin reiniciar. La CLI lo pide con «acepto» al terminar `tramtai agentes entrar|instalar`, o con `tramtai agentes suscripcion <agente>`. Equivale a escribir esto en la configuración global `config.yaml` (ver [configuración](#configuración)):
 
 ```yaml
 adaptadores:
@@ -152,7 +155,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 - `-m` (o `model` en la API) acepta el nombre que entienda el CLI: `haiku`, `sonnet`, `claude-sonnet-5-5`, `gemini-flash-latest`…
 - **GitHub Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático (el único del plan Free): GitHub Copilot elige el modelo,
   Tramtai muestra cuál usó y cada petición gasta créditos del plan. Con un plan de pago, `copilot/<modelo>`. Inicia
-  sesión desde su tarjeta en Agentes (o con `tramtai agentes entrar copilot`) y elige «Usar mi suscripción», o guarda
+  sesión desde su tarjeta en Agentes (o con `tramtai agentes entrar copilot`) y, al terminar, acepta «Usar mi suscripción», o guarda
   `COPILOT_GITHUB_TOKEN`.
 - `-p` usa un perfil: `rapido`, `equilibrado` o `profundo`. Para Claude equivalen a `haiku`, `sonnet` y `opus`, y para Gemini a los modelos *flash-lite*, *flash* y *pro*. Para Codex defínelos tú:
 

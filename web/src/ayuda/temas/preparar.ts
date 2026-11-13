@@ -49,7 +49,7 @@ export const preparar: Tema = {
     {
       tipo: 'pasos',
       titulo: 'ayuda.preparar.cli',
-      pasos: ['ayuda.preparar.c1', 'ayuda.preparar.c2', 'ayuda.preparar.c3', 'ayuda.preparar.c4'],
+      pasos: ['ayuda.preparar.c1', 'ayuda.preparar.c2', 'ayuda.preparar.c3', 'ayuda.preparar.cSuscripcion', 'ayuda.preparar.c4'],
     },
     {
       tipo: 'preguntas',

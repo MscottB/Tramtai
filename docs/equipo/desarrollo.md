@@ -352,7 +352,8 @@ no vale se rechaza.
 (sin cuenta) y lo cancela, actualiza y desinstala. `cmd/compatibilidad juntar` añade a la lista publicada las versiones
 que pasaron en los tres sistemas, sube `version` y solo escribe si cambia algo; el job la firma con
 `FIRMA_ACTUALIZACIONES`, comprueba la firma y la sube al release. Si algo falla, abre o comenta un issue con lo que hay
-que ajustar en la receta. Un límite de la API de GitHub cuenta como «sin concluir»: la versión no entra ni sale.
+que ajustar en la receta. Publicar y avisar solo pasan desde `main` (la ejecución semanal y la manual sobre `main`): en
+otra rama el job prueba, pero no publica la lista ni abre issues. Un límite de la API de GitHub cuenta como «sin concluir»: la versión no entra ni sale.
 
 **Añadir una versión comprobada a mano** (si el job no puede, o para una versión de Tramtai):
 1. Lo normal es lanzar el job a mano (Actions › «Compatibilidad de los agentes» › Run workflow): prueba y publica.

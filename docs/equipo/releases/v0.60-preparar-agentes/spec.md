@@ -103,7 +103,11 @@ Un paquete nuevo, `internal/preparar`, ejecuta la receta como una tarea por agen
 2. Estado `esperando_usuario` con:
    - el enlace y el código de dispositivo (Codex, Copilot): se espera a que el usuario lo apruebe en su navegador; o
    - el enlace y un campo «Pega aquí el código» (Claude, si lo pide así): lo pegado se pasa al CLI por su entrada.
-3. Cuando el CLI termina, `ComprobarSesion` lo confirma y el agente queda listo.
+3. Cuando el CLI termina, `ComprobarSesion` lo confirma. Si el agente admite la suscripción y sigue con clave de API sin
+   clave guardada (`falta_clave`), aún no está listo: el panel, la bienvenida, la terminal (tecla `a`) y la CLI («acepto»;
+   si no, sale con 3) ofrecen «Usar mi suscripción» con su aviso de riesgo; nunca se cambia solo. En el servidor no se
+   acepta ahí: tras `tramtai-servidor agentes entrar <id>`, la orden `tramtai-servidor agentes suscripcion <id>` (con
+   `--personal` si está abierto a la red), cada una en su bloque copiable (Rulings 34 y 35).
 4. Si se cancela o se agota el plazo, se cierra el proceso. La sesión la guarda el CLI; Tramtai nunca lee ni guarda
    tokens.
 
@@ -198,7 +202,9 @@ Bajo la instancia, con la sesión de la Web UI o la clave del servicio; la clave
 
 **Bienvenida (app y Web UI):** si no hay ningún agente listo, ofrece «Prepara tus agentes» con Claude Code y Codex
 marcados; los instala uno tras otro en un solo panel, que en cada inicio de sesión enseña enlace («Abrir»), código
-(«Copiar») y, si hace falta, el campo para pegar. Termina con «Listo: ya puedes usar …».
+(«Copiar») y, si hace falta, el campo para pegar. Termina con «Listo: ya puedes usar …» para los que quedaron listos y,
+para los que inician sesión y aún van con clave de API, «Falta un paso: usar tu suscripción.» con el botón «Usar mi
+suscripción» (o su orden, donde no hay botón).
 
 **Agentes:** cada tarjeta, su estado y una sola acción principal:
 - No instalado → «Instalar» (y el requisito que falte, si falta).

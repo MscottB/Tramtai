@@ -262,10 +262,11 @@ test('el sitio no tiene rayas largas ni promesas absolutas', () => {
   }
 })
 
-test('Empezar avisa, junto al botón de descargar, del CLI del agente y del aviso de Windows', () => {
+test('Empezar avisa, junto al botón de descargar, de que hace falta un agente (que Tramtai instala) y del aviso de Windows', () => {
   const html = paginas.get('ayuda/empezar.html')!
   const tras = html.slice(html.indexOf('Descargar Tramtai'))
-  assert.match(tras.slice(0, 1500), /Antes necesitas el CLI de al menos un agente[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
+  assert.match(tras.slice(0, 1500), /Necesitas al menos un agente: Tramtai instala el CLI[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
+  assert.doesNotMatch(html, /Tramtai no los instala|doesn’t install them/)
 })
 
 test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 20 temas', () => {

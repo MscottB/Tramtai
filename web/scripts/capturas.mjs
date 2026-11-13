@@ -487,7 +487,8 @@ try {
               // para no meter en el recorte trozos de la página de detrás.
               const m = ${cabecera} ? 0 : fijo ? 6 : 16
               const b = c.getBoundingClientRect()
-              const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, b.top + scrollY - m)
+              const arriba = ${JSON.stringify(a.arriba ?? '')} ? e.closest(${JSON.stringify(a.arriba ?? '')}) : null
+              const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, (arriba ?? c).getBoundingClientRect().top + scrollY - m)
               const w = Math.min(document.documentElement.scrollWidth, b.right + scrollX + m) - x
               const h = Math.min(document.documentElement.scrollHeight, b.bottom + scrollY + m) - y
               // El texto de toda la zona recortada (también lo de detrás y los campos), no solo el del elemento.

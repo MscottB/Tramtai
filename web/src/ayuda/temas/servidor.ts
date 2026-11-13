@@ -32,6 +32,7 @@ export const servidor: Tema = {
         { id: 'servidor-sesion-a-mano', pregunta: 'ayuda.servidor.pAMano', respuesta: 'ayuda.servidor.rAMano' },
         { id: 'servidor-herramientas', pregunta: 'ayuda.servidor.pHerramientas', respuesta: 'ayuda.servidor.rHerramientas', tema: 'conectar-herramientas' },
         { id: 'servidor-suscripcion', pregunta: 'ayuda.servidor.pSuscripcion', respuesta: 'ayuda.servidor.rSuscripcion' },
+        { id: 'servidor-suscripcion-ordenes', pregunta: 'ayuda.servidor.pSuscripcionOrdenes', respuesta: 'ayuda.servidor.rSuscripcionOrdenes' },
         { id: 'servidor-codex', pregunta: 'ayuda.servidor.pCodex', respuesta: 'ayuda.servidor.rCodex' },
         { id: 'servidor-actualizar', pregunta: 'ayuda.servidor.pActualizar', respuesta: 'ayuda.servidor.rActualizar' },
         { id: 'servidor-quitar', pregunta: 'ayuda.servidor.pQuitar', respuesta: 'ayuda.servidor.rQuitar' },

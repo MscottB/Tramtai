@@ -5,6 +5,7 @@ import { pasosBienvenida } from '../src/recorrido.ts'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { PORTADA, TOKENS_TERMINAL } from './capturas-lista.ts'
+import { AVISO_DESCARGA } from './sitio.ts'
 
 const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
 // seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
@@ -86,10 +87,12 @@ test('la línea de ventajas: siete paradas con el texto de la spec, en los dos i
     const ingles = p.match(/<p class="parada-texto">[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
     assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
   })
-  // Dos listas (de cuatro y de tres desde la v0.60), independientes: cada columna reparte sus paradas a su ritmo (revisión de la Tarea 14, M3).
+  // Tres listas (tres, tres y una desde la v0.60), independientes: las dos columnas quedan iguales, cada una a su ritmo,
+  // y la séptima va debajo, a lo ancho (revisión de la Tarea 14).
   const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
-  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [4, 3])
-  assert.match(listas[1], /^<ol class="ventajas-linea" start="5">/)
+  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [3, 3, 1])
+  assert.match(listas[1], /^<ol class="ventajas-linea" start="4">/)
+  assert.match(listas[2], /^<ol class="ventajas-linea" start="7">/)
   // Las paradas son las del plano (.parada): una sola estación y la vía de 3 px de las secuencias, en el acento; el color
   // de línea es de los agentes (M4).
   assert.doesNotMatch(css, /\.parada-ventaja/)
@@ -97,9 +100,9 @@ test('la línea de ventajas: siete paradas con el texto de la spec, en los dos i
   assert.match(css, /\.metro--plano \.parada:not\(:last-child\)::after \{[^}]*height: 3px/)
   const reglas = css.slice(css.indexOf('.ventajas'), css.indexOf('/* Pares'))
   assert.doesNotMatch(reglas, COLORES_LINEA)
-  // En el móvil la vía sigue de la tercera a la cuarta; desde 901 px, dos columnas (mismo corte que .como y .par: 900).
-  assert.match(reglas, /@media \(max-width: 900px\) \{[^@]*\.ventajas-linea:first-child > \.parada:last-child::after \{ content: ''; \}/)
+  assert.match(reglas, /@media \(max-width: 900px\) \{[^@]*\.ventajas-linea:not\(:last-child\) > \.parada:last-child::after \{ content: ''; \}/)
   assert.match(reglas, /@media \(min-width: 901px\) \{[^@]*\.ventajas \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(reglas, /@media \(min-width: 901px\) \{[^@]*\.ventajas-linea:last-child \{ grid-column: 1 \/ -1; \}/)
   assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.cifras \{ grid-template-columns: repeat\(2/)
   assert.match(css, /@media \(max-width: 900px\) \{[^@]*\.tablero, \.como, \.par, \.par\.invertido, \.conexiones \{/)
 })
@@ -350,9 +353,12 @@ test('sin JavaScript el menú se ve y el mapa queda quieto; el paso del cursor n
   assert.doesNotMatch(css, /translateY/)
 })
 
-test('junto a Descargar se avisa del CLI del agente y del aviso de Windows (58)', () => {
+test('junto a Descargar se avisa de que hace falta un agente, que Tramtai instala, y del aviso de Windows (58)', () => {
   const descargar = seccion('descargar')
-  assert.match(descargar, /Antes necesitas el CLI de al menos un agente/)
+  // Lo mismo que Empezar (AVISO_DESCARGA): desde la v0.60 Tramtai instala los CLI, así que ya no dice que no los instala.
+  assert.ok(descargar.includes(`<span lang="es">${AVISO_DESCARGA.es.split('. ')[0]}.</span>`))
+  assert.ok(descargar.includes(`<span lang="en">${AVISO_DESCARGA.en.split('. ')[0]}.</span>`))
+  assert.doesNotMatch(html, /Tramtai no los instala|doesn’t install them|Necesitas tener instalado el CLI|CLI must be installed/)
   assert.match(descargar, /Windows protegió su PC/)
   assert.match(descargar, /Windows protected your PC/)
 })

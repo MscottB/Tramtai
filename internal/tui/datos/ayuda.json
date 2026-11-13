@@ -61,7 +61,7 @@
           "pares": [
             [
               "¿Tengo que instalar los agentes aparte?",
-              "No: la primera vez, si no tienes ningún agente listo, Tramtai ofrece «Prepara tus agentes» y los instala uno tras otro. Después, desde Agentes (tema «Preparar tus agentes»)."
+              "No: la primera vez, si no tienes ningún agente listo, Tramtai ofrece «Prepara tus agentes», los instala uno tras otro y, tras iniciar sesión, te ofrece usar tu suscripción. Después, desde Agentes."
             ],
             [
               "¿Necesito una clave para entrar?",
@@ -113,7 +113,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles, c comprueba, d conecta o desconecta, a cambia la autenticación; i instala, s inicia sesión, u actualiza, x desinstala y l enseña el registro.",
+      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles, c comprueba, d conecta o desconecta, a cambia la autenticación (tras iniciar sesión, usa tu suscripción); i instala y s inicia sesión.",
       "bloques": [
         {
           "tipo": "web",
@@ -128,7 +128,7 @@
           "tipo": "pasos",
           "lineas": [
             "Abre Agentes: cada uno dice si está listo o qué le falta; si no está instalado, «Instalar» lo instala (tema «Preparar tus agentes»).",
-            "Con tu suscripción: inicia sesión en su CLI desde su tarjeta (Tramtai te enseña el enlace y el código) y pulsa «Usar mi suscripción».",
+            "Con tu suscripción: inicia sesión en su CLI desde su tarjeta (Tramtai te enseña el enlace y el código) y, al terminar, pulsa «Usar mi suscripción», que sale ahí mismo.",
             "Con una clave: «tramtai claves guardar ANTHROPIC_API_KEY» la guarda cifrada y vale sin reiniciar.",
             "En Ajustes elige el modelo y el esfuerzo que se usan cuando una petición no los dice."
           ]
@@ -206,7 +206,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
-      "terminal": "En la terminal: 2 abre Agentes. i instala, s inicia sesión, u actualiza, x desinstala (X borra también sus datos), y sigue, k cancela, l enseña el registro, c comprueba y e vuelve al código.",
+      "terminal": "En la terminal: 2 abre Agentes. i instala, s inicia sesión (y luego a usa tu suscripción), u actualiza, x desinstala (X con sus datos), y sigue, k cancela, l enseña el registro y e vuelve al código.",
       "bloques": [
         {
           "tipo": "web",
@@ -222,7 +222,7 @@
           "lineas": [
             "En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». La primera vez, si no tienes ningún agente listo, Tramtai te lo ofrece con «Prepara tus agentes».",
             "Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve. Sigue solo en cuanto lo apruebas.",
-            "Para usar tu suscripción, elige «Usar mi suscripción» en la tarjeta del agente; si no, ponle su clave de API. Antigravity va siempre con clave.",
+            "Al terminar, Tramtai ofrece ahí mismo «Usar mi suscripción» (antes te enseña el riesgo): hasta entonces el agente no está listo. Si no, ponle su clave de API. Antigravity va siempre con clave.",
             "Si hay una versión nueva, la tarjeta lo dice y «Actualizar» la instala. En «⋯» están Comprobar versión, Actualizar, Desinstalar y Ver registro."
           ]
         },
@@ -280,8 +280,9 @@
           "lineas": [
             "«tramtai agentes instalar claude codex» los instala y sigue con el inicio de sesión; «tramtai agentes entrar codex» solo inicia sesión. Enseñan el enlace y el código y piden el que te den.",
             "«tramtai agentes actualizar --todos» actualiza los que tienen una versión nueva; «tramtai agentes desinstalar codex» pregunta antes (con --borrar-datos, también su sesión y ajustes).",
-            "«tramtai agentes versiones» enseña la instalada, la última y si está comprobada. Con --confirmar no pregunta antes de seguir con una versión sin comprobar.",
-            "Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar que no se confirmó, o acción que ahora no se puede; 3 hecho, pero falta un paso (sin sesión o sin clave); 130 cancelado."
+            "«tramtai agentes versiones» enseña la instalada, la última y si está comprobada (--comprobar las consulta ahora). Con --confirmar no pregunta por una versión sin comprobar ni antes de desinstalar.",
+            "Si tras iniciar sesión el agente sigue con clave de API y sin clave, piden «acepto» para usar tu suscripción (antes enseñan el riesgo; --confirmar no se lo salta). En el servidor, dan la orden.",
+            "Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar no confirmada o acción no posible ahora; 3 hecho, pero falta un paso (sesión, clave o suscripción) o no se pudo comprobar; 130 cancelado."
           ]
         },
         {
@@ -297,7 +298,7 @@
             ],
             [
               "¿Puedo cerrar la pantalla mientras se instala?",
-              "Sí: la preparación sigue en el servicio y, al volver a Agentes, ves dónde va. Instalar, actualizar o iniciar sesión se cortan a los 15 minutos."
+              "Sí: la preparación sigue en el servicio y, al volver a Agentes, ves dónde va. Cualquier preparación (instalar, actualizar, desinstalar o iniciar sesión) se corta a los 15 minutos."
             ],
             [
               "¿Por qué sale desactivado el inicio de sesión automático?",
@@ -325,7 +326,7 @@
             ],
             [
               "¿Y en el modo servidor?",
-              "Se hace igual, con la cuenta del servicio: desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes …». Solo el administrador."
+              "Se hace igual, con la cuenta del servicio: desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes …». Solo el administrador. La suscripción no se acepta ahí: va con su orden."
             ]
           ]
         },
@@ -1449,6 +1450,10 @@
               "Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas)."
             ],
             [
+              "¿Cómo activo mi suscripción en el servidor?",
+              "Inicia sesión con «tramtai-servidor agentes entrar [id]» y, cuando termine, actívala con «tramtai-servidor agentes suscripcion [id]» (abierto a la red, con --personal). Una y, después, la otra."
+            ],
+            [
               "¿Qué riesgo tiene Codex en el servidor?",
               "Lee lo que lee la cuenta del servicio, claves incluidas. Da la clave del espacio solo a gente de confianza y, en las APIs ajenas, pon Modelos permitidos y respaldo sin Codex (vacía, vale cualquiera)."
             ],
@@ -1805,7 +1810,7 @@
           "tipo": "pasos",
           "titulo": "Terminal only",
           "lineas": [
-            "Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.",
+            "Start the service in the background with “tramtai service start -d”: it serves your apps without opening the app, even after you close the terminal.",
             "Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.",
             "Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back, W opens the Web UI in the browser and q quits. In the Playground, c cancels the running request.",
             "Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters."
@@ -1830,15 +1835,15 @@
           "pares": [
             [
               "Do I have to install the agents separately?",
-              "No: the first time, if no agent is ready, Tramtai offers “Set up your agents” and installs them one after another. Later, from Agents (topic “Set up your agents”)."
+              "No: the first time, if no agent is ready, Tramtai offers “Set up your agents”, installs them one after another and, after you sign in, offers to use your subscription. Later, from Agents."
             ],
             [
               "Do I need a key to get in?",
-              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps."
+              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai open” opens it already signed in. My APIs keys are only for your apps."
             ],
             [
               "How do I know it is running, and how do I stop it?",
-              "The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it."
+              "The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai service stop” stops it."
             ],
             [
               "Windows says “Windows protected your PC”",
@@ -1882,7 +1887,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "In the terminal: 2 opens Agents. Enter shows the details, c checks, d connects or disconnects, a switches authentication; i installs, s signs in, u updates, x uninstalls and l shows the log.",
+      "terminal": "In the terminal: 2 opens Agents. Enter shows the details, c checks, d connects or disconnects, a switches authentication (after signing in, uses your subscription); i installs and s signs in.",
       "bloques": [
         {
           "tipo": "web",
@@ -1897,8 +1902,8 @@
           "tipo": "pasos",
           "lineas": [
             "Open Agents: each one says whether it is ready or what it is missing; if it isn’t installed, “Install” installs it (topic “Set up your agents”).",
-            "With your subscription: sign in to its CLI from its card (Tramtai shows you the link and the code) and click “Use my subscription”.",
-            "With a key: “tramtai claves guardar ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
+            "With your subscription: sign in to its CLI from its card (Tramtai shows you the link and the code) and, when it’s done, click “Use my subscription”, right there.",
+            "With a key: “tramtai keys set ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
             "In Settings pick the model and effort used when a request does not say."
           ]
         },
@@ -1975,7 +1980,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai installs each agent’s CLI, helps you sign in and keeps it up to date, only with checked versions.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
-      "terminal": "In the terminal: 2 opens Agents. i installs, s signs in, u updates, x uninstalls (X also deletes its data), y continues, k cancels, l shows the log, c checks and e goes back to the code.",
+      "terminal": "In the terminal: 2 opens Agents. i installs, s signs in (then a uses your subscription), u updates, x uninstalls (X with its data), y continues, k cancels, l shows the log and e goes back to the code.",
       "bloques": [
         {
           "tipo": "web",
@@ -1991,7 +1996,7 @@
           "lineas": [
             "In Agents, open “Other agents you can install” and click “Install”. The first time, if no agent is ready yet, Tramtai offers it with “Set up your agents”.",
             "Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back. It carries on as soon as you approve.",
-            "To use your subscription, pick “Use my subscription” on the agent’s card; otherwise, give it its API key. Antigravity always uses a key.",
+            "When it’s done, Tramtai offers “Use my subscription” right there (it shows you the risk first): until then the agent isn’t ready. Otherwise, give it its API key. Antigravity always uses a key.",
             "When there is a new version, the card says so and “Update” installs it. Under “⋯” you have Check version, Update, Uninstall and View log."
           ]
         },
@@ -2049,8 +2054,9 @@
           "lineas": [
             "“tramtai agents install claude codex” installs them and goes on with sign-in; “tramtai agents login codex” only signs in. They show the link and the code and ask for the one you get.",
             "“tramtai agents update --all” updates the ones with a new version; “tramtai agents uninstall codex” asks first (with --delete-data, its session and settings too).",
-            "“tramtai agents versions” shows the installed version, the latest and whether it is checked. With --confirm it doesn’t ask before going on with an unchecked version.",
-            "Exit codes: 0 ready; 1 error; 2 unchecked version that wasn’t confirmed, or an action not possible now; 3 done, but a step is missing (no session or no key); 130 canceled."
+            "“tramtai agents versions” shows the installed version, the latest and whether it is checked (--check looks now). With --confirm it doesn’t ask about an unchecked version or before uninstalling.",
+            "If, after signing in, the agent is on an API key with none saved, they ask for “accept” to use your subscription (risk shown first; --confirm doesn’t skip it). On a server, they give the command.",
+            "Exit codes: 0 ready; 1 error; 2 unchecked version not confirmed, or an action not possible now; 3 done, but a step is missing (session, key or subscription) or it couldn’t be checked; 130 canceled."
           ]
         },
         {
@@ -2066,7 +2072,7 @@
             ],
             [
               "Can I close the screen while it installs?",
-              "Yes: the setup keeps going in the service and, when you come back to Agents, you see where it is. Installing, updating or signing in stop after 15 minutes."
+              "Yes: the setup keeps going in the service and, when you come back to Agents, you see where it is. Any setup (installing, updating, uninstalling or signing in) stops after 15 minutes."
             ],
             [
               "Why is automatic sign-in turned off?",
@@ -2094,7 +2100,7 @@
             ],
             [
               "And in server mode?",
-              "It works the same, with the service account: from Agents in the remote Web UI, the terminal or “tramtai-servidor agents …”. Administrator only."
+              "It works the same, with the service account: from Agents in the remote Web UI, the terminal or “tramtai-servidor agents …”. Administrator only. The subscription takes its own command there."
             ]
           ]
         },
@@ -2328,12 +2334,12 @@
             [
               "Claude Code",
               "settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json",
-              "In the encrypted system store: Claude Code asks for it with “tramtai herramientas clave claude-code”"
+              "In the encrypted system store: Claude Code asks for it with “tramtai tools key claude-code”"
             ],
             [
               "Codex",
               "config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers",
-              "In the encrypted system store: Codex asks for it with “tramtai herramientas clave codex”"
+              "In the encrypted system store: Codex asks for it with “tramtai tools key codex”"
             ],
             [
               "Continue",
@@ -2479,7 +2485,7 @@
               "Tramtai does not touch it and does not turn the tool on: rename it in My APIs and turn the tool on again."
             ],
             [
-              "What is “tramtai herramientas clave” for?",
+              "What is “tramtai tools key” for?",
               "Claude Code and Codex use it to ask for their key. It responds while Tramtai keeps the key (on or turned off, not after “Forget”) and prints only the key; turned off, its stopped API rejects it."
             ],
             [
@@ -2488,7 +2494,7 @@
             ],
             [
               "How do I turn several on or off at once?",
-              "Pass several ids or --todas (--all), for example “tramtai herramientas activar --todas”. activar takes --modelo (--model) with agent/model, such as claude/sonnet."
+              "Pass several ids or --all, for example “tramtai tools enable --all”. enable takes --model with agent/model, such as claude/sonnet."
             ]
           ]
         },
@@ -2860,11 +2866,11 @@
             ],
             [
               "How do I watch what it processes while developing?",
-              "“tramtai servicio registro -f” shows one live line per request: agent, model, duration, tokens and the API it came from."
+              "“tramtai service log -f” shows one live line per request: agent, model, duration, tokens and the API it came from."
             ],
             [
               "Can I run the service in the foreground?",
-              "Yes: stop the service and run “tramtai servicio iniciar --abrir”: it runs with the log in view, opens the app and Ctrl+C stops it."
+              "Yes: stop the service and run “tramtai service start --abrir”: it runs with the log in view, opens the app and Ctrl+C stops it."
             ],
             [
               "How do I delete test data?",
@@ -3047,7 +3053,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Choose how it starts when you sign in: “The app in the tray” or “Just the service”, with no window. Without signing in, it’s the server (“tramtai-servidor instalar”), another environment.",
+            "Choose how it starts when you sign in: “The app in the tray” or “Just the service”, with no window. Without signing in, it’s the server (“tramtai-servidor install”), another environment.",
             "Pick the model and effort used when a request does not say.",
             "In History decide how long requests are kept; in Files, prepare the converter."
           ]
@@ -3191,7 +3197,7 @@
             ],
             [
               "And from the server itself?",
-              "“tramtai-servidor abrir”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside."
+              "“tramtai-servidor open”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside."
             ],
             [
               "Where do the agents’ keys go?",
@@ -3216,6 +3222,10 @@
             [
               "Can I use my subscription on the server?",
               "By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas)."
+            ],
+            [
+              "How do I turn on my subscription on the server?",
+              "Sign in with “tramtai-servidor agents login [id]” and, when it’s done, turn it on with “tramtai-servidor agents subscription [id]” (open to the network, with --personal). One, then the other."
             ],
             [
               "What’s the risk with Codex on the server?",
@@ -3342,7 +3352,7 @@
           "pares": [
             [
               "Offline",
-              "The service is not running. Open the app or run “tramtai servicio iniciar”. With start-up in Settings it starts on its own when you sign in."
+              "The service is not running. Open the app or run “tramtai service start”. With start-up in Settings it starts on its own when you sign in."
             ],
             [
               "The key is missing or not valid (no_autorizado)",

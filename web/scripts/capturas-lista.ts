@@ -150,7 +150,10 @@ export function ansiAHtml(ansi: string): string {
 
 // ANCLAS son los elementos que señalan los recorridos guiados (data-recorrido): una captura por ancla aunque salga en
 // varias páginas, la primera que la cita. Salen de los temas, así que un paso nuevo trae su captura sin tocar esta lista.
-export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string }
+export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string; arriba?: string }
+// ARRIBA hace empezar el recorte de un ancla en el borde de arriba de su contenedor (closest): una fila suelta, con el
+// margen de 16 px, dejaba ver medio renglón de lo de encima. La fila de preparar sale con la cabecera de su agente.
+const ARRIBA: Record<string, string> = { 'agentes.preparar': '.q-expansion-item' }
 // PREPARAR deja visible un ancla que la página no muestra al abrirla: es JavaScript que corre en la página y da true
 // cuando ya hizo lo suyo (se repite hasta entonces, por si los datos aún no llegaron).
 const PREPARAR: Record<string, string> = {
@@ -177,7 +180,7 @@ for (const tema of temas)
     if (bloque.tipo === 'recorrido')
       for (const { ancla } of bloque.pasos)
         if (tema.paginaApp && !ANCLAS.some((a) => a.ancla === ancla))
-          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla] })
+          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla], arriba: ARRIBA[ancla] })
 
 // SIN_CAPTURA son las anclas que la demo no puede mostrar, con el motivo: su paso sale en el sitio sin imagen.
 // Primero se intenta que los datos de demostración la hagan visible; esto es el último recurso.

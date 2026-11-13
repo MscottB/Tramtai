@@ -925,7 +925,7 @@
     "error.ya_en_curso": "That agent is already being prepared",
     "error.correccion_no_disponible": "This request cannot be corrected: send it again",
     "error.conversor_no_disponible": "The file converter is missing",
-    "ayuda.problemas.sin_conexion": "The service is not running. Open the app or run “tramtai servicio iniciar”. With start-up in Settings it starts on its own when you sign in.",
+    "ayuda.problemas.sin_conexion": "The service is not running. Open the app or run “tramtai service start”. With start-up in Settings it starts on its own when you sign in.",
     "ayuda.problemas.no_autorizado": "Check the key in your app: the workspace one or that API’s. If you regenerated it, the old one no longer works.",
     "ayuda.problemas.autenticacion_agente": "The agent has no session or key. In Agents, sign in to its CLI or save an API key.",
     "ayuda.problemas.agente_no_disponible": "The CLI is not installed or cannot be found; Agents says how to install it. Antigravity also cannot be used from APIs.",

@@ -39,8 +39,8 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 ## Empezar
 
 1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/#descargar) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
-2. En **Agentes**, prepara al menos uno: Tramtai instala su CLI y te ayuda a iniciar sesión, o le pones una clave de API.
-   La primera vez, la bienvenida te lo ofrece («Prepara tus agentes»).
+2. En **Agentes**, prepara al menos uno: Tramtai instala su CLI y te ayuda a iniciar sesión (al terminar, «Usar mi
+   suscripción»), o le pones una clave de API. La primera vez, la bienvenida te lo ofrece («Prepara tus agentes»).
 3. En **Mis APIs**, copia la URL y crea la clave (se ve una sola vez) para tu aplicación:
 
 ```python
@@ -153,7 +153,7 @@ URL and the key. Antigravity, for now, only from the Playground, the terminal an
 5. Tramtai is free and provided as is, without warranties.
 <!-- /riesgos:en -->
 
-[**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, set up an agent in *Agents* (Tramtai installs its CLI and helps you sign in)
+[**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, set up an agent in *Agents* (Tramtai installs its CLI and helps you sign in, then “Use my subscription”)
 and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal
 and CLI are in English and Spanish; the detailed documentation is in Spanish, and the
 [product page](https://mscottb.github.io/Tramtai/) has an English overview. Free for personal and non-commercial use
