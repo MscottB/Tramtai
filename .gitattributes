@@ -4,3 +4,6 @@
 
 # Salidas generadas: GitHub no las cuenta como código ni las despliega en los diffs.
 internal/recursos/web/** linguist-generated
+
+# Salidas reales de los inicios de sesión de los CLI (M0 de la v0.60): byte a byte, con sus CR y secuencias ANSI.
+internal/agentes/*/testdata/sesion-*.txt -text

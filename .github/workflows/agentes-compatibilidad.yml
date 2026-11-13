@@ -1,0 +1,93 @@
+# Compatibilidad de los CLI de los agentes (v0.60). Por ahora es el M0 (docs/equipo/releases/v0.60-preparar-agentes/m0.md):
+# instala cada CLI con su instalador oficial en una carpeta de usuario temporal de Linux, macOS y Windows Server, lo
+# actualiza desde una versión fijada, lanza su inicio de sesión hasta el enlace y el código, sin cuenta (se cierra a
+# los 25 s), y lo desinstala. En Windows Server, además, lo mismo con la cuenta virtual de un servicio de prueba. La Tarea 13 le añade
+# la ejecución semanal y la lista firmada de versiones comprobadas.
+name: Compatibilidad de los agentes
+
+on:
+  workflow_dispatch:
+  # Temporal, solo para el M0: workflow_dispatch no se puede lanzar hasta que el archivo esté en main. La Tarea 13 lo quita.
+  push:
+    branches: ['v0.60/t01-*']
+    paths: ['.github/workflows/agentes-compatibilidad.yml', 'scripts/agentes/**', 'pruebas/m0agentes/**']
+
+permissions:
+  contents: read
+
+jobs:
+  instalar:
+    name: ${{ matrix.agente }} (${{ matrix.os }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2025]
+        agente: [claude, codex, copilot, antigravity]
+        # Una versión anterior a la última, para ver que se puede fijar y que «actualizar» sube. Antigravity no deja fijarla.
+        include:
+          - { agente: claude, version: 2.1.311 }
+          - { agente: codex, version: 0.167.1 }
+          - { agente: copilot, version: 1.0.108 }
+    runs-on: ${{ matrix.os }}
+    # Los valores de la matriz llegan a los run: por el entorno, nunca pegados en la orden.
+    env:
+      AGENTE: ${{ matrix.agente }}
+      VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Instalar, actualizar e iniciar sesión (Linux y macOS)
+        if: runner.os != 'Windows'
+        env:
+          ACTUALIZAR: '1'
+          SESION: '1'
+          DESINSTALAR: '1'
+        run: sh scripts/agentes/probar-instalacion.sh "$AGENTE" "$RUNNER_TEMP/casa"
+      - name: Instalar, actualizar e iniciar sesión (Windows Server)
+        if: runner.os == 'Windows'
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente $env:AGENTE -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa" -Actualizar -ProbarSesion -Desinstalar
+      # Copilot sin winget (no está para la cuenta de un servicio): su descarga directa de GitHub Releases.
+      - name: Copilot por su descarga directa (Windows Server)
+        if: runner.os == 'Windows' && matrix.agente == 'copilot'
+        run: ./scripts/agentes/probar-instalacion.ps1 -Agente copilot -Descarga -Version "$env:VERSION" -Carpeta "$env:RUNNER_TEMP\casa-descarga" -Actualizar -ProbarSesion -Desinstalar
+
+  # ¿Puede la cuenta virtual de un servicio (como la de Tramtai en modo servidor) instalar cada CLI y lanzar su inicio
+  # de sesión? Cada agente, con su servicio y su cuenta (NT SERVICE\TramtaiM0<agente>), en su perfil de verdad.
+  cuenta-virtual:
+    name: Cuenta virtual de un servicio (Windows Server)
+    timeout-minutes: 60
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Sonda
+        run: New-Item -ItemType Directory -Force C:\ProgramData\TramtaiM0Agentes | Out-Null; go build -tags m0agentes -o C:\ProgramData\TramtaiM0Agentes\sonda.exe ./pruebas/m0agentes
+      - name: Instalar e iniciar sesión con la cuenta virtual
+        run: |
+          $dir = 'C:\ProgramData\TramtaiM0Agentes'
+          Copy-Item scripts\agentes\probar-instalacion.ps1 $dir
+          $pwsh = (Get-Command pwsh).Source
+          foreach ($a in 'claude', 'codex', 'copilot', 'antigravity') {
+            $n = "TramtaiM0$a"
+            $log = "$dir\$a.log"
+            $bin = "`"$dir\sonda.exe`" `"$log`" `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$dir\probar-instalacion.ps1`" -Agente $a -SinAislar -Actualizar -ProbarSesion -Desinstalar$(if ($a -eq 'copilot') { ' -Descarga' })"
+            sc.exe create $n binPath= $bin obj= "NT SERVICE\$n" | Out-Null
+            icacls $dir /grant "NT SERVICE\${n}:(OI)(CI)M" | Out-Null
+            sc.exe start $n | Out-Null
+            $limite = (Get-Date).AddMinutes(12)
+            while ((Get-Service $n).Status -ne 'Stopped' -and (Get-Date) -lt $limite) { Start-Sleep 5 }
+            if ((Get-Service $n).Status -ne 'Stopped') { sc.exe stop $n | Out-Null; Start-Sleep 5 }
+            Write-Host "`n################ $a ($n)"
+            if (Test-Path $log) { Get-Content $log } else { Write-Host 'sin registro: el servicio no llegó a escribirlo' }
+            Write-Host "`n--- perfil C:\Windows\ServiceProfiles\$n"
+            Get-ChildItem "C:\Windows\ServiceProfiles\$n" -Recurse -Force -Depth 5 -File -ErrorAction SilentlyContinue |
+              Select-Object -First 60 | ForEach-Object { '{0,12}  {1}' -f $_.Length, $_.FullName }
+            sc.exe delete $n | Out-Null
+          }
