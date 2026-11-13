@@ -14,3 +14,8 @@ import (
 func contextoDeParada(ctx context.Context) (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 }
+
+// contextoDeOrden es el de una orden larga: se cancela con Ctrl+C, SIGTERM o SIGHUP (se cierra la terminal).
+func contextoDeOrden(ctx context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+}

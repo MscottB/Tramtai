@@ -12,8 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
-	"os/signal"
 	"slices"
 	"strings"
 	"text/tabwriter"
@@ -39,6 +39,7 @@ const (
 	accionDesinstalar = "desinstalar"
 
 	salidaNoPosible = 2   // versión sin comprobar sin confirmar, o acción que ahora no se puede
+	salidaFalta     = 3   // hecho, pero falta un paso (queda sin sesión o sin clave)
 	salidaCancelado = 130 // Ctrl+C (o cancelada desde otra pantalla)
 )
 
@@ -61,7 +62,7 @@ func conCodigo(codigo int, mensaje string) error { return errConCodigo{codigo, e
 
 // conSalidas añade a la ayuda de una orden de preparar sus códigos de salida.
 func conSalidas(texto string) string {
-	return texto + "\n\n" + idioma.T("Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar sin confirmar o acción que ahora no se puede; 130 cancelado (Ctrl+C).")
+	return texto + "\n\n" + idioma.T("Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar sin confirmar o acción que ahora no se puede; 3 hecho, pero falta un paso (queda sin sesión o sin clave); 130 cancelado (Ctrl+C).")
 }
 
 // banderas define una opción booleana con sus alias (el primero es el que sale en la ayuda).
@@ -153,7 +154,7 @@ func tablaVersiones(cmd *cobra.Command, lista []contrato.VersionesAgente) error 
 		comprobada := "-"
 		if len(v.Comprobadas) > 0 {
 			comprobada = idioma.T("sí")
-			if slices.Contains(mapValues(v.Comprobadas), false) {
+			if slices.Contains(slices.Collect(maps.Values(v.Comprobadas)), false) {
 				comprobada = idioma.T("no")
 			}
 		}
@@ -168,14 +169,6 @@ func tablaVersiones(cmd *cobra.Command, lista []contrato.VersionesAgente) error 
 		}
 	}
 	return nil
-}
-
-func mapValues(m map[string]bool) []bool {
-	var v []bool
-	for _, x := range m {
-		v = append(v, x)
-	}
-	return v
 }
 
 // conVersionNueva son los agentes instalados con una versión nueva publicada que el servicio deja actualizar ahora.
@@ -232,9 +225,14 @@ func prepararAgentes(cmd *cobra.Command, ids []string, accion string, borrar, co
 	if base == nil {
 		base = context.Background()
 	}
-	ctx, parar := signal.NotifyContext(base, os.Interrupt)
+	if fd := os.Stdin.Fd(); term.IsTerminal(fd) { // el código se lee sin eco: tras Ctrl+C, la terminal vuelve como estaba
+		if estado, err := term.GetState(fd); err == nil {
+			defer term.Restore(fd, estado)
+		}
+	}
+	ctx, parar := contextoDeOrden(base)
 	defer parar()
-	p := &preparador{c: c, ctx: ctx, out: cmd.OutOrStdout(), aviso: cmd.ErrOrStderr(), entrada: bufio.NewReader(cmd.InOrStdin()), confirmar: confirmar}
+	p := &preparador{c: c, ctx: ctx, parar: parar, out: cmd.OutOrStdout(), aviso: cmd.ErrOrStderr(), entrada: bufio.NewReader(cmd.InOrStdin()), confirmar: confirmar}
 	var primero error
 	for _, id := range ids {
 		err := p.correr(id, accion, borrar)
@@ -254,6 +252,8 @@ type preparador struct {
 	out, aviso io.Writer
 	entrada    *bufio.Reader
 	confirmar  bool
+	parar      context.CancelFunc // suelta las señales: un segundo Ctrl+C mata la orden
+	adoptada   bool               // se sigue una preparación que lanzó otra pantalla: esta orden no la cancela
 }
 
 // leerLinea lee una línea de la entrada; lo secreto, sin eco si es una terminal.
@@ -297,6 +297,9 @@ func (p *preparador) correr(id, accion string, borrar bool) error {
 			fmt.Fprintln(p.aviso, idioma.T("Se borran también su sesión y sus ajustes."))
 		}
 		if !p.preguntar(idioma.Tf("¿Desinstalar %s?", nombre)) {
+			if p.ctx.Err() != nil {
+				return p.salirCancelado()
+			}
 			return p.sinCambios(id)
 		}
 	}
@@ -315,6 +318,9 @@ func (p *preparador) correr(id, accion string, borrar bool) error {
 		}
 		fmt.Fprintln(p.aviso, avisoNoComprobada(e.Accion, id))
 		if !p.confirmar && !p.preguntar(idioma.T("¿Seguir igualmente?")) {
+			if p.ctx.Err() != nil {
+				return p.salirCancelado()
+			}
 			return p.sinCambios(id)
 		}
 		confirmado = true
@@ -325,18 +331,35 @@ func (p *preparador) sinCambios(id string) error {
 	return conCodigo(salidaNoPosible, idioma.Tf("no se ha cambiado nada en %s", agentes.NombreVisible(id)))
 }
 
-// lanzar pide la acción al servicio. Con otra ya en marcha para el agente (esta orden y la Web UI a la vez), sigue esa.
+// lanzar pide la acción al servicio. Con otra ya en marcha para el agente (esta orden y la Web UI a la vez), sigue esa si
+// es la misma acción; si es otra, no la adopta. Con Ctrl+C antes de que el servicio la acepte, no cancela nada: no es suya.
 func (p *preparador) lanzar(id string, pedido contrato.PedidoPreparacion) (contrato.EstadoPreparacion, error) {
+	p.adoptada = false
+	if p.ctx.Err() != nil {
+		return contrato.EstadoPreparacion{}, p.salirCancelado()
+	}
 	e, err := p.c.Preparar(p.ctx, espacioPreparar, id, pedido)
 	switch nucleo.CodigoDe(err) {
 	case nucleo.CodigoYaEnCurso:
-		fmt.Fprintln(p.out, idioma.Tf("ya hay una preparación de %s en marcha: se sigue esa", agentes.NombreVisible(id)))
-		return p.c.Preparacion(p.ctx, espacioPreparar, id)
+		nombre := agentes.NombreVisible(id)
+		if e, err = p.c.Preparacion(p.ctx, espacioPreparar, id); err != nil {
+			if p.ctx.Err() != nil {
+				return e, p.salirCancelado()
+			}
+			return e, err
+		}
+		if e.Accion != "" && e.Accion != pedido.Accion {
+			fmt.Fprintln(p.aviso, idioma.Tf("ya hay otra preparación de %s en marcha (%s): espera a que termine o cancélala desde donde la lanzaste", nombre, e.Accion))
+			return e, conCodigo(salidaNoPosible, idioma.Tf("no se ha cambiado nada en %s", nombre))
+		}
+		fmt.Fprintln(p.out, idioma.Tf("ya hay una preparación de %s en marcha: se sigue esa", nombre))
+		p.adoptada = true
+		return e, nil
 	case nucleo.CodigoPeticionesEnCurso, nucleo.CodigoNoDisponibleEnServidor:
 		return e, errConCodigo{salidaNoPosible, err}
 	}
 	if err != nil && p.ctx.Err() != nil {
-		return e, p.cancelar(id)
+		return e, p.salirCancelado()
 	}
 	return e, err
 }
@@ -390,9 +413,13 @@ func (p *preparador) seguir(id string, e contrato.EstadoPreparacion) (contrato.E
 			case r.codigo == "":
 			default:
 				if err := p.c.CodigoPreparacion(p.ctx, espacioPreparar, id, r.codigo); err != nil {
-					fmt.Fprintln(p.aviso, nucleo.MensajeDe(err))
+					if p.ctx.Err() != nil {
+						return e, p.cancelar(id)
+					}
+					fmt.Fprintln(p.aviso, nucleo.MensajeDe(err)) // no llegó: se vuelve a pedir
+				} else {
+					enviado = true
 				}
-				enviado = true
 			}
 		case <-turno.C:
 			n, err := p.c.Preparacion(p.ctx, espacioPreparar, id)
@@ -411,14 +438,26 @@ func (p *preparador) seguir(id string, e contrato.EstadoPreparacion) (contrato.E
 	return e, nil
 }
 
-// cancelar corta la preparación en el servicio (aunque el contexto de la orden ya esté cancelado) y sale con 130.
+// cancelar corta la preparación en el servicio (aunque el contexto de la orden ya esté cancelado) y sale con 130. Una que
+// lanzó otra pantalla no se corta.
 func (p *preparador) cancelar(id string) error {
+	if p.adoptada {
+		return p.salirCancelado()
+	}
+	p.parar()
 	ctx, parar := context.WithTimeout(context.WithoutCancel(p.ctx), 10*time.Second)
 	defer parar()
 	if err := p.c.CancelarPreparacion(ctx, espacioPreparar, id); err != nil {
-		fmt.Fprintln(p.aviso, nucleo.MensajeDe(err))
+		fmt.Fprintln(p.aviso, "\n"+nucleo.MensajeDe(err))
 	}
-	fmt.Fprintln(p.aviso, idioma.Tf("Se canceló la preparación de %s.", agentes.NombreVisible(id)))
+	fmt.Fprintln(p.aviso, "\n"+idioma.Tf("Se canceló la preparación de %s.", agentes.NombreVisible(id)))
+	return conCodigo(salidaCancelado, idioma.T("cancelado"))
+}
+
+// salirCancelado sale con 130 sin tocar el servicio: lo que se cancela no lo lanzó esta orden (o aún no existe).
+func (p *preparador) salirCancelado() error {
+	p.parar()
+	fmt.Fprintln(p.aviso)
 	return conCodigo(salidaCancelado, idioma.T("cancelado"))
 }
 
@@ -429,8 +468,10 @@ func (p *preparador) mostrar(id string, e contrato.EstadoPreparacion, dicho *vis
 		dicho.estado, dicho.etapa = e.Estado, e.Etapa
 		fmt.Fprintln(p.out, progreso(e, nombre))
 		if clave, enlace := agentes.AvisoSesion(id); e.Estado == "esperando_usuario" && clave != "" { // el de la receta (Codex: código de dispositivo)
-			fmt.Fprintln(p.out, idioma.T("Codex inicia sesión con un código de dispositivo, y ChatGPT pide activarlo una vez en sus ajustes de seguridad."))
-			fmt.Fprintln(p.out, idioma.T("Abrir los ajustes de seguridad de ChatGPT")+": "+enlace)
+			if aviso := textoAviso(clave); aviso != "" {
+				fmt.Fprintln(p.out, aviso)
+				fmt.Fprintln(p.out, idioma.T("Abrir los ajustes de seguridad de ChatGPT")+": "+enlace)
+			}
 		}
 	}
 	if enlace := enlaceSeguro(e.Enlace); enlace != "" && enlace != dicho.enlace {
@@ -506,18 +547,20 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 			return nil
 		}
 		// Listo con motivo: la acción se hizo, pero no queda listo para usar.
-		if e.Accion == accionInstalar {
-			fmt.Fprintln(p.aviso, idioma.Tf("%s está instalado (%s), pero sin iniciar sesión: inicia sesión con «tramtai agentes entrar %s».", nombre, despues, id))
-		} else {
-			fmt.Fprintln(p.aviso, idioma.Tf("%s no quedó listo para usar.", nombre))
+		quedaSinListo := idioma.Tf("%s no quedó listo para usar.", nombre)
+		if e.Accion == accionInstalar && agentes.AdmiteSuscripcion(id) {
+			quedaSinListo = idioma.Tf("%s está instalado (%s), pero sin iniciar sesión: inicia sesión con «tramtai agentes entrar %s».", nombre, despues, id)
+		} else if e.Accion == accionInstalar {
+			quedaSinListo = idioma.Tf("%s está instalado (%s), pero le falta su clave de API (tramtai-servidor claves guardar).", nombre, despues)
 		}
 		if e.Mensaje != "" {
 			fmt.Fprintln(p.aviso, limpio(e.Mensaje))
 		}
 		if e.Accion == accionIniciar {
+			fmt.Fprintln(p.aviso, quedaSinListo)
 			return conCodigo(1, idioma.Tf("No se pudo iniciar sesión en %s", nombre))
 		}
-		return nil
+		return conCodigo(salidaFalta, quedaSinListo) // hecho, pero falta un paso
 	case "cancelado":
 		fmt.Fprintln(p.aviso, idioma.Tf("Se canceló la preparación de %s.", nombre))
 		return conCodigo(salidaCancelado, idioma.T("cancelado"))
@@ -597,4 +640,12 @@ func limpio(linea string) string {
 		}
 		return r
 	}, ansi.Strip(linea))
+}
+
+// textoAviso es el texto de la CLI de un aviso de sesión de la receta (su clave de texto en la Web UI); vacío si no lo conoce.
+func textoAviso(clave string) string {
+	if clave == "preparar.avisoCodex" {
+		return idioma.T("Codex inicia sesión con un código de dispositivo, y ChatGPT pide activarlo una vez en sus ajustes de seguridad.")
+	}
+	return ""
 }
