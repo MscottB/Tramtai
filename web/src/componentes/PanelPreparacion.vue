@@ -1,9 +1,11 @@
 <template>
   <!-- Instala, actualiza, desinstala o inicia sesión en los CLI de los agentes, uno tras otro, y enseña cómo va. Sin acción,
        sigue la preparación que ya está en marcha (la lanzó otra pantalla, o antes de recargar). -->
-  <div class="panel-preparacion column q-gutter-y-md">
+  <!-- column de Quasar parte en líneas (flex-wrap): sin no-wrap, una línea larga del registro (que no se parte) daba su
+       ancho a todo el panel y desbordaba la pantalla en un móvil. -->
+  <div class="panel-preparacion column no-wrap q-gutter-y-md">
     <div v-if="cuenta" class="text-caption texto-suave"><q-icon name="o_dns" class="q-mr-xs" aria-hidden="true" />{{ t('preparar.cuentaServicio', { cuenta }) }}</div>
-    <div v-for="agente in visibles" :key="agente" class="column q-gutter-y-sm">
+    <div v-for="agente in visibles" :key="agente" class="column no-wrap q-gutter-y-sm">
       <!-- El estado, en voz alta para un lector de pantalla cada vez que cambia; recibe el foco cuando el panel sustituye
            al botón que lo lanzó. -->
       <div :ref="(el) => (cajasEstado[agente] = el as HTMLElement | null)" role="status" aria-live="polite" tabindex="-1"
@@ -19,9 +21,10 @@
           {{ t(AVISOS_SESION[agente].texto) }}
           <a class="enlace" :href="AVISOS_SESION[agente].enlace" target="_blank" rel="noopener noreferrer">{{ t('preparar.abrirAjustesSeguridad') }}</a>
         </div>
-        <div v-if="vistaEspera(estados[agente])!.enlace" class="row items-center no-wrap q-gutter-x-sm">
-          <span class="codigo romper col">{{ vistaEspera(estados[agente])!.enlace }}</span>
-          <q-btn unelevated dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-md" :label="t('preparar.abrir')" :aria-label="t('preparar.abrirEnlace', { agente: nombreAgente(agente) })" :href="vistaEspera(estados[agente])!.enlace" target="_blank" rel="noopener noreferrer" />
+        <!-- En un móvil, el enlace a todo el ancho y «Abrir» debajo: al lado quedaba una columna estrecha de letras sueltas. -->
+        <div v-if="vistaEspera(estados[agente])!.enlace" class="row items-center q-col-gutter-sm">
+          <div class="col-12 col-sm"><span class="codigo romper">{{ vistaEspera(estados[agente])!.enlace }}</span></div>
+          <div class="col-auto"><q-btn unelevated dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-md" :label="t('preparar.abrir')" :aria-label="t('preparar.abrirEnlace', { agente: nombreAgente(agente) })" :href="vistaEspera(estados[agente])!.enlace" target="_blank" rel="noopener noreferrer" /></div>
         </div>
         <div v-if="vistaEspera(estados[agente])!.codigo">
           <div class="text-caption texto-suave q-mb-xs">{{ t('preparar.codigo') }}</div>
@@ -161,6 +164,9 @@ async function activar(agente: string) {
   } finally {
     activando.value = ''
   }
+  // El botón desaparece al activarla: el foco pasa al estado, que dice cómo quedó, en lugar de perderse.
+  await nextTick()
+  if (!falta(agente)) cajasEstado[agente]?.focus()
 }
 
 // correr recorre los agentes desde uno.

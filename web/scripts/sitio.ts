@@ -3,7 +3,7 @@
 // al día en las páginas escritas a mano (PAGINAS_FIJAS). Son funciones puras: sitio-ayuda.mjs les da los textos, los
 // ejemplos y las capturas y escribe los archivos.
 import type { Bloque, Tema } from '../src/ayuda/tipos'
-import { bloquesVisibles, capturaDeAncla } from '../src/ayuda/vista'
+import { bloquesVisibles, capturaDeAncla, partesOpciones } from '../src/ayuda/vista'
 import { campos, normalizar } from '../src/ayuda/buscar'
 import { ERRORES } from '../src/ayuda/temas/problemas'
 
@@ -237,7 +237,12 @@ export function escapar(s: string): string {
 }
 
 function bilingue(es: string, en: string): string {
-  return `<span lang="es">${escapar(es)}</span><span lang="en">${escapar(en)}</span>`
+  return `<span lang="es">${conOpciones(es)}</span><span lang="en">${conOpciones(en)}</span>`
+}
+
+// conOpciones escapa un texto y envuelve sus opciones de la CLI en .opcion-cli, que no se parte tras el guion.
+function conOpciones(s: string): string {
+  return partesOpciones(s).map((p) => (p.opcion ? `<span class="opcion-cli">${escapar(p.texto)}</span>` : escapar(p.texto))).join('')
 }
 
 const GUIA = new Set(['conectar', 'herramientas', 'archivos'])

@@ -48,7 +48,8 @@
               {{ t('preparar.hayNueva', { ultima: versionNueva(versiones[a.agente]), instalada: versiones[a.agente].instalada ?? '' }) }}</div>
             <div v-if="principal(a).aviso" class="aviso text-body2 q-mb-sm">{{ principal(a).aviso }}</div>
             <div class="row items-center q-gutter-sm">
-              <q-btn v-if="principal(a).accion" unelevated dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)"
+              <!-- Con el agente listo, la principal de la tarjeta es «Probar»: actualizar va contorneado, sin competir con ella. -->
+              <q-btn v-if="principal(a).accion" :unelevated="!listo(a)" :outline="listo(a)" dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)"
                 @click="preparar(a.agente, principal(a).accion!)" />
               <q-btn flat round dense icon="more_horiz" :loading="comprobandoVersiones" :aria-label="t('preparar.acciones', { agente: nombreAgente(a.agente) })">
                 <q-menu>

@@ -1,0 +1,56 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "web/src/estilos.css"
+        ],
+        "createdAt": "2026-11-13T19:34:00.832Z",
+        "reason": "Agente (T15a): es la cita (blockquote) del Markdown que devuelven los agentes, filete gris neutro de 3 px; no es una tarjeta con acento"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "site/estilo.css"
+        ],
+        "createdAt": "2026-11-13T19:34:00.953Z",
+        "reason": "Agente (T15a): es la línea de estaciones del índice de la Ayuda (barra de línea de 4 px con estaciones de aro), la firma de transporte de .impeccable/superficie-web-ui.md; no es una tarjeta"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/ayuda/*.html",
+          "site/desarrolladores.html",
+          "site/index.html",
+          "site/servidor.html"
+        ],
+        "createdAt": "2026-11-13T19:34:01.063Z",
+        "reason": "Agente (T15a): falsos positivos medidos: .idioma son botones de 44 px de alto con el texto centrado; el ol del índice deja 14 px hasta la línea de estaciones; .tabla envuelve una tabla cuyas celdas tienen 10px 14px"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "site/servidor.html"
+        ],
+        "createdAt": "2026-11-13T19:34:01.178Z",
+        "reason": "Agente (T15a): es kbd (tecla W) con el borde inferior de 2 px de una tecla física, no una tarjeta con acento"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-13T19:34:33.193Z",
+        "reason": "Agente (T15a): son kbd (teclas de la terminal) con el borde inferior de 2 px de una tecla física, no tarjetas con acento"
+      }
+    ]
+  }
+}
