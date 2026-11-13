@@ -98,6 +98,9 @@ type LectorSesion struct {
 	// Enlace y Codigo son obligatorios si el CLI los imprime; Codigo es nil si no hay (Claude). PidePegar es nil si el
 	// CLI no espera un código pegado.
 	Enlace, Codigo, PidePegar *regexp.Regexp
+	// Aviso es la clave del texto de lo que la cuenta del proveedor exige antes de iniciar sesión y no es un ajuste del
+	// CLI (Codex: activar el código de dispositivo en ChatGPT); AvisoEnlace, dónde se hace. Vacíos si no hay.
+	Aviso, AvisoEnlace string
 }
 
 // Receta reúne los datos de instalación y sesión de un CLI. Las órdenes de Instalar y Actualizar y las demás tablas se

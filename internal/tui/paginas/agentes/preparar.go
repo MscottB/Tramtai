@@ -154,12 +154,6 @@ func limpio(linea string) string {
 	}, ansi.Strip(linea))
 }
 
-// avisosSesion es lo que la cuenta del proveedor exige antes de iniciar sesión y no es un ajuste del CLI: Codex entra por
-// código de dispositivo, y ChatGPT pide activarlo una vez en sus ajustes de seguridad.
-var avisosSesion = map[string]struct{ texto, enlace string }{
-	"codex": {"preparar.avisoCodex", "https://chatgpt.com/#settings/Security"},
-}
-
 // opciones es lo que se puede hacer ahora con un agente, según su estado y lo que dicen sus versiones.
 type opciones struct {
 	instalar, iniciar, actualizar, desinstalar bool
@@ -731,9 +725,10 @@ func (p *Pagina) panel(ancho int) []string {
 		l = append(l, tono.Render(marca+linea))
 	}
 	if e.Estado == "esperando_usuario" {
-		if aviso, ok := avisosSesion[g]; ok {
-			texto(plano, p.tx(aviso.texto))
-			texto(plano, p.tx("preparar.abrirAjustesSeguridad")+": "+aviso.enlace)
+		// Lo que la cuenta del proveedor exige antes (Codex: activar el código de dispositivo en ChatGPT), de su receta.
+		if clave, enlace := catalogo.AvisoSesion(g); clave != "" {
+			texto(plano, p.tx(clave))
+			texto(plano, p.tx("preparar.abrirAjustesSeguridad")+": "+enlace)
 		}
 		if enlace := enlaceSeguro(e.Enlace); enlace != "" {
 			// Entero y sin saltos propios: la terminal lo parte sola y al copiarlo sale entero. Con OSC 8 es también un
