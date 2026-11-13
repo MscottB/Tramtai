@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -272,11 +273,10 @@ func TestInterrogacionAbreSuTema(t *testing.T) {
 			}
 			continue
 		}
+		// El primero de la página, como la Ayuda (Agentes tiene dos: «Agentes y modelos» y «Preparar tus agentes»).
 		var tema datos.Tema
-		for _, x := range datos.Ayuda("es") {
-			if x.Pagina == clave {
-				tema = x
-			}
+		if i := slices.IndexFunc(datos.Ayuda("es"), func(x datos.Tema) bool { return x.Pagina == clave }); i >= 0 {
+			tema = datos.Ayuda("es")[i]
 		}
 		if tema.ID == "" || primera != tema.Titulo || !strings.Contains(v, "En la terminal:") {
 			t.Errorf("%s: ? abre el tema %q: %q\n%s", clave, tema.Titulo, primera, v)

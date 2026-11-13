@@ -58,7 +58,9 @@ func init() {
 		"Para la clave de API, ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:":      "For the API key, run this in a terminal (it asks for the key without showing it) and press c to check again:",
 		"Necesita una clave de API. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:": "Needs an API key. Run this in a terminal (it asks for the key without showing it) and press c to check again:",
 		"Instala su CLI y pulsa c para volver a comprobar. Si está en otra ruta, indícala en comandos_agentes.%s.":                 "Install its CLI and press c to check again. If it is somewhere else, set it in comandos_agentes.%s.",
-		"Pulsa s para confirmar:": "Press y to confirm:",
+		"Pulsa s para confirmar:":  "Press y to confirm:",
+		"usar tu suscripción (%s)": "use your subscription (%s)",
+		"Pulsa a para usar tu suscripción (antes te enseña el riesgo).":       "Press a to use your subscription (it shows you the risk first).",
 		"Instala su CLI antes: no hay nada que conectar ni desconectar":       "Install its CLI first: there is nothing to connect or disconnect",
 		"%s no admite la suscripción: solo usa clave de API":                  "%s does not support the subscription: it only uses an API key",
 		"Tiene que estar instalado y conectado para cambiar su autenticación": "It has to be installed and connected to change its authentication",
@@ -66,12 +68,12 @@ func init() {
 		"Este agente aún no está listo para probar":                           "This agent is not ready to try yet",
 
 		// Agentes: preparar sus CLI (instalar, iniciar sesión, actualizar, desinstalar); el resto sale de los textos de la Web UI.
-		"deja el campo":              "leave the field",
-		"pegar código":               "paste code",
-		"nueva %s":                   "new %s",
+		"deja el campo":                  "leave the field",
+		"pegar código":                   "paste code",
+		"nueva %s":                       "new %s",
 		"desinstalar y borrar sus datos": "uninstall and delete its data",
-		"versiones de los agentes":   "agent versions",
-		"Esta acción no está disponible ahora para este agente": "This action is not available for this agent right now",
+		"versiones de los agentes":       "agent versions",
+		"Esta acción no está disponible ahora para este agente":                        "This action is not available for this agent right now",
 		"Se desinstala con su orden oficial y deja de estar también fuera de Tramtai.": "It is uninstalled with its official command and is no longer available outside Tramtai either.",
 		"Para borrarlos también, cancela y pulsa X.":                                   "To delete them too, cancel and press X.",
 

@@ -249,7 +249,11 @@ func (p *Pagina) textoDetalle(a contrato.Adaptador) string {
 		switch {
 		case p.c.Entorno == "servidor": // en lugar de «tu suscripción (tecla a)», su orden; la clave, con tramtai-servidor
 			if catalogo.AdmiteSuscripcion(a.Agente) {
-				add(p.tx(p.textoSuscripcionServidor()), "  "+p.ordenSuscripcion(a.Agente), "")
+				add(p.tx(p.textoSuscripcionServidor()))
+				for _, orden := range p.ordenesSuscripcion(a.Agente) {
+					add("  " + orden)
+				}
+				add("")
 			}
 			add(p.tx("agentes.servidorClave"))
 		case catalogo.AdmiteSuscripcion(a.Agente):
@@ -340,13 +344,14 @@ func (p *Pagina) comandoClave(a contrato.Adaptador) string {
 	return "tramtai claves guardar " + variable
 }
 
-// ordenSuscripcion es, en el servidor, la orden de la suscripción de un agente: con el servicio abierto a la red, la
-// personal (con sus condiciones); si no, el inicio de sesión del propio CLI con la cuenta del servicio.
-func (p *Pagina) ordenSuscripcion(agente string) string {
+// ordenesSuscripcion son, en el servidor, las órdenes de la suscripción de un agente: con el servicio abierto a la red,
+// la personal (con sus condiciones); si no, el inicio de sesión del propio CLI con la cuenta del servicio y después la
+// suscripción (sin ella sigue con clave de API, Ruling 34). La última es la que activa la suscripción.
+func (p *Pagina) ordenesSuscripcion(agente string) []string {
 	if p.servidor != nil && p.servidor.Expuesto {
-		return "tramtai-servidor agentes suscripcion " + agente + " --personal"
+		return []string{"tramtai-servidor agentes suscripcion " + agente + " --personal"}
 	}
-	return "tramtai-servidor agentes entrar " + agente
+	return []string{"tramtai-servidor agentes entrar " + agente, "tramtai-servidor agentes suscripcion " + agente}
 }
 
 // textoSuscripcionServidor es la clave del texto que acompaña a ordenSuscripcion.

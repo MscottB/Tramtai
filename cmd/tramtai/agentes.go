@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -74,10 +75,7 @@ func comandoSuscripcion() *cobra.Command {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintln(out, idioma.Tf("Antes de usar tu suscripción de %s, lee los riesgos:", agentes.NombreVisible(agente)))
-			for i, riesgo := range terminos.Riesgos(true)[0:2] {
-				fmt.Fprintf(out, "  %d. %s\n", i+1, riesgo)
-			}
+			riesgosSuscripcion(out, agente)
 			if personal {
 				f, _ := agentes.Buscar(agente)
 				fmt.Fprintf(out, idioma.T("Condiciones de la suscripción personal en el servidor:\n  - solo la usas tú, el titular de la cuenta del proveedor;\n  - no repartes las claves de las APIs que usan este agente;\n  - uso ordinario, como el tuyo en tu propio equipo.\nTérminos del proveedor: %s\nTérminos de Tramtai: %s\n"), f.URLTerminos, terminos.URL)
@@ -113,6 +111,30 @@ func comandoSuscripcion() *cobra.Command {
 	cmd.Flags().BoolVar(&personal, "personal", false, idioma.T("tu suscripción personal en el servidor abierto a la red (exige TOTP del administrador)"))
 	cmd.Flags().IntVar(&simultaneas, "simultaneas", 1, idioma.T("peticiones a la vez con la suscripción personal, de 1 a 3"))
 	return cmd
+}
+
+// riesgosSuscripcion enseña los riesgos 1 y 2 de usar la suscripción de un agente, antes de pedir «acepto» (aquí y al
+// terminar de iniciar sesión con «agentes entrar|instalar»).
+func riesgosSuscripcion(out io.Writer, agente string) {
+	fmt.Fprintln(out, idioma.Tf("Antes de usar tu suscripción de %s, lee los riesgos:", agentes.NombreVisible(agente)))
+	for i, riesgo := range terminos.Riesgos(true)[0:2] {
+		fmt.Fprintf(out, "  %d. %s\n", i+1, riesgo)
+	}
+}
+
+// ordenSuscripcionCLI es la orden que activa la suscripción de un agente: en el servidor, con tramtai-servidor y, si
+// está abierto a la red, la personal (sin --personal la rechazaría).
+func ordenSuscripcionCLI(agente string) string {
+	if !carpetas.Servidor() {
+		return "tramtai agentes suscripcion " + agente
+	}
+	orden := "tramtai-servidor agentes suscripcion " + agente
+	if c, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
+		if red, err := entradaServidor(c); err == nil && servidor.Expuesto(red) {
+			orden += " --personal"
+		}
+	}
+	return orden
 }
 
 // comprobarSuscripcionServidor, en el servidor y antes de preguntar nada, mira la configuración que quedaría: sin

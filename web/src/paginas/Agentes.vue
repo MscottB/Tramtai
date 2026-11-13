@@ -40,7 +40,7 @@
             <div class="q-px-md q-pb-md">
         <!-- Su CLI, desde aquí: la versión nueva, la acción principal de preparar (o el aviso si su versión no está
              comprobada), «⋯» con el resto y, mientras se prepara, su panel. -->
-        <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md">
+        <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md" data-recorrido="agentes.preparar">
           <PanelPreparacion v-if="paneles[a.agente]" :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion"
             :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
           <template v-else>
@@ -118,23 +118,24 @@
                 <div class="opcion full-height">
                   <div class="text-weight-medium"><q-icon name="o_key" class="q-mr-xs" />{{ t('agentes.opcionClave') }}</div>
                   <div class="text-caption texto-suave q-mt-xs">{{ t('agentes.opcionClaveTexto') }}</div>
-                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
                   <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
                 </div>
               </div>
             </div>
           </template>
-          <!-- En el servidor, en lugar de «Usar mi suscripción»: la orden del inicio de sesión del CLI (en local) o de la
-               suscripción personal con sus condiciones (abierto a la red), y la clave con tramtai-servidor. -->
+          <!-- En el servidor, en lugar de «Usar mi suscripción»: las dos órdenes, el inicio de sesión del CLI y después
+               la suscripción (en local), o la suscripción personal con sus condiciones (abierto a la red), y la clave con
+               tramtai-servidor. Cada botón de copiar dice qué orden copia. -->
           <template v-else-if="forma !== 'elegir' && admite(a)">
             <div class="text-body2">{{ t(forma === 'personal' ? 'agentes.servidorPersonal' : 'agentes.servidorEntrar') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+            <OrdenesCopiables :ordenes="ordenesSuscripcion(a.agente, forma)" class="q-mt-sm" />
             <div class="text-body2 q-mt-md">{{ t('agentes.servidorClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
           </template>
           <template v-else>
             <div class="text-body2">{{ t('agentes.soloClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
             <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
           </template>
         </template>
@@ -142,7 +143,8 @@
         <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
         <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
-          <div v-if="forma !== 'elegir'" class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+          <!-- Ya en suscripción, solo le falta la sesión: la primera orden (entrar), sin volver a pedir «acepto». -->
+          <OrdenesCopiables v-if="forma !== 'elegir'" :ordenes="ordenesSuscripcion(a.agente, forma).slice(0, 1)" class="q-mt-sm" />
           <q-btn v-if="puedeVolver(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
@@ -185,7 +187,7 @@
       <q-card v-if="filtro === 'instalar' && !otros.length">
         <EstadoVacio :titulo="t('agentes.sinResultados')" :accion="t('historial.quitarFiltros')" @accion="quitarFiltros" />
       </q-card>
-      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
+      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'" data-recorrido="agentes.instalar">
         <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
           :label="t('agentes.otros', { n: otros.length })" :caption="t('agentes.otrosTexto')" @update:model-value="(v: boolean) => (otrosAbierto = v)">
           <q-list separator>
@@ -261,10 +263,12 @@ import type { Adaptador, EstadoPreparacion, VersionesAgente } from '../api/tipos
 import { accionPrincipal, confirmarDesinstalar, conSesion, enMarcha, trozos, versionNueva, type Accion } from '../preparacion'
 import { sesion } from '../estado'
 import type { Destino } from '../navegacion'
-import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
+import { adaptadoresConocidos, agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
-import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import { estadoServidor, formaSuscripcion, ordenClave, ordenesSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import OrdenesCopiables from '../componentes/OrdenesCopiables.vue'
+import { aceptarRiesgoSuscripcion } from '../suscripcion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -364,16 +368,8 @@ async function cargar() {
 }
 
 // La suscripción solo se activa si el usuario acepta el riesgo con los términos del proveedor (TERMINOS.md, punto 4).
-function confirmarSuscripcion(a: Adaptador) {
-  $q.dialog({ title: t('agentes.confirmarTitulo', { agente: nombreAgente(a.agente) }),
-    message: t('agentes.confirmarSuscripcion', { cli: cli(a) }) + '\n\n' + t('agentes.riesgoSuscripcion'),
-    style: 'white-space: pre-line',
-    options: { type: 'checkbox', model: [], items: [{ label: t('agentes.aceptoRiesgo'), value: 'acepto' }] },
-    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('agentes.usarSuscripcion'), unelevated: true, noCaps: true } })
-    .onOk((elegidas: string[]) => {
-      if (elegidas.includes('acepto')) cambiar(a, 'suscripcion')
-      else avisarError(new Error(t('agentes.faltaAceptar')))
-    })
+async function confirmarSuscripcion(a: Adaptador) {
+  if (await aceptarRiesgoSuscripcion(a.agente)) cambiar(a, 'suscripcion')
 }
 
 // conectar conecta o desconecta el agente en todos los espacios (al desconectar, pide confirmación).
@@ -453,6 +449,8 @@ watch(() => instalados.value.map((a) => a.agente), (ahora, antes) => {
     else if (!ahora.includes(agente) && antes?.includes(agente)) otrosAbierto.value = true
   }
 })
+// Una comprobación hecha fuera de la página (el panel, tras «Usar mi suscripción») también pone las tarjetas al día.
+watch(adaptadoresConocidos, (lista) => lista && (adaptadores.value = lista))
 // alTerminar refresca las tarjetas.
 function alTerminar() {
   cargar()

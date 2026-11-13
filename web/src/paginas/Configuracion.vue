@@ -16,13 +16,13 @@
         <q-card-section>
           <h2 class="titulo-seccion">{{ t('servidor.titulo') }}</h2>
           <div v-if="!estadoServidor" class="texto-suave text-body2 q-mt-sm" role="status">{{ t('comun.cargando') }}</div>
-          <div v-else class="ficha text-body2 q-mt-sm">
+          <div v-else class="ficha ficha--apilable text-body2 q-mt-sm">
             <template v-for="f in filas" :key="f.etiqueta">
               <div>{{ t(f.etiqueta) }}</div>
               <div>
                 <div>{{ f.valor }}</div>
                 <div class="text-caption texto-suave">
-                  <template v-if="f.orden">{{ t('servidor.cambia') }} <code class="codigo">{{ f.orden }}</code></template>
+                  <template v-if="f.ordenes">{{ t('servidor.cambia') }}<OrdenesCopiables :ordenes="f.ordenes" class="q-mt-xs" /></template>
                   <template v-else-if="f.clave">{{ t('servidor.enConfig') }} <code class="codigo">{{ f.clave }}</code></template>
                   <template v-else>{{ f.nota }}</template>
                 </div>
@@ -284,6 +284,7 @@ import { actualizacion, sesion, sistema } from '../estado'
 import { esfuerzoEspacio, esfuerzosDe, nombreAgente, opcionModelo } from '../agentes'
 import { enRango, fecha, nombreEsfuerzo, registroCubre, terminales } from '../formato'
 import { conArranque, estadoServidor, filasServidor, modosArranque, pestanasAjustes } from '../servidor'
+import OrdenesCopiables from '../componentes/OrdenesCopiables.vue'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'

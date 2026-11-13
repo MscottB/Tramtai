@@ -24,7 +24,9 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
@@ -39,7 +41,7 @@ const (
 	accionDesinstalar = "desinstalar"
 
 	salidaNoPosible = 2   // versión sin comprobar sin confirmar, o acción que ahora no se puede
-	salidaFalta     = 3   // hecho, pero falta un paso (queda sin sesión o sin clave)
+	salidaFalta     = 3   // hecho, pero falta un paso (queda sin sesión, sin clave o sin usar la suscripción)
 	salidaCancelado = 130 // Ctrl+C (o cancelada desde otra pantalla)
 )
 
@@ -62,7 +64,7 @@ func conCodigo(codigo int, mensaje string) error { return errConCodigo{codigo, e
 
 // conSalidas añade a la ayuda de una orden de preparar sus códigos de salida.
 func conSalidas(texto string) string {
-	return texto + "\n\n" + idioma.T("Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar sin confirmar o acción que ahora no se puede; 3 hecho, pero falta un paso (queda sin sesión o sin clave); 130 cancelado (Ctrl+C).")
+	return texto + "\n\n" + idioma.T("Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar sin confirmar o acción que ahora no se puede; 3 hecho, pero falta un paso (queda sin sesión, sin clave o sin usar tu suscripción); 130 cancelado (Ctrl+C).")
 }
 
 // banderas define una opción booleana con sus alias (el primero es el que sale en la ayuda).
@@ -269,22 +271,23 @@ func (p *preparador) leerLinea(secreto bool) (string, error) {
 	return strings.TrimRight(s, "\r\n"), nil
 }
 
+// responder hace una pregunta y devuelve la línea que se escriba; sin entrada, o con Ctrl+C, vacía.
+func (p *preparador) responder(pregunta string) string {
+	fmt.Fprint(p.aviso, pregunta)
+	r := make(chan string, 1)
+	go func() { l, _ := p.leerLinea(false); r <- l }()
+	select {
+	case l := <-r:
+		return l
+	case <-p.ctx.Done():
+		return ""
+	}
+}
+
 // preguntar hace una pregunta de sí o no (la «s» o la «y»; cualquier otra cosa es un no); Ctrl+C la deja sin responder.
 func (p *preparador) preguntar(pregunta string) bool {
-	fmt.Fprint(p.aviso, pregunta+idioma.T(" [s/N] "))
-	type respuesta struct {
-		linea string
-		err   error
-	}
-	r := make(chan respuesta, 1)
-	go func() { l, err := p.leerLinea(false); r <- respuesta{l, err} }()
-	select {
-	case x := <-r:
-		l := strings.ToLower(strings.TrimSpace(x.linea))
-		return strings.HasPrefix(l, "s") || strings.HasPrefix(l, "y")
-	case <-p.ctx.Done():
-		return false
-	}
+	l := strings.ToLower(strings.TrimSpace(p.responder(pregunta + idioma.T(" [s/N] "))))
+	return strings.HasPrefix(l, "s") || strings.HasPrefix(l, "y")
 }
 
 // correr hace la acción de un agente: la pide, la sigue y, si se paró por una versión sin comprobar, pregunta y la repite
@@ -539,6 +542,11 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 	switch e.Estado {
 	case "listo":
 		if e.MotivoCodigo == "" {
+			if falta, err := p.faltaSuscripcion(id, e.Accion); err != nil {
+				return p.sinComprobar(id, err)
+			} else if falta {
+				return p.ofrecerSuscripcion(id)
+			}
 			fmt.Fprintln(p.out, map[string]string{
 				accionInstalar:    idioma.Tf("%s está instalado (%s).", nombre, despues),
 				accionActualizar:  idioma.Tf("%s está actualizado: antes %s, ahora %s.", nombre, antes, despues),
@@ -569,6 +577,53 @@ func (p *preparador) terminar(id string, e contrato.EstadoPreparacion) error {
 		return p.fallo(id, e)
 	}
 	return conCodigo(1, idioma.T("el servicio no dio el estado de la preparación"))
+}
+
+// faltaSuscripcion: inició sesión bien (al entrar, o al instalar), pero Tramtai aún usa el agente con clave de API y no
+// hay ninguna guardada (falta_clave, según la comprobación del servicio): falta usar la suscripción. No se cambia sola,
+// para no saltarse el aviso de riesgo (Ruling 34). Si la comprobación falla, el error: no se sabe si está listo.
+func (p *preparador) faltaSuscripcion(id, accion string) (bool, error) {
+	if (accion != accionIniciar && accion != accionInstalar) || !agentes.AdmiteSuscripcion(id) {
+		return false, nil
+	}
+	r, err := p.c.Capacidades(p.ctx, espacioPreparar)
+	i := slices.IndexFunc(r.Adaptadores, func(a contrato.Adaptador) bool { return a.Agente == id })
+	return err == nil && i >= 0 && r.Adaptadores[i].Estado == contrato.AgenteFaltaClave, err
+}
+
+// sinComprobar: tras iniciar sesión no se pudo comprobar el agente; sin saber si falta usar la suscripción, no se da por
+// listo (3), y se dice cómo mirarlo.
+func (p *preparador) sinComprobar(id string, err error) error {
+	if p.ctx.Err() != nil {
+		return p.salirCancelado()
+	}
+	fmt.Fprintln(p.aviso, nucleo.MensajeDe(err))
+	return conCodigo(salidaFalta, idioma.Tf("no se pudo comprobar si falta usar tu suscripción en %s: míralo con «tramtai agentes»", agentes.NombreVisible(id)))
+}
+
+// ofrecerSuscripcion dice que falta usar la suscripción y la orden que lo hace. Fuera del servidor ofrece hacerlo ahí
+// mismo, con la misma aceptación del riesgo que «agentes suscripcion» (--confirmar no se la salta): con «acepto» queda
+// listo (0); si no, sale con 3. En el servidor no pregunta: da la orden (abierto a la red, la personal, con sus
+// condiciones).
+func (p *preparador) ofrecerSuscripcion(id string) error {
+	nombre := agentes.NombreVisible(id)
+	fmt.Fprintln(p.out, idioma.Tf("%s tiene la sesión iniciada, pero falta un paso: usar tu suscripción.", nombre))
+	orden := ordenSuscripcionCLI(id)
+	if !carpetas.Servidor() {
+		riesgosSuscripcion(p.aviso, id)
+		linea := p.responder(idioma.T("Escribe «acepto» para activarla ahora (o pulsa Enter para dejarlo): "))
+		if p.ctx.Err() != nil {
+			return p.salirCancelado()
+		}
+		if aceptado(linea) {
+			if err := p.c.CambiarAutenticacion(p.ctx, id, adaptadores.AutenticacionSuscripcion); err != nil {
+				return err
+			}
+			fmt.Fprintln(p.out, idioma.Tf("%s usa tu suscripción: ya puedes usarlo.", nombre))
+			return nil
+		}
+	}
+	return conCodigo(salidaFalta, idioma.Tf("falta usar tu suscripción en %s: %s", nombre, orden))
 }
 
 // fallo explica un error: qué pasó y qué hacer, el detalle del servicio y las últimas líneas de la salida del CLI.

@@ -236,18 +236,19 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
   .cifra:nth-child(n+3) { border-top: 1px solid var(--borde); }
 }
 /* La línea de ventajas: las paradas del plano de Funciones (.parada, en el acento: el color de línea es de los agentes).
-   Son dos listas de tres. En el móvil se leen como una sola línea de seis: la vía sigue de la tercera a la cuarta. Desde
-   901 px van lado a lado, cada una con sus paradas a su ritmo. */
+   Son tres listas (tres, tres y una). En el móvil se leen como una sola línea de siete: la vía sigue de una lista a la
+   siguiente. Desde 901 px las dos primeras van lado a lado, cada una a su ritmo, y la última debajo, a lo ancho. */
 .ventajas { margin: 48px 0 0; display: grid; gap: 0 48px; }
 .ventajas-linea { list-style: none; margin: 0; padding: 0; }
 .ventajas .parada-titulo::before { background: var(--superficie-suave); }
 .ventajas .parada-texto { max-width: 40em; }
 @media (max-width: 900px) {
-  .ventajas-linea:first-child > .parada:last-child { padding-bottom: 24px; }
-  .ventajas-linea:first-child > .parada:last-child::after { content: ''; }
+  .ventajas-linea:not(:last-child) > .parada:last-child { padding-bottom: 24px; }
+  .ventajas-linea:not(:last-child) > .parada:last-child::after { content: ''; }
 }
 @media (min-width: 901px) {
-  .ventajas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ventajas { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; }
+  .ventajas-linea:last-child { grid-column: 1 / -1; }
 }
 
 /* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */

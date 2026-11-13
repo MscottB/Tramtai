@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -151,9 +152,10 @@ type preparacionCLI struct {
 	pegados     []string
 	cancelados  []string
 	versiones   []contrato.VersionesAgente
-	falloCodigo int    // los primeros envíos del código que fallan
-	forzados    []bool // el forzar de cada consulta de versiones
-	alConsultar func() // se llama en cada consulta del estado
+	falloCodigo int                              // los primeros envíos del código que fallan
+	forzados    []bool                           // el forzar de cada consulta de versiones
+	alConsultar func()                           // se llama en cada consulta del estado
+	registro    map[string]adaptadores.Adaptador // agentes del servicio de prueba, además del simulado
 }
 
 func (f *preparacionCLI) siguiente(agente string) (contrato.EstadoPreparacion, bool) {
@@ -244,7 +246,9 @@ func servicioConPreparacion(t *testing.T, f *preparacionCLI) *httptest.Server {
 		t.Fatal(err)
 	}
 	ts := httptest.NewUnstartedServer(nil)
-	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
+	registro := map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}
+	maps.Copy(registro, f.registro)
+	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro,
 		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
 		Preparacion: f})
 	if err != nil {
@@ -582,6 +586,90 @@ func TestAgentesInstalarSinSesion(t *testing.T) {
 	}
 	if _, err = ejecutarAdmin(t, "", "agentes", "actualizar", "claude"); salida(err) != 3 {
 		t.Fatalf("actualizar sin sesión: %v", err)
+	}
+}
+
+// conModo es un agente simulado que se detecta según su modo de autenticación, que el servicio cambia en marcha: con
+// clave de API y sin clave, falta_clave; con la suscripción, listo (su CLI ya tiene la sesión).
+type conModo struct {
+	adaptadores.Simulado
+	modo *adaptadores.Modo
+}
+
+func (c conModo) ModoAutenticacion() *adaptadores.Modo { return c.modo }
+func (c conModo) Detectar(context.Context) adaptadores.Estado {
+	if c.modo.Valor() == adaptadores.AutenticacionSuscripcion {
+		return adaptadores.Estado{Autenticacion: adaptadores.AutenticacionSuscripcion}
+	}
+	return adaptadores.Estado{Autenticacion: adaptadores.AutenticacionClaveAPI, Problema: "falta ANTHROPIC_API_KEY", ProblemaCodigo: adaptadores.ProblemaFaltaClave}
+}
+
+// TestAgentesFaltaSuscripcion (Ruling 34): tras entrar (o instalar e iniciar sesión), un agente que Tramtai aún usa con
+// clave de API y sin clave no está listo: lo dice con la orden que falta y sale con 3, no con 0. Ofrece activarla ahí mismo
+// con la misma aceptación del riesgo que «agentes suscripcion», que --confirmar no se salta; con «acepto» queda listo (0).
+func TestAgentesFaltaSuscripcion(t *testing.T) {
+	modo := adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo")), registro: map[string]adaptadores.Adaptador{"claude": conModo{modo: modo}}}
+	servicioConPreparacion(t, f)
+
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 3 || !strings.Contains(salidaTexto, "falta un paso: usar tu suscripción") || !strings.Contains(salidaTexto, "lee los riesgos") ||
+		!strings.Contains(salidaTexto+err.Error(), "tramtai agentes suscripcion claude") || strings.Contains(salidaTexto, "ya puedes usarlo") {
+		t.Fatalf("entrar: %v\n%s", err, salidaTexto)
+	}
+	f.guion = siempre(est("claude", "instalar", "listo"))
+	if salidaTexto, err = ejecutarAdmin(t, "s\n", "agentes", "instalar", "claude", "--confirmar"); salida(err) != 3 || modo.Valor() != adaptadores.AutenticacionClaveAPI {
+		t.Fatalf("--confirmar no acepta el riesgo: %v %s\n%s", err, modo.Valor(), salidaTexto)
+	}
+	salidaTexto, err = ejecutarAdmin(t, "acepto\n", "agentes", "instalar", "claude", "--confirmar")
+	if err != nil || modo.Valor() != adaptadores.AutenticacionSuscripcion || !strings.Contains(salidaTexto, "Claude usa tu suscripción") {
+		t.Fatalf("con «acepto»: %v %s\n%s", err, modo.Valor(), salidaTexto)
+	}
+	// Ya en la suscripción, entrar queda listo sin preguntar nada.
+	f.guion = siempre(est("claude", "iniciar_sesion", "listo"))
+	if salidaTexto, err = ejecutarAdmin(t, "", "agentes", "entrar", "claude"); err != nil || !strings.Contains(salidaTexto, "ya puedes usarlo") || strings.Contains(salidaTexto, "riesgos") {
+		t.Fatalf("ya en la suscripción: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesFaltaSuscripcionSinComprobar: si no se puede comprobar el agente tras iniciar sesión, no se da por listo: lo
+// dice, con cómo mirarlo, y sale con 3.
+func TestAgentesFaltaSuscripcionSinComprobar(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo"))}
+	ts := servicioConPreparacion(t, f)
+	siguiente := ts.Config.Handler
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/capacidades") {
+			http.Error(w, "fallo", http.StatusInternalServerError)
+			return
+		}
+		siguiente.ServeHTTP(w, r)
+	})
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 3 || strings.Contains(salidaTexto, "ya puedes usarlo") || !strings.Contains(err.Error(), "no se pudo comprobar si falta usar tu suscripción") ||
+		!strings.Contains(err.Error(), "tramtai agentes") {
+		t.Fatalf("sin comprobar: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesFaltaSuscripcionServidor: en el servidor no se pregunta (la suscripción del servidor tiene sus condiciones):
+// sale con 3 y da la orden de tramtai-servidor; abierto a la red, la personal.
+func TestAgentesFaltaSuscripcionServidor(t *testing.T) {
+	modo := adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo")), registro: map[string]adaptadores.Adaptador{"claude": conModo{modo: modo}}}
+	servicioConPreparacion(t, f)
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	for config, orden := range map[string]string{"": "tramtai-servidor agentes suscripcion claude", "servicio:\n  proxy:\n    confiables: [10.0.0.0/8]\n": "tramtai-servidor agentes suscripcion claude --personal"} {
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		salidaTexto, err := ejecutarAdmin(t, "acepto\n", "agentes", "entrar", "claude")
+		if salida(err) != 3 || strings.Contains(salidaTexto, "acepto") || !strings.HasSuffix(err.Error(), orden) || modo.Valor() != adaptadores.AutenticacionClaveAPI {
+			t.Fatalf("%q: %v\n%s", orden, err, salidaTexto)
+		}
 	}
 }
 

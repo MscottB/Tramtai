@@ -242,10 +242,10 @@ function bilingue(es: string, en: string): string {
 
 const GUIA = new Set(['conectar', 'herramientas', 'archivos'])
 
-// AVISO_DESCARGA es lo que hay que saber antes de descargar; la portada repite lo mismo bajo Descargar.
+// AVISO_DESCARGA es lo que hay que saber antes de descargar; la portada repite la primera frase bajo Descargar.
 export const AVISO_DESCARGA = {
-  es: 'Antes necesitas el CLI de al menos un agente (Claude Code, Codex o GitHub Copilot CLI) o una clave de la Gemini API. En Windows puede salir «Windows protegió su PC», porque el instalador aún no está firmado.',
-  en: 'You first need the CLI of at least one agent (Claude Code, Codex or GitHub Copilot CLI) or a Gemini API key. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.',
+  es: 'Necesitas al menos un agente: Tramtai instala el CLI de Claude Code, Codex, GitHub Copilot o Antigravity y te ayuda a iniciar sesión; para Gemini basta una clave de la Gemini API. En Windows puede salir «Windows protegió su PC», porque el instalador aún no está firmado.',
+  en: 'You need at least one agent: Tramtai installs the CLI of Claude Code, Codex, GitHub Copilot or Antigravity and helps you sign in; for Gemini, a Gemini API key is enough. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.',
 }
 
 // pagina es el armazón de cada página generada; clase es la del <main> (con índice lateral, «ayuda»).

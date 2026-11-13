@@ -35,6 +35,16 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
 - **En Windows:** si se instala con npm, en el PATH queda un envoltorio `.cmd`, que `ResolverPrograma` rechaza. Busca el
   ejecutable nativo del paquete de la plataforma, como hace `programa` en `internal/agentes/copilot`.
 
+- **Instalar, iniciar sesión, actualizar y desinstalar** (para su receta, v0.60; ver
+  `docs/equipo/releases/v0.60-preparar-agentes/m0.md`), en Windows, macOS y Linux, con `HOME`, `USERPROFILE` y su carpeta
+  de configuración temporales para no tocar las sesiones reales:
+  - la orden de instalación oficial que no necesita Node, si fija versión y dónde deja el ejecutable;
+  - cómo se actualiza (su orden o reinstalar) y qué hay que borrar al desinstalar (ejecutable, sesión y ajustes);
+  - de dónde sale su última versión (un manifiesto, las versiones de GitHub o npm) y si publica sumas o firmas;
+  - su inicio de sesión: los argumentos, si abre el navegador solo (y la variable que lo evita), el enlace, el código o la
+    petición de pegar, cómo termina y si necesita una terminal de verdad. Guarda su salida, limpia de datos, en
+    `internal/agentes/<nombre>/testdata/sesion-<sistema>.txt`.
+
 ## 2. El módulo
 
 - `internal/agentes/<nombre>/<nombre>.go`: el adaptador (`adaptadores.Adaptador`). Si se puede, también
@@ -56,6 +66,13 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
   | `PermitidoEnApps` | `true` solo si su canario pasó. |
   | `URLInstalacion` | Dónde se instala, o dónde se consigue la clave si no hay CLI. |
   | `Crear` | Construye el adaptador con la configuración efectiva. |
+  | `Receta` | Cómo lo instala, conecta, actualiza y desinstala Tramtai (`adaptadores.Receta`, ver abajo). Sin receta, Agentes enseña su `URLInstalacion` y no ofrece «Instalar». |
+
+- **La receta** es parte del agente: órdenes fijas por sistema (`Instalar`, `Actualizar` o una `Descarga` con su suma),
+  `Rutas`, `Borrar`, `DatosCLI`, `FijaVersion`, `Ultima`, `Sesion` (`nil` si solo va con clave, como Antigravity) y
+  `Comprobadas`, las versiones que pasaron el M0 por acción. Los campos y cómo los usa `internal/preparar` están en
+  [la guía de desarrollo](desarrollo.md#preparar-los-cli-de-los-agentes-internalpreparar). El job semanal
+  (`cmd/compatibilidad`) la prueba sin tocar nada más: recorre las fichas del catálogo.
 
 ## 3. El catálogo
 
@@ -80,11 +97,15 @@ Una línea en `fichas` de `internal/agentes/catalogo.go`. Con eso:
 - **Canario:** el caso del agente en `pruebas/canario/canario_test.go` (`go test -tags canario`), con su modelo más
   pequeño.
 - **Prueba real opcional:** `internal/agentes/real_test.go` (`go test -tags agentes`).
+- **De la receta** (`internal/agentes/recetas_test.go`): `TestRecetasCompletas` la cubre en cuanto la ficha está en el
+  catálogo; añade sus casos a `TestLectoresConSalidaReal` (cada `testdata/sesion-*.txt` con el enlace y el código que
+  debe sacar) y sus versiones del M0 a `TestComprobadasTienenLaDelM0`.
+  El primer lunes, el job de compatibilidad la prueba con el CLI real en los tres sistemas.
 
 ## 5. Textos y documentación
 
 - Mensajes nuevos en Go con `idioma.T`/`Tf` y su traducción en `internal/idioma/en_*.go` (`TestCobertura`).
 - Ayuda (`web/src/idiomas`), README (también su sección en inglés), `site/index.html` (mapa, sección de agentes y
-  marcas), el tema `agentes` de la Ayuda (`web/src/ayuda/temas/agentes.ts`, que genera también el sitio), `TERMINOS.md` si admite suscripción, `docs/arquitectura.md` (sus diferencias en la tabla
+  marcas), los temas `agentes` y `preparar` de la Ayuda (`web/src/ayuda/temas/`, que generan también el sitio; en `preparar`, su fila de «Cómo inicia sesión»), `TERMINOS.md` si admite suscripción, `docs/arquitectura.md` (sus diferencias en la tabla
   de adaptadores) y `docs/equipo/pendientes.md`.
 - Textos que nombren agentes en la Web UI: búscalos (`Claude y Codex`…) y déjalos genéricos o al día.

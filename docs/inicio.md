@@ -3,7 +3,7 @@
 ## Qué necesitas
 
 - **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** 11 o posterior (Intel o Apple Silicon). La app de escritorio existe para los tres.
-- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de GitHub Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`).
+- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de GitHub Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`). No hace falta instalarlos a mano: Tramtai instala sus CLI y te ayuda a iniciar sesión (ver [Dejar listos los agentes](#2-dejar-listos-los-agentes)).
 - **Para archivos de Office y PDF no hace falta instalar nada:** Tramtai prepara su conversor (markitdown, con su
   propio Python) en su carpeta la primera vez que arranca; lo ves y lo repites en **Ajustes → Archivos** o con
   `tramtai conversor preparar`. Ocupa unos 300 MB y no pide permisos de administrador. Si la red de tu empresa bloquea
@@ -47,7 +47,7 @@ Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicacion
 - **Entrar en la Web UI:** la app de escritorio entra sola. En el navegador (Windows, Linux y macOS) entras directamente: Tramtai comprueba que es de tu mismo usuario del sistema. Si no se puede comprobar, `tramtai abrir` la abre ya dentro con un código de un solo uso. La clave de las aplicaciones no sirve para entrar.
 - **Que arranque solo:** en **Ajustes → Arranque con Windows** (o con macOS, o con Linux, según tu sistema) o con `tramtai servicio autoarranque activar --modo app|servicio`, Tramtai se inicia al iniciar sesión, oculto en la bandeja («La app en la bandeja») o sin ventana ni bandeja («Solo el servicio»), y la Web UI está siempre disponible. Para que arranque sin iniciar sesión está el [modo servidor](servidor.md), otro entorno.
 - **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
-- **El recorrido guiado:** la primera vez que abres Tramtai, ya en **Inicio**, un diálogo pregunta «¿Te enseño Tramtai?»: **Hacer el recorrido** te enseña el mapa, Agentes, Probar, Mis APIs y Espacios en 14 pasos, y **Ahora no** no vuelve a preguntar; lo tienes en **Primeros pasos** («Haz el recorrido de Tramtai») para cuando quieras, también para repetirlo. No sale si entraste por un enlace directo a una página. En cada página, el botón **?** abre su ayuda y **Muéstrame en pantalla** hace el recorrido de esa página (también en **Ayuda**). Con Esc lo cierras y con las flechas pasas de paso. Solo enseña: no pulsa nada ni cambia tus datos.
+- **El recorrido guiado:** la primera vez que abres Tramtai, ya en **Inicio**, un diálogo pregunta «¿Te enseño Tramtai?» (y, si ningún agente está listo, ofrece **Prepara tus agentes**): **Hacer el recorrido** te enseña el mapa, Agentes, Probar, Mis APIs y Espacios en 14 pasos, y **Ahora no** no vuelve a preguntar; lo tienes en **Primeros pasos** («Haz el recorrido de Tramtai») para cuando quieras, también para repetirlo. No sale si entraste por un enlace directo a una página. En cada página, el botón **?** abre su ayuda y **Muéstrame en pantalla** hace el recorrido de esa página (también en **Ayuda**). Con Esc lo cierras y con las flechas pasas de paso. Solo enseña: no pulsa nada ni cambia tus datos.
 - **El menú, por grupos:** **Empezar** (Inicio, Agentes, Probar), **Usar** (Mis APIs, Historial) y **Organizar** (Espacios, Ajustes); Ayuda queda aparte, abajo.
 - **Accesibilidad:** la Web UI se usa entera con el teclado: el foco siempre se ve y «Saltar al contenido» lleva directo a la página. Los textos y los estados llegan a 4,5:1 de contraste en el tema claro y en el oscuro, y con el dedo todo botón compacto ocupa al menos 44 × 44 px.
 - **Aplicación de escritorio:** Tramtai abre la Web UI en su propia ventana, en Windows, macOS y Linux. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
@@ -55,7 +55,40 @@ Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicacion
 
 ## 2. Dejar listos los agentes
 
-La página **Agentes** dice qué falta en cada uno. Hay dos formas de autenticarlos:
+La página **Agentes** dice qué falta en cada uno.
+
+**Instalarlos desde Tramtai.** Claude Code, Codex, GitHub Copilot y Antigravity se instalan con su instalador oficial,
+para tu usuario (sirven también fuera de Tramtai), y sin Node:
+
+- **La primera vez,** si ningún agente está listo, la bienvenida ofrece **Prepara tus agentes**: marca los que quieres
+  (Claude Code y Codex vienen marcados) y Tramtai los instala uno tras otro, con su inicio de sesión. El resumen dice
+  cuáles quedaron listos; si a uno le falta usar tu suscripción, lo dice («Falta un paso: usar tu suscripción.») con el
+  botón **Usar mi suscripción** al lado.
+- **En Agentes,** «Otros agentes que puedes instalar» tiene **Instalar**. Al terminar, Tramtai lanza el inicio de sesión
+  del propio CLI y te enseña su enlace y su código (o un campo para pegar el que te den); sigue solo en cuanto lo
+  apruebas. Al terminar, el mismo panel ofrece **Usar mi suscripción** (antes te enseña el riesgo): hasta entonces el
+  agente sigue con clave de API y no está listo. Codex usa un código de dispositivo, que activas una vez en los ajustes
+  de seguridad de ChatGPT; Antigravity no inicia sesión: va con la clave de la Gemini API.
+- **Mantenerlos:** la tarjeta de cada agente avisa de una versión nueva y la instala con **Actualizar**; en **⋯** están
+  Comprobar versión, Actualizar, Desinstalar y Ver registro. Desinstalar pide confirmación y no borra su sesión ni sus
+  ajustes salvo que marques «Borrar también su sesión y ajustes».
+- **Desde la terminal** (`2`, Agentes): `i` instala, `s` inicia sesión (y después `a` usa tu suscripción), `u`
+  actualiza, `x` desinstala y `l` enseña el registro. **Desde la CLI:**
+
+```powershell
+tramtai agentes instalar claude codex     # los instala y sigue con el inicio de sesión (install)
+tramtai agentes entrar copilot            # solo el inicio de sesión; si falta, pide «acepto» para tu suscripción (login)
+tramtai agentes versiones --comprobar     # la instalada, la última y si está comprobada, consultadas ahora (versions --check)
+tramtai agentes actualizar --todos        # los que tienen una versión nueva (update --all)
+tramtai agentes desinstalar codex         # pregunta antes; --borrar-datos borra también su sesión (uninstall)
+```
+
+- **Versiones comprobadas:** Tramtai solo instala, actualiza e inicia sesión de forma automática con versiones de cada
+  CLI que ya comprobó. Con una que aún no lo está, el inicio de sesión automático sale desactivado en ese agente, con la
+  orden para hacerlo en una consola; el uso normal del agente sigue igual. La lista se pone al día sola cada semana. Todo
+  esto, en la Ayuda, «Preparar tus agentes».
+
+Hay dos formas de autenticar un agente:
 
 **Clave de API** (la predeterminada). `tramtai claves guardar` la pide sin mostrarla y la guarda cifrada en el almacén del sistema; Tramtai nunca la escribe en sus archivos:
 
@@ -77,7 +110,7 @@ tramtai claves listar                      # de dónde sale cada una, sin mostra
 - **Variable de entorno:** si existe una con el mismo nombre, tiene prioridad sobre el almacén, pero el servicio solo la ve si arranca con ella. En macOS, una variable de `~/.zshrc` no llega al servicio que inicia la app o el arranque automático: usa el Llavero. En Linux sin `secret-tool`, la variable es la única opción.
 - La página **Agentes** dice dónde queda la clave en tu sistema.
 
-**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Lo más fácil es el botón **Usar mi suscripción** de la página Agentes: lo aplica al momento, sin reiniciar. Equivale a escribir esto en la configuración global `config.yaml` (ver [configuración](#configuración)):
+**Tu suscripción** (Claude Pro/Max, cuenta de ChatGPT o GitHub Copilot), solo para uso **personal y local**. Con la sesión del CLI iniciada, lo más fácil es el botón **Usar mi suscripción**: lo ofrece el propio panel al terminar de iniciar sesión (y la bienvenida), y está en la tarjeta del agente en Agentes; lo aplica al momento, sin reiniciar. La CLI lo pide con «acepto» al terminar `tramtai agentes entrar|instalar`, o con `tramtai agentes suscripcion <agente>`. Equivale a escribir esto en la configuración global `config.yaml` (ver [configuración](#configuración)):
 
 ```yaml
 adaptadores:
@@ -122,7 +155,8 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 - `-m` (o `model` en la API) acepta el nombre que entienda el CLI: `haiku`, `sonnet`, `claude-sonnet-5-5`, `gemini-flash-latest`…
 - **GitHub Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático (el único del plan Free): GitHub Copilot elige el modelo,
   Tramtai muestra cuál usó y cada petición gasta créditos del plan. Con un plan de pago, `copilot/<modelo>`. Inicia
-  sesión con `copilot login` y elige en Agentes «Usar mi suscripción», o guarda `COPILOT_GITHUB_TOKEN`.
+  sesión desde su tarjeta en Agentes (o con `tramtai agentes entrar copilot`) y, al terminar, acepta «Usar mi suscripción», o guarda
+  `COPILOT_GITHUB_TOKEN`.
 - `-p` usa un perfil: `rapido`, `equilibrado` o `profundo`. Para Claude equivalen a `haiku`, `sonnet` y `opus`, y para Gemini a los modelos *flash-lite*, *flash* y *pro*. Para Codex defínelos tú:
 
   ```yaml

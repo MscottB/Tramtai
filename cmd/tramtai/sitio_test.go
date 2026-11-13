@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -134,7 +135,8 @@ func codigosEnLinea(pagina string) (codigos []struct{ texto, lang string }) {
 
 // ordenDeLinea saca los argumentos (con sus opciones) de una línea que es una orden de Tramtai: tras un sudo y un ./ o .\
 // opcionales, empieza por tramtai, tramtai.exe o tramtai-servidor. Las demás (brew, tar, curl, comentarios…) no lo son.
-// Un # corta la línea y una \ final (continuación) no es un argumento.
+// Un # o unos puntos suspensivos («tramtai-servidor agentes …») cortan la línea; una \ final (continuación) y un hueco
+// para rellenar (<id>, <orden>) no son argumentos.
 func ordenDeLinea(linea string) (args []string, servidor, ok bool) {
 	campos := strings.Fields(html.UnescapeString(linea))
 	if len(campos) > 0 && campos[0] == "sudo" {
@@ -148,10 +150,10 @@ func ordenDeLinea(linea string) (args []string, servidor, ok bool) {
 		return nil, false, false
 	}
 	for _, a := range campos[1:] {
-		if strings.HasPrefix(a, "#") {
+		if strings.HasPrefix(a, "#") || a == "…" {
 			break
 		}
-		if a != `\` {
+		if a != `\` && !(strings.HasPrefix(a, "<") && strings.HasSuffix(a, ">")) {
 			args = append(args, a)
 		}
 	}
@@ -298,8 +300,8 @@ func TestOrdenesDelSitioIdioma(t *testing.T) {
 }
 
 // TestComandosDelSitioExisten: cada orden de tramtai que enseñan los <pre> de index.html, servidor.html y
-// desarrolladores.html existe, y las de
-// los lang="en" existen con nombres en inglés. Lo que no está dentro de ningún lang se lee como español (se enseña en los
+// desarrolladores.html, sus frases y las de la Ayuda (site/ayuda/*.html) existe, y las de los lang="en" existen con
+// nombres en inglés. Lo que no está dentro de ningún lang se lee como español (se enseña en los
 // dos idiomas, así que las Tareas 15 y 16 lo marcan por idioma). Solo lee archivos y llama a Find: no ejecuta nada.
 func TestComandosDelSitioExisten(t *testing.T) {
 	raiz := nuevaRaiz()
@@ -335,18 +337,36 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Fatalf("%s: no hay ningún <pre>: ¿cambió el marcado?", archivo)
 		}
 	}
-	revisadas, enFrases := 0, 0
+	// Y las de la Ayuda (site/ayuda/*.html), que las cita entre comillas («…» o “…”) dentro de su frase en cada idioma.
+	ayudas, err := filepath.Glob("../../site/ayuda/*.html")
+	if err != nil || len(ayudas) == 0 {
+		t.Fatalf("no se leyó site/ayuda: %v", err)
+	}
+	for _, archivo := range ayudas {
+		datos, err := os.ReadFile(archivo)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range citasDeAyuda(string(datos)) {
+			lineas = append(lineas, linea{"ayuda/" + filepath.Base(archivo), c.texto, c.lang == "en", true})
+		}
+	}
+	revisadas, enFrases, enAyuda := 0, 0, 0
 	for _, l := range lineas {
 		args, servidor, ok := ordenDeLinea(l.texto)
 		if !ok {
 			continue
 		}
-		if l.enLinea {
+		ingles := l.ingles
+		if strings.HasPrefix(l.fuente, "ayuda/") {
+			enAyuda++
+			ingles = ingles && !(len(args) > 0 && sinAliasIngles[args[0]])
+		} else if l.enLinea {
 			enFrases++
 		} else {
 			revisadas++
 		}
-		if err := comprobarOrdenSitio(raiz, args, servidor, l.ingles); err != nil {
+		if err := comprobarOrdenSitio(raiz, args, servidor, ingles); err != nil {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
@@ -355,10 +375,55 @@ func TestComandosDelSitioExisten(t *testing.T) {
 	if revisadas < 26 {
 		t.Errorf("solo se revisaron %d órdenes (mínimo 26): ¿cambió el marcado de los <pre>?", revisadas)
 	}
-	t.Logf("órdenes revisadas: %d en <pre> y %d en frases", revisadas, enFrases)
-	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 32 entre los dos idiomas.
-	if enFrases < 30 {
-		t.Errorf("solo se revisaron %d órdenes en frases (mínimo 30): ¿cambió el marcado de los <code>?", enFrases)
+	t.Logf("órdenes revisadas: %d en <pre>, %d en frases y %d en la Ayuda", revisadas, enFrases, enAyuda)
+	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 38 entre los dos idiomas.
+	if enFrases < 36 {
+		t.Errorf("solo se revisaron %d órdenes en frases (mínimo 36): ¿cambió el marcado de los <code>?", enFrases)
+	}
+	if enAyuda < minimoAyuda {
+		t.Errorf("solo se revisaron %d órdenes en la Ayuda (mínimo %d): ¿cambiaron sus comillas o sus <span lang>?", enAyuda, minimoAyuda)
+	}
+	for nombre := range sinAliasIngles {
+		if c, _, err := raiz.Find([]string{nombre}); err != nil || len(c.Aliases) > 0 {
+			t.Errorf("«tramtai %s» ya tiene alias en inglés (o no existe): quítalo de sinAliasIngles", nombre)
+		}
+	}
+}
+
+// sinAliasIngles: órdenes de primer nivel que aún no tienen nombre en inglés; la Ayuda en inglés las cita en español.
+// shortcut: solo se comprueba que existan; cuando tengan alias, se quitan de aquí y la Ayuda en inglés pasa a usarlo.
+var sinAliasIngles = map[string]bool{"actualizar": true, "conversor": true, "espacio": true, "espacios": true, "global": true, "proyecto": true}
+
+// minimoAyuda: las órdenes que cita la Ayuda entre los dos idiomas (hoy 106), con algo de margen.
+const minimoAyuda = 100
+
+var (
+	spanAyuda = regexp.MustCompile(`(?s)<span lang="(es|en)">(.*?)</span>`)
+	citaAyuda = regexp.MustCompile(`[«“]([^«»“”]*)[»”]`)
+)
+
+// citasDeAyuda saca de una página de la Ayuda lo citado entre comillas en cada <span lang>, con su idioma: las órdenes
+// que la Ayuda pone en una frase. ordenDeLinea decide después cuáles son órdenes de Tramtai.
+func citasDeAyuda(pagina string) (citas []struct{ texto, lang string }) {
+	for _, s := range spanAyuda.FindAllStringSubmatch(pagina, -1) {
+		texto := html.UnescapeString(etiquetaSitio.ReplaceAllString(s[2], ""))
+		for _, c := range citaAyuda.FindAllStringSubmatch(texto, -1) {
+			citas = append(citas, struct{ texto, lang string }{c[1], s[1]})
+		}
+	}
+	return citas
+}
+
+// TestCitasDeAyuda: cada cita lleva el idioma de su <span>, sin etiquetas y con las entidades resueltas.
+func TestCitasDeAyuda(t *testing.T) {
+	pagina := `<li><span lang="es">«tramtai agentes entrar codex» y «Instalar»</span><span lang="en">“tramtai agents login <a>codex</a>” &amp; “x &lt;id&gt;”</span></li>`
+	var r []string
+	for _, c := range citasDeAyuda(pagina) {
+		r = append(r, c.lang+":"+c.texto)
+	}
+	quiere := []string{"es:tramtai agentes entrar codex", "es:Instalar", "en:tramtai agents login codex", "en:x <id>"}
+	if !slices.Equal(r, quiere) {
+		t.Errorf("%q, quería %q", r, quiere)
 	}
 }
 
@@ -375,14 +440,17 @@ func TestCodigosEnLineaSitio(t *testing.T) {
 	}
 }
 
-// TestOrdenDeLineaSitio: sudo, ./ y .\ no cuentan, un # corta, una \ final no es un argumento y lo que no es de Tramtai se ignora.
+// TestOrdenDeLineaSitio: sudo, ./ y .\ no cuentan, un # o un … corta, una \ final o un <hueco> no es un argumento y lo que
+// no es de Tramtai se ignora.
 func TestOrdenDeLineaSitio(t *testing.T) {
 	for linea, esperada := range map[string]string{
-		`sudo ./tramtai server install`:             "tramtai|server install",
-		`.\tramtai.exe tools enable --all \`:        "tramtai|tools enable --all",
-		`sudo tramtai-servidor admin password # ok`: "servidor|admin password",
-		`brew install tramtai`:                      "",
-		`# tramtai terminal`:                        "",
+		`sudo ./tramtai server install`:               "tramtai|server install",
+		`.\tramtai.exe tools enable --all \`:          "tramtai|tools enable --all",
+		`sudo tramtai-servidor admin password # ok`:   "servidor|admin password",
+		`brew install tramtai`:                        "",
+		`# tramtai terminal`:                          "",
+		`tramtai-servidor agentes … y más`:            "servidor|agentes",
+		`tramtai agentes suscripcion <id> --personal`: "tramtai|agentes suscripcion --personal",
 	} {
 		args, servidor, ok := ordenDeLinea(linea)
 		r := ""

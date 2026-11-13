@@ -460,9 +460,24 @@ sudo tramtai-servidor agentes entrar copilot   # copilot login --device-code
   /var/lib/tramtai/.local/bin/claude auth login`. En Windows Server la cuenta virtual del servicio no tiene consola: usa
   la clave de API del agente.
 
-**Solo en este equipo** (el servicio sin abrir a la red), la suscripción se activa como en el escritorio.
+**Solo en este equipo** (el servicio sin abrir a la red), iniciar sesión no basta: el agente sigue con su clave de API
+hasta que actives la suscripción con su propia orden, **después** de que termine la de entrar. Son dos órdenes, cada una
+por separado (no las pegues juntas: la segunda caería en lo que pregunte la primera):
 
-**Abierto a la red,** solo la **suscripción personal**, por agente:
+```sh
+sudo tramtai-servidor agentes entrar claude
+```
+
+Después, cuando termine:
+
+```sh
+sudo tramtai-servidor agentes suscripcion claude    # enseña los riesgos 1 y 2 y pide «acepto»
+```
+
+Hasta entonces, `agentes entrar` sale con el código 3 y te da esa orden. En este caso, Agentes y Ajustes → Servidor enseñan las dos (en la Web UI,
+cada una con su botón de copiar).
+
+**Abierto a la red,** solo la **suscripción personal**, por agente, también después de `agentes entrar`:
 
 ```sh
 sudo tramtai-servidor agentes suscripcion claude --personal
@@ -806,7 +821,9 @@ device-code sign-in turned on in your ChatGPT security settings, and keeps its s
 COPILOT_GITHUB_TOKEN`). If automatic sign-in can’t be done (a CLI version not yet checked with Tramtai, or output Tramtai
 doesn’t recognize), the notice says how to do it by hand: on Linux, a command as the service account (`sudo -u tramtai
 -H env -i HOME=/var/lib/tramtai PATH=… <cli> <arguments>`); on Windows Server the service’s virtual account has no
-console, so use the agent’s API key. Open to the network, only the
+console, so use the agent’s API key. Signing in isn’t enough: the agent stays on its API key until, once `agents login`
+has finished, you run `sudo tramtai-servidor agents subscription <agent>` as a separate command (it shows risks 1 and 2
+and asks for “accept”); until then `agents login` exits with 3 and gives you that command. Open to the network, only the
 **personal subscription** (`agents subscription <agent> --personal`): it shows the conditions (only you, the account
 holder; you don’t hand out the keys of APIs that use that agent; ordinary use), the provider’s terms
 ([Anthropic](https://code.claude.com/docs/en/legal-and-compliance), [OpenAI](https://openai.com/policies/),
