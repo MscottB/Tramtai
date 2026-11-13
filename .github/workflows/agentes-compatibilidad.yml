@@ -43,10 +43,15 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      # pwsh también en Linux y macOS: en Windows, bash pondría el tar de Git delante, y el instalador de Codex fallaría.
       - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI
-        shell: pwsh
-        run: go run ./cmd/compatibilidad comprobar "$env:RUNNER_TEMP/resultado/$env:RUNNER_OS.json"
+        if: runner.os != 'Windows'
+        run: go run ./cmd/compatibilidad comprobar "$RUNNER_TEMP/resultado/$RUNNER_OS.json"
+      # En Windows, desde cmd, como el servicio: bash pondría el tar de Git delante (el instalador de Codex falla) y pwsh
+      # pasaría su PSModulePath al powershell de los instaladores (el de Claude no encuentra Get-FileHash).
+      - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: go run ./cmd/compatibilidad comprobar "%RUNNER_TEMP%\resultado\%RUNNER_OS%.json"
       - uses: actions/upload-artifact@v7
         with:
           name: resultado-${{ runner.os }}
@@ -104,10 +109,10 @@ jobs:
           # documentar (Ruling 12 de la v0.60): se avisa si deja de responder o si los instaladores cambian de sitio.
           manifiesto=$(grep -o 'https://antigravity-cli-auto-updater[^"]*' internal/agentes/antigravity/ficha.go)
           base=${manifiesto%%/manifests/*}
-          curl -fsS --max-time 30 "$manifiesto" | grep -q '"version"' ||
+          curl -fsS --max-time 30 "$manifiesto" | grep '"version"' > /dev/null ||
             echo "- **antigravity**: el manifiesto $manifiesto no responde con su versión; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
           for guion in install.sh install.ps1; do
-            curl -fsSL --max-time 30 "https://antigravity.google/cli/$guion" | grep -qF "$base" ||
+            curl -fsSL --max-time 30 "https://antigravity.google/cli/$guion" | grep -F "$base" > /dev/null ||
               echo "- **antigravity**: $guion ya no descarga de $base; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
           done
           cat fallos.md
