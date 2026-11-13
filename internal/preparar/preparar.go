@@ -28,8 +28,8 @@ import (
 // Códigos de Error y de EstadoPreparacion.MotivoCodigo.
 const (
 	CodigoVersionNoComprobada = "version_no_comprobada"
-	CodigoPeticionesEnCurso   = "peticiones_en_curso"
-	CodigoYaEnCurso           = "ya_en_curso"
+	CodigoPeticionesEnCurso   = string(nucleo.CodigoPeticionesEnCurso) // también errores de la API (409)
+	CodigoYaEnCurso           = string(nucleo.CodigoYaEnCurso)
 	CodigoInstaladorFallo     = "instalador_fallo"
 	CodigoNoEncontrado        = "no_encontrado_tras_instalar"
 	CodigoPlazoAgotado        = "plazo_agotado"
