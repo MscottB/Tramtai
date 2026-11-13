@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: '23 5 * * 1' # los lunes
   workflow_dispatch:
+  # TEMPORAL (ronda 2 de la Tarea 13): para lanzarlo desde la rama. Se quita al terminar.
+  push:
+    branches: ['v0.60/t13-compatibilidad']
+    paths: ['.github/workflows/agentes-compatibilidad.yml']
 
 # Cada job pide lo suyo: leer en la matriz, que ejecuta los instaladores de terceros; escribir en el release solo al
 # publicar; issues solo al avisar.
@@ -68,7 +72,7 @@ jobs:
   publicar:
     name: Juntar, firmar y publicar la lista
     needs: comprobar
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }} # un sistema sin resultado también se avisa
+    if: ${{ !cancelled() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v0.60/t13-compatibilidad') }} # un sistema sin resultado también se avisa
     timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
@@ -167,7 +171,7 @@ jobs:
   avisar:
     name: Avisar de lo que no pasó
     needs: publicar
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (needs.publicar.result == 'failure' || needs.publicar.outputs.fallos == 'si') }}
+    if: ${{ !cancelled() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v0.60/t13-compatibilidad') && (needs.publicar.result == 'failure' || needs.publicar.outputs.fallos == 'si') }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
