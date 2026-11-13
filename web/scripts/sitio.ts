@@ -24,14 +24,17 @@ const REPO = 'https://github.com/MscottB/Tramtai'
 
 // Lugar dice dónde está una página: rel lleva de ella a la raíz del sitio y ruta es su dirección desde la raíz (null en
 // la 404, que no tiene una propia).
-type Actual = 'inicio' | 'ayuda' | 'desarrolladores' | 'servidor' | ''
+export type Actual = 'inicio' | 'producto' | 'agentes' | 'servidor' | 'desarrolladores' | 'ayuda' | 'descargar' | ''
 interface Lugar { rel: string; ruta: string | null; actual: Actual }
 
 // PAGINAS_FIJAS son las páginas escritas a mano; sitio-ayuda.mjs les pone al día las zonas comunes con rellenar.
 export const PAGINAS_FIJAS: (Lugar & { archivo: string })[] = [
   { archivo: 'index.html', rel: '', ruta: '', actual: 'inicio' },
-  { archivo: 'desarrolladores.html', rel: '', ruta: 'desarrolladores.html', actual: 'desarrolladores' },
+  { archivo: 'producto.html', rel: '', ruta: 'producto.html', actual: 'producto' },
+  { archivo: 'agentes.html', rel: '', ruta: 'agentes.html', actual: 'agentes' },
   { archivo: 'servidor.html', rel: '', ruta: 'servidor.html', actual: 'servidor' },
+  { archivo: 'desarrolladores.html', rel: '', ruta: 'desarrolladores.html', actual: 'desarrolladores' },
+  { archivo: 'descargar.html', rel: '', ruta: 'descargar.html', actual: 'descargar' },
 ]
 
 // riesgos son los cinco riesgos de los términos (spec §10), los de riesgos.* de los catálogos: el mismo texto que
@@ -96,12 +99,15 @@ const ICONO_TEMA = {
 const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const soloLectores = (es: string, en: string) => `<span lang="es" class="solo-lectores">${es}</span><span lang="en" class="solo-lectores">${en}</span>`
 
-// cabecera es el enlace para saltar al contenido y la barra: las mismas seis entradas, idioma, tema y Descargar. En
-// pantallas medianas y pequeñas las secciones, el idioma y el tema van juntos en el panel del menú (#menu), así cada
-// control cabe con 44 px. Desde la portada, sus secciones son anclas de la misma página.
+// enlacePagina arma el enlace a una página del sitio con su nombre en los dos idiomas y marca la página actual.
+const enlacePagina = (rel: string, actual: Actual) => (a: Actual, ruta: string, es: string, en: string, clase = ''): string =>
+  `<a href="${ruta ? rel + ruta : rel || './'}"${clase ? ` class="${clase}"` : ''}${a === actual ? ' aria-current="page"' : ''}>${bilingue(es, en)}</a>`
+
+// cabecera es el enlace para saltar al contenido y la barra: las siete páginas, el buscador (oculto hasta que sitio.js lo
+// encienda), idioma, tema, GitHub y Descargar. En pantallas medianas y pequeñas las páginas, el buscador, el idioma y el
+// tema van juntos en el panel del menú (#menu), así cada control cabe con 44 px.
 export function cabecera(rel: string, actual: Actual): string {
-  const raiz = actual === 'inicio' ? '' : rel || './'
-  const marca = (a: Actual) => (a === actual ? ' aria-current="page"' : '')
+  const enlace = enlacePagina(rel, actual)
   const tema = (t: keyof typeof ICONO_TEMA, es: string, en: string) =>
     `<button type="button" data-tema="${t}" aria-pressed="${t === 'sistema'}">${svg(ICONO_TEMA[t])}${soloLectores(es, en)}</button>`
   return `<a class="saltar" href="#contenido">${bilingue('Saltar al contenido', 'Skip to content')}</a>
@@ -111,13 +117,14 @@ export function cabecera(rel: string, actual: Actual): string {
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden>${svg('<path d="M4 7h16M4 12h16M4 17h16"/>')}${soloLectores('Menú', 'Menu')}</button>
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
-        <a href="${raiz}#como">${bilingue('Cómo funciona', 'How it works')}</a>
-        <a href="${raiz}#terminal">Terminal</a>
-        <a href="${raiz}#servidor">${bilingue('Servidor', 'Server')}</a>
-        <a href="${raiz}#agentes">${bilingue('Agentes', 'Agents')}</a>
-        <a href="${rel}ayuda/"${marca('ayuda')}>${bilingue('Ayuda', 'Help')}</a>
-        <a href="${rel}desarrolladores.html"${marca('desarrolladores')}>${bilingue('Desarrolladores', 'Developers')}</a>
+        ${enlace('producto', 'producto.html', 'Producto', 'Product')}
+        ${enlace('agentes', 'agentes.html', 'Agentes', 'Agents')}
+        ${enlace('servidor', 'servidor.html', 'Servidor', 'Server')}
+        ${enlace('desarrolladores', 'desarrolladores.html', 'Desarrolladores', 'Developers')}
+        ${enlace('ayuda', 'ayuda/', 'Ayuda', 'Help')}
+        ${enlace('descargar', 'descargar.html', 'Descargar', 'Download', 'solo-menu')}
       </nav>
+      <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden>${svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}${soloLectores('Buscar', 'Search')}</button>
       <div class="preferencias">
         <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
           <button type="button" data-idioma="es" aria-pressed="true">ES</button>
@@ -131,21 +138,25 @@ export function cabecera(rel: string, actual: Actual): string {
       </div>
     </div>
     <a class="github" href="${REPO}" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="${GITHUB}"/></svg></a>
-    <a class="boton principal" href="${raiz}#descargar" data-descarga>${svg('<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/>')}<span class="boton-texto">${bilingue('Descargar', 'Download')}</span></a>
+    <a class="boton principal" href="${rel || './'}descargar.html"${actual === 'descargar' ? ' aria-current="page"' : ''}>${svg('<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/>')}<span class="boton-texto">${bilingue('Descargar', 'Download')}</span></a>
   </div>
 </header>`
 }
 
 // pie lleva a todo lo que no está en la barra: empezar, el código, las versiones, la licencia y los términos.
-export function pie(rel: string): string {
+export function pie(rel: string, actual: Actual = ''): string {
+  const enlace = enlacePagina(rel, actual)
   return `<footer>
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
-      <a href="${rel || './'}#descargar">${bilingue('Descargar', 'Download')}</a>
+      ${enlace('inicio', '', 'Inicio', 'Home')}
+      ${enlace('producto', 'producto.html', 'Producto', 'Product')}
+      ${enlace('agentes', 'agentes.html', 'Agentes', 'Agents')}
+      ${enlace('servidor', 'servidor.html', 'Servidor', 'Server')}
+      ${enlace('desarrolladores', 'desarrolladores.html', 'Desarrolladores', 'Developers')}
+      ${enlace('ayuda', 'ayuda/', 'Ayuda', 'Help')}
+      ${enlace('descargar', 'descargar.html', 'Descargar', 'Download')}
       <a href="${rel}ayuda/empezar.html">${bilingue('Primeros pasos', 'Getting started')}</a>
-      <a href="${rel}ayuda/">${bilingue('Ayuda', 'Help')}</a>
-      <a href="${rel}desarrolladores.html">${bilingue('Desarrolladores', 'Developers')}</a>
-      <a href="${rel}servidor.html">${bilingue('Modo servidor', 'Server mode')}</a>
       <a href="${REPO}">GitHub</a>
       <a href="${REPO}/releases">${bilingue('Versiones', 'Releases')}</a>
       <a href="${REPO}/blob/main/LICENSE.md">${bilingue('Licencia', 'License')}</a>
@@ -202,8 +213,8 @@ ${paneles.join('\n')}
 // (comun:terminal) solo van donde la página los pide, con los textos de los catálogos y las pantallas de terminal.json.
 export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos; terminal?: Terminal }): string {
   const titulo = desescapar(html.match(/<title[^>]*>([^<]*)<\/title>/)?.[1] ?? 'Tramtai')
-  const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)">/)?.[1] ?? '')
-  const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel) }
+  const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)"[^>]*>/)?.[1] ?? '')
+  const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel, l.actual) }
   const opcionales: Record<string, string> = {
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
@@ -230,6 +241,18 @@ export const ANCLAS_VIEJAS: Record<string, string> = {
 export function destinoAncla(hash: string): string {
   const ancla = hash.replace(/^#/, '')
   return 'ayuda/' + (Object.hasOwn(ANCLAS_VIEJAS, ancla) ? ANCLAS_VIEJAS[ancla] : '')
+}
+
+// ANCLAS_PORTADA lleva cada anclaje de la portada de hoy a su sitio nuevo (spec §7); Inicio la incrusta como salto.
+export const ANCLAS_PORTADA: Record<string, string> = {
+  descargar: 'descargar.html', como: 'producto.html#como', funciones: 'producto.html#funciones', 'por-que': 'producto.html#por-que',
+  privacidad: 'producto.html#privacidad', agentes: 'agentes.html', app: '#formas', terminal: '#formas', servidor: 'servidor.html',
+}
+
+// destinoPortada es el destino de un anclaje viejo, o null si no está en la tabla (la portada nueva lo conserva o no existe).
+export function destinoPortada(hash: string): string | null {
+  const ancla = hash.replace(/^#/, '')
+  return Object.hasOwn(ANCLAS_PORTADA, ancla) ? ANCLAS_PORTADA[ancla] : null
 }
 
 export function escapar(s: string): string {
@@ -271,7 +294,7 @@ ${cabecera(l.rel, l.actual)}
 ${cuerpo}
 </main>
 
-${pie(l.rel)}
+${pie(l.rel, l.actual)}
 </body>
 </html>
 `
@@ -444,7 +467,7 @@ function pagina404(): string {
 }
 
 function sitemap(f: Fuente): string {
-  const urls = ['', 'desarrolladores.html', 'servidor.html', 'ayuda/', ...f.temas.map((t) => `ayuda/${t.id}.html`)]
+  const urls = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html', ...f.temas.map((t) => `ayuda/${t.id}.html`)]
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${URL_SITIO}${u}</loc></url>`).join('\n')}
