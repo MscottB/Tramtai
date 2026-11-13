@@ -325,6 +325,30 @@ func TestYaEnCurso(t *testing.T) {
 	muertos(t, latido, latido+".nieto")
 }
 
+// Ruling 19: al parar el servicio, Cerrar corta las preparaciones en marcha y espera a que su árbol termine; quedan en
+// error con interrumpida (también en disco) y después no se lanza ninguna más.
+func TestCerrar(t *testing.T) {
+	latido := filepath.Join(t.TempDir(), "latido")
+	pr := nueva(t, fichaFalsa(t, "colgar", "PREPARAR_LATIDO="+latido))
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"}); err != nil {
+		t.Fatal(err)
+	}
+	vivos(t, latido, latido+".nieto")
+	pr.p.Cerrar()
+	// Cerrar ya esperó: el estado es el final sin sondear y el árbol está cerrado.
+	if e, _ := pr.p.Estado("falso"); e.Estado != "error" || e.MotivoCodigo != CodigoInterrumpida || e.Fin == nil {
+		t.Fatalf("tras Cerrar: %+v", e)
+	}
+	muertos(t, latido, latido+".nieto")
+	if g, err := pr.p.leer("falso"); err != nil || g.MotivoCodigo != CodigoInterrumpida || g.PID != 0 {
+		t.Fatalf("en disco: %+v %v", g, err)
+	}
+	if _, err := pr.p.Iniciar("falso", contrato.PedidoPreparacion{Accion: "instalar"}); err == nil {
+		t.Fatal("tras Cerrar no se lanza ninguna preparación")
+	}
+	pr.p.Cerrar() // dos veces, o sin nada en marcha, no espera
+}
+
 // EnCurso puede preguntar por el estado: no se llama con el cerrojo tomado.
 func TestEnCursoSinCerrojo(t *testing.T) {
 	pr := nueva(t, fichaFalsa(t, "instalar"))

@@ -461,6 +461,16 @@ func (a *Almacen) ContarOrigenDesde(ctx context.Context, instancia, origen strin
 	return n, err
 }
 
+// ContarEnCurso cuenta los trabajos de la instancia sin terminar (en cola o en marcha) cuyo agente es ese ahora: con
+// alguno, no se instala, actualiza ni desinstala su CLI.
+func (a *Almacen) ContarEnCurso(ctx context.Context, instancia, agente string) (int, error) {
+	var n int
+	err := a.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM trabajos WHERE instancia = ? AND json_extract(solicitud, '$.agente') = ?
+		AND estado NOT IN (?, ?, ?, ?)`, instancia, agente,
+		string(nucleo.Completado), string(nucleo.Fallido), string(nucleo.Cancelado), string(nucleo.Interrumpido)).Scan(&n)
+	return n, err
+}
+
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.
 func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Estado]int, error) {
 	filas, err := a.db.QueryContext(ctx, `SELECT estado, COUNT(*) FROM trabajos WHERE instancia = ? GROUP BY estado`, instancia)

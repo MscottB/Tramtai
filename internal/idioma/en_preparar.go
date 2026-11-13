@@ -51,4 +51,10 @@ func init() {
 		"No se sabe qué versión se instalará, así que no se sabe si está comprobada: si sigues y no lo está, el inicio de sesión automático quedará desactivado hasta que lo esté": "It is not known which version will be installed, so it is not known whether it has been checked: if you go ahead and it has not, automatic sign-in will stay off until it is",
 		"la firma de la lista de versiones comprobadas no es válida: se sigue con la anterior":                                                                                     "the signature of the checked versions list is not valid: the previous list stays in use",
 	})
+	// El servicio y la API (Tarea 7).
+	agregar(map[string]string{
+		"el servicio se está deteniendo: no se lanza ninguna preparación":                                "the service is stopping: no setup is started",
+		"%s se está instalando, actualizando o desinstalando: vuelve a intentarlo cuando termine":        "%s is being installed, updated or uninstalled: try again when it finishes",
+		"en el servidor solo el administrador prepara los agentes: entra en la Web UI con su contraseña": "on the server only the administrator sets up the agents: sign in to the Web UI with their password",
+	})
 }

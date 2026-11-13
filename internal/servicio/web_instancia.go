@@ -23,6 +23,12 @@ import (
 // puntos de acceso. Devuelve false si la ruta no es suya.
 func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *Instancia, privilegiada bool) bool {
 	ruta := r.URL.Path
+	// En el servidor, preparar agentes instala programas en la cuenta del servicio: solo el administrador (su sesión, con
+	// TOTP si lo tiene, o la clave del servicio en el propio servidor), nunca la clave de una app.
+	if strings.HasPrefix(ruta, "/api/v1/agentes/") && !privilegiada && s.entorno() == "servidor" {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("en el servidor solo el administrador prepara los agentes: entra en la Web UI con su contraseña")))
+		return true
+	}
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
 		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
 		e := inst.estado(r.Context())

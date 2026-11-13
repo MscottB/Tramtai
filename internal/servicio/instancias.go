@@ -172,6 +172,9 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Conf
 	opc := planificador.OpcionesDesde(c, id)
 	opc.Registros = s.opc.Registros
 	opc.Desconectado = s.opc.Conexiones.Desconectado
+	if s.preparar != nil {
+		opc.Preparando = s.preparando
+	}
 	opc.Salud = s.opc.Salud
 	opc.Secretos = s.opc.Secretos
 	if c.ProyectoConfiable(raiz) {
@@ -188,7 +191,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Conf
 		return nil, err
 	}
 	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Conexiones: s.opc.Conexiones, Salud: s.opc.Salud, Config: c, Conversor: s.conversor,
-		FijarPrepararAlIniciar: s.fijarPrepararConversor,
+		FijarPrepararAlIniciar: s.fijarPrepararConversor, Preparacion: s.preparar, VersionesAgentes: s.versionesAgentes,
 		PuntosDeGrupo: func(grupo string) []string {
 			var nombres []string
 			for _, punto := range s.puntosDe(id) {
