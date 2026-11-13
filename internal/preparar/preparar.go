@@ -339,6 +339,9 @@ type corrida struct {
 	registro []string // órdenes y resultado, para <id>.log
 	// sinConfirmar es el aviso de un proceso que no confirmó su terminación: su PID y su firma se quedan para Recuperar.
 	sinConfirmar string
+	// avisoListo es el porqué de una preparación que termina en listo sin todo hecho (instalado, pero sin iniciar sesión
+	// porque la versión no está comprobada): va en MotivoCodigo y Mensaje del estado listo.
+	avisoListo *Error
 }
 
 // fijar cambia el estado y lo guarda en disco, con el cerrojo tomado: la última preparación es la última que se escribe.
@@ -400,6 +403,9 @@ func (c *corrida) correr(cancelar context.CancelCauseFunc) {
 	var e *Error
 	switch {
 	case err == nil:
+		if c.avisoListo != nil {
+			codigo, mensaje = c.avisoListo.Codigo, c.avisoListo.Mensaje
+		}
 	case errors.Is(c.ctx.Err(), context.DeadlineExceeded):
 		estado, codigo, mensaje = "error", CodigoPlazoAgotado, idioma.Tf("la preparación superó su plazo de %d min y se cerró", int(math.Ceil(c.p.plazo.Minutes())))
 	case errors.Is(context.Cause(c.base), errCerrado):
@@ -517,10 +523,14 @@ func (c *corrida) ultimaSi() string {
 	return version
 }
 
+// version es el número de versión del CLI («2.1.311»), como en Versiones: las pantallas no interpretan nada. Lo que
+// imprimió --version, tal cual, queda solo en el registro.
 func (c *corrida) version(ruta string) string {
 	ctx, cancelar := context.WithTimeout(c.ctx, 30*time.Second)
 	defer cancelar()
-	return adaptadores.VersionDe(ctx, ruta)
+	texto := adaptadores.VersionDe(ctx, ruta)
+	c.anotar("--version: " + texto)
+	return numeroVersion(texto)
 }
 
 // encontrar busca el CLI tras instalar o actualizar, lee su versión y, si comandos_agentes con su valor predeterminado no

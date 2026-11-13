@@ -28,14 +28,7 @@ func (s *Servicio) actualizacionUI(w http.ResponseWriter, r *http.Request, _ *se
 			api.EscribirError(w, r, err)
 			return
 		}
-		var err error
-		if peticion.Buscar != nil {
-			err = s.fijarBusqueda(*peticion.Buscar)
-		}
-		if err == nil && peticion.BuscarVersionesAgentes != nil {
-			err = s.fijarBuscarVersiones(*peticion.BuscarVersionesAgentes)
-		}
-		if err != nil {
+		if err := s.fijarBusquedas(peticion.Buscar, peticion.BuscarVersionesAgentes); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}

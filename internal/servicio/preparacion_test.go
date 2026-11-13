@@ -349,7 +349,7 @@ func TestFijarBuscarVersiones(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
 	global, _ := configuracion.RutaGlobal()
 	for _, buscar := range []bool{false, true} {
-		if err := s.fijarBuscarVersiones(buscar); err != nil {
+		if err := s.fijarBusquedas(nil, &buscar); err != nil {
 			t.Fatal(err)
 		}
 		texto, _ := os.ReadFile(global)
@@ -374,6 +374,11 @@ func TestRutaBuscarVersiones(t *testing.T) {
 	}
 	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar": false}`); s.buscar.Load() || !s.buscarVersiones.Load() {
 		t.Fatalf("buscar solo cambia la de Tramtai: %s", cuerpo)
+	}
+	// Las dos a la vez se guardan juntas.
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar": true, "buscar_versiones_agentes": false}`); !s.buscar.Load() || s.buscarVersiones.Load() ||
+		!strings.Contains(cuerpo, `"buscar":true`) || !strings.Contains(cuerpo, `"buscar_versiones_agentes":false`) {
+		t.Fatalf("las dos: %s", cuerpo)
 	}
 }
 

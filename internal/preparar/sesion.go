@@ -134,6 +134,7 @@ func (c *corrida) sesionTrasInstalar() error {
 			conVersionSi(c.f.Programa, version), ordenConsola(c.f))
 		c.linea(aviso)
 		c.anotar(aviso)
+		c.avisoListo = &Error{CodigoVersionNoComprobada, aviso}
 		return nil
 	}
 	c.nuevoPlazo()
@@ -203,7 +204,7 @@ func (c *corrida) sesion(version string) error {
 	}
 	c.fijar(func(g *guardado) { g.Estado, g.PidePegar = "comprobando", false })
 	if c.p.o.Comprobar != nil && c.p.o.Comprobar(c.ctx, c.agente).Estado == adaptadores.SesionSin {
-		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada", c.f.Programa)}
+		return &Error{CodigoSalidaNoReconocida, idioma.Tf("%s terminó sin dejar la sesión iniciada: inicia sesión en una consola con %s", c.f.Programa, ordenConsola(c.f))}
 	}
 	return nil
 }

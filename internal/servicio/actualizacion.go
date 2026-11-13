@@ -59,16 +59,32 @@ func (s *Servicio) novedades(ctx context.Context, desde, hasta string) ([]actual
 	return actualizacion.Novedades(ctx, desde, hasta)
 }
 
-// fijarBusqueda guarda servicio.buscar_actualizaciones en la configuración global y lo aplica sin reiniciar.
-func (s *Servicio) fijarBusqueda(buscar bool) error {
+// fijarBusquedas guarda en la configuración global servicio.buscar_actualizaciones y servicio.buscar_versiones_agentes
+// (los que llegan, de una vez: o los dos o ninguno) y los aplica sin reiniciar.
+func (s *Servicio) fijarBusquedas(buscar, versiones *bool) error {
+	valores := map[string]any{}
+	if buscar != nil {
+		valores["servicio.buscar_actualizaciones"] = *buscar
+	}
+	if versiones != nil {
+		valores["servicio.buscar_versiones_agentes"] = *versiones
+	}
+	if len(valores) == 0 {
+		return nil
+	}
 	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.buscar_actualizaciones", buscar); err != nil {
+	if err := configuracion.FijarValores(ruta, configuracion.OrigenGlobal, valores); err != nil {
 		return err
 	}
-	s.buscar.Store(buscar)
+	if buscar != nil {
+		s.buscar.Store(*buscar)
+	}
+	if versiones != nil {
+		s.buscarVersiones.Store(*versiones)
+	}
 	return nil
 }
 

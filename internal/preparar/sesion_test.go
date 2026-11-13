@@ -171,7 +171,7 @@ func TestInstalarSigueConSesion(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := esperando(t, pr.p, false)
-	if e.Accion != "instalar" || e.Enlace != "https://github.com/login/device" || e.Codigo != "1A2B-3C4D" || e.VersionDespues != "falso 1.2.3" {
+	if e.Accion != "instalar" || e.Enlace != "https://github.com/login/device" || e.Codigo != "1A2B-3C4D" || e.VersionDespues != "1.2.3" {
 		t.Fatalf("estado %+v", e)
 	}
 	aprobar(t, aprobado)
@@ -194,6 +194,15 @@ func TestInstalarSigueConSesion(t *testing.T) {
 	if lineas := strings.Join(e.Lineas, "\n"); e.Estado != "listo" || e.Enlace != "" ||
 		!strings.Contains(lineas, "Falso CLI 1.2.3 aún no está comprobado") || !strings.Contains(lineas, "en una consola con falso login") {
 		t.Fatalf("sin la versión comprobada se instala, no se inicia sesión y se dice la orden para la consola: %+v", e)
+	}
+	// El estado listo lo dice también (las pantallas no cuentan el agente como listo para usar).
+	if e.MotivoCodigo != CodigoVersionNoComprobada || !strings.Contains(e.Mensaje, "en una consola con falso login") {
+		t.Fatalf("el aviso va en el estado: %+v", e)
+	}
+	// Una corrida sin aviso no hereda el de la anterior.
+	pr.p.o.Comprobada = func(string, string, string) bool { return true }
+	if e = iniciar(t, pr.p, "actualizar"); e.Estado != "listo" || e.MotivoCodigo != "" || e.Mensaje != "" {
+		t.Fatalf("sin aviso: %+v", e)
 	}
 }
 

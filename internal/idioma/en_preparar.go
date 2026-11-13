@@ -39,10 +39,10 @@ func init() {
 		"%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s": "%s has not been checked with Tramtai yet: automatic sign-in comes back once it is. Meanwhile, you can sign in from a console with %s",
 		"no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s":                                                             "what %s wrote in %d s was not recognized: sign in from a console with %s",
 		"el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo o hazlo en una consola con %s":                               "the %s sign-in failed (it exited with code %d): try again or sign in from a console with %s",
-		"%s terminó sin dejar la sesión iniciada":                                           "%s finished without leaving you signed in",
-		"el código pegado no es válido: una sola línea sin espacios, de %d a %d caracteres": "the pasted code is not valid: a single line without spaces, %d to %d characters",
-		"%s no está esperando ningún código":                                                "%s is not waiting for a code",
-		"no se pudo pasar el código a %s":                                                   "could not pass the code to %s",
+		"%s terminó sin dejar la sesión iniciada: inicia sesión en una consola con %s":                                                                "%s finished without leaving you signed in: sign in from a console with %s",
+		"el código pegado no es válido: una sola línea sin espacios, de %d a %d caracteres":                                                           "the pasted code is not valid: a single line without spaces, %d to %d characters",
+		"%s no está esperando ningún código": "%s is not waiting for a code",
+		"no se pudo pasar el código a %s":    "could not pass the code to %s",
 	})
 	// Las versiones comprobadas (Tarea 5).
 	agregar(map[string]string{

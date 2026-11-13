@@ -185,7 +185,7 @@ type Servicio struct {
 
 	// preparar instala, actualiza y desinstala los CLI de los agentes para todo el servicio; nil sin PrepararAgentes.
 	// versiones es su última comprobación de versiones (versionesEn, cuándo empezó), que se sirve sin repetirla.
-	// buscarVersiones es servicio.buscar_versiones_agentes, en marcha (fijarBuscarVersiones); calculo, la comprobación en
+	// buscarVersiones es servicio.buscar_versiones_agentes, en marcha (fijarBusquedas); calculo, la comprobación en
 	// marcha, que comparten quienes la piden a la vez.
 	preparar        preparacion
 	buscarVersiones atomic.Bool

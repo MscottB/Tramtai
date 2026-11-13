@@ -50,24 +50,12 @@ func (s *Servicio) nuevaPreparacion() *preparar.Preparador {
 			return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
 		},
 		Agentes:         agentesPreparables(),
-		BuscarVersiones: s.buscarVersiones.Load, // en marcha: Ajustes lo cambia con fijarBuscarVersiones
+		BuscarVersiones: s.buscarVersiones.Load, // en marcha: Ajustes lo cambia con fijarBusquedas
 	})
 	p.Recuperar()
 	return p
 }
 
-// fijarBuscarVersiones guarda servicio.buscar_versiones_agentes en la configuración global y lo aplica sin reiniciar.
-func (s *Servicio) fijarBuscarVersiones(buscar bool) error {
-	ruta, err := configuracion.RutaGlobal()
-	if err != nil {
-		return err
-	}
-	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.buscar_versiones_agentes", buscar); err != nil {
-		return err
-	}
-	s.buscarVersiones.Store(buscar)
-	return nil
-}
 
 // peticionesEnCurso cuenta las peticiones sin terminar del agente en todas las instancias abiertas.
 func (s *Servicio) peticionesEnCurso(agente string) int {

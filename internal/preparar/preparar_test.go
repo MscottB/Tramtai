@@ -212,15 +212,19 @@ func TestInstalarYEncontrar(t *testing.T) {
 	pr := nueva(t, fichaFalsa(t, "instalar"))
 	e := iniciar(t, pr.p, "instalar")
 	ruta := filepath.Join(pr.casa, "bin", nombreFalso())
-	if e.Estado != "listo" || e.VersionDespues != "falso 1.2.3" {
+	// La versión va como número (como en Versiones); lo que imprimió --version, tal cual, solo en el registro.
+	if e.Estado != "listo" || e.VersionDespues != "1.2.3" {
 		t.Fatalf("estado %+v", e)
+	}
+	if registro, _ := os.ReadFile(filepath.Join(pr.datos, "agentes", "preparaciones", "falso.log")); !strings.Contains(string(registro), "falso 1.2.3") {
+		t.Fatalf("el registro guarda lo que imprimió --version: %s", registro)
 	}
 	if g := pr.guardadasHasta(); !slices.Equal(g, []string{"falso=" + ruta}) {
 		t.Fatalf("comandos_agentes recibió %q, se esperaba %s", g, ruta)
 	}
 	// Actualizar lanza el CLI suelto («falso update») por la ruta de la receta, no por el PATH.
 	e = iniciar(t, pr.p, "actualizar")
-	if e.Estado != "listo" || e.VersionAntes != "falso 1.2.3" || !slices.Contains(e.Lineas, "actualizado") {
+	if e.Estado != "listo" || e.VersionAntes != "1.2.3" || !slices.Contains(e.Lineas, "actualizado") {
 		t.Fatalf("actualizar: %+v", e)
 	}
 }
@@ -399,7 +403,7 @@ func TestDesinstalarNoBorraDatos(t *testing.T) {
 		t.Fatal(err)
 	}
 	iniciar(t, pr.p, "instalar")
-	if e := iniciar(t, pr.p, "desinstalar"); e.Estado != "listo" || e.VersionAntes != "falso 1.2.3" {
+	if e := iniciar(t, pr.p, "desinstalar"); e.Estado != "listo" || e.VersionAntes != "1.2.3" {
 		t.Fatalf("estado %+v", e)
 	}
 	if _, err := os.Stat(ruta); !os.IsNotExist(err) {

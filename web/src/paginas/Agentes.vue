@@ -2,7 +2,7 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="agentes" :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
       <template #acciones>
-        <q-btn data-recorrido="agentes.recomprobar" flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="recomprobar" />
+        <q-btn data-recorrido="agentes.recomprobar" flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando || comprobandoVersiones" @click="recomprobar" />
       </template>
     </CabeceraPagina>
 
@@ -42,7 +42,7 @@
              comprobada), «⋯» con el resto y, mientras se prepara, su panel. -->
         <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md">
           <PanelPreparacion v-if="paneles[a.agente]" :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion"
-            :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @fin="alTerminar(a.agente)" @cerrar="delete paneles[a.agente]" />
+            :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
           <template v-else>
             <div v-if="versionNueva(versiones[a.agente])" class="text-body2 q-mb-xs">
               {{ t('preparar.hayNueva', { ultima: versionNueva(versiones[a.agente]), instalada: versiones[a.agente].instalada ?? '' }) }}</div>
@@ -50,7 +50,7 @@
             <div class="row items-center q-gutter-sm">
               <q-btn v-if="principal(a).accion" unelevated dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)"
                 @click="preparar(a.agente, principal(a).accion!)" />
-              <q-btn flat round dense icon="more_horiz" :aria-label="t('preparar.acciones', { agente: nombreAgente(a.agente) })">
+              <q-btn flat round dense icon="more_horiz" :loading="comprobandoVersiones" :aria-label="t('preparar.acciones', { agente: nombreAgente(a.agente) })">
                 <q-menu>
                   <q-list style="min-width: 220px">
                     <q-item v-close-popup clickable @click="cargarVersiones(true)">
@@ -196,7 +196,7 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-medium">{{ nombreAgente(a.agente) }}</q-item-label>
-                <q-item-label v-if="principal(a).accion" caption>{{ t('preparar.instalarTexto') }}</q-item-label>
+                <q-item-label v-if="principal(a).accion" caption>{{ t(conSesion(a.agente) ? 'preparar.instalarTexto' : 'preparar.instalarTextoClave') }}</q-item-label>
                 <q-item-label v-else caption>{{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}</q-item-label>
                 <q-item-label v-if="principal(a).aviso" caption class="text-body2 q-mt-xs">{{ principal(a).aviso }}</q-item-label>
               </q-item-section>
@@ -210,7 +210,7 @@
             </q-item>
             <div v-if="paneles[a.agente]" class="q-px-md q-pb-md">
               <PanelPreparacion :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion" :borrar-datos="paneles[a.agente].borrar"
-                :confirmar="paneles[a.agente].confirmar" @fin="alTerminar(a.agente)" @cerrar="delete paneles[a.agente]" />
+                :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
             </div>
             </template>
           </q-list>
@@ -239,7 +239,7 @@
           <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" />
         </q-card-section>
         <q-card-section class="q-pt-none">
-          <div v-if="registro.estado?.lineas?.length" class="bloque-codigo sin-ajuste text-caption" tabindex="0" :aria-label="t('preparar.registro')">
+          <div v-if="registro.estado?.lineas?.length" class="bloque-codigo sin-ajuste text-caption" role="log" tabindex="0" :aria-label="t('preparar.registro')">
             <div v-for="(linea, i) in registro.estado.lineas" :key="i"><template v-for="(trozo, j) in trozos(linea)" :key="j"><mark v-if="j % 2">{{ trozo }}</mark><template v-else>{{ trozo }}</template></template></div>
           </div>
           <div v-else class="texto-suave">{{ t('preparar.sinRegistro') }}</div>
@@ -258,7 +258,7 @@ import PanelPreparacion from '../componentes/PanelPreparacion.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador, EstadoPreparacion, VersionesAgente } from '../api/tipos'
-import { accionPrincipal, confirmarDesinstalar, enMarcha, trozos, versionNueva, type Accion } from '../preparacion'
+import { accionPrincipal, confirmarDesinstalar, conSesion, enMarcha, trozos, versionNueva, type Accion } from '../preparacion'
 import { sesion } from '../estado'
 import type { Destino } from '../navegacion'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
@@ -413,11 +413,15 @@ async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
 // Preparar los CLI desde aquí. versiones lanza --version de cada CLI en el servicio: se pide al abrir la página y con
 // «Volver a comprobar» o «Comprobar versión» (forzar), nunca en el sondeo de cada 5 minutos.
 const versiones = ref<Record<string, VersionesAgente>>({})
+const comprobandoVersiones = ref(false)
 async function cargarVersiones(forzar = false) {
+  comprobandoVersiones.value = true
   try {
     versiones.value = Object.fromEntries((await api.versionesAgentes(forzar)).map((v) => [v.agente, v]))
   } catch (e) {
     if (forzar) avisarError(e) // al abrir, sin versiones las tarjetas siguen como antes
+  } finally {
+    comprobandoVersiones.value = false
   }
 }
 function recomprobar() {
@@ -435,11 +439,22 @@ function preparar(agente: string, accion?: Accion, opciones: { borrar?: boolean;
   if (adaptadores.value?.find((a) => a.agente === agente && instalado(a))) abierto.value = agente
   else otrosAbierto.value = true
 }
-// alTerminar refresca la tarjeta. El panel pasa a solo mirar el estado: si el agente cambia de lista (instalado o
-// desinstalado) se vuelve a montar y no debe lanzar la acción otra vez.
-function alTerminar(agente: string) {
+// soloMirar: en cuanto el servicio acepta la acción, el panel pasa a solo seguir su estado. Si el agente cambia de lista
+// a mitad (cualquier cargar: el sondeo de 5 minutos, «Volver a comprobar», el final de otro panel), el panel se vuelve a
+// montar y no debe lanzarla otra vez.
+function soloMirar(agente: string) {
   const panel = paneles.value[agente]
-  if (panel) panel.accion = undefined
+  if (panel) Object.assign(panel, { accion: undefined, confirmar: undefined })
+}
+// Un agente con panel que cambia de lista (se instaló o se desinstaló) se enseña desplegado con su panel.
+watch(() => instalados.value.map((a) => a.agente), (ahora, antes) => {
+  for (const agente of Object.keys(paneles.value)) {
+    if (ahora.includes(agente) && !antes?.includes(agente)) abierto.value = agente
+    else if (!ahora.includes(agente) && antes?.includes(agente)) otrosAbierto.value = true
+  }
+})
+// alTerminar refresca las tarjetas.
+function alTerminar() {
   cargar()
   cargarVersiones()
 }
