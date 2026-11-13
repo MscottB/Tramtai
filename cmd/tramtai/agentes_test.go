@@ -714,3 +714,20 @@ func TestAgentesVersionesComprobar(t *testing.T) {
 		t.Fatalf("consultas: %q", pedidas)
 	}
 }
+
+// TestAgentesCtrlCAdoptada: Ctrl+C siguiendo una preparación que lanzó otra pantalla sale con 130, no la cancela y dice
+// que sigue en marcha.
+func TestAgentesCtrlCAdoptada(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya"}
+	}
+	f.cola = map[string][]contrato.EstadoPreparacion{"claude": {est("claude", "instalar", "instalando")}}
+	servicioConPreparacion(t, f)
+	ctx, parar := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer parar()
+	salidaTexto, err := ejecutarCtx(t, ctx, entradaSinFin(t), "agentes", "instalar", "claude")
+	if _, _, cancelados := f.vistos(); salida(err) != 130 || len(cancelados) != 0 || !strings.Contains(salidaTexto, "sigue en marcha: la lanzó otra pantalla") {
+		t.Fatalf("adoptada: %v %v\n%s", err, cancelados, salidaTexto)
+	}
+}

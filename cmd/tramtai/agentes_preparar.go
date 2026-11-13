@@ -442,6 +442,7 @@ func (p *preparador) seguir(id string, e contrato.EstadoPreparacion) (contrato.E
 // lanzó otra pantalla no se corta.
 func (p *preparador) cancelar(id string) error {
 	if p.adoptada {
+		fmt.Fprintln(p.aviso, "\n"+idioma.Tf("La preparación de %s sigue en marcha: la lanzó otra pantalla; cancélala desde allí", agentes.NombreVisible(id)))
 		return p.salirCancelado()
 	}
 	p.parar()
