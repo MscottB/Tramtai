@@ -129,11 +129,20 @@ export const siguienteTrasSaltar = (i: number, n: number): number | 'fin' => (i 
 // CODIGOS_EXPLICADOS: los códigos de error de preparar con explicación en preparar.error.* (uno nuevo del servicio se
 // queda con su detalle).
 export const CODIGOS_EXPLICADOS = ['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
-  'no_disponible_en_servidor', 'interrumpida']
+  'interrumpida']
 
-// CON_ORDEN_A_MANO: los códigos cuyo mensaje del servicio ya dice cómo iniciar sesión a mano; en el resumen no hay nada
-// debajo, así que la razón es ese mensaje.
-const CON_ORDEN_A_MANO = ['salida_no_reconocida', 'inicio_sesion_fallo']
+// conAMano: el estado dice cómo iniciar sesión a mano: un inicio de sesión que no se reconoció o falló, o uno sin
+// comprobar (al iniciar sesión, o el listo de instalar que no siguió con él). La orden llega aparte, en orden_consola, y
+// la frase se arma aquí en el idioma de la Web UI (Ruling 37).
+export const conAMano = (e?: EstadoPreparacion | null) => !!e?.motivo_codigo && (['salida_no_reconocida', 'inicio_sesion_fallo'].includes(e.motivo_codigo)
+  || (e.motivo_codigo === 'version_no_comprobada' && (e.accion === 'iniciar_sesion' || e.estado === 'listo')))
+
+// aMano: cómo iniciar sesión a mano. Sin orden, la cuenta del servicio no tiene consola (Windows Server): su clave de API.
+export const aMano = (x: { orden_consola?: string }) => (x.orden_consola ? t('preparar.aMano', { orden: x.orden_consola }) : t('preparar.aManoSinConsola'))
+
+// razonAMano: por qué no se inició sesión y cómo hacerlo a mano, en una frase (donde no hay nada debajo: el resumen de la
+// bienvenida, la tarjeta y el listo del panel).
+export const razonAMano = (codigo: string, x: { orden_consola?: string }) => `${t(('preparar.causa.' + codigo) as Clave)} ${aMano(x)}`
 
 // resumenFinal separa los agentes que quedaron listos de verdad de los que no, con el porqué de cada uno. Un agente que va
 // solo con clave (Antigravity) instalado aún no se puede usar; fallos trae por qué no se lanzó uno (sin estado). Con
@@ -148,8 +157,9 @@ export function resumenFinal(agentes: string[], estados: Record<string, EstadoPr
     if (faltaSuscripcion(e, adaptador(agente))) return { agente, razon: t('bienvenida.faltaSuscripcion'), suscripcion: true }
     const razon = !e ? (fallos[agente] ? t('bienvenida.noSeLanzo', { motivo: fallos[agente] }) : t('bienvenida.saltado'))
       : e.estado === 'cancelado' ? t('bienvenida.cancelado') : listoParaUsar(e) ? t('bienvenida.faltaClave')
-        : e.motivo_codigo && CON_ORDEN_A_MANO.includes(e.motivo_codigo) && e.mensaje ? e.mensaje
-          : e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(('preparar.error.' + e.motivo_codigo) as Clave) : e.mensaje || t('bienvenida.sinTerminar')
+        : conAMano(e) ? razonAMano(e.motivo_codigo!, e)
+          : e.motivo_codigo === 'version_no_comprobada' ? t('preparar.noComprobadaTitulo', { agente: nombreAgente(agente) }) + '.'
+            : e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(('preparar.error.' + e.motivo_codigo) as Clave) : e.mensaje || t('bienvenida.sinTerminar')
     return { agente, razon }
   })
   return { listos, pendientes }
@@ -178,10 +188,10 @@ export interface Principal {
   aviso?: string
 }
 
-// avisoNoComprobada es el aviso de la tarjeta para una acción con la versión sin comprobar (para iniciar sesión, el
-// motivo del servicio, que trae la orden para la consola).
+// avisoNoComprobada es el aviso de la tarjeta para una acción con la versión sin comprobar (para iniciar sesión, con la
+// orden para la consola).
 export function avisoNoComprobada(accion: Accion, agente: string, v?: VersionesAgente): string {
-  if (accion === 'iniciar_sesion' && v?.motivo_codigo === 'version_no_comprobada' && v.motivo) return v.motivo
+  if (accion === 'iniciar_sesion' && v?.motivo_codigo === 'version_no_comprobada') return razonAMano('version_no_comprobada', v)
   if (accion === 'actualizar') return t('preparar.noComprobada.actualizar')
   const titulo = t('preparar.noComprobadaTitulo', { agente: nombreAgente(agente) }) + '.'
   return accion === 'instalar' && conSesion(agente) ? `${titulo} ${t('preparar.noComprobada.instalar')}` : titulo

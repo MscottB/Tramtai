@@ -55,7 +55,7 @@ export const CLAVES_AGENTES: string[] = [
   ...['instalar', 'actualizar', 'iniciar_sesion', 'desinstalar'].map((a) => 'preparar.fallo.' + a),
   ...['instalar', 'actualizar', 'desinstalar', 'iniciar_sesion'].map((a) => 'preparar.noComprobada.' + a),
   ...['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
-    'no_disponible_en_servidor', 'interrumpida'].map((c) => 'preparar.error.' + c),
+    'interrumpida'].map((c) => 'preparar.error.' + c),
 ]
 
 // CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los

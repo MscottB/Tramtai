@@ -39,12 +39,15 @@
         </form>
       </template>
 
-      <!-- Falló: qué hacer y el detalle del servicio. Un listo con motivo (instalado sin iniciar sesión) dice por qué. -->
+      <!-- Falló: qué hacer y, debajo, cómo iniciar sesión a mano (en el idioma de la Web UI) o el detalle del servicio. Un
+           listo con motivo (instalado sin iniciar sesión) dice por qué. -->
       <template v-if="estados[agente]?.estado === 'error'">
         <div class="text-body2">{{ explicacion(estados[agente]!) }}</div>
-        <div v-if="estados[agente]!.mensaje" class="text-caption texto-suave romper">{{ estados[agente]!.mensaje }}</div>
+        <div v-if="conAMano(estados[agente])" class="text-body2 romper">{{ aMano(estados[agente]!) }}</div>
+        <div v-else-if="estados[agente]!.mensaje" class="text-caption texto-suave romper">{{ estados[agente]!.mensaje }}</div>
       </template>
-      <div v-else-if="estados[agente]?.estado === 'listo' && estados[agente]!.mensaje" class="aviso text-body2 romper">{{ estados[agente]!.mensaje }}</div>
+      <div v-else-if="estados[agente]?.estado === 'listo' && estados[agente]!.motivo_codigo && (conAMano(estados[agente]) || estados[agente]!.mensaje)" class="aviso text-body2 romper">
+        {{ conAMano(estados[agente]) ? razonAMano(estados[agente]!.motivo_codigo!, estados[agente]!) : estados[agente]!.mensaje }}</div>
       <div v-if="fallos[agente]" class="text-body2" role="alert">{{ fallos[agente] }}</div>
 
       <!-- Inició sesión, pero Tramtai aún lo usa con clave de API y no hay ninguna: «Usar mi suscripción» ahí mismo, con su
@@ -89,7 +92,7 @@ import { sesion } from '../estado'
 import { sinDato } from '../formato'
 import { esServidor, estadoServidor, ordenUsarSuscripcion, puedeElegirSuscripcion } from '../servidor'
 import { usarSuscripcion } from '../suscripcion'
-import { AVISOS_SESION, CODIGOS_EXPLICADOS, conSesion, enMarcha, faltaSuscripcion, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
+import { AVISOS_SESION, CODIGOS_EXPLICADOS, aMano, conAMano, conSesion, razonAMano, enMarcha, faltaSuscripcion, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 

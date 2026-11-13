@@ -58,6 +58,7 @@ export const preparar: Tema = {
         { id: 'preparar-node', pregunta: 'ayuda.preparar.pNode', respuesta: 'ayuda.preparar.rNode' },
         { id: 'preparar-cerrar', pregunta: 'ayuda.preparar.pCerrar', respuesta: 'ayuda.preparar.rCerrar' },
         { id: 'preparar-desactivada', pregunta: 'ayuda.preparar.pDesactivada', respuesta: 'ayuda.preparar.rDesactivada' },
+        { id: 'preparar-consola', pregunta: 'ayuda.preparar.pConsola', respuesta: 'ayuda.preparar.rConsola' },
         { id: 'preparar-no-avanza', pregunta: 'ayuda.preparar.pNoAvanza', respuesta: 'ayuda.preparar.rNoAvanza' },
         { id: 'preparar-sitios', pregunta: 'ayuda.preparar.pSitios', respuesta: 'ayuda.preparar.rSitios' },
         { id: 'preparar-sin-consulta', pregunta: 'ayuda.preparar.pSinConsulta', respuesta: 'ayuda.preparar.rSinConsulta' },

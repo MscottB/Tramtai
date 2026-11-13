@@ -305,6 +305,10 @@
               "Porque esa versión del CLI aún no está comprobada con Tramtai. El aviso trae la orden para hacerlo en una consola, y vuelve solo cuando la versión entra en la lista."
             ],
             [
+              "¿Por qué la orden para la consola lleva una ruta?",
+              "Si la consola no encuentra el CLI por su nombre (el instalador de Claude no toca el PATH), la orden lleva su ruta completa. En Windows va para PowerShell; en cmd, quita el «&» del principio."
+            ],
+            [
               "¿Y si el inicio de sesión no avanza?",
               "Si el CLI escribe algo que Tramtai no reconoce, lo cancela, enseña sus últimas líneas con el enlace resaltado y la orden para la consola, y aparta esa versión hasta que la lista la confirme."
             ],
@@ -322,7 +326,7 @@
             ],
             [
               "¿Desinstalar borra mi sesión?",
-              "No, salvo que marques «Borrar también su sesión y ajustes». Pide confirmación porque el CLI deja de estar también fuera de Tramtai."
+              "No, salvo que marques «Borrar también su sesión y ajustes». Borra los archivos que dejó su instalador (ningún CLI trae orden para eso) y pide confirmar: deja de estar también fuera de Tramtai."
             ],
             [
               "¿Y en el modo servidor?",
@@ -2079,6 +2083,10 @@
               "Because that CLI version hasn’t been checked with Tramtai yet. The notice has the command to do it in a console, and it comes back by itself once the version is on the list."
             ],
             [
+              "Why does the console command have a path?",
+              "If the console can’t find the CLI by name (Claude’s installer doesn’t touch the PATH), the command has its full path. On Windows it’s for PowerShell; in cmd, remove the “&” at the start."
+            ],
+            [
               "What if sign-in doesn’t move on?",
               "If the CLI writes something Tramtai doesn’t recognize, it cancels, shows its last lines with the link highlighted and the console command, and sets that version aside until the list confirms it."
             ],
@@ -2096,7 +2104,7 @@
             ],
             [
               "Does uninstalling delete my session?",
-              "No, unless you tick “Also delete its session and settings”. It asks you to confirm because the CLI also stops being there outside Tramtai."
+              "No, unless you tick “Also delete its session and settings”. It deletes the files its installer left (no CLI has a command for that) and asks you to confirm: it’s gone outside Tramtai too."
             ],
             [
               "And in server mode?",
@@ -2564,7 +2572,7 @@
             ],
             [
               "What if the converter is missing?",
-              "Settings → Files → “Prepare files”, or “tramtai conversor preparar”. If your network blocks the download, use the converter package for Windows."
+              "Settings → Files → “Prepare files”, or “tramtai converter prepare”. If your network blocks the download, use the converter package for Windows."
             ],
             [
               "Does anything leave my computer when converting?",
@@ -2946,7 +2954,7 @@
             ],
             [
               "And from the terminal?",
-              "“tramtai espacios” lists them; “tramtai espacio iniciar”, “detener” and “olvidar” do the same as the page."
+              "“tramtai workspaces” lists them; “tramtai workspace start”, “stop” and “forget” do the same as the page."
             ]
           ]
         },
@@ -2959,7 +2967,7 @@
             ],
             [
               "This project’s workspace is stopped (espacio_detenido)",
-              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+              "You are inside a stopped project. Start it with tramtai workspace start, or use --global to send to the global one."
             ]
           ]
         },
@@ -3020,11 +3028,11 @@
             ],
             [
               "What if the workspace key leaks?",
-              "Regenerate it in “Workspace key” in My APIs, or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project). The old one stops working at once. Per-app APIs do not change."
+              "Regenerate it in “Workspace key” in My APIs, or with “tramtai global token --rotar” (“tramtai project token --rotar” in a project). The old one stops working at once. Per-app APIs do not change."
             ],
             [
               "Where do I see the workspace key?",
-              "Only when you create or regenerate it. A new workspace has no key: create it in “Workspace key” in My APIs or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project)."
+              "Only when you create or regenerate it. A new workspace has no key: create it in “Workspace key” in My APIs or with “tramtai global token --rotar” (“tramtai project token --rotar” in a project)."
             ],
             [
               "What if I use the TRAMTAI_TOKEN_GLOBAL variable?",
@@ -3084,7 +3092,7 @@
             ],
             [
               "How do I update without the Windows installer?",
-              "Homebrew: “brew upgrade”. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, “tramtai actualizar” (“--comprobar” only checks)."
+              "Homebrew: “brew upgrade”. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, “tramtai update” (“--comprobar” only checks)."
             ],
             [
               "Can I check for a version now?",
@@ -3440,7 +3448,7 @@
             ],
             [
               "This project’s workspace is stopped (espacio_detenido)",
-              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+              "You are inside a stopped project. Start it with tramtai workspace start, or use --global to send to the global one."
             ]
           ]
         },

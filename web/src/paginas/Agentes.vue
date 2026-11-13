@@ -39,8 +39,9 @@
             </template>
             <div class="q-px-md q-pb-md">
         <!-- Su CLI, desde aquí: la versión nueva, la acción principal de preparar (o el aviso si su versión no está
-             comprobada), «⋯» con el resto y, mientras se prepara, su panel. -->
-        <div v-if="versiones[a.agente] || paneles[a.agente]" class="q-mb-md" data-recorrido="agentes.preparar">
+             comprobada), «⋯» con el resto y, mientras se prepara, su panel. Un agente listo sin nada de eso no tiene esta
+             fila: su «⋯» va junto a «Probar». -->
+        <div v-if="(versiones[a.agente] || paneles[a.agente]) && !soloMenu(a)" class="q-mb-md" data-recorrido="agentes.preparar">
           <PanelPreparacion v-if="paneles[a.agente]" :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion"
             :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
           <template v-else>
@@ -51,32 +52,8 @@
               <!-- Con el agente listo, la principal de la tarjeta es «Probar»: actualizar va contorneado, sin competir con ella. -->
               <q-btn v-if="principal(a).accion" :unelevated="!listo(a)" :outline="listo(a)" dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)"
                 @click="preparar(a.agente, principal(a).accion!)" />
-              <q-btn flat round dense icon="more_horiz" :loading="comprobandoVersiones" :aria-label="t('preparar.acciones', { agente: nombreAgente(a.agente) })">
-                <q-menu>
-                  <q-list style="min-width: 220px">
-                    <q-item v-close-popup clickable @click="cargarVersiones(true)">
-                      <q-item-section avatar><q-icon name="o_refresh" /></q-item-section>
-                      <q-item-section>{{ t('preparar.comprobarVersion') }}</q-item-section>
-                    </q-item>
-                    <q-item v-if="versiones[a.agente]?.acciones.includes('actualizar')" v-close-popup clickable @click="preparar(a.agente, 'actualizar')">
-                      <q-item-section avatar><q-icon name="o_upgrade" /></q-item-section>
-                      <q-item-section>{{ t('preparar.actualizar') }}</q-item-section>
-                    </q-item>
-                    <q-item v-close-popup clickable @click="verRegistro(a.agente)">
-                      <q-item-section avatar><q-icon name="o_receipt_long" /></q-item-section>
-                      <q-item-section>{{ t('preparar.verRegistro') }}</q-item-section>
-                    </q-item>
-                    <!-- La destructiva, aparte y al final, en color de error. -->
-                    <template v-if="versiones[a.agente]?.acciones.includes('desinstalar')">
-                      <q-separator />
-                      <q-item v-close-popup clickable class="text-negative" @click="desinstalar(a.agente)">
-                        <q-item-section avatar><q-icon name="o_delete" color="negative" /></q-item-section>
-                        <q-item-section>{{ t('preparar.desinstalar') }}</q-item-section>
-                      </q-item>
-                    </template>
-                  </q-list>
-                </q-menu>
-              </q-btn>
+              <MenuPreparacion :agente="a.agente" :versiones="versiones[a.agente]" :comprobando="comprobandoVersiones" @comprobar="cargarVersiones(true)"
+                @preparar="preparar(a.agente, $event)" @registro="verRegistro(a.agente)" @desinstalar="desinstalar(a.agente)" />
             </div>
           </template>
         </div>
@@ -100,6 +77,9 @@
           <q-btn v-if="suscripcion(a) ? puedeVolver(a) : puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
             :label="suscripcion(a) ? t('agentes.cambiarAClave') : t('agentes.cambiarASuscripcion')"
             @click="suscripcion(a) ? cambiar(a, 'clave_api') : confirmarSuscripcion(a)" />
+          <MenuPreparacion v-if="soloMenu(a)" class="q-mt-md" :agente="a.agente" :versiones="versiones[a.agente]" :comprobando="comprobandoVersiones"
+            data-recorrido="agentes.preparar" @comprobar="cargarVersiones(true)" @preparar="preparar(a.agente, $event)" @registro="verRegistro(a.agente)"
+            @desinstalar="desinstalar(a.agente)" />
         </template>
 
         <!-- Falta conectarlo: las dos opciones, lado a lado -->
@@ -258,6 +238,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import PanelPreparacion from '../componentes/PanelPreparacion.vue'
+import MenuPreparacion from '../componentes/MenuPreparacion.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador, EstadoPreparacion, VersionesAgente } from '../api/tipos'
@@ -426,6 +407,10 @@ function recomprobar() {
   cargarVersiones(true)
 }
 const principal = (a: Adaptador) => accionPrincipal(a, versiones.value[a.agente])
+// soloMenu: listo, sin panel, sin versión nueva ni acción ni aviso de preparar: la fila de preparar solo tendría «⋯», que
+// va entonces junto a «Probar».
+const soloMenu = (a: Adaptador) => listo(a) && !!versiones.value[a.agente] && !paneles.value[a.agente] && !versionNueva(versiones.value[a.agente])
+  && !principal(a).accion && !principal(a).aviso
 // abierto es la tarjeta desplegada de los instalados (la de una preparación se abre sola).
 const abierto = ref('')
 // paneles: la preparación que enseña cada agente; n cambia con cada acción para lanzar un panel nuevo.
