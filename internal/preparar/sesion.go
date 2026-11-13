@@ -129,9 +129,9 @@ func (c *corrida) sesionTrasInstalar() error {
 		return nil
 	}
 	version := numeroVersion(c.t.g.VersionDespues) // solo la escribe esta corrida
-	if c.p.o.Comprobada != nil && !c.p.o.Comprobada(c.agente, "iniciar_sesion", version) {
+	if !c.p.o.Comprobada(c.agente, "iniciar_sesion", version) {
 		aviso := idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
-			c.conVersionSi(version), c.ordenConsola())
+			conVersionSi(c.f.Programa, version), ordenConsola(c.f))
 		c.linea(aviso)
 		c.anotar(aviso)
 		return nil
@@ -141,8 +141,8 @@ func (c *corrida) sesionTrasInstalar() error {
 }
 
 // ordenConsola es el inicio de sesión para hacerlo a mano («claude auth login»).
-func (c *corrida) ordenConsola() string {
-	return strings.Join(append([]string{c.f.Comando}, c.r.Sesion.Argumentos...), " ")
+func ordenConsola(f adaptadores.Ficha) string {
+	return strings.Join(append([]string{f.Comando}, f.Receta.Sesion.Argumentos...), " ")
 }
 
 // sesion lanza el inicio de sesión del CLI con tuberías (el M0 no pidió pty a ninguno) y la entrada abierta para lo
@@ -192,14 +192,14 @@ func (c *corrida) sesion(version string) error {
 			c.anotar(err.Error())
 		}
 		return &Error{CodigoSalidaNoReconocida, idioma.Tf("no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s",
-			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), c.ordenConsola())}
+			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), ordenConsola(c.f))}
 	}
 	if err != nil {
 		return err
 	}
 	if salida != 0 {
 		return &Error{CodigoInicioSesionFallo, idioma.Tf("el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo o hazlo en una consola con %s",
-			c.f.Programa, salida, c.ordenConsola())}
+			c.f.Programa, salida, ordenConsola(c.f))}
 	}
 	c.fijar(func(g *guardado) { g.Estado, g.PidePegar = "comprobando", false })
 	if c.p.o.Comprobar != nil && c.p.o.Comprobar(c.ctx, c.agente).Estado == adaptadores.SesionSin {
@@ -237,8 +237,3 @@ func (p *Preparador) Codigo(agente, codigo string) error {
 	}
 	return nil
 }
-
-// Marcar anota en este equipo que esa versión del agente no es compatible (su inicio de sesión no se reconoció) hasta que
-// la lista firmada la vuelva a confirmar.
-// shortcut: no guarda nada; la Tarea 5 lo escribe en datos/agentes/compatibilidad.json.
-func (p *Preparador) Marcar(agente, version string) error { return nil }

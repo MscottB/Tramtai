@@ -161,6 +161,8 @@ func nueva(t *testing.T, f adaptadores.Ficha) *prueba {
 			return nil
 		},
 		UltimaVersion: func(context.Context, string) (string, error) { return "1.2.3", nil },
+		// Sin este gancho valdría el del preparador, con las Comprobadas de la ficha (la falsa no tiene).
+		Comprobada: func(string, string, string) bool { return true },
 		// El inicio de sesión falso deja ~/.falso-sesion al terminar bien.
 		Comprobar: func(context.Context, string) adaptadores.SesionCLI {
 			if _, err := os.Stat(filepath.Join(pr.casa, ".falso-sesion")); err == nil {

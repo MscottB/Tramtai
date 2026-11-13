@@ -44,4 +44,8 @@ func init() {
 		"%s no está esperando ningún código":                                                "%s is not waiting for a code",
 		"no se pudo pasar el código a %s":                                                   "could not pass the code to %s",
 	})
+	// Las versiones comprobadas (Tarea 5).
+	agregar(map[string]string{
+		"%s aún no está comprobado con Tramtai: si sigues, el inicio de sesión automático quedará desactivado hasta que lo esté": "%s has not been checked with Tramtai yet: if you go ahead, automatic sign-in will stay off until it is",
+	})
 }

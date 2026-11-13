@@ -2,7 +2,9 @@ package preparar
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -365,7 +367,8 @@ func TestSesionNoSeLanza(t *testing.T) {
 		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai" {
 		t.Fatalf("sin comprobar: %+v", e)
 	}
-	// Sin versión que decir (un instalador que no la fija), el mensaje no queda con dos espacios.
+	// Sin versión que decir (un instalador que no la fija y la última sin consultar), el mensaje no queda con dos espacios.
+	pr.p.o.UltimaVersion = func(context.Context, string) (string, error) { return "", errors.New("sin red") }
 	if e := iniciar(t, pr.p, "instalar"); e.MotivoCodigo != CodigoVersionNoComprobada || e.Mensaje != "Falso CLI aún no está comprobado con Tramtai" {
 		t.Fatalf("sin versión: %+v", e)
 	}

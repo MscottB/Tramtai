@@ -298,6 +298,16 @@ export interface EstadoPreparacion {
   fin?: string
 }
 
+export interface VersionesAgente {
+  agente: string
+  instalada?: string
+  ultima?: string
+  comprobadas: Record<string, boolean>
+  acciones: string[]
+  motivo_codigo?: 'version_no_comprobada' | 'sin_red'
+  motivo?: string
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
