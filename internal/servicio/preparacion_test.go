@@ -349,13 +349,36 @@ func TestFijarBuscarVersiones(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
 	global, _ := configuracion.RutaGlobal()
 	for _, buscar := range []bool{false, true} {
-		if err := s.fijarBuscarVersiones(buscar); err != nil {
+		if err := s.fijarBusquedas(nil, &buscar); err != nil {
 			t.Fatal(err)
 		}
 		texto, _ := os.ReadFile(global)
 		if s.buscarVersiones.Load() != buscar || !strings.Contains(string(texto), "buscar_versiones_agentes: "+map[bool]string{true: "true", false: "false"}[buscar]) {
 			t.Fatalf("%v: %v %s", buscar, s.buscarVersiones.Load(), texto)
 		}
+	}
+}
+
+// TestRutaBuscarVersiones: Ajustes cambia servicio.buscar_versiones_agentes con la misma ruta que la búsqueda de
+// actualizaciones, sin tocar esa, y el estado lo devuelve.
+func TestRutaBuscarVersiones(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	ruta := "/api/v1/servicio/actualizacion"
+	antes := s.buscar.Load()
+	if r, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar_versiones_agentes": false}`); r.StatusCode != 200 ||
+		!strings.Contains(cuerpo, `"buscar_versiones_agentes":false`) || s.buscarVersiones.Load() || s.buscar.Load() != antes {
+		t.Fatalf("%d %s %v %v", r.StatusCode, cuerpo, s.buscarVersiones.Load(), s.buscar.Load())
+	}
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar_versiones_agentes": true}`); !strings.Contains(cuerpo, `"buscar_versiones_agentes":true`) || !s.buscarVersiones.Load() {
+		t.Fatalf("%s", cuerpo)
+	}
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar": false}`); s.buscar.Load() || !s.buscarVersiones.Load() {
+		t.Fatalf("buscar solo cambia la de Tramtai: %s", cuerpo)
+	}
+	// Las dos a la vez se guardan juntas.
+	if _, cuerpo := pedirAdmin(t, s, ts.URL, "PUT", ruta, `{"buscar": true, "buscar_versiones_agentes": false}`); !s.buscar.Load() || s.buscarVersiones.Load() ||
+		!strings.Contains(cuerpo, `"buscar":true`) || !strings.Contains(cuerpo, `"buscar_versiones_agentes":false`) {
+		t.Fatalf("las dos: %s", cuerpo)
 	}
 }
 

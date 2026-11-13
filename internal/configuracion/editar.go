@@ -3,7 +3,9 @@ package configuracion
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -73,34 +75,49 @@ func EditarPuntos(ruta string, origen Origen, editar func([]contrato.ConfigPunto
 // FijarValor escribe una clave con puntos (adaptadores.claude.autenticacion) en un archivo YAML, creando los
 // mapas que falten y conservando el resto del archivo y sus comentarios.
 func FijarValor(ruta string, origen Origen, clave string, valor any) error {
-	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
-		partes := strings.Split(clave, ".")
-		for i, parte := range partes {
-			if nodo.Kind != yaml.MappingNode {
-				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: %s debe ser un mapa", ruta, strings.Join(partes[:i], ".")))
+	return FijarValores(ruta, origen, map[string]any{clave: valor})
+}
+
+// FijarValores escribe varias claves de una vez: o quedan todas o ninguna.
+func FijarValores(ruta string, origen Origen, valores map[string]any) error {
+	return editarYAML(ruta, origen, func(raiz *yaml.Node) error {
+		for _, clave := range slices.Sorted(maps.Keys(valores)) {
+			if err := fijarEn(raiz, ruta, clave, valores[clave]); err != nil {
+				return err
 			}
-			var hijo *yaml.Node
-			for j := 0; j+1 < len(nodo.Content); j += 2 {
-				if nodo.Content[j].Value == parte {
-					hijo = nodo.Content[j+1]
-					break
-				}
-			}
-			if hijo == nil {
-				hijo = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-				nodo.Content = append(nodo.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: parte}, hijo)
-			}
-			if i == len(partes)-1 {
-				var nuevo yaml.Node
-				if err := nuevo.Encode(valor); err != nil {
-					return err
-				}
-				*hijo = nuevo
-			}
-			nodo = hijo
 		}
 		return nil
 	})
+}
+
+// fijarEn pone una clave con puntos en el documento, creando los mapas que falten.
+func fijarEn(nodo *yaml.Node, ruta, clave string, valor any) error {
+	partes := strings.Split(clave, ".")
+	for i, parte := range partes {
+		if nodo.Kind != yaml.MappingNode {
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: %s debe ser un mapa", ruta, strings.Join(partes[:i], ".")))
+		}
+		var hijo *yaml.Node
+		for j := 0; j+1 < len(nodo.Content); j += 2 {
+			if nodo.Content[j].Value == parte {
+				hijo = nodo.Content[j+1]
+				break
+			}
+		}
+		if hijo == nil {
+			hijo = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+			nodo.Content = append(nodo.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: parte}, hijo)
+		}
+		if i == len(partes)-1 {
+			var nuevo yaml.Node
+			if err := nuevo.Encode(valor); err != nil {
+				return err
+			}
+			*hijo = nuevo
+		}
+		nodo = hijo
+	}
+	return nil
 }
 
 // QuitarValor borra una clave con puntos de un archivo YAML (si está), conservando el resto del archivo y sus

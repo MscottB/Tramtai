@@ -23,16 +23,18 @@ type ClaveGuardada struct {
 
 // EstadoActualizacion es el de las actualizaciones: la versión actual, si se buscan, si hay otra nueva (con su página y
 // sus notas) y si se instala desde aquí; Comprobado es cuándo terminó la última consulta a GitHub y Fallo si falló.
+// BuscarVersionesAgentes es servicio.buscar_versiones_agentes (la consulta diaria de las versiones de los CLI).
 type EstadoActualizacion struct {
-	Actual     string    `json:"actual"`
-	Buscar     bool      `json:"buscar"`
-	Disponible bool      `json:"disponible"`
-	Version    string    `json:"version"`
-	URL        string    `json:"url"`
-	Notas      string    `json:"notas"`
-	Instalable bool      `json:"instalable"`
-	Comprobado time.Time `json:"comprobado,omitzero"`
-	Fallo      bool      `json:"fallo,omitempty"`
+	Actual                 string    `json:"actual"`
+	Buscar                 bool      `json:"buscar"`
+	BuscarVersionesAgentes bool      `json:"buscar_versiones_agentes"`
+	Disponible             bool      `json:"disponible"`
+	Version                string    `json:"version"`
+	URL                    string    `json:"url"`
+	Notas                  string    `json:"notas"`
+	Instalable             bool      `json:"instalable"`
+	Comprobado             time.Time `json:"comprobado,omitzero"`
+	Fallo                  bool      `json:"fallo,omitempty"`
 }
 
 // ProgresoActualizacion es el avance de la actualización en curso: la fase (descargando, verificando, listo, instalando

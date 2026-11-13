@@ -28,8 +28,8 @@ import (
 // Códigos de Error y de EstadoPreparacion.MotivoCodigo.
 const (
 	CodigoVersionNoComprobada = "version_no_comprobada"
-	CodigoPeticionesEnCurso   = "peticiones_en_curso"
-	CodigoYaEnCurso           = "ya_en_curso"
+	CodigoPeticionesEnCurso   = string(nucleo.CodigoPeticionesEnCurso) // también errores de la API (409)
+	CodigoYaEnCurso           = string(nucleo.CodigoYaEnCurso)
 	CodigoInstaladorFallo     = "instalador_fallo"
 	CodigoNoEncontrado        = "no_encontrado_tras_instalar"
 	CodigoPlazoAgotado        = "plazo_agotado"
@@ -339,6 +339,9 @@ type corrida struct {
 	registro []string // órdenes y resultado, para <id>.log
 	// sinConfirmar es el aviso de un proceso que no confirmó su terminación: su PID y su firma se quedan para Recuperar.
 	sinConfirmar string
+	// avisoListo es el porqué de una preparación que termina en listo sin todo hecho (instalado, pero sin iniciar sesión
+	// porque la versión no está comprobada): va en MotivoCodigo y Mensaje del estado listo.
+	avisoListo *Error
 }
 
 // fijar cambia el estado y lo guarda en disco, con el cerrojo tomado: la última preparación es la última que se escribe.
@@ -400,6 +403,9 @@ func (c *corrida) correr(cancelar context.CancelCauseFunc) {
 	var e *Error
 	switch {
 	case err == nil:
+		if c.avisoListo != nil {
+			codigo, mensaje = c.avisoListo.Codigo, c.avisoListo.Mensaje
+		}
 	case errors.Is(c.ctx.Err(), context.DeadlineExceeded):
 		estado, codigo, mensaje = "error", CodigoPlazoAgotado, idioma.Tf("la preparación superó su plazo de %d min y se cerró", int(math.Ceil(c.p.plazo.Minutes())))
 	case errors.Is(context.Cause(c.base), errCerrado):
@@ -448,10 +454,12 @@ func (c *corrida) accion() error {
 		if instalado == "" {
 			return &Error{CodigoNoEncontrado, idioma.Tf("no se encuentra %s", c.f.Programa)}
 		}
-		// Sin comprobar no se inicia sesión, ni con Confirmar: el inicio de sesión automático queda desactivado.
+		// Sin comprobar no se inicia sesión, ni con Confirmar: el inicio de sesión automático queda desactivado y se dice
+		// cómo hacerlo en una consola (el panel no tiene otro sitio de donde sacar la orden).
 		version := numeroVersion(antes)
 		if !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-			return c.noComprobada(version)
+			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
+				conVersionSi(c.f.Programa, version), ordenConsola(c.f))}
 		}
 		return c.sesion(version)
 	}
@@ -515,10 +523,14 @@ func (c *corrida) ultimaSi() string {
 	return version
 }
 
+// version es el número de versión del CLI («2.1.311»), como en Versiones: las pantallas no interpretan nada. Lo que
+// imprimió --version, tal cual, queda solo en el registro.
 func (c *corrida) version(ruta string) string {
 	ctx, cancelar := context.WithTimeout(c.ctx, 30*time.Second)
 	defer cancelar()
-	return adaptadores.VersionDe(ctx, ruta)
+	texto := adaptadores.VersionDe(ctx, ruta)
+	c.anotar("--version: " + texto)
+	return numeroVersion(texto)
 }
 
 // encontrar busca el CLI tras instalar o actualizar, lee su versión y, si comandos_agentes con su valor predeterminado no

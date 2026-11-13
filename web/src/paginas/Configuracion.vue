@@ -129,6 +129,16 @@
         <q-toggle :model-value="actualizacion.buscar" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('actualizacion.ajustesTitulo')"
           @update:model-value="cambiarBusqueda" />
       </q-card-section>
+      <!-- Junto a las de Tramtai: las versiones nuevas de los CLI de los agentes (servicio.buscar_versiones_agentes). -->
+      <q-separator />
+      <q-card-section class="row items-start no-wrap">
+        <div class="col">
+          <h2 class="titulo-seccion">{{ t('versionesAgentes.titulo') }}</h2>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('versionesAgentes.texto') }}</div>
+        </div>
+        <q-toggle :model-value="actualizacion.buscar_versiones_agentes" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('versionesAgentes.titulo')"
+          @update:model-value="cambiarBusquedaAgentes" />
+      </q-card-section>
     </q-card>
 
     <div class="row q-col-gutter-md">
@@ -475,6 +485,16 @@ async function cambiarBusqueda(buscar: boolean) {
   cambiandoBusqueda.value = true
   try {
     actualizacion.value = await api.buscarActualizaciones(buscar)
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cambiandoBusqueda.value = false
+  }
+}
+async function cambiarBusquedaAgentes(buscar: boolean) {
+  cambiandoBusqueda.value = true
+  try {
+    actualizacion.value = await api.buscarVersionesAgentes(buscar)
   } catch (e) {
     avisarError(e)
   } finally {

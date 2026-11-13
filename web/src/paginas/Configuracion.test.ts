@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { idioma, t } from '../i18n.ts'
 import { conArranque, filasServidor, modosArranque, ofrecerInstalar, pestanasAjustes } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
@@ -54,6 +55,16 @@ test('Ajustes → Servidor: cada dato con la orden (o la clave de config.yaml) q
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.vence'), undefined, 'sin certificado propio no hay vencimiento')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.administrador')?.orden, 'tramtai-servidor administrador contraseña')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.valor, t('servidor.sinSuscripciones'))
+})
+
+test('«Comprobar versiones nuevas de los agentes» va junto a las actualizaciones y cambia el ajuste en marcha', () => {
+  const pagina = readFileSync(new URL('./Configuracion.vue', import.meta.url), 'utf8')
+  assert.ok(pagina.includes('actualizacion.buscar_versiones_agentes') && pagina.includes('api.buscarVersionesAgentes('))
+  for (const lengua of ['es', 'en'] as const) {
+    idioma.value = lengua
+    assert.ok(t('versionesAgentes.texto').includes('GitHub'), `${lengua}: dice a qué sitios se conecta`)
+  }
+  idioma.value = 'es'
 })
 
 test('los textos de Servidor existen en los dos idiomas', () => {
