@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,16 +107,17 @@ func leerResultados(pares []string) (map[string]resultado, error) {
 }
 
 // juntarAgente dice con qué versión y para qué acciones pasó el agente en todos los sistemas, lo que no pasó (para el
-// issue) y lo que quedó sin concluir por el límite de la API de GitHub (ni se añade ni se avisa: Ruling 32). Sin la
-// última versión de una fuente de GitHub, un sistema pudo instalar la de la receta: si las versiones no coinciden por
-// eso, también queda sin concluir.
+// issue) y lo que quedó sin concluir por el límite de la API de GitHub (ni se añade ni se avisa: Rulings 32 y 33).
+// Sin la última versión por ese límite, un sistema pudo instalar la de la receta: si las versiones no coinciden por eso,
+// también queda sin concluir. Cualquier otro motivo de no saber la última versión (404, etiqueta no válida, sin red) se
+// avisa.
 func juntarAgente(f adaptadores.Ficha, porSistema map[string]resultado) (version string, pasan map[string]bool, fallos, notas []string) {
-	github := f.Receta.Ultima.Tipo == "github"
-	sinUltima, consultada := false, false
+	limite, consultada, errorUltima := false, false, ""
 	for _, s := range sistemas {
 		if c, ok := porSistema[s].Agentes[f.Nombre]; ok {
 			consultada = consultada || c.Ultima != ""
-			sinUltima = sinUltima || github && c.Ultima == ""
+			limite = limite || c.UltimaLimite
+			errorUltima = cmp.Or(errorUltima, c.UltimaFallo)
 		}
 	}
 	completo := true
@@ -145,7 +147,7 @@ func juntarAgente(f adaptadores.Ficha, porSistema map[string]resultado) (version
 		case c.Version != version:
 			completo = false
 			texto := fmt.Sprintf("**%s**: versiones distintas según el sistema (%s, %s en %s)", f.Nombre, version, c.Version, s)
-			if sinUltima {
+			if limite {
 				notas = append(notas, texto)
 			} else {
 				fallos = append(fallos, "- "+texto)
@@ -160,9 +162,12 @@ func juntarAgente(f adaptadores.Ficha, porSistema map[string]resultado) (version
 	}
 	if !consultada && f.Receta.Ultima.Tipo != "" {
 		texto := fmt.Sprintf("**%s**: no se pudo consultar la última versión en ningún sistema (%s %s)", f.Nombre, f.Receta.Ultima.Tipo, f.Receta.Ultima.Nombre)
-		if github {
+		switch {
+		case errorUltima != "":
+			fallos = append(fallos, fmt.Sprintf("- %s: %s", texto, tapar(errorUltima, "")))
+		case limite:
 			notas = append(notas, texto)
-		} else {
+		default:
 			fallos = append(fallos, "- "+texto)
 		}
 	}

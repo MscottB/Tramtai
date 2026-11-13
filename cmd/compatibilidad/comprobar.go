@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,7 +37,12 @@ func comprobar(ctx context.Context, fichas []adaptadores.Ficha, ultima func(cont
 	for i, f := range fichas {
 		ids[i] = f.Nombre
 	}
-	p := preparar.Nuevo(preparar.Opciones{
+	// La última versión se consulta una vez por agente, antes de nada, y el preparador usa lo consultado (Descarga sin
+	// versión fijada). Sin gancho de las pruebas, GitHub se consulta aquí, con el token del job (Ruling 33), y las demás
+	// fuentes como el servicio.
+	ultimas, errores := map[string]string{}, map[string]error{}
+	var p *preparar.Preparador
+	p = preparar.Nuevo(preparar.Opciones{
 		Datos: datos,
 		Ficha: func(id string) (adaptadores.Ficha, bool) {
 			if i := slices.Index(ids, id); i >= 0 {
@@ -43,17 +51,26 @@ func comprobar(ctx context.Context, fichas []adaptadores.Ficha, ultima func(cont
 			return adaptadores.Ficha{}, false
 		},
 		Agentes:       ids,
-		UltimaVersion: ultima,
+		UltimaVersion: func(_ context.Context, id string) (string, error) { return ultimas[id], errores[id] },
 		// Aquí es donde se comprueba: todas las versiones se dejan preparar.
 		Comprobada: func(string, string, string) bool { return true },
 	})
 	defer p.Cerrar()
-	ultimas := map[string]string{}
+	if ultima == nil {
+		ultima = func(ctx context.Context, id string) (string, error) {
+			if f := fichas[slices.Index(ids, id)]; f.Receta.Ultima.Tipo == "github" {
+				return ultimaGitHub(ctx, f.Receta.Ultima, tokenGitHub)
+			}
+			return p.UltimaPublicada(ctx, id)
+		}
+	}
 	semilla := map[string]map[string][]string{}
-	for _, v := range p.Versiones(ctx, true) {
-		ultimas[v.Agente] = v.Ultima
-		if v.Ultima != "" {
-			semilla[v.Agente] = map[string][]string{"instalar": {v.Ultima}}
+	for _, id := range ids {
+		consulta, cancelar := context.WithTimeout(ctx, plazoUltima)
+		ultimas[id], errores[id] = ultima(consulta, id)
+		cancelar()
+		if errores[id] == nil {
+			semilla[id] = map[string][]string{"instalar": {ultimas[id]}}
 		}
 	}
 	// Un instalador que fija la versión instala la comprobada más reciente de la receta y de la lista guardada: con la
@@ -65,9 +82,9 @@ func comprobar(ctx context.Context, fichas []adaptadores.Ficha, ultima func(cont
 	r := resultado{Sistema: runtime.GOOS, Agentes: map[string]comprobacion{}}
 	for _, f := range fichas {
 		c := comprobarAgente(ctx, p, f)
-		c.Ultima = ultimas[f.Nombre]
+		anotarUltima(&c, ultimas[f.Nombre], errores[f.Nombre])
 		r.Agentes[f.Nombre] = c
-		fmt.Fprintf(salida, "%s %s (última %q): %v; sin concluir: %v\n", f.Nombre, c.Version, c.Ultima, c.Acciones, c.SinConcluir)
+		fmt.Fprintf(salida, "%s %s (última %q%s): %v; sin concluir: %v\n", f.Nombre, c.Version, c.Ultima, c.UltimaFallo, c.Acciones, c.SinConcluir)
 		if c.Fallo != "" {
 			fmt.Fprintln(salida, c.Fallo)
 		}
@@ -203,4 +220,72 @@ func tapar(texto, codigo string) string {
 	}
 	texto = reCodigo.ReplaceAllString(texto, "XXXX-XXXX")
 	return reConsulta.ReplaceAllString(texto, "$1?…")
+}
+
+// plazoUltima acota cada consulta de la última versión, como en el servicio.
+const plazoUltima = 10 * time.Second
+
+// tokenGitHub es el GITHUB_TOKEN del job (solo lectura), que main quita del entorno al arrancar: solo va en las consultas
+// a la API de GitHub, nunca a un instalador ni a un CLI.
+var tokenGitHub string
+
+// La API de GitHub y su cliente; variables para las pruebas.
+var (
+	baseGitHub    = "https://api.github.com/repos/"
+	clienteGitHub = &http.Client{}
+)
+
+// errorLimite es un 403 o 429 de la API de GitHub: su límite de peticiones, que deja la comprobación sin concluir.
+type errorLimite struct{ error }
+
+// ultimaGitHub es el tag_name del último release (sin Prefijo), como la fuente «github» del servicio, pero con el token
+// del job. Un 403/429 es errorLimite; un 404, un tag que no es una versión o un fallo de red son un error que se avisa.
+func ultimaGitHub(ctx context.Context, fuente adaptadores.FuenteVersion, token string) (string, error) {
+	url := baseGitHub + fuente.Nombre + "/releases/latest"
+	pedido, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	pedido.Header.Set("Accept", "application/vnd.github+json")
+	pedido.Header.Set("User-Agent", "tramtai-compatibilidad")
+	if token != "" {
+		pedido.Header.Set("Authorization", "Bearer "+token)
+	}
+	r, err := clienteGitHub.Do(pedido)
+	if err != nil {
+		return "", err
+	}
+	defer r.Body.Close()
+	switch r.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden, http.StatusTooManyRequests:
+		return "", errorLimite{fmt.Errorf("%s respondió %d", url, r.StatusCode)}
+	default:
+		return "", fmt.Errorf("%s respondió %d", url, r.StatusCode)
+	}
+	var j struct {
+		Etiqueta string `json:"tag_name"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&j); err != nil {
+		return "", fmt.Errorf("%s: %w", url, err)
+	}
+	version := strings.TrimPrefix(j.Etiqueta, fuente.Prefijo)
+	if !preparar.VersionValida(version) {
+		return "", fmt.Errorf("%s: la etiqueta %q no es una versión válida", url, j.Etiqueta)
+	}
+	return version, nil
+}
+
+// anotarUltima guarda en la comprobación la última versión o por qué no se supo: el límite de GitHub aparte, porque
+// queda sin concluir; lo demás se avisa.
+func anotarUltima(c *comprobacion, ultima string, err error) {
+	var limite errorLimite
+	switch {
+	case err == nil:
+		c.Ultima = ultima
+	case errors.As(err, &limite):
+		c.UltimaLimite = true
+	default:
+		c.UltimaFallo = err.Error()
+	}
 }

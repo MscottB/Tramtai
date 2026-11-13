@@ -39,10 +39,14 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      # El resultado se escribe tras cada agente: con el plazo agotado, lo hecho se sube igual.
+      # El resultado se escribe tras cada agente: con el plazo agotado, lo hecho se sube igual. GITHUB_TOKEN (de solo
+      # lectura, como el job) es para consultar la última versión en la API de GitHub sin su límite por IP: el programa lo
+      # quita de su entorno al arrancar y nunca llega a un instalador ni a un CLI (Ruling 33).
       - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI
         if: runner.os != 'Windows'
         timeout-minutes: 75
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: go run ./cmd/compatibilidad comprobar "$RUNNER_TEMP/resultado/$RUNNER_OS.json"
       # En Windows, desde cmd, como el servicio: bash pondría el tar de Git delante (el instalador de Codex falla) y
       # pwsh pasaría su PSModulePath al powershell de los instaladores (el de Claude no encuentra Get-FileHash).
@@ -50,6 +54,8 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 75
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: go run ./cmd/compatibilidad comprobar "%RUNNER_TEMP%\resultado\%RUNNER_OS%.json"
       - uses: actions/upload-artifact@v7
         if: always()

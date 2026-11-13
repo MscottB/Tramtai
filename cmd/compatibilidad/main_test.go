@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,12 +17,18 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/preparar"
 )
 
 // TestMain hace de CLI falso: con --version dice FALSO_VERSION y, con COMPATIBILIDAD_FALSO, de instalador o de
 // inicio de sesión.
 func TestMain(m *testing.M) {
+	// Con FALSO_ENTORNO, cada CLI falso anota el GITHUB_TOKEN que le llega: el del job no puede llegar a ninguno.
+	if ruta := os.Getenv("FALSO_ENTORNO"); ruta != "" {
+		if f, err := os.OpenFile(ruta, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
+			fmt.Fprintf(f, "%v %s GITHUB_TOKEN=%q\n", os.Args[1:], os.Getenv("COMPATIBILIDAD_FALSO"), os.Getenv("GITHUB_TOKEN"))
+			f.Close()
+		}
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
 		fmt.Println("falso " + os.Getenv("FALSO_VERSION"))
 		os.Exit(0)
@@ -174,10 +182,16 @@ func TestCompatibilidad(t *testing.T) {
 	t.Setenv("HOME", casa)
 	t.Setenv("USERPROFILE", casa)
 	conSistemas(t, runtime.GOOS) // el CLI falso solo corre en este sistema
-	// La lista publicada de verdad no se baja: falla al momento, sin salir a la red.
-	antesURL := preparar.URLLista
-	preparar.URLLista = "https://127.0.0.1:1/compatibilidad.json"
-	t.Cleanup(func() { preparar.URLLista = antesURL })
+	// El token del job está en el entorno de la prueba: ningún instalador ni CLI falso puede verlo.
+	entorno := filepath.Join(t.TempDir(), "entorno.txt")
+	t.Setenv("FALSO_ENTORNO", entorno)
+	t.Setenv("GITHUB_TOKEN", "ghs_token_del_job_que_no_debe_llegar")
+	defer func() {
+		datos, err := os.ReadFile(entorno)
+		if err != nil || !strings.Contains(string(datos), "login") || strings.Contains(string(datos), "ghs_token") {
+			t.Errorf("lo que vieron los CLI falsos = %q, %v; se esperaba que se lanzaran y sin el token", datos, err)
+		}
+	}()
 	dir := t.TempDir()
 	comprobarEn := func(f adaptadores.Ficha, version string) string {
 		return runtime.GOOS + "=" + comprobarCon(t, f, version)
@@ -338,27 +352,116 @@ func TestJuntarVersionNoValida(t *testing.T) {
 	noHay(t, nueva)
 }
 
-// Sin la última versión de una fuente de GitHub (límite de su API), las versiones distintas quedan sin concluir: no
-// entra nada y no se avisa (Ruling 32).
+// La última versión de GitHub: el límite de su API (403/429) deja las versiones distintas sin concluir, sin aviso; un
+// 404, una etiqueta que no es una versión o sin red se avisan, y unas versiones distintas sin ese límite también
+// (Rulings 32 y 33).
 func TestJuntarSinUltimaDeGitHub(t *testing.T) {
 	conSistemas(t, "linux", "darwin", "windows")
 	f := fichaFalsa(t, "instalar", "sesion")
 	f.Receta.Ultima = adaptadores.FuenteVersion{Tipo: "github", Nombre: "falso/falso"}
-	windows := todo("1.0.0") // sin la última, instaló la de la receta
-	windows.Ultima = ""
 	anterior := filepath.Join(t.TempDir(), "anterior.json")
-	if err := escribirJSON(anterior, lista{Version: 2, Agentes: map[string]map[string][]string{"falso": {"instalar": {"1.0.0"}}}}); err != nil {
+	// 1.0.0 ya está para todo: lo único nuevo sería 2.0.0, que no entra en ningún caso.
+	if err := escribirJSON(anterior, lista{Version: 2, Agentes: map[string]map[string][]string{"falso": {"instalar": {"1.0.0"},
+		"actualizar": {"1.0.0"}, "iniciar_sesion": {"1.0.0"}, "desinstalar": {"1.0.0"}}}}); err != nil {
 		t.Fatal(err)
 	}
-	nueva := filepath.Join(t.TempDir(), "nueva.json")
-	c, salida := juntarCon(t, f, anterior, nueva, resultadoDe(t, "linux", todo("2.0.0")), resultadoDe(t, "darwin", todo("2.0.0")),
-		resultadoDe(t, "windows", windows))
-	if c != 0 || salida != "" {
-		t.Fatalf("juntar = %d, %q; se esperaba 0 sin aviso", c, salida)
+	// sin es una comprobación que no supo la última versión e instaló la de la receta.
+	sin := func(limite bool, fallo string) comprobacion {
+		c := todo("1.0.0")
+		c.Ultima, c.UltimaLimite, c.UltimaFallo = "", limite, fallo
+		return c
 	}
-	noHay(t, nueva)
+	for nombre, caso := range map[string]struct {
+		linux, darwin, windows comprobacion
+		aviso                  string
+	}{
+		"límite en un sistema":       {todo("2.0.0"), todo("2.0.0"), sin(true, ""), ""},
+		"límite en todos":            {sin(true, ""), sin(true, ""), sin(true, ""), ""},
+		"404 en todos":               {sin(false, "respondió 404"), sin(false, "respondió 404"), sin(false, "respondió 404"), "404"},
+		"etiqueta no válida":         {sin(false, `la etiqueta "x" no es una versión válida`), sin(false, "x"), sin(false, "x"), "etiqueta"},
+		"sin red en un sistema":      {todo("2.0.0"), todo("2.0.0"), sin(false, "dial tcp: sin red"), "versiones distintas"},
+		"vacía sin motivo, distinta": {todo("2.0.0"), todo("2.0.0"), sin(false, ""), "versiones distintas"},
+	} {
+		nueva := filepath.Join(t.TempDir(), "nueva.json")
+		c, salida := juntarCon(t, f, anterior, nueva, resultadoDe(t, "linux", caso.linux), resultadoDe(t, "darwin", caso.darwin),
+			resultadoDe(t, "windows", caso.windows))
+		switch {
+		case caso.aviso == "" && (c != 0 || salida != ""):
+			t.Errorf("%s: juntar = %d, %q; se esperaba 0 sin aviso", nombre, c, salida)
+		case caso.aviso != "" && (c != salidaFallos || !strings.Contains(salida, caso.aviso)):
+			t.Errorf("%s: juntar = %d, %q; se esperaba %d con %q", nombre, c, salida, salidaFallos, caso.aviso)
+		}
+		noHay(t, nueva)
+	}
 }
 
+// ultimaGitHub lleva el token del job y distingue el límite de la API (sin concluir) de lo que se avisa.
+func TestUltimaGitHub(t *testing.T) {
+	var autorizacion string
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		autorizacion = r.Header.Get("Authorization")
+		switch r.URL.Path {
+		case "/repos/limite/x/releases/latest":
+			w.WriteHeader(http.StatusForbidden)
+		case "/repos/demasiadas/x/releases/latest":
+			w.WriteHeader(http.StatusTooManyRequests)
+		case "/repos/mala/x/releases/latest":
+			fmt.Fprint(w, `{"tag_name":"v1.0.0; rm -rf"}`)
+		case "/repos/buena/x/releases/latest":
+			fmt.Fprint(w, `{"tag_name":"rust-v0.169.0"}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	antes, antesCliente := baseGitHub, clienteGitHub
+	baseGitHub, clienteGitHub = srv.URL+"/repos/", srv.Client()
+	t.Cleanup(func() { baseGitHub, clienteGitHub = antes, antesCliente })
+	consultar := func(nombre string) comprobacion {
+		v, err := ultimaGitHub(context.Background(), adaptadores.FuenteVersion{Tipo: "github", Nombre: nombre, Prefijo: "rust-v"}, "ghs_token")
+		var c comprobacion
+		anotarUltima(&c, v, err)
+		return c
+	}
+	if c := consultar("buena/x"); c.Ultima != "0.169.0" || autorizacion != "Bearer ghs_token" {
+		t.Fatalf("buena = %+v, Authorization %q", c, autorizacion)
+	}
+	for _, nombre := range []string{"limite/x", "demasiadas/x"} {
+		if c := consultar(nombre); !c.UltimaLimite || c.UltimaFallo != "" || c.Ultima != "" {
+			t.Errorf("%s = %+v; se esperaba el límite", nombre, c)
+		}
+	}
+	for nombre, motivo := range map[string]string{"no-hay/x": "404", "mala/x": "no es una versión válida"} {
+		if c := consultar(nombre); c.UltimaLimite || !strings.Contains(c.UltimaFallo, motivo) {
+			t.Errorf("%s = %+v; se esperaba un fallo con %q", nombre, c, motivo)
+		}
+	}
+}
+
+// comprobar anota la última versión que no se supo con su motivo: el límite aparte.
+func TestComprobarAnotaLaUltima(t *testing.T) {
+	casa := t.TempDir()
+	t.Setenv("HOME", casa)
+	t.Setenv("USERPROFILE", casa)
+	t.Setenv("FALSO_VERSION", "1.0.0")
+	f := fichaFalsa(t, "fallar", "sesion") // no hace falta instalar nada
+	for _, caso := range []struct {
+		err   error
+		mirar func(comprobacion) bool
+	}{
+		{errorLimite{fmt.Errorf("respondió 429")}, func(c comprobacion) bool { return c.UltimaLimite && c.UltimaFallo == "" }},
+		{fmt.Errorf("respondió 404"), func(c comprobacion) bool { return !c.UltimaLimite && strings.Contains(c.UltimaFallo, "404") }},
+	} {
+		r := filepath.Join(t.TempDir(), "resultado.json")
+		ultima := func(context.Context, string) (string, error) { return "", caso.err }
+		if c := ejecutar(context.Background(), []adaptadores.Ficha{f}, ultima, []string{"comprobar", r}, io.Discard); c != 0 {
+			t.Fatalf("comprobar terminó con %d", c)
+		}
+		if c := leerResultado(t, runtime.GOOS+"="+r); !caso.mirar(c) {
+			t.Errorf("con %v: resultado = %+v", caso.err, c)
+		}
+	}
+}
 func TestTapar(t *testing.T) {
 	texto := tapar("visita https://github.com/login/device?code=1 y escribe 1A2B-3C4D (o QWER-TYUIO); el 2026-11-13", "")
 	if strings.Contains(texto, "1A2B-3C4D") || strings.Contains(texto, "QWER-TYUIO") || strings.Contains(texto, "code=1") ||

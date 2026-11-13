@@ -11,7 +11,7 @@
 // juntar añade a la lista anterior (la publicada; sin ella, la de las recetas) cada versión para las acciones que
 // pasaron en todos los sistemas y, si algo cambió, escribe la nueva con version+1 (si no, no escribe nada y no se
 // publica). Lo que no pasó sale por la salida estándar, en Markdown, y termina con 2: el workflow abre o comenta un
-// issue. Lo que quedó sin concluir por el límite de la API de GitHub no se añade ni se avisa (Ruling 32).
+// issue. Lo que quedó sin concluir por el límite de la API de GitHub no se añade ni se avisa (Rulings 32 y 33).
 package main
 
 import (
@@ -48,9 +48,12 @@ type resultado struct {
 }
 
 type comprobacion struct {
-	// Ultima es la última versión publicada (vacía si no se pudo consultar); Version, la que quedó instalada.
-	Ultima  string `json:"ultima,omitempty"`
-	Version string `json:"version,omitempty"`
+	// Ultima es la última versión publicada; si no se pudo consultar, UltimaLimite dice que fue por el límite de la API
+	// de GitHub (sin concluir) y UltimaFallo, si no, por qué (se avisa). Version es la que quedó instalada.
+	Ultima       string `json:"ultima,omitempty"`
+	UltimaLimite bool   `json:"ultima_limite,omitempty"`
+	UltimaFallo  string `json:"ultima_fallo,omitempty"`
+	Version      string `json:"version,omitempty"`
 	// Acciones dice, por acción intentada, si pasó; Fallo es lo que no pasó, con las últimas líneas ya tapadas.
 	Acciones map[string]bool `json:"acciones"`
 	Fallo    string          `json:"fallo,omitempty"`
@@ -59,6 +62,9 @@ type comprobacion struct {
 }
 
 func main() {
+	// El token del job solo sirve para consultar la API de GitHub: fuera del entorno, ningún proceso hijo lo hereda.
+	tokenGitHub = os.Getenv("GITHUB_TOKEN")
+	os.Unsetenv("GITHUB_TOKEN")
 	ctx, parar := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer parar()
 	os.Exit(ejecutar(ctx, agentes.Todos(), nil, os.Args[1:], os.Stdout))
