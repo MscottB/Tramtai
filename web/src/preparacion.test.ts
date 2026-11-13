@@ -36,7 +36,7 @@ test('la acción principal de cada tarjeta sale de su estado y de sus versiones'
 })
 
 test('una versión no comprobada enseña el aviso; para iniciar sesión, sin el botón', () => {
-  const motivo = 'Claude Code 2.2.0 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con claude auth login'
+  const motivo = 'Claude Code 2.2.0 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con claude auth login'
   const v = versiones({ instalada: '2.2.0', comprobadas: { actualizar: true, iniciar_sesion: false, desinstalar: true }, acciones: ['actualizar', 'desinstalar'],
     motivo_codigo: 'version_no_comprobada', motivo })
   assert.deepEqual(accionPrincipal(agente('sin_sesion'), v), { aviso: motivo })

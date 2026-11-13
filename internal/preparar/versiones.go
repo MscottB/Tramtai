@@ -214,8 +214,8 @@ func (p *Preparador) versionesDe(id string, f adaptadores.Ficha, instalada, ulti
 		switch {
 		case comprobada || accion == "desinstalar": // desinstalar ya pide confirmar siempre
 		case accion == "iniciar_sesion": // sin comprobar, desactivado: ni con confirmar
-			v.MotivoCodigo, v.Motivo = CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
-				conVersionSi(f.Programa, usada), ordenConsola(f))
+			v.MotivoCodigo, v.Motivo = CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, %s",
+				conVersionSi(f.Programa, usada), p.aMano(f))
 			continue
 		case aviso != "":
 		case r.Sesion == nil:

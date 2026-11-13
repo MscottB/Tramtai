@@ -8,12 +8,14 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/preparar"
+	"tramtai/internal/servidor"
 )
 
 // preparacion es lo que el servicio usa de preparar.Preparador (las pruebas ponen una falsa que no instala nada).
@@ -41,6 +43,10 @@ func agentesPreparables() []string {
 // preparación a medias queda interrumpida y su proceso, cerrado). Ninguna de sus funciones toma un cerrojo que el
 // servicio tenga mientras llama a la preparación.
 func (s *Servicio) nuevaPreparacion() *preparar.Preparador {
+	var ordenConsola func(string, []string) string
+	if carpetas.Servidor() { // a mano, el inicio de sesión va como la cuenta del servicio
+		ordenConsola = servidor.OrdenConsola
+	}
 	p := preparar.Nuevo(preparar.Opciones{
 		Datos:   s.opc.Datos,
 		Ficha:   agentes.Buscar,
@@ -54,11 +60,11 @@ func (s *Servicio) nuevaPreparacion() *preparar.Preparador {
 		},
 		Agentes:         agentesPreparables(),
 		BuscarVersiones: s.buscarVersiones.Load, // en marcha: Ajustes lo cambia con fijarBusquedas
+		OrdenConsola:    ordenConsola,
 	})
 	p.Recuperar()
 	return p
 }
-
 
 // peticionesEnCurso cuenta las peticiones sin terminar del agente en todas las instancias abiertas.
 func (s *Servicio) peticionesEnCurso(agente string) int {

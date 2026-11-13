@@ -5,7 +5,6 @@ package servidor
 import (
 	"context"
 	"os"
-	"os/exec"
 )
 
 // sinBloquear no se usa aquí: prepararDatos solo se llega a usar en Linux y en Windows.
@@ -51,5 +50,5 @@ func AjustarDueno(string) error { return nil }
 
 func ajustarDueno(*os.Root) error { return nil }
 
-// OrdenEntrar no existe fuera de Linux y Windows.
-func OrdenEntrar(string, string, []string) (*exec.Cmd, error) { return nil, noDisponible() }
+// OrdenConsola es vacía: fuera de Linux y Windows no hay servicio del sistema.
+func OrdenConsola(string, []string) string { return "" }

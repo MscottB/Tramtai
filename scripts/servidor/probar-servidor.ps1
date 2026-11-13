@@ -5,7 +5,8 @@
 # Compila dos versiones en dos .zip como el portable (tramtai.exe, uv.exe, portable.txt y la licencia) y sigue la
 # secuencia de probar-servidor.sh: «servidor instalar» desde el .zip, la contraseña del administrador, TLS propio con un
 # certificado de prueba, iniciar sesión, una petición al Claude simulado, guardar una clave con una petición larga en
-# curso (en Windows vale sin reiniciar: la petición termina y el servicio sigue siendo el mismo proceso), actualizar con
+# curso (en Windows vale sin reiniciar: la petición termina y el servicio sigue siendo el mismo proceso), instalar y
+# desinstalar Antigravity para la cuenta del servicio (con su instalador oficial: necesita red), actualizar con
 # «servidor instalar» desde el .zip nuevo y desinstalar con --borrar-datos.
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true # una orden que sale con error para el script
@@ -140,6 +141,26 @@ $fila = Servidor trabajos listar | Select-String "^\s+$id\s+(\S+)"
 $estado = if ($fila) { $fila.Matches[0].Groups[1].Value }
 if ($estado -ne 'completado') { Falla "la petición larga quedó en «$estado» al guardar la clave" }
 if ((Pid-Servicio) -ne $antes) { Falla 'guardar la clave reinició el servicio (en Windows vale sin reiniciar)' }
+
+Write-Host '== preparar un agente para la cuenta del servicio'
+# El servicio instala Antigravity (no inicia sesión) con su instalador oficial y su cuenta virtual: queda en el perfil de
+# esa cuenta («~» de la receta), Tramtai guarda su ruta en comandos_agentes (está fuera del PATH del servicio) sin tocar
+# la de Claude, y desinstalar lo quita y quita la ruta. Necesita red.
+$agy = Join-Path $env:SystemRoot 'ServiceProfiles\Tramtai\AppData\Local\agy\bin\agy.exe'
+$config = Join-Path $datos 'config.yaml'
+$PSNativeCommandUseErrorActionPreference = $false # 3: instalado, pero le falta su clave de API
+$salida = Servidor agentes instalar antigravity --confirmar 2>&1 | Out-String
+$codigo = $LASTEXITCODE
+$PSNativeCommandUseErrorActionPreference = $true
+if ($codigo -notin 0, 3) { Falla "agentes instalar antigravity salió con ${codigo}: $salida" }
+if (-not (Test-Path $agy)) { Falla "agentes instalar no dejó ${agy}: $salida" }
+$comandos = Get-Content $config -Raw
+if ($comandos -notmatch "antigravity: '?$([regex]::Escape($agy))") { Falla "comandos_agentes no apunta a ${agy}: $comandos" }
+if ($comandos -notmatch "claude: '?$([regex]::Escape($simulado))") { Falla "guardar la ruta de Antigravity cambió la de Claude: $comandos" }
+if ((Servidor agentes versiones | Out-String) -notmatch 'antigravity +[0-9]') { Falla 'agentes versiones no ve Antigravity instalado' }
+$salida = Servidor agentes desinstalar antigravity --confirmar 2>&1 | Out-String
+if (Test-Path $agy) { Falla "agentes desinstalar deja ${agy}: $salida" }
+if ((Get-Content $config -Raw) -match 'antigravity:') { Falla 'agentes desinstalar deja comandos_agentes.antigravity' }
 
 Write-Host '== actualizar desde el .zip nuevo'
 $antes = Pid-Servicio
