@@ -194,6 +194,8 @@
       </q-page>
     </q-page-container>
 
+    <DialogoBienvenida v-model="bienvenidaAbierta" @recorrido="empezarBienvenida" @ir="ir" @cerrada="alCerrarDialogoBienvenida" />
+
     <q-dialog v-model="dialogoProyecto" aria-labelledby="titulo-proyecto">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
@@ -337,6 +339,7 @@ import { GRUPOS_MENU } from './menu'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
+import DialogoBienvenida from './componentes/DialogoBienvenida.vue'
 import EstadoVacio from './componentes/EstadoVacio.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
@@ -579,21 +582,16 @@ function examinar() {
 // lee los diálogos de arriba al ejecutarse ya (immediate).
 const enlaceProfundo = entradaPorEnlace(location.hash)
 let bienvenidaOfrecida = false
+const bienvenidaAbierta = ref(false)
+// «Ahora no», Esc o clic fuera: no se vuelve a ofrecer (si ya hizo algo, ya quedó marcada hecha).
+function alCerrarDialogoBienvenida(hecha: boolean) {
+  const respuesta = alCerrarBienvenida(hecha)
+  if (respuesta) marcarBienvenida(respuesta)
+}
 const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value || pantallaTerm.value !== 'app')
 watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], ([conSesion, pag, ocupado, enMarcha]) => {
   if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha })) return
   bienvenidaOfrecida = true
-  let empezada = false
-  $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),
-    cancel: { flat: true, label: t('bienvenida.ahoraNo'), noCaps: true }, ok: { color: 'primary', label: t('bienvenida.empezar'), unelevated: true, noCaps: true } })
-    .onOk(() => {
-      empezada = true
-      empezarBienvenida()
-    })
-    // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
-    .onDismiss(() => {
-      const respuesta = alCerrarBienvenida(empezada)
-      if (respuesta) marcarBienvenida(respuesta)
-    })
+  bienvenidaAbierta.value = true
 }, { immediate: true })
 </script>

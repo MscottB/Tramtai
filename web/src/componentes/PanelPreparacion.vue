@@ -50,9 +50,13 @@
         <div v-for="(linea, i) in estados[agente]!.lineas" :key="i"><template v-for="(trozo, j) in trozos(linea)" :key="j"><mark v-if="j % 2">{{ trozo }}</mark><template v-else>{{ trozo }}</template></template></div>
       </div>
     </div>
+    <!-- Con varios agentes, el que no acabó en listo se puede reintentar o saltar, y se enseña lo que falta. -->
+    <div v-if="parada && parada.pendientes.length" class="text-body2">{{ t('preparar.pendientes', { agentes: parada.pendientes.map(nombreAgente).join(', ') }) }}</div>
     <!-- Las acciones son del agente en curso: solo uno se prepara a la vez. -->
     <div v-if="pideSeguir(estados[actual]) || enMarcha(estados[actual]) || (terminado && visibles.length)" class="row items-center q-gutter-sm">
       <q-btn v-if="pideSeguir(estados[actual])" unelevated no-caps color="primary" :label="t('preparar.seguir')" :disable="corriendo" @click="seguir(actual)" />
+      <q-btn v-if="parada?.reintentar" :unelevated="!pideSeguir(estados[actual])" :flat="pideSeguir(estados[actual])" no-caps color="primary" icon="o_refresh" :label="t('comun.reintentar')" :disable="corriendo" @click="reintentar" />
+      <q-btn v-if="parada?.saltar" flat no-caps color="primary" :label="t('preparar.saltar')" :disable="corriendo" @click="saltar" />
       <q-btn v-if="enMarcha(estados[actual])" flat no-caps color="neutro" icon="o_close" :label="t('comun.cancelar')" :loading="cancelando" @click="cancelar(actual)" />
       <q-btn v-if="terminado && visibles.length" flat no-caps color="primary" :label="t('comun.cerrar')" @click="emit('cerrar')" />
     </div>
@@ -67,14 +71,14 @@ import { nombreAgente } from '../agentes'
 import { sesion } from '../estado'
 import { sinDato } from '../formato'
 import { esServidor } from '../servidor'
-import { AVISOS_SESION, enMarcha, ordenSeguir, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
+import { AVISOS_SESION, CODIGOS_EXPLICADOS, enMarcha, opcionesParada, ordenSeguir, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
 const props = defineProps<{ agentes: string[]; accion?: Accion; borrarDatos?: boolean; confirmar?: boolean }>()
 // lanzada: el servicio aceptó la acción del agente (quien muestra el panel ya no debe repetirla si lo vuelve a montar);
-// fin: la de un agente terminó (como sea); listo: llegaron todos a listo, con el estado de cada uno (un listo con motivo
-// no está listo para usar, ver listoParaUsar); cerrar: el usuario cierra el panel.
+// fin: la de un agente terminó (como sea); listo: acabó la tanda (todos en listo, o los que quedaron saltados), con el estado
+// de cada uno (un listo con motivo no está listo para usar, ver listoParaUsar); cerrar: el usuario cierra el panel.
 const emit = defineEmits<{ lanzada: [agente: string]; fin: [agente: string, estado: EstadoPreparacion | null]; listo: [estados: Record<string, EstadoPreparacion | null>]; cerrar: [] }>()
 
 const estados = reactive<Record<string, EstadoPreparacion | null>>({})
@@ -84,6 +88,13 @@ const acciones = reactive<Record<string, Accion | undefined>>({})
 const cajasEstado: Record<string, HTMLElement | null> = {}
 const actual = ref('')
 const terminado = ref(false)
+// paradaEn: el índice del agente donde se paró la tanda (no acabó en listo), o -1.
+const paradaEn = ref(-1)
+const parada = computed(() => {
+  if (!terminado.value || paradaEn.value < 0) return null
+  const o = opcionesParada(props.agentes, paradaEn.value)
+  return { ...o, reintentar: o.reintentar && !!props.accion }
+})
 const corriendo = ref(false)
 const pegado = ref('')
 const enviando = ref(false)
@@ -113,15 +124,31 @@ const corrida: Corrida = {
 // correr recorre los agentes desde uno.
 async function correr(desde: number, primera: Orden) {
   terminado.value = false
+  paradaEn.value = -1
   corriendo.value = true
   try {
-    const resultado = await prepararAgentes(corrida, props.agentes, desde, primera, { accion: props.accion, borrar_datos: props.borrarDatos, confirmar: props.confirmar })
+    const resultado = await prepararAgentes(corrida, props.agentes, desde, primera, ordenInicial())
     if (resultado === 'cortado') return
     terminado.value = true
-    if (resultado === 'listo') emit('listo', Object.fromEntries(props.agentes.map((a) => [a, estados[a] ?? null])))
+    if (resultado === 'listo') avisarListo()
+    else paradaEn.value = props.agentes.indexOf(actual.value)
   } finally {
     corriendo.value = false
   }
+}
+const ordenInicial = (): Orden => ({ accion: props.accion, borrar_datos: props.borrarDatos, confirmar: props.confirmar })
+const avisarListo = () => emit('listo', Object.fromEntries(props.agentes.map((a) => [a, estados[a] ?? null])))
+
+// reintentar vuelve a pedir el agente donde se paró; saltar sigue con el siguiente (o termina, si era el último).
+function reintentar() {
+  void correr(paradaEn.value, ordenInicial())
+  void enfocarEstado()
+}
+function saltar() {
+  const siguiente = paradaEn.value + 1
+  if (siguiente < props.agentes.length) return void correr(siguiente, ordenInicial())
+  paradaEn.value = -1
+  avisarListo()
 }
 
 // enfocarEstado lleva el foco al estado cuando el panel sustituye al botón que lo lanzó (la acción de la tarjeta o «Seguir»).
@@ -193,11 +220,8 @@ function titular(agente: string): string {
 // explicacion dice qué pasó y qué hacer, en el idioma de la Web UI (el detalle del servicio va debajo).
 function explicacion(e: EstadoPreparacion): string {
   if (e.motivo_codigo === 'version_no_comprobada') return t(k(`preparar.noComprobada.${e.accion}`), { agente: nombreAgente(e.agente) })
-  return e.motivo_codigo && conocidos.includes(e.motivo_codigo) ? t(k(`preparar.error.${e.motivo_codigo}`)) : ''
+  return e.motivo_codigo && CODIGOS_EXPLICADOS.includes(e.motivo_codigo) ? t(k(`preparar.error.${e.motivo_codigo}`)) : ''
 }
-// conocidos: los códigos con explicación (uno nuevo del servicio se queda con su detalle).
-const conocidos = ['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
-  'no_disponible_en_servidor', 'interrumpida']
 
 function icono(agente: string) {
   const e = estados[agente]
@@ -212,7 +236,7 @@ function color(agente: string) {
 
 onMounted(() => {
   if (esServidor(sesion.value)) api.acerca().then((a) => (cuenta.value = a.cuenta ?? '')).catch(() => {})
-  void correr(0, { accion: props.accion, borrar_datos: props.borrarDatos, confirmar: props.confirmar })
+  void correr(0, ordenInicial())
   if (props.accion) void enfocarEstado()
 })
 </script>

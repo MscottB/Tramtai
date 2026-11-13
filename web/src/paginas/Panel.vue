@@ -136,7 +136,7 @@ import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/c
 import type { Adaptador, EspacioUI, ResumenInstancia, EstadoPunto, Paso, Trabajo } from '../api/tipos'
 import { periodoHistorial, guiaOculta, ocultarGuia, sesion, sistema } from '../estado'
 import type { Destino } from '../navegacion'
-import { asegurarFichas, ordenarAgentes } from '../agentes'
+import { asegurarFichas, fijarDisponibilidad, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, textoDe } from '../formato'
 import { conTexto, guiaVisible as mostrarGuia } from '../pasos'
 import { t } from '../i18n'
@@ -239,6 +239,7 @@ function comprobar() {
   comprobandoPasos.value = true
   api.pasos().then((r) => {
     adaptadores.value = r.adaptadores
+    fijarDisponibilidad(r.adaptadores)
     pasosServicio.value = r.pasos
     errorPasos.value = ''
   }).catch((e) => {
