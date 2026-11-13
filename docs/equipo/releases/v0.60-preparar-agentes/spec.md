@@ -51,26 +51,34 @@ del servicio.
 |---|---|---|---|---|
 | Claude Code | sí | sí (`claude auth login`) | sí | sí |
 | Codex | sí | sí (código de dispositivo, `codex login --device-auth`) | sí | sí |
-| GitHub Copilot | sí | sí (`copilot login`, código de GitHub) | sí | sí |
+| GitHub Copilot | sí | sí (`copilot login --device-code`, código de GitHub) | sí | sí |
 | Antigravity | sí | no: solo clave de API (la sesión personal no se usa) | sí | sí |
 
-Los argumentos de inicio de sesión son los de las fichas actuales; el M0 confirma o corrige los de escritorio.
+Los argumentos de inicio de sesión los fijó el M0 (`m0.md`):
+- **Codex** inicia sesión siempre por código de dispositivo, en el escritorio y en el servidor; la tarjeta y la Ayuda avisan
+  de que hay que activarlo en ChatGPT › Seguridad, con su enlace (Ruling 8).
+- **Copilot** se lanza con `COPILOT_DEBUG_BROWSER` puesto: si no, abre el navegador del sistema y copia el código por su
+  cuenta (Ruling 9). Cada receta lleva las variables que su inicio de sesión necesita (Ruling 11).
+- **Claude** imprime el enlace y pide pegar el código que da la página.
 
 ## Cómo funciona
 
 ### La receta de cada agente
 
 Cada ficha (`internal/agentes/<nombre>`) suma una receta, con un valor por sistema (Windows, macOS, Linux):
-- **Instalar:** la orden oficial y lo que necesita (nada, npm, winget o brew). Se prefiere siempre la que no necesita
-  Node. Candidatas, a confirmar en el M0: Claude Code, su instalador nativo (`install.ps1`/`install.sh`); Codex, sus
-  binarios publicados o su paquete npm; Copilot, su instalador o su paquete npm; Antigravity, su instalador oficial.
-- **Dónde queda:** la ruta donde deja el ejecutable (por ejemplo `~/.local/bin`).
-- **Fijar versión:** si el instalador admite elegir versión, cómo se le pasa.
-- **Actualizar:** la orden del propio CLI (`claude update`…) o, si no tiene, volver a instalar.
-- **Desinstalar:** la orden oficial; si no tiene, qué ejecutable se borra.
-- **Última versión publicada:** de dónde se lee (registro de npm, versiones de GitHub, manifiesto del fabricante).
-- **Lector del inicio de sesión:** cómo se reconocen en su salida el enlace, el código y la petición de pegar algo, y si
-  necesita una terminal de verdad (pty).
+- **Instalar:** la orden oficial, sin Node (el M0 vio que ninguno lo necesita). Claude Code, Codex y Antigravity, su
+  instalador oficial (`install.ps1`/`install.sh`); Copilot, en macOS y Linux su instalador y en Windows su descarga
+  directa comprobada (zip y `SHA256SUMS.txt`, x64 o arm64) en `%LOCALAPPDATA%\GitHubCopilotCLI`, sin winget ni
+  administrador, que sirve también para la cuenta del servicio (Ruling 6).
+- **Dónde queda:** la ruta donde deja el ejecutable (por ejemplo `~/.local/bin`), escrita con `~` y `/`; `~` es el
+  perfil de la cuenta que corre el servicio (Ruling 14).
+- **Fijar versión:** si el instalador admite elegir versión, cómo se le pasa (Claude, Codex y Copilot; Antigravity no).
+- **Actualizar:** la orden del propio CLI (`claude update`, `codex update`, `copilot update`, `agy update`).
+- **Desinstalar:** ninguno tiene orden propia: la receta dice qué rutas se borran (Ruling 16).
+- **Última versión publicada:** Claude, su dirección `latest`; Codex y Copilot, sus versiones de GitHub (Codex con el
+  prefijo `rust-v`, Ruling 15); Antigravity, el manifiesto que usa su instalador (Ruling 12).
+- **Lector del inicio de sesión:** cómo se reconocen en su salida el enlace, el código y la petición de pegar algo. Ninguno
+  necesita una terminal de verdad (pty): todos funcionan con tuberías.
 - **Versiones comprobadas:** ver abajo.
 
 Las órdenes están fijas en el código: nada de lo que escribe el usuario entra en ellas.
@@ -82,24 +90,32 @@ Un paquete nuevo, `internal/preparar`, ejecuta la receta como una tarea por agen
   pide pegar), `listo`, `error` (con motivo y qué hacer) y `cancelado`.
 - **Una por agente a la vez,** cancelable, con plazo (instalar y actualizar: 15 min; iniciar sesión: 15 min) y el árbol
   de procesos atado como en las peticiones (Job Objects en Windows, grupo de procesos en Unix).
-- **Sigue aunque cierres la pantalla:** vive en el servicio; al volver, la pantalla ve dónde va.
-- **Registro corto** de cada preparación (órdenes, últimas líneas, resultado), sin secretos, para «Ver registro».
+- **Sigue aunque cierres la pantalla:** vive en el servicio; al volver, la pantalla ve dónde va. Si dos pantallas lanzan
+  la misma a la vez, la segunda recibe `ya_en_curso` y ve la de la primera.
+- **Al parar el servicio** se cancelan las preparaciones en marcha y se espera a que su árbol termine (Ruling 19); si el
+  servicio se cae a mitad, al volver la preparación sale como `error` con `interrumpida`.
+- **Mientras instala, actualiza o desinstala un agente,** el servicio lo trata como no disponible: las peticiones nuevas
+  reciben el `agente_no_disponible` de siempre (Ruling 18). Y nunca a la vez que una petición en curso: se vuelve a
+  contar con la reserva ya visible (Ruling 39).
+- **Registro corto** de cada preparación (órdenes, últimas líneas, resultado), sin secretos. «Ver registro» enseña las 20
+  últimas líneas, ya tapadas, que da el estado de la última preparación; el registro entero queda en
+  `datos/agentes/preparaciones/<id>.log`, sin ruta en la API (Ruling 25).
 
 ### Instalar
 
-1. **Requisitos:** si la receta pide npm, winget o brew y no está, no se instala: se dice qué falta con su enlace (ver
-   «Requisitos»).
-2. **Versión:** se instala la versión comprobada más reciente cuando el instalador deja fijarla; si no, la que dé el
+1. **Versión:** se instala la versión comprobada más reciente cuando el instalador deja fijarla; si no, la que dé el
    instalador.
-3. **Instalador oficial** con el usuario (o la cuenta del servicio), mostrando su salida resumida.
-4. **Encontrarlo:** en el PATH, en la ruta de la receta y, en Windows, en el PATH de usuario guardado en el registro. Si
+2. **Instalador oficial** con el usuario (o la cuenta del servicio), mostrando su salida resumida, con la entrada estándar
+   cerrada (si aun así se queda esperando, `plazo_agotado` y se cierra su árbol).
+3. **Encontrarlo:** en el PATH, en la ruta de la receta y, en Windows, en el PATH de usuario guardado en el registro. Si
    solo está fuera del PATH del servicio, se guarda su ruta en `comandos_agentes` (configuración de Tramtai, no del CLI).
-5. **Versión** con `--version` y, salvo Antigravity, se sigue con el inicio de sesión. En Antigravity se pide la clave de
+4. **Versión** con `--version` y, salvo Antigravity, se sigue con el inicio de sesión. En Antigravity se pide la clave de
    API como hoy.
 
 ### Iniciar sesión
 
-1. Se lanza el inicio de sesión del CLI (con pty si la receta lo pide) y se lee su salida con el lector de la receta.
+1. Se lanza el inicio de sesión del CLI y se lee su salida con el lector de la receta, sobre el texto acumulado y sin
+   secuencias ANSI. Sin enlace ni código en 30 s, `salida_no_reconocida`.
 2. Estado `esperando_usuario` con:
    - el enlace y el código de dispositivo (Codex, Copilot): se espera a que el usuario lo apruebe en su navegador; o
    - el enlace y un campo «Pega aquí el código» (Claude, si lo pide así): lo pegado se pasa al CLI por su entrada.
@@ -108,8 +124,8 @@ Un paquete nuevo, `internal/preparar`, ejecuta la receta como una tarea por agen
    si no, sale con 3) ofrecen «Usar mi suscripción» con su aviso de riesgo; nunca se cambia solo. En el servidor no se
    acepta ahí: tras `tramtai-servidor agentes entrar <id>`, la orden `tramtai-servidor agentes suscripcion <id>` (con
    `--personal` si está abierto a la red), cada una en su bloque copiable (Rulings 34 y 35).
-4. Si se cancela o se agota el plazo, se cierra el proceso. La sesión la guarda el CLI; Tramtai nunca lee ni guarda
-   tokens.
+4. Si se cancela o se agota el plazo, se cierra el proceso. Si el CLI termina con error («Login failed», «Bad Request»),
+   `inicio_sesion_fallo` (Ruling 21). La sesión la guarda el CLI; Tramtai nunca lee ni guarda tokens.
 
 ### Versiones comprobadas
 
@@ -120,7 +136,12 @@ instalar) está **comprobada**:
   comprueba que su instalador y su inicio de sesión siguen como dice la receta (lanza el inicio de sesión, lee el enlace
   y el código y lo cancela, sin cuenta) y, si pasa, la añade y la sube como archivo de un release fijo de GitHub,
   `compatibilidad` (el sitio solo se publica con cada versión, así que no sirve). Así una versión nueva queda comprobada
-  sin esperar a otra versión de Tramtai. Tramtai lee esa lista con la búsqueda diaria de versiones.
+  sin esperar a otra versión de Tramtai. Tramtai lee esa lista con la búsqueda diaria de versiones. El job lee las
+  últimas versiones de GitHub con su `GITHUB_TOKEN` de solo lectura, que nunca pasa a instaladores ni CLI; solo un límite
+  de la API (403/429) cuenta como «sin concluir» (la versión ni entra ni sale y no se avisa); un 404, un tag que no vale
+  o un fallo de red se avisan (Rulings 32 y 33).
+- **Autoactualización:** Claude, Copilot y Antigravity se siguen actualizando solos (no es un ajuste imprescindible). Si
+  saltan a una versión sin comprobar, solo queda desactivada la acción automática de ese agente (Ruling 7).
 - **Instaladores que no dejan elegir versión:** si la última versión publicada está comprobada, se instala sin más; si
   no, se avisa antes, como al actualizar, y si el usuario sigue, se instala y el inicio de sesión automático queda
   desactivado hasta que esa versión esté comprobada.
@@ -134,6 +155,9 @@ instalar) está **comprobada**:
   queda colgado.
 - **Antes de actualizar** a una versión que no está comprobada se avisa: «La versión nueva aún no está comprobada: si
   actualizas, el inicio de sesión automático quedará desactivado hasta que lo esté».
+- **Seguir igualmente:** instalar, actualizar y desinstalar una versión sin comprobar se pueden confirmar (`confirmar` en
+  la API, «Seguir» en las pantallas, `--confirmar` en la CLI); desinstalar también, porque Claude y Copilot se
+  actualizan solos (Ruling 22). Iniciar sesión no se salta nunca: llega en el estado como `version_no_comprobada`.
 - **El uso normal del agente no se bloquea:** las peticiones siguen funcionando con sus comprobaciones de siempre; lo
   que se desactiva es la preparación automática.
 
@@ -141,41 +165,47 @@ instalar) está **comprobada**:
 
 - **Última versión publicada:** se consulta en la fuente oficial de cada CLI como mucho una vez al día y al pulsar
   «Volver a comprobar». La tarjeta dice «Hay una versión nueva: 2.1.300 (tienes 2.1.288)». No se envía nada que
-  identifique al usuario; se puede desactivar en Ajustes.
+  identifique al usuario; se puede desactivar en Ajustes. El servicio guarda el último resultado y lo sirve en el GET;
+  solo con `?forzar=1` (o al arrancar y al cambiar de día, en segundo plano) vuelve a consultar, y las consultas
+  simultáneas se agrupan en una.
 - **Actualizar** ejecuta la orden de la receta y enseña la versión de antes y la de después. No actualiza si el agente
   tiene peticiones en curso: lo dice y espera.
 - **Volver a iniciar sesión** aparece cuando la sesión caducó («sesión no responde»).
 
 ### Desinstalar
 
-- Con la orden oficial de la receta; si no hay, se borra solo el ejecutable de la ruta conocida.
+- Ningún CLI tiene orden oficial para desinstalar: se borran las rutas de la receta, siempre dentro de la casa de la
+  cuenta y nunca la casa entera. Si entre la casa y la ruta hay un enlace o una junction, no se borra y se dice por qué
+  (Ruling 20).
 - Pide confirmación: el CLI también deja de estar para el usuario fuera de Tramtai.
 - No borra la sesión ni los ajustes del CLI (`~/.claude`, `~/.codex`, `~/.copilot`…) salvo con la casilla «Borrar
-  también su sesión y ajustes».
+  también su sesión y ajustes». Las líneas del PATH que dejaron los instaladores se quedan (no son de Tramtai).
 - Espera si hay peticiones en curso con ese agente. Quita su ruta de `comandos_agentes` si la puso Tramtai.
 
 ### Requisitos
 
-Solo si el M0 confirma que algún CLI necesita Node/npm porque no tiene un instalador sin él:
-- **Windows:** Tramtai instala Node LTS con winget, por usuario si se puede.
-- **macOS:** con Homebrew si está; si no, se enlaza el instalador oficial.
-- **Linux:** se enseña la orden de su distribución: necesita root y Tramtai no lo pide.
-
-Si ningún CLI necesita Node, esta parte no se construye y se anota así en el M0.
+No se construye: el M0 vio que los cuatro CLI tienen instalador o descarga oficial sin Node (`m0.md`, Ruling 16). Sin
+receta que pida Node, no hay `requisito_falta` ni instalación de Node; si un CLI futuro lo necesita, se añade entonces.
 
 ### Ajustes imprescindibles
 
-Solo los que el M0 encuentre necesarios para que un CLI funcione con Tramtai. Si hay alguno, se escribe con la copia, la
-anotación y el Restaurar de `internal/apuntar`, y se quita al desinstalar. Si no hay ninguno, no se toca nada.
+Ninguno: el M0 vio que los cuatro se instalan e imprimen su enlace y su código sin tocar su configuración. Tramtai no
+escribe nada en la de los CLI.
 
 ### Modo servidor
 
 - El servicio ya corre con la cuenta del servicio, así que instala e inicia sesión para esa cuenta: «instalación
   normal» de esa cuenta, en su carpeta. El panel lo recuerda: «Para la cuenta del servicio (tramtai)».
 - **Linux:** la Web UI remota y `tramtai agentes …` sustituyen a `sudo npm install -g` y `sudo -u …` en la guía.
-- **Windows Server:** el M0 averigua qué se puede hacer con la cuenta virtual del servicio (instalar, dónde, iniciar
-  sesión). Lo que se pueda, se hace igual que en Linux; lo que no, se explica en la tarjeta y en la guía, y queda la
-  clave de API.
+- **Windows Server:** el M0 vio que, con la cuenta virtual del servicio, los cuatro se instalan, se actualizan y se
+  desinstalan en `C:\Windows\ServiceProfiles\<servicio>`, y los tres con sesión imprimen enlace y código; que la sesión
+  aprobada quede guardada se comprueba en la prueba final (Ruling 10). Esa cuenta no tiene consola: donde un mensaje
+  daría la orden para hacerlo a mano, remite a la clave de API.
+- **La orden para la consola** que dan los mensajes (por ejemplo, con una versión sin comprobar) es, en el servidor
+  Linux, la de la cuenta del servicio: `sudo -u <cuenta> -H env -i HOME=… <cli> …`, conservando `TERM` y `LANG` si
+  no necesitan comillas (Ruling 31). En el escritorio es la del CLI con su nombre si la consola lo encuentra; si no (el
+  instalador de Claude y la descarga de Copilot en Windows no tocan el PATH), con su ruta completa, entre comillas si
+  lleva espacios: `& "C:\Users\Ana María\.local\bin\claude.exe" auth login` en PowerShell (en cmd, sin el `&`).
 - Solo el administrador, con su sesión (y TOTP si está activado), puede preparar agentes.
 
 ## API
@@ -185,17 +215,23 @@ Bajo la instancia, con la sesión de la Web UI o la clave del servicio; la clave
 | Ruta | Qué hace |
 |---|---|
 | `GET /api/v1/agentes/<id>/preparacion` | Estado de la preparación (o `null`) |
-| `POST /api/v1/agentes/<id>/preparacion` | `{"accion": "instalar"\|"actualizar"\|"iniciar_sesion"\|"desinstalar", "borrar_datos": false}` |
+| `POST /api/v1/agentes/<id>/preparacion` | `{"accion": "instalar"\|"actualizar"\|"iniciar_sesion"\|"desinstalar", "borrar_datos": false, "confirmar": false}` (202) |
 | `POST /api/v1/agentes/<id>/preparacion/codigo` | `{"codigo": "…"}`: lo pegado, al CLI |
 | `DELETE /api/v1/agentes/<id>/preparacion` | Cancela |
-| `GET /api/v1/agentes/versiones` | Instalada, última publicada, comprobada o no, y acciones habilitadas por agente |
+| `GET /api/v1/agentes/versiones` | Instalada, última publicada, comprobada o no, y acciones habilitadas por agente (`?forzar=1` vuelve a consultar) |
+
+Con la clave del espacio (la de las apps), estas rutas responden 403 `no_autorizado`: con ella una app podría desinstalar
+un CLI, borrar su sesión o colar su código de dispositivo (Rulings 23 y 24).
 
 - Las pantallas siguen el estado con un sondeo corto mientras hay una preparación en marcha, como el conversor
   (`seguirPreparacion` en `web/src/conversor.ts`); el canal de eventos de la instancia solo lleva peticiones y no cambia.
-- Errores con código: `requisito_falta`, `version_no_comprobada`, `peticiones_en_curso`, `ya_en_curso`,
-  `instalador_fallo`, `no_encontrado_tras_instalar`, `plazo_agotado`, `salida_no_reconocida`, `inicio_sesion_fallo` (el
-  inicio de sesión del CLI terminó con error), `sin_red`,
-  `no_disponible_en_servidor` (lo que el M0 diga para Windows Server).
+- Errores con código: `version_no_comprobada`, `peticiones_en_curso`, `ya_en_curso`, `instalador_fallo`,
+  `no_encontrado_tras_instalar`, `plazo_agotado`, `salida_no_reconocida`, `inicio_sesion_fallo` (el inicio de sesión del
+  CLI terminó con error), `sin_red` e `interrumpida` (el servicio se reinició a mitad). `requisito_falta` no existe: no
+  hay requisitos (Ruling 16), y `no_disponible_en_servidor` es solo de las herramientas: preparar no lo da (Ruling 38).
+- **La orden a mano va aparte** en `orden_consola` (en el estado de la preparación y en las versiones) cuando el mensaje
+  dice cómo iniciar sesión a mano; las pantallas arman la frase en su idioma (Ruling 37). Vacía ahí, la cuenta del
+  servicio no tiene consola y queda la clave de API.
 - Los tipos salen de `internal/contrato` (`go generate ./internal/contrato`).
 
 ## Pantallas
@@ -204,10 +240,12 @@ Bajo la instancia, con la sesión de la Web UI o la clave del servicio; la clave
 marcados; los instala uno tras otro en un solo panel, que en cada inicio de sesión enseña enlace («Abrir»), código
 («Copiar») y, si hace falta, el campo para pegar. Termina con «Listo: ya puedes usar …» para los que quedaron listos y,
 para los que inician sesión y aún van con clave de API, «Falta un paso: usar tu suscripción.» con el botón «Usar mi
-suscripción» (o su orden, donde no hay botón).
+suscripción» (o su orden, donde no hay botón). Si un agente no acaba en listo, el panel ofrece «Reintentar» (también con
+un solo agente) y «Saltar», y dice cuáles quedan (Rulings 26 y 27). Quien ya respondió la bienvenida en una versión
+anterior no la vuelve a ver: prepara sus agentes desde Agentes y Primeros pasos (Ruling 28).
 
 **Agentes:** cada tarjeta, su estado y una sola acción principal:
-- No instalado → «Instalar» (y el requisito que falte, si falta).
+- No instalado → «Instalar».
 - Instalado sin sesión → «Iniciar sesión» (Antigravity: «Poner la clave»).
 - Listo → su versión y, si la hay, «Hay una versión nueva…» con «Actualizar».
 - Sesión caducada → «Volver a iniciar sesión».
@@ -215,20 +253,33 @@ suscripción» (o su orden, donde no hay botón).
 - En «…»: «Comprobar versión», «Actualizar», «Desinstalar» y «Ver registro».
 
 **Ajustes:** «Comprobar versiones nuevas de los agentes» (activada, una vez al día), junto a las actualizaciones de
-Tramtai, con a qué sitios se conecta.
+Tramtai, con a qué sitios se conecta. Como el de las actualizaciones, solo se cambia en el propio equipo: en la Web UI
+remota del servidor sale desactivado.
 
-**Terminal:** en Agentes, `i` instalar, `s` iniciar sesión, `u` actualizar, `x` desinstalar (con confirmación); el
-panel enseña enlace y código como texto seleccionable y un campo para pegar.
+**Terminal:** en Agentes, `i` instalar, `s` iniciar sesión, `u` actualizar, `x` desinstalar y `X` desinstalar borrando
+sus datos (con confirmación), `y` seguir con una versión sin comprobar, `k` cancelar, `l` ver registro, `e` volver al
+campo de pegar, `c` volver a comprobar y `a` usar tu suscripción tras iniciar sesión; `v` en Ajustes cambia el ajuste de
+versiones. El panel enseña enlace y código como texto seleccionable y un campo para pegar; el enlace va sin saltos de
+línea propios y como hipervínculo OSC 8, para copiarlo entero (Ruling 29).
 
 **CLI** (con alias en inglés desde el principio):
 - `tramtai agentes instalar|install <id>…`
 - `tramtai agentes entrar|login <id>` (hoy solo en el servidor; pasa a funcionar siempre)
 - `tramtai agentes actualizar|update <id>…|--todos`
 - `tramtai agentes desinstalar|uninstall <id> [--borrar-datos]`
-- `tramtai agentes versiones|versions`
+- `tramtai agentes versiones|versions [--comprobar]`
 
-Imprimen el progreso, el enlace y el código, leen el código pegado por la entrada estándar y terminan con un código de
-salida claro.
+Imprimen el progreso, el enlace y el código, leen el código pegado por la entrada estándar sin mostrarlo y terminan con
+un código de salida claro: 0 listo; 1 error; 2 versión sin comprobar que no se confirmó, o acción que ahora no se puede;
+3 hecho, pero falta un paso (queda sin sesión, sin clave o sin usar tu suscripción, o no se pudo comprobar), con la
+orden que falta (Ruling 30); 130 cancelado. `--confirmar` se salta la pregunta de la versión sin comprobar y la de
+desinstalar, nunca el inicio de sesión ni el «acepto» de la suscripción.
+
+De paso (Ruling 36), las órdenes que la Ayuda en inglés aún citaba en español llevan su alias: `actualizar|update`,
+`conversor|converter` (`estado|status`, `preparar|prepare`), `espacio|workspace` (`iniciar|start`, `detener|stop`,
+`olvidar|forget`), `espacios|workspaces` y `proyecto|project` (con `global`, que se escribe igual: `iniciar|start`,
+`detener|stop`, `estado|status`, `abrir|open`); `servicio iniciar` admite `--open` (oculta) como `--abrir`. Los textos en
+inglés citan las órdenes con su alias.
 
 Todos los textos en español e inglés, con el glosario y `estilo-textos.test.ts`.
 

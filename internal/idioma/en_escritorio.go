@@ -48,6 +48,6 @@ func init() {
 		// Página de error
 		"no se encontró el ejecutable tramtai junto a la aplicación ni en el PATH":                        "the tramtai executable was not found next to the app or in the PATH",
 		"No se pudo conectar con el servicio de Tramtai":                                                  "Could not connect to the Tramtai service",
-		"Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.": "Try <code>tramtai servicio iniciar -d</code> in a terminal and open the app again.",
+		"Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.": "Try <code>tramtai service start -d</code> in a terminal and open the app again.",
 	})
 }

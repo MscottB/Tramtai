@@ -743,6 +743,10 @@ input[type='number'] {
 .markdown a {
   color: var(--acento);
 }
+/* Una opción de la CLI (--comprobar) no se parte tras el guion. */
+.opcion-cli {
+  white-space: nowrap;
+}
 .bloque-texto {
   background: var(--superficie-suave);
   border: 1px solid var(--borde);

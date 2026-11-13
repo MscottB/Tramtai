@@ -73,9 +73,9 @@ func init() {
 		"nueva %s":                       "new %s",
 		"desinstalar y borrar sus datos": "uninstall and delete its data",
 		"versiones de los agentes":       "agent versions",
-		"Esta acción no está disponible ahora para este agente":                        "This action is not available for this agent right now",
-		"Se desinstala con su orden oficial y deja de estar también fuera de Tramtai.": "It is uninstalled with its official command and is no longer available outside Tramtai either.",
-		"Para borrarlos también, cancela y pulsa X.":                                   "To delete them too, cancel and press X.",
+		"Esta acción no está disponible ahora para este agente":                                                "This action is not available for this agent right now",
+		"Se desinstala borrando los archivos que dejó su instalador y deja de estar también fuera de Tramtai.": "It is uninstalled by deleting the files its installer left and is no longer available outside Tramtai either.",
+		"Para borrarlos también, cancela y pulsa X.":                                                           "To delete them too, cancel and press X.",
 
 		// Inicio: los textos, contadores y pasos salen de los de la Web UI; aquí solo lo propio de la terminal.
 		"desplaza": "scroll",

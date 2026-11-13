@@ -207,6 +207,9 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones;
 ```
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
+- **Alias en inglés:** `actualizar` (`update`), `conversor` (`converter`: `status`, `prepare`), `espacio` y
+  `espacios` (`workspace`, `workspaces`: `start`, `stop`, `forget`) y `proyecto` (`project`; con `global`:
+  `start`, `stop`, `status`, `open`). `servicio iniciar --open` es `--abrir`.
 - **Los CLI de los agentes:** `tramtai agentes instalar|entrar|actualizar|desinstalar|versiones` tienen alias en inglés
   (`install`, `login`, `update --all`, `uninstall --delete-data`, `versions --check`). Enseñan el progreso, el enlace y el
   código (no abren ningún navegador) y piden sin mostrarlo el código que te den. Con una versión sin comprobar preguntan

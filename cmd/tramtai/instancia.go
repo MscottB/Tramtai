@@ -115,7 +115,10 @@ func comandoInstancia(ambito string) *cobra.Command {
 	corto := map[string]string{"global": idioma.T("Espacio global: texto y archivos sin repositorio (también: tramtai espacio)"),
 		"proyecto": idioma.T("Espacio del proyecto actual, .tramtai/config.yaml (también: tramtai espacio)")}[ambito]
 	grupo := &cobra.Command{Use: ambito, Short: corto}
-	iniciar := &cobra.Command{Use: "iniciar", Short: idioma.T("Activa el espacio (inicia el servicio si hace falta)"),
+	if ambito == "proyecto" { // «global» se escribe igual en inglés
+		grupo.Aliases = []string{"project"}
+	}
+	iniciar := &cobra.Command{Use: "iniciar", Aliases: []string{"start"}, Short: idioma.T("Activa el espacio (inicia el servicio si hace falta)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			raiz, _, _, err := identificar(ambito)
 			if err != nil {
@@ -134,7 +137,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			imprimirActivacion(cmd.OutOrStdout(), ambito, a, c)
 			return nil
 		}}
-	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el espacio: vacía su cola sin afectar a los demás"),
+	detener := &cobra.Command{Use: "detener", Aliases: []string{"stop"}, Short: idioma.T("Detiene el espacio: vacía su cola sin afectar a los demás"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, id, _, err := identificar(ambito)
 			if err != nil {
@@ -152,7 +155,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("espacio %s detenido\n"), id)
 			return nil
 		}}
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si el espacio está activo y sus peticiones"),
+	estado := &cobra.Command{Use: "estado", Aliases: []string{"status"}, Short: idioma.T("Muestra si el espacio está activo y sus peticiones"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			raiz, id, _, err := identificar(ambito)
 			if err != nil {
@@ -184,7 +187,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito, rotarToken) }}
 	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera una clave nueva; la anterior deja de valer"))
 	var enNavegador bool
-	abrirWeb := &cobra.Command{Use: "abrir", Short: idioma.T("Abre el espacio en la app de escritorio o, con --navegador, en el navegador"),
+	abrirWeb := &cobra.Command{Use: "abrir", Aliases: []string{"open"}, Short: idioma.T("Abre el espacio en la app de escritorio o, con --navegador, en el navegador"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito, enNavegador) }}
 	abrirWeb.Flags().BoolVar(&enNavegador, "navegador", false, idioma.T("abre la Web UI en el navegador en lugar de la app de escritorio"))
 	grupo.AddCommand(iniciar, detener, estado, token, abrirWeb)

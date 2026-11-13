@@ -74,8 +74,9 @@ test('los textos de Servidor existen en los dos idiomas', () => {
     for (const clave of ['config.pestanaServidor', 'servidor.texto', 'servidor.cambiaEn', 'servidor.tlsNinguno', 'servidor.renovarArchivos'] as const) {
       assert.notEqual(t(clave), clave, `${lengua}: ${clave}`)
     }
-    // Las órdenes de antes aún no tienen alias en inglés (llegan en la v0.62).
-    assert.ok(t('actualizacion.servidor').includes('tramtai-servidor actualizar') && t('servidor.cambiaEn').includes('tramtai-servidor reiniciar'), lengua)
+    // Cada idioma cita la orden con su nombre: en inglés, su alias.
+    const [actualizar, reiniciar] = lengua === 'es' ? ['actualizar', 'reiniciar'] : ['update', 'restart']
+    assert.ok(t('actualizacion.servidor').includes(`tramtai-servidor ${actualizar}`) && t('servidor.cambiaEn').includes(`tramtai-servidor ${reiniciar}`), lengua)
   }
   idioma.value = 'es'
 })

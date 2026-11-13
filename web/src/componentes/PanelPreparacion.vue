@@ -1,9 +1,11 @@
 <template>
   <!-- Instala, actualiza, desinstala o inicia sesión en los CLI de los agentes, uno tras otro, y enseña cómo va. Sin acción,
        sigue la preparación que ya está en marcha (la lanzó otra pantalla, o antes de recargar). -->
-  <div class="panel-preparacion column q-gutter-y-md">
+  <!-- column de Quasar parte en líneas (flex-wrap): sin no-wrap, una línea larga del registro (que no se parte) daba su
+       ancho a todo el panel y desbordaba la pantalla en un móvil. -->
+  <div class="panel-preparacion column no-wrap q-gutter-y-md">
     <div v-if="cuenta" class="text-caption texto-suave"><q-icon name="o_dns" class="q-mr-xs" aria-hidden="true" />{{ t('preparar.cuentaServicio', { cuenta }) }}</div>
-    <div v-for="agente in visibles" :key="agente" class="column q-gutter-y-sm">
+    <div v-for="agente in visibles" :key="agente" class="column no-wrap q-gutter-y-sm">
       <!-- El estado, en voz alta para un lector de pantalla cada vez que cambia; recibe el foco cuando el panel sustituye
            al botón que lo lanzó. -->
       <div :ref="(el) => (cajasEstado[agente] = el as HTMLElement | null)" role="status" aria-live="polite" tabindex="-1"
@@ -19,9 +21,10 @@
           {{ t(AVISOS_SESION[agente].texto) }}
           <a class="enlace" :href="AVISOS_SESION[agente].enlace" target="_blank" rel="noopener noreferrer">{{ t('preparar.abrirAjustesSeguridad') }}</a>
         </div>
-        <div v-if="vistaEspera(estados[agente])!.enlace" class="row items-center no-wrap q-gutter-x-sm">
-          <span class="codigo romper col">{{ vistaEspera(estados[agente])!.enlace }}</span>
-          <q-btn unelevated dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-md" :label="t('preparar.abrir')" :aria-label="t('preparar.abrirEnlace', { agente: nombreAgente(agente) })" :href="vistaEspera(estados[agente])!.enlace" target="_blank" rel="noopener noreferrer" />
+        <!-- En un móvil, el enlace a todo el ancho y «Abrir» debajo: al lado quedaba una columna estrecha de letras sueltas. -->
+        <div v-if="vistaEspera(estados[agente])!.enlace" class="row items-center q-col-gutter-sm">
+          <div class="col-12 col-sm"><span class="codigo romper">{{ vistaEspera(estados[agente])!.enlace }}</span></div>
+          <div class="col-auto"><q-btn unelevated dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-md" :label="t('preparar.abrir')" :aria-label="t('preparar.abrirEnlace', { agente: nombreAgente(agente) })" :href="vistaEspera(estados[agente])!.enlace" target="_blank" rel="noopener noreferrer" /></div>
         </div>
         <div v-if="vistaEspera(estados[agente])!.codigo">
           <div class="text-caption texto-suave q-mb-xs">{{ t('preparar.codigo') }}</div>
@@ -36,12 +39,15 @@
         </form>
       </template>
 
-      <!-- Falló: qué hacer y el detalle del servicio. Un listo con motivo (instalado sin iniciar sesión) dice por qué. -->
+      <!-- Falló: qué hacer y, debajo, cómo iniciar sesión a mano (en el idioma de la Web UI) o el detalle del servicio. Un
+           listo con motivo (instalado sin iniciar sesión) dice por qué. -->
       <template v-if="estados[agente]?.estado === 'error'">
         <div class="text-body2">{{ explicacion(estados[agente]!) }}</div>
-        <div v-if="estados[agente]!.mensaje" class="text-caption texto-suave romper">{{ estados[agente]!.mensaje }}</div>
+        <div v-if="conAMano(estados[agente])" class="text-body2 romper">{{ aMano(estados[agente]!) }}</div>
+        <div v-else-if="estados[agente]!.mensaje" class="text-caption texto-suave romper">{{ estados[agente]!.mensaje }}</div>
       </template>
-      <div v-else-if="estados[agente]?.estado === 'listo' && estados[agente]!.mensaje" class="aviso text-body2 romper">{{ estados[agente]!.mensaje }}</div>
+      <div v-else-if="estados[agente]?.estado === 'listo' && estados[agente]!.motivo_codigo && (conAMano(estados[agente]) || estados[agente]!.mensaje)" class="aviso text-body2 romper">
+        {{ conAMano(estados[agente]) ? razonAMano(estados[agente]!.motivo_codigo!, estados[agente]!) : estados[agente]!.mensaje }}</div>
       <div v-if="fallos[agente]" class="text-body2" role="alert">{{ fallos[agente] }}</div>
 
       <!-- Inició sesión, pero Tramtai aún lo usa con clave de API y no hay ninguna: «Usar mi suscripción» ahí mismo, con su
@@ -86,7 +92,7 @@ import { sesion } from '../estado'
 import { sinDato } from '../formato'
 import { esServidor, estadoServidor, ordenUsarSuscripcion, puedeElegirSuscripcion } from '../servidor'
 import { usarSuscripcion } from '../suscripcion'
-import { AVISOS_SESION, CODIGOS_EXPLICADOS, conSesion, enMarcha, faltaSuscripcion, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
+import { AVISOS_SESION, CODIGOS_EXPLICADOS, aMano, conAMano, conSesion, razonAMano, enMarcha, faltaSuscripcion, opcionesParada, ordenSeguir, siguienteTrasSaltar, pideSeguir, prepararAgentes, trozos, vistaEspera, type Accion, type Corrida, type Orden } from '../preparacion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -161,6 +167,9 @@ async function activar(agente: string) {
   } finally {
     activando.value = ''
   }
+  // El botón desaparece al activarla: el foco pasa al estado, que dice cómo quedó, en lugar de perderse.
+  await nextTick()
+  if (!falta(agente)) cajasEstado[agente]?.focus()
 }
 
 // correr recorre los agentes desde uno.

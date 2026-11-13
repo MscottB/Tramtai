@@ -36,10 +36,15 @@ test('la acción principal de cada tarjeta sale de su estado y de sus versiones'
 })
 
 test('una versión no comprobada enseña el aviso; para iniciar sesión, sin el botón', () => {
-  const motivo = 'Claude Code 2.2.0 aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, inicia sesión en una consola con claude auth login'
+  // El motivo del servicio viene en su idioma: el aviso se arma con orden_consola en el de la Web UI (Ruling 37).
+  const motivo = 'Claude Code 2.2.0 is not checked with Tramtai yet: … claude auth login'
   const v = versiones({ instalada: '2.2.0', comprobadas: { actualizar: true, iniciar_sesion: false, desinstalar: true }, acciones: ['actualizar', 'desinstalar'],
-    motivo_codigo: 'version_no_comprobada', motivo })
-  assert.deepEqual(accionPrincipal(agente('sin_sesion'), v), { aviso: motivo })
+    motivo_codigo: 'version_no_comprobada', motivo, orden_consola: 'claude auth login' })
+  assert.deepEqual(accionPrincipal(agente('sin_sesion'), v),
+    { aviso: t('preparar.causa.version_no_comprobada') + ' ' + t('preparar.aMano', { orden: 'claude auth login' }) })
+  // Sin orden, la cuenta del servicio no tiene consola: su clave de API.
+  assert.deepEqual(accionPrincipal(agente('sin_sesion'), { ...v, orden_consola: undefined }),
+    { aviso: t('preparar.causa.version_no_comprobada') + ' ' + t('preparar.aManoSinConsola') })
   // Instalar o actualizar una no comprobada sí se puede, con el aviso de su acción delante (y «Seguir» en el panel); el
   // motivo del servicio (que puede ser el de iniciar sesión, o «no se pudo consultar…») no se usa.
   const instalar = versiones({ comprobadas: { instalar: false }, acciones: ['instalar'], motivo_codigo: 'sin_red', motivo: 'no se pudo consultar la última versión de Claude Code' })
@@ -279,12 +284,12 @@ test('resumenFinal: separa los que quedaron listos de verdad de los que no, con 
   const r = resumenFinal(['claude', 'codex', 'copilot', 'antigravity'], {
     claude: e('claude', {}),
     codex: e('codex', { estado: 'error', motivo_codigo: 'sin_red' }),
-    copilot: e('copilot', { motivo_codigo: 'version_no_comprobada', mensaje: 'Instalado, sin sesión.' }),
+    copilot: e('copilot', { motivo_codigo: 'version_no_comprobada', mensaje: 'Installed, not signed in.', orden_consola: 'copilot login' }),
   })
   assert.deepEqual(r.listos, ['claude'])
   assert.deepEqual(r.pendientes.map((p) => p.agente), ['codex', 'copilot', 'antigravity'])
   assert.equal(r.pendientes[0].razon, t('preparar.error.sin_red'))
-  assert.equal(r.pendientes[1].razon, 'Instalado, sin sesión.')
+  assert.equal(r.pendientes[1].razon, t('preparar.causa.version_no_comprobada') + ' ' + t('preparar.aMano', { orden: 'copilot login' }))
   assert.equal(r.pendientes[2].razon, t('bienvenida.saltado'))
 })
 
@@ -320,12 +325,18 @@ test('resumenFinal: no se lanzó (con su motivo) no es lo mismo que saltado', ()
   assert.equal(r.pendientes[1].razon, t('bienvenida.saltado'))
 })
 
-test('resumenFinal: sin enlace reconocido o con el inicio de sesión fallido, la razón es el mensaje con cómo hacerlo a mano', () => {
-  const mensaje = 'no se reconoció lo que escribió Codex en 30 s: inicia sesión en una consola con codex login --device-auth'
+test('resumenFinal: sin enlace reconocido o con el inicio de sesión fallido, la razón dice cómo hacerlo a mano en el idioma de la Web UI', () => {
+  const orden = '& "C:\\Users\\Ana María\\.local\\bin\\codex.exe" login --device-auth'
   const r = resumenFinal(['codex', 'copilot', 'claude'], {
-    codex: { agente: 'codex', accion: 'instalar', estado: 'error', motivo_codigo: 'salida_no_reconocida', mensaje } as EstadoPreparacion,
+    codex: { agente: 'codex', accion: 'instalar', estado: 'error', motivo_codigo: 'salida_no_reconocida', mensaje: 'the service’s language', orden_consola: orden } as EstadoPreparacion,
     copilot: { agente: 'copilot', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo', mensaje: 'falló: usa su clave de API' } as EstadoPreparacion,
-    claude: { agente: 'claude', accion: 'instalar', estado: 'error', motivo_codigo: 'inicio_sesion_fallo' } as EstadoPreparacion,
+    claude: { agente: 'claude', accion: 'instalar', estado: 'error', motivo_codigo: 'version_no_comprobada', mensaje: 'Claude Code 2.2.0 aún no…' } as EstadoPreparacion,
   })
-  assert.deepEqual(r.pendientes.map((p) => p.razon), [mensaje, 'falló: usa su clave de API', t('preparar.error.inicio_sesion_fallo')])
+  assert.deepEqual(r.pendientes.map((p) => p.razon), [
+    t('preparar.causa.salida_no_reconocida') + ' ' + t('preparar.aMano', { orden }),
+    t('preparar.causa.inicio_sesion_fallo') + ' ' + t('preparar.aManoSinConsola'),
+    // Instalar sin comprobar (pide «Seguir»): no es de iniciar sesión, y tampoco usa el mensaje del servicio.
+    t('preparar.noComprobadaTitulo', { agente: 'Claude Code' }) + '.',
+  ])
+  for (const p of r.pendientes) assert.ok(!/language|falló|2\.2\.0/.test(p.razon), p.razon)
 })

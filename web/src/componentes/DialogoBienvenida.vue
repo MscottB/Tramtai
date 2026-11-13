@@ -49,8 +49,10 @@
 
       <q-card-actions v-if="fase !== 'preparando'" align="right" class="q-px-md q-pb-md">
         <q-btn v-close-popup flat no-caps color="primary" :label="fase === 'oferta' ? t('bienvenida.ahoraNo') : t('comun.cerrar')" />
-        <q-btn v-if="fase === 'resumen' && resumen.pendientes.length" v-close-popup outline no-caps color="primary" :label="t('bienvenida.irAgentes')" @click="emit('ir', 'agentes')" />
-        <q-btn v-close-popup :unelevated="!opciones.length || fase === 'resumen'" :outline="!!opciones.length && fase === 'oferta'" no-caps color="primary" :label="t('bienvenida.empezar')" @click="empezar" />
+        <!-- El recorrido es la principal solo si no queda otra cosa que hacer: con «Prepara tus agentes» en la oferta, o con
+             pendientes en el resumen, va contorneado y la principal (a la derecha) es terminarlos en Agentes. -->
+        <q-btn v-close-popup :unelevated="!recorridoSecundario" :outline="recorridoSecundario" no-caps color="primary" :label="t('bienvenida.empezar')" @click="empezar" />
+        <q-btn v-if="fase === 'resumen' && resumen.pendientes.length" v-close-popup unelevated no-caps color="primary" :label="t('bienvenida.irAgentes')" @click="emit('ir', 'agentes')" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -88,6 +90,7 @@ const motivos = reactive<Record<string, string>>({})
 // El resumen mira también cómo quedó cada agente (el panel los vuelve a comprobar al iniciar sesión): con la sesión
 // iniciada pero sin usar la suscripción, falta un paso.
 const resumen = computed(() => resumenFinal(lanzados.value, estados, motivos, adaptadoresConocidos.value ?? []))
+const recorridoSecundario = computed(() => fase.value === 'oferta' ? !!opciones.value.length : resumen.value.pendientes.length > 0)
 const activando = ref('')
 async function activar(agente: string) {
   activando.value = agente
@@ -96,6 +99,9 @@ async function activar(agente: string) {
   } finally {
     activando.value = ''
   }
+  // Activada, su botón desaparece: el foco vuelve al resumen, que ya lo da por listo.
+  await nextTick()
+  if (!resumen.value.pendientes.some((p) => p.agente === agente && p.suscripcion)) cajaResumen.value?.$el.focus()
 }
 const cajaResumen = ref<{ $el: HTMLElement } | null>(null)
 // cuenta: en el servidor se prepara para la cuenta del servicio, y la bienvenida lo dice antes de empezar.

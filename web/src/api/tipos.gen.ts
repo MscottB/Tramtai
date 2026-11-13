@@ -290,8 +290,9 @@ export interface EstadoPreparacion {
   enlace?: string
   codigo?: string
   pide_pegar?: boolean
-  motivo_codigo?: 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'
+  motivo_codigo?: 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'interrumpida'
   mensaje?: string
+  orden_consola?: string
   lineas?: string[]
   version_antes?: string
   version_despues?: string
@@ -307,6 +308,7 @@ export interface VersionesAgente {
   acciones: string[]
   motivo_codigo?: 'version_no_comprobada' | 'sin_red'
   motivo?: string
+  orden_consola?: string
 }
 
 export interface Uso {

@@ -892,4 +892,10 @@ func TestOrdenConsola(t *testing.T) {
 	if orden, quiere := OrdenConsola(cli, args), base+" TERM=xterm-256color LANG=es_CL.UTF-8 "+cli+" login --device-auth"; orden != quiere {
 		t.Fatalf("con TERM y LANG:\n%s\nse esperaba\n%s", orden, quiere)
 	}
+	// Un valor que necesitaría comillas no se pasa: la orden se pega en una consola.
+	t.Setenv("TERM", "xterm; rm -rf ~")
+	t.Setenv("LANG", "es_CL.UTF-8 $(id)")
+	if orden, quiere := OrdenConsola(cli, args), base+" "+cli+" login --device-auth"; orden != quiere {
+		t.Fatalf("con TERM y LANG raros:\n%s\nse esperaba\n%s", orden, quiere)
+	}
 }

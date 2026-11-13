@@ -31,6 +31,14 @@ func adminAgentesServidor() error {
 	return nil
 }
 
+// ordenClaves es la orden que guarda una clave de API: la del servidor solo en el modo servidor.
+func ordenClaves() string {
+	if carpetas.Servidor() {
+		return idioma.T("tramtai-servidor claves guardar")
+	}
+	return idioma.T("tramtai claves guardar")
+}
+
 // comandoEntrar inicia sesión en el CLI del agente a través del servicio, también fuera del modo servidor: enseña el
 // enlace y el código (o pide el código que te den, sin mostrarlo) y deja que el CLI haga su propio flujo y guarde su
 // sesión (spec §5).
@@ -40,7 +48,7 @@ func comandoEntrar() *cobra.Command {
 		Long:  conSalidas(idioma.T("Inicia sesión en el CLI del agente a través del servicio, con la cuenta del servicio en el modo servidor. Enseña el enlace y el código (no abre ningún navegador) y, si el CLI espera un código, lo pide sin mostrarlo. Con una versión del CLI sin comprobar, no inicia sesión: dice cómo seguir.")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if f, ok := agentes.Buscar(args[0]); !ok || len(f.InicioSesion) == 0 {
-				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)"), args[0])
+				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (%s)"), args[0], ordenClaves())
 			}
 			return prepararAgentes(cmd, args, accionIniciar, false, false)
 		}}

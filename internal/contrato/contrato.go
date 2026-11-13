@@ -329,8 +329,12 @@ type EstadoPreparacion struct {
 	Codigo    string `json:"codigo,omitempty"`
 	PidePegar bool   `json:"pide_pegar,omitempty"`
 	// MotivoCodigo es el código del error (estado error) y Mensaje, el texto legible.
-	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'no_disponible_en_servidor' | 'interrumpida'"`
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'interrumpida'"`
 	Mensaje      string `json:"mensaje,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando Mensaje dice cómo hacerlo (salida_no_reconocida,
+	// inicio_sesion_fallo o version_no_comprobada al iniciar sesión): las pantallas arman la frase en su idioma. Vacía
+	// ahí, la cuenta del servicio no tiene consola y queda la clave de API.
+	OrdenConsola string `json:"orden_consola,omitempty"`
 	// Lineas son las últimas 20 de la salida, sin nada con forma de secreto.
 	Lineas         []string   `json:"lineas,omitempty"`
 	VersionAntes   string     `json:"version_antes,omitempty"`
@@ -353,4 +357,7 @@ type VersionesAgente struct {
 	// MotivoCodigo y Motivo dicen por qué falta alguna o qué hay que avisar antes.
 	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'sin_red'"`
 	Motivo       string `json:"motivo,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando iniciar sesión no está comprobado (como en
+	// EstadoPreparacion); vacía entonces, la cuenta del servicio no tiene consola.
+	OrdenConsola string `json:"orden_consola,omitempty"`
 }

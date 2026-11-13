@@ -184,6 +184,8 @@ func comandoServicio() *cobra.Command {
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, idioma.T("inicia el servicio desacoplado de esta terminal"))
 	iniciar.Flags().BoolVar(&abrirAlIniciar, "abrir", false, idioma.T("en primer plano, abre la interfaz cuando el servicio responda (modo desarrollo)"))
 	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, idioma.T("con --abrir, usa el navegador en lugar de la app de escritorio"))
+	iniciar.Flags().BoolVar(&abrirAlIniciar, "open", false, "")
+	_ = iniciar.Flags().MarkHidden("open") // alias en inglés de --abrir
 	iniciar.Flags().StringVar(&archivoRegistro, "registro", "", idioma.T("escribe el registro en este archivo, con servicio.registro_mb y servicio.registro_copias"))
 	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
 	iniciar.Flags().BoolVar(&esperarCierre, "esperar-cierre", false, idioma.T("espera a que termine el servicio en marcha (reinicio)"))

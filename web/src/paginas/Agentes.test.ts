@@ -84,3 +84,10 @@ test('volver a la clave de API sí se puede en el servidor, también desde la se
   const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
   assert.ok(pagina.includes("puedeVolverAClave(") && pagina.includes("cambiar(a, 'clave_api')"))
 })
+
+test('un agente listo sin nada que preparar lleva su «⋯» junto a «Probar», sin una fila con solo «⋯»', () => {
+  const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
+  assert.ok(pagina.includes('&& !soloMenu(a)" class="q-mb-md" data-recorrido="agentes.preparar"'), 'la fila de preparar no sale')
+  assert.match(pagina, /:label="t\('agentes\.probar'\)"[\s\S]*?<MenuPreparacion v-if="soloMenu\(a\)"/, 'el «⋯» va tras «Probar»')
+  assert.match(pagina, /const soloMenu = \(a: Adaptador\) => listo\(a\)[^\n]*versionNueva[^\n]*\n\s*&& !principal\(a\)\.accion && !principal\(a\)\.aviso/)
+})

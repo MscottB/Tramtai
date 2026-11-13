@@ -442,13 +442,28 @@ func TestAgentesEntrarSinSesion(t *testing.T) {
 	}
 }
 
+// TestOrdenClaves (M4): la orden que guarda la clave es «tramtai claves guardar» en el escritorio y «tramtai-servidor
+// claves guardar» solo en el modo servidor.
+func TestOrdenClaves(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if _, err := ejecutarAdmin(t, "", "agentes", "entrar", "antigravity"); err == nil || !strings.Contains(err.Error(), "(tramtai claves guardar)") {
+		t.Fatalf("en el escritorio: %v", err)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if orden := ordenClaves(); orden != "tramtai-servidor claves guardar" {
+		t.Fatalf("en el servidor: %q", orden)
+	}
+}
+
 // TestAgentesCancelar: Ctrl+C (el contexto de la orden) cancela la preparación en el servicio y sale con 130; una que ya
 // estaba en marcha (ya_en_curso) se sigue.
 func TestAgentesCancelar(t *testing.T) {
-	f := &preparacionCLI{guion: siempre(est("claude", "instalar", "instalando"))}
-	servicioConPreparacion(t, f)
-	ctx, parar := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	// Ctrl+C cuando la orden ya sigue la preparación (su primera consulta del estado), no tras un plazo que con -race y la
+	// máquina cargada podía llegar antes de lanzarla.
+	ctx, parar := context.WithCancel(context.Background())
 	defer parar()
+	f := &preparacionCLI{guion: siempre(est("claude", "instalar", "instalando")), alConsultar: parar}
+	servicioConPreparacion(t, f)
 	raiz := nuevaRaiz()
 	var o bytes.Buffer
 	raiz.SetOut(&o)
@@ -559,6 +574,24 @@ func ejecutarCtx(t *testing.T, ctx context.Context, entrada io.Reader, args ...s
 	raiz.SetArgs(args)
 	err := raiz.ExecuteContext(ctx)
 	return o.String(), err
+}
+
+// ctrlCAlLeer da un contexto y una entrada que nunca responde: al ponerse a leer (una pregunta, o el código), el contexto
+// se cancela, como un Ctrl+C del usuario ahí mismo.
+func ctrlCAlLeer(t *testing.T) (context.Context, io.Reader) {
+	ctx, cancelar := context.WithCancel(context.Background())
+	t.Cleanup(cancelar)
+	return ctx, lectorCtrlC{entradaSinFin(t), cancelar}
+}
+
+type lectorCtrlC struct {
+	r        io.Reader
+	cancelar context.CancelFunc
+}
+
+func (l lectorCtrlC) Read(p []byte) (int, error) {
+	l.cancelar()
+	return l.r.Read(p)
 }
 
 // entradaSinFin es una entrada que nunca responde (el usuario no escribe nada).
@@ -705,31 +738,27 @@ func TestAgentesCtrlCEnPreguntas(t *testing.T) {
 		return []contrato.EstadoPreparacion{e}, nil
 	}
 	servicioConPreparacion(t, f)
-	corto := func() (context.Context, context.CancelFunc) {
-		return context.WithTimeout(context.Background(), 150*time.Millisecond)
-	}
 
-	ctx, parar := corto()
-	_, err := ejecutarCtx(t, ctx, entradaSinFin(t), "agentes", "desinstalar", "claude")
-	parar()
+	// Ctrl+C justo cuando la orden se pone a leer (está en la pregunta), no tras un plazo: con -race y la máquina
+	// cargada, 150 ms no siempre llegaban a lanzar el pedido antes de la pregunta.
+	ctx, entrada := ctrlCAlLeer(t)
+	_, err := ejecutarCtx(t, ctx, entrada, "agentes", "desinstalar", "claude")
 	if pedidos, _, cancelados := f.vistos(); salida(err) != 130 || len(pedidos) != 0 || len(cancelados) != 0 {
 		t.Fatalf("¿Desinstalar?: %v %v %v", err, pedidos, cancelados)
 	}
-	ctx, parar = corto()
-	_, err = ejecutarCtx(t, ctx, entradaSinFin(t), "agentes", "instalar", "claude")
-	parar()
+	ctx, entrada = ctrlCAlLeer(t)
+	_, err = ejecutarCtx(t, ctx, entrada, "agentes", "instalar", "claude")
 	if pedidos, _, cancelados := f.vistos(); salida(err) != 130 || len(pedidos) != 1 || len(cancelados) != 0 {
 		t.Fatalf("¿Seguir igualmente?: %v %v %v", err, pedidos, cancelados)
 	}
-	ctx, parar = corto()
-	_, err = ejecutarCtx(t, ctx, entradaSinFin(t), "agentes", "entrar", "claude")
-	parar()
+	ctx, entrada = ctrlCAlLeer(t)
+	_, err = ejecutarCtx(t, ctx, entrada, "agentes", "entrar", "claude")
 	if _, _, cancelados := f.vistos(); salida(err) != 130 || !slices.Equal(cancelados, []string{"claude"}) {
 		t.Fatalf("esperando el código: %v %v", err, cancelados)
 	}
 }
 
-// TestAgentesNoPosible: peticiones en curso y no disponible en el servidor salen con 2; una acción ajena en marcha no se
+// TestAgentesNoPosible: peticiones en curso sale con 2; una acción ajena en marcha no se
 // adopta (2, sin cancelar); un estado «cancelado» sale con 130.
 func TestAgentesNoPosible(t *testing.T) {
 	f := &preparacionCLI{}
@@ -740,12 +769,7 @@ func TestAgentesNoPosible(t *testing.T) {
 	if _, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 2 {
 		t.Fatalf("peticiones_en_curso: %v", err)
 	}
-	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
-		return nil, &preparar.Error{Codigo: "no_disponible_en_servidor", Mensaje: "no"}
-	}
-	if _, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 2 {
-		t.Fatalf("no_disponible_en_servidor: %v", err)
-	}
+
 	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
 		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya"}
 	}

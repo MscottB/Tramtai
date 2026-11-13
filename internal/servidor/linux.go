@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -500,16 +501,20 @@ func Reiniciar() error {
 // el entorno del servicio.
 const pathServicio = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
+// valorSuelto es un TERM o un LANG que puede ir en la orden sin comillas.
+var valorSuelto = regexp.MustCompile(`^[A-Za-z0-9._@:-]+$`)
+
 // OrdenConsola es el inicio de sesión del CLI de un agente (su ruta y los argumentos de su receta) para hacerlo a mano
 // en una consola como la cuenta del servicio, con su carpeta como HOME y un entorno limpio (env -i) que no depende de la
 // política de sudo: el CLI guarda la sesión donde la busca el servicio (Codex con suscripción, en ~/.codex de esa
 // carpeta). TERM y LANG, si los tiene el servicio, van también: el inicio de sesión se ve bien en la consola y en su
-// idioma. Tramtai no lee ni copia lo que guarde el CLI.
+// idioma; solo con una forma corriente (xterm-256color, es_CL.UTF-8), que no necesita comillas. Tramtai no lee ni copia
+// lo que guarde el CLI.
 // shortcut: sin comillas: casa, ruta y argumentos son fijos; entrecomillar si alguno pudiera venir de configuración.
 func OrdenConsola(cli string, args []string) string {
 	orden := []string{"sudo", "-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
 	for _, nombre := range []string{"TERM", "LANG"} {
-		if valor := os.Getenv(nombre); valor != "" {
+		if valor := os.Getenv(nombre); valorSuelto.MatchString(valor) {
 			orden = append(orden, nombre+"="+valor)
 		}
 	}

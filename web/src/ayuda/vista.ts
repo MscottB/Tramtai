@@ -3,6 +3,12 @@ import type { Bloque, Pagina, Tema } from './tipos'
 
 export type Contexto = 'app' | 'panel' | 'sitio'
 
+// partesOpciones aparta las opciones de la CLI (--comprobar) del texto, para pintarlas sin partir: el navegador corta
+// tras un guion y en un móvil quedaba «-» en una línea y «-comprobar» en la siguiente.
+export function partesOpciones(s: string): { texto: string; opcion: boolean }[] {
+  return s.split(/(--[a-z][\w-]*)/i).map((texto, i) => ({ texto, opcion: i % 2 === 1 })).filter((p) => p.texto)
+}
+
 // varianteCaptura es el archivo de una captura para el tema de colores y el idioma que se ven.
 export function varianteCaptura(id: string, oscuro: boolean, idioma: 'es' | 'en'): string {
   return `${id}.${oscuro ? 'oscuro' : 'claro'}.${idioma}.webp`

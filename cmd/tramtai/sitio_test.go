@@ -390,9 +390,31 @@ func TestComandosDelSitioExisten(t *testing.T) {
 	}
 }
 
-// sinAliasIngles: órdenes de primer nivel que aún no tienen nombre en inglés; la Ayuda en inglés las cita en español.
-// shortcut: solo se comprueba que existan; cuando tengan alias, se quitan de aquí y la Ayuda en inglés pasa a usarlo.
-var sinAliasIngles = map[string]bool{"actualizar": true, "conversor": true, "espacio": true, "espacios": true, "global": true, "proyecto": true}
+// sinAliasIngles: órdenes de primer nivel sin nombre en inglés; la Ayuda en inglés las cita tal cual. «global» se escribe
+// igual en los dos idiomas (Ruling 36).
+var sinAliasIngles = map[string]bool{"global": true}
+
+// TestAliasSinChoques: dentro de cada grupo, ningún nombre ni alias de una orden es también el de otra (cobra
+// resolvería la primera sin avisar).
+func TestAliasSinChoques(t *testing.T) {
+	var revisar func(c *cobra.Command)
+	revisar = func(c *cobra.Command) {
+		vistos := map[string]string{}
+		for _, h := range c.Commands() {
+			for _, n := range append([]string{h.Name()}, h.Aliases...) {
+				if otra, ok := vistos[n]; ok {
+					t.Errorf("%s: «%s» es de %s y de %s", c.CommandPath(), n, otra, h.Name())
+				}
+				vistos[n] = h.Name()
+			}
+			revisar(h)
+		}
+	}
+	revisar(nuevaRaiz())
+	if c, _, err := nuevaRaiz().Find([]string{"service", "start"}); err != nil || c.Flags().Lookup("open") == nil || !c.Flags().Lookup("open").Hidden {
+		t.Errorf("servicio iniciar lleva --open, oculta, como --abrir: %v", err)
+	}
+}
 
 // minimoAyuda: las órdenes que cita la Ayuda entre los dos idiomas (hoy 106), con algo de margen.
 const minimoAyuda = 100
@@ -400,11 +422,14 @@ const minimoAyuda = 100
 var (
 	spanAyuda = regexp.MustCompile(`(?s)<span lang="(es|en)">(.*?)</span>`)
 	citaAyuda = regexp.MustCompile(`[«“]([^«»“”]*)[»”]`)
+	// opcionAyuda es una opción de la CLI que el sitio envuelve para que no se parta tras el guion.
+	opcionAyuda = regexp.MustCompile(`<span class="opcion-cli">([^<]*)</span>`)
 )
 
 // citasDeAyuda saca de una página de la Ayuda lo citado entre comillas en cada <span lang>, con su idioma: las órdenes
 // que la Ayuda pone en una frase. ordenDeLinea decide después cuáles son órdenes de Tramtai.
 func citasDeAyuda(pagina string) (citas []struct{ texto, lang string }) {
+	pagina = opcionAyuda.ReplaceAllString(pagina, "$1")
 	for _, s := range spanAyuda.FindAllStringSubmatch(pagina, -1) {
 		texto := html.UnescapeString(etiquetaSitio.ReplaceAllString(s[2], ""))
 		for _, c := range citaAyuda.FindAllStringSubmatch(texto, -1) {
@@ -416,12 +441,14 @@ func citasDeAyuda(pagina string) (citas []struct{ texto, lang string }) {
 
 // TestCitasDeAyuda: cada cita lleva el idioma de su <span>, sin etiquetas y con las entidades resueltas.
 func TestCitasDeAyuda(t *testing.T) {
-	pagina := `<li><span lang="es">«tramtai agentes entrar codex» y «Instalar»</span><span lang="en">“tramtai agents login <a>codex</a>” &amp; “x &lt;id&gt;”</span></li>`
+	pagina := `<li><span lang="es">«tramtai agentes entrar codex» y «Instalar»</span><span lang="en">“tramtai agents login <a>codex</a>” &amp; “x &lt;id&gt;”</span></li>` +
+		`<li><span lang="es">«tramtai agentes versiones <span class="opcion-cli">--comprobar</span>» y «a»</span></li>`
 	var r []string
 	for _, c := range citasDeAyuda(pagina) {
 		r = append(r, c.lang+":"+c.texto)
 	}
-	quiere := []string{"es:tramtai agentes entrar codex", "es:Instalar", "en:tramtai agents login codex", "en:x <id>"}
+	quiere := []string{"es:tramtai agentes entrar codex", "es:Instalar", "en:tramtai agents login codex", "en:x <id>",
+		"es:tramtai agentes versiones --comprobar", "es:a"}
 	if !slices.Equal(r, quiere) {
 		t.Errorf("%q, quería %q", r, quiere)
 	}
