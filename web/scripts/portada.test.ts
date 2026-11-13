@@ -51,7 +51,7 @@ test('bajo los botones de la portada, tres accesos: Escritorio, Terminal y Servi
 
 // v0.59 (spec §4): la franja de cuatro cifras del producto y la línea de seis paradas, en lugar de los seis motivos.
 const porQue = seccion('por-que')
-test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular', () => {
+test('«Por qué Tramtai» tiene cuatro cifras del producto, en Inter tabular', () => {
   const cifras = porQue.match(/<li class="cifra">[\s\S]*?<\/li>/g) ?? []
   assert.equal(cifras.length, 4)
   assert.deepEqual(cifras.map((c) => c.match(/<span class="cifra-numero">(\d+)<\/span>/)?.[1]), ['4', '3', '0', '2'])
@@ -59,7 +59,7 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Overpass tabular
   for (const t of ['agentes desde tus apps', 'OpenAI, Anthropic y la propia', 'telemetría y ningún servidor nuestro', 'cambios en tu app: la URL y la clave'])
     assert.ok(porQue.includes(t), t)
   const regla = css.match(/\.cifra-numero \{[^}]*\}/)?.[0] ?? ''
-  assert.match(regla, /var\(--titulo\)/)
+  assert.match(regla, /var\(--fuente\)/)
   assert.match(regla, /font-variant-numeric: tabular-nums/)
 })
 
@@ -306,7 +306,8 @@ test('Antigravity va como vía muerta en el mapa y el titular cuenta cuatro agen
   assert.match(seccion('agentes'), /<article class="agente sin-apps">/)
 })
 
-test('el hero tiene un titular, dos frases y ninguna pastilla, rejilla ni brillo de fondo (56, 57, 59)', () => {
+// La cuadrícula y el brillo vuelven en la v0.61 (spec §1), solo en .arranque: la portada de hoy aún no los lleva.
+test('el hero tiene un titular, dos frases y ninguna pastilla (56, 57, 59)', () => {
   const portada = html.match(/<section id="portada" class="portada">[\s\S]*?<div class="mapa"/)?.[0] ?? ''
   assert.ok(portada, 'falta <section id="portada">')
   assert.doesNotMatch(portada, /class="chapa"/)
@@ -315,7 +316,9 @@ test('el hero tiene un titular, dos frases y ninguna pastilla, rejilla ni brillo
   // Con el SDK cambian la URL y la clave, como dice la cifra de «Por qué Tramtai» (revisión de la Tarea 14, ronda 2).
   assert.match(portada, /solo cambias la URL y la clave\.<\/span>/)
   assert.match(portada, /you only change the URL and the key\.<\/span>/)
-  assert.doesNotMatch(css, /\.portada::before|repeating-linear-gradient|radial-gradient/)
+  assert.doesNotMatch(css, /\.portada::before|repeating-linear-gradient/)
+  for (const [, selector, cuerpo] of css.matchAll(/([^{}]+)\{([^}]*)\}/g))
+    if (/radial-gradient/.test(cuerpo)) assert.match(selector.trim(), /^\.arranque::/, selector)
 })
 
 test('las secciones no abren todas igual: sin etiqueta sobre el h2 y no todas centradas (35, 55)', () => {
@@ -325,9 +328,9 @@ test('las secciones no abren todas igual: sin etiqueta sobre el h2 y no todas ce
   assert.ok(aperturas.filter((a) => a[1]).length >= 1)
 })
 
-test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo para cifras (33)', () => {
-  const reglas = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].filter(([, , cuerpo]) => /text-transform:\s*uppercase/.test(cuerpo)).map(([, s]) => s.trim())
-  assert.deepEqual(reglas, ['.tablero-cabecera'])
+test('mayúsculas espaciadas solo en los rótulos «FIG» y la cabecera del tablero (35) y ámbar solo para cifras (33)', () => {
+  const reglas = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].filter(([, , cuerpo]) => /text-transform:\s*uppercase/.test(cuerpo)).map(([, s]) => s.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+  assert.deepEqual(reglas.sort(), ['.fig', '.tablero-cabecera'])
   assert.doesNotMatch(css + html, /--cifra|#ffcf5c/)
 })
 
@@ -347,9 +350,11 @@ test('el foco se ve: sin recortes en ES/EN y en verde claro dentro del código (
   assert.doesNotMatch(css, /:focus-visible \{[^}]*border-radius/)
 })
 
-test('sin JavaScript el menú se ve y el mapa queda quieto; el paso del cursor no levanta nada (60, 61)', () => {
+test('sin JavaScript el menú se ve y nada se mueve; el paso del cursor no levanta nada (60, 61)', () => {
   assert.match(css, /html\.js \.menu-panel \{ display: none;/)
-  assert.doesNotMatch(css, /@keyframes/)
+  // Lo único que se anima es lo vivo, con JavaScript y ya en pantalla (v0.61, spec §1).
+  for (const [, selector, cuerpo] of css.matchAll(/([^{}]+)\{([^}]*)\}/g))
+    if (/animation:(?!\s*none)/.test(cuerpo)) assert.match(selector.trim(), /^html\.js \.vivo\.visto /, selector)
   assert.doesNotMatch(css, /translateY/)
 })
 
