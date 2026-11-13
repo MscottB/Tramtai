@@ -669,6 +669,9 @@ func (c *corrida) resolver(programa string) (string, error) {
 // reVersion es la forma de una versión que puede entrar en una orden o una URL (2.1.311, 0.167.2, 1.0.0-beta).
 var reVersion = regexp.MustCompile(`^[0-9]+(\.[0-9A-Za-z-]+)*$`)
 
+// VersionValida dice si version tiene la forma de una versión que puede entrar en una orden, una URL o la lista firmada.
+func VersionValida(version string) bool { return reVersion.MatchString(version) }
+
 func validarVersion(version string) error {
 	if !reVersion.MatchString(version) {
 		return &Error{CodigoInstaladorFallo, idioma.Tf("versión no válida: %q", version)}

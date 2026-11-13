@@ -39,33 +39,36 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      # El resultado se escribe tras cada agente: con el plazo agotado, lo hecho se sube igual.
       - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI
         if: runner.os != 'Windows'
+        timeout-minutes: 75
         run: go run ./cmd/compatibilidad comprobar "$RUNNER_TEMP/resultado/$RUNNER_OS.json"
-      # En Windows, desde cmd, como el servicio: bash pondría el tar de Git delante (el instalador de Codex falla) y pwsh
-      # pasaría su PSModulePath al powershell de los instaladores (el de Claude no encuentra Get-FileHash).
+      # En Windows, desde cmd, como el servicio: bash pondría el tar de Git delante (el instalador de Codex falla) y
+      # pwsh pasaría su PSModulePath al powershell de los instaladores (el de Claude no encuentra Get-FileHash).
       - name: Instalar, iniciar sesión sin cuenta, actualizar y desinstalar cada CLI (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 75
         shell: cmd
         run: go run ./cmd/compatibilidad comprobar "%RUNNER_TEMP%\resultado\%RUNNER_OS%.json"
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: resultado-${{ runner.os }}
           path: ${{ runner.temp }}/resultado/
           retention-days: 7
 
+  # Solo en main (la ejecución semanal y la manual): una rama no publica la lista ni abre issues.
   publicar:
     name: Juntar, firmar y publicar la lista
     needs: comprobar
-    if: ${{ !cancelled() }} # un sistema sin resultado también se avisa
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }} # un sistema sin resultado también se avisa
     timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
       fallos: ${{ steps.juntar.outputs.fallos }}
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -74,47 +77,65 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      # Cada sistema en su carpeta: juntar recibe un resultado por sistema y comprueba que es de ese sistema.
       - uses: actions/download-artifact@v8
         with:
           pattern: resultado-*
           path: resultados
-          merge-multiple: true
       # La lista publicada se amplía solo si su firma vale: nunca se vuelve a firmar algo que no firmó este job. Sin el
-      # release se empieza de cero; un fallo de la consulta para el job (empezar de cero bajaría la version publicada).
+      # release se empieza de cero; con el release, la lista y su firma tienen que estar y valer, y cualquier otro fallo
+      # de la consulta para el job: empezar de cero bajaría la version publicada.
       - name: Bajar la lista publicada
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir anterior
-          if archivos=$(gh release view compatibilidad --json assets -q '.assets[].name' 2>&1); then
-            if grep -qx compatibilidad.json <<< "$archivos"; then
-              gh release download compatibilidad -p compatibilidad.json -p compatibilidad.json.sig -D anterior
-              go run ./scripts/firmar -comprobar anterior/compatibilidad.json
-            fi
-          elif [ "$archivos" != 'release not found' ]; then
-            echo "$archivos"
+          if salida=$(gh release view compatibilidad --json name 2>&1); then
+            gh release download compatibilidad -p compatibilidad.json -p compatibilidad.json.sig -D anterior
+            test -f anterior/compatibilidad.json
+            test -f anterior/compatibilidad.json.sig
+            go run ./scripts/firmar -comprobar anterior/compatibilidad.json
+          elif [ "$salida" != 'release not found' ]; then
+            echo "$salida"
             exit 1
           fi
       - name: Juntar
         id: juntar
         run: |
           go build -o "$RUNNER_TEMP/compatibilidad" ./cmd/compatibilidad
+          pares=()
+          for par in linux:Linux darwin:macOS windows:Windows; do
+            ruta="resultados/resultado-${par#*:}/${par#*:}.json"
+            if [ -f "$ruta" ]; then pares+=("${par%%:*}=$ruta"); fi
+          done
           set +e
-          "$RUNNER_TEMP/compatibilidad" juntar anterior/compatibilidad.json nueva/compatibilidad.json resultados/*.json > fallos.md
+          "$RUNNER_TEMP/compatibilidad" juntar anterior/compatibilidad.json nueva/compatibilidad.json "${pares[@]}" > fallos.md
           codigo=$?
           set -e
           # La última versión de Antigravity sale del manifiesto que usan sus instaladores (DOWNLOAD_BASE_URL), sin
           # documentar (Ruling 12 de la v0.60): se avisa si deja de responder o si los instaladores cambian de sitio.
-          manifiesto=$(grep -o 'https://antigravity-cli-auto-updater[^"]*' internal/agentes/antigravity/ficha.go)
-          base=${manifiesto%%/manifests/*}
-          curl -fsS --max-time 30 "$manifiesto" | grep '"version"' > /dev/null ||
-            echo "- **antigravity**: el manifiesto $manifiesto no responde con su versión; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
-          for guion in install.sh install.ps1; do
-            curl -fsSL --max-time 30 "https://antigravity.google/cli/$guion" | grep -F "$base" > /dev/null ||
-              echo "- **antigravity**: $guion ya no descarga de $base; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
-          done
+          manifiesto=$(grep -o 'https://antigravity-cli-auto-updater[^"]*' internal/agentes/antigravity/ficha.go || true)
+          if [ -z "$manifiesto" ]; then
+            echo "- **antigravity**: no se encuentra la URL del manifiesto en internal/agentes/antigravity/ficha.go; ajusta esta comprobación" >> fallos.md
+          else
+            base=${manifiesto%%/manifests/*}
+            curl -fsS --max-time 30 "$manifiesto" | grep '"version"' > /dev/null ||
+              echo "- **antigravity**: el manifiesto $manifiesto no responde con su versión; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
+            for guion in install.sh install.ps1; do
+              curl -fsSL --max-time 30 "https://antigravity.google/cli/$guion" | grep -F "$base" > /dev/null ||
+                echo "- **antigravity**: $guion ya no descarga de $base; ajusta Ultima en internal/agentes/antigravity/ficha.go" >> fallos.md
+            done
+          fi
           cat fallos.md
           if [ -s fallos.md ]; then echo 'fallos=si' >> "$GITHUB_OUTPUT"; fi
           if [ "$codigo" -ne 0 ] && [ "$codigo" -ne 2 ]; then exit "$codigo"; fi
           if [ -f nueva/compatibilidad.json ]; then cat nueva/compatibilidad.json; else echo 'Nada nuevo: no se publica.'; fi
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() && steps.juntar.outputs.fallos == 'si' }}
+        with:
+          name: fallos
+          path: fallos.md
+          retention-days: 7
       - name: Firmar la lista
         if: hashFiles('nueva/compatibilidad.json') != ''
         working-directory: nueva
@@ -128,39 +149,45 @@ jobs:
       # Previa, para que no cuente como versión de Tramtai (releases/latest y la lista de novedades la saltan).
       - name: Publicar en el release compatibilidad
         if: hashFiles('nueva/compatibilidad.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release view compatibilidad > /dev/null 2>&1 ||
             gh release create compatibilidad --prerelease --title 'Versiones comprobadas de los CLI de los agentes' \
               --notes 'Lista firmada que publica cada semana el workflow «Compatibilidad de los agentes». No es una versión de Tramtai.'
           gh release upload compatibilidad nueva/compatibilidad.json nueva/compatibilidad.json.sig --clobber
-      - uses: actions/upload-artifact@v7
-        if: steps.juntar.outputs.fallos == 'si'
-        with:
-          name: fallos
-          path: fallos.md
-          retention-days: 7
 
+  # También si publicar falló (la lista no salió) o ningún sistema dejó resultado.
   avisar:
     name: Avisar de lo que no pasó
     needs: publicar
-    if: ${{ !cancelled() && needs.publicar.outputs.fallos == 'si' }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (needs.publicar.result == 'failure' || needs.publicar.outputs.fallos == 'si') }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
       issues: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      EJECUCION: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/download-artifact@v8
+        if: needs.publicar.outputs.fallos == 'si'
         with:
           name: fallos
       # Un solo issue abierto: si ya lo hay, se comenta.
       - name: Abrir o comentar el issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EJECUCION: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PUBLICAR: ${{ needs.publicar.result }}
         run: |
           titulo='Compatibilidad de los agentes: algo no pasa con la receta'
-          { echo "La [comprobación de esta semana]($EJECUCION) encontró esto (no se añadió a la lista firmada):"; echo; cat fallos.md; } > cuerpo.md
+          {
+            echo "La [comprobación de esta semana]($EJECUCION) encontró esto (no se añadió a la lista firmada):"
+            if [ "$PUBLICAR" = failure ]; then
+              echo
+              echo '- El job «Juntar, firmar y publicar la lista» falló: la lista no se publicó. Mira la ejecución.'
+            fi
+            if [ -f fallos.md ]; then echo; cat fallos.md; fi
+          } > cuerpo.md
           numero=$(gh issue list --state open --search "\"$titulo\" in:title" --json number,title \
             -q ".[] | select(.title == \"$titulo\") | .number" | head -n 1)
           if [ -n "$numero" ]; then
