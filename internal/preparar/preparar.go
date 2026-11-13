@@ -236,6 +236,8 @@ func (p *Preparador) Recuperar() {
 				ahora := time.Now()
 				g.Estado, g.MotivoCodigo, g.Mensaje, g.Fin = "error", CodigoInterrumpida,
 					idioma.T("el servicio se reinició a mitad de la preparación"), &ahora
+				// El inicio de sesión murió con el servicio: su enlace y su código ya no sirven.
+				g.Enlace, g.Codigo, g.PidePegar = "", "", false
 			}
 			g.PID, g.Firma = 0, ""
 		}
@@ -368,6 +370,15 @@ func (c *corrida) correr(cancelar context.CancelFunc) {
 	})
 }
 
+// conVersionSi es el programa con su versión, si se sabe («Claude Code 2.1.311» o «Claude Code»).
+func (c *corrida) conVersionSi(version string) string {
+	return strings.TrimSpace(c.f.Programa + " " + version)
+}
+
+func (c *corrida) noComprobada(version string) *Error {
+	return &Error{CodigoVersionNoComprobada, idioma.Tf("%s aún no está comprobado con Tramtai", c.conVersionSi(version))}
+}
+
 // accion ejecuta lo pedido.
 func (c *corrida) accion() error {
 	instalado := buscar(c.f)
@@ -377,9 +388,12 @@ func (c *corrida) accion() error {
 	}
 	c.fijar(func(g *guardado) { g.VersionAntes = antes })
 	if c.pedido.Accion == "iniciar_sesion" {
+		if instalado == "" {
+			return &Error{CodigoNoEncontrado, idioma.Tf("no se encuentra %s", c.f.Programa)}
+		}
 		version := numeroVersion(antes)
 		if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-			return &Error{CodigoVersionNoComprobada, idioma.Tf("%s %s aún no está comprobado con Tramtai", c.f.Programa, version)}
+			return c.noComprobada(version)
 		}
 		return c.sesion(version)
 	}
@@ -392,7 +406,7 @@ func (c *corrida) accion() error {
 	version := ""
 	switch {
 	case c.pedido.Accion == "desinstalar":
-		version = antes
+		version = numeroVersion(antes)
 	case !actualizar && hayDescarga:
 		var err error
 		if version, err = c.ultimaVersion(); err != nil {
@@ -401,7 +415,7 @@ func (c *corrida) accion() error {
 	}
 	// Tarea 5: la versión debe estar comprobada para esta acción, salvo que el usuario confirme.
 	if c.p.o.Comprobada != nil && !c.pedido.Confirmar && !c.p.o.Comprobada(c.agente, c.pedido.Accion, version) {
-		return &Error{CodigoVersionNoComprobada, idioma.Tf("%s %s aún no está comprobado con Tramtai", c.f.Programa, version)}
+		return c.noComprobada(version)
 	}
 	switch {
 	case c.pedido.Accion == "desinstalar":
@@ -526,12 +540,16 @@ func (c *corrida) ejecutar(o adaptadores.OrdenReceta, version string) error {
 		return err
 	}
 	c.fijar(func(g *guardado) { g.Etapa = "orden" })
-	return c.lanzar(c.ctx, procesos.Orden{Programa: programa, Argumentos: args, Entorno: entornoDe(extra)})
+	salida, err := c.lanzar(c.ctx, procesos.Orden{Programa: programa, Argumentos: args, Entorno: entornoDe(extra)})
+	if err == nil && salida != 0 {
+		err = &Error{CodigoInstaladorFallo, idioma.Tf("%s terminó con el código %d", filepath.Base(programa), salida)}
+	}
+	return err
 }
 
-// lanzar ejecuta la orden en la casa del usuario con el árbol de procesos atado, anota su PID y su firma para Recuperar y
-// pasa su salida a Lineas.
-func (c *corrida) lanzar(ctx context.Context, o procesos.Orden) error {
+// lanzar ejecuta la orden en la casa del usuario con el árbol de procesos atado, anota su PID y su firma para Recuperar,
+// pasa su salida a Lineas y devuelve su código de salida (quien llama dice qué significa uno distinto de 0).
+func (c *corrida) lanzar(ctx context.Context, o procesos.Orden) (int, error) {
 	c.anotar(strings.Join(append([]string{o.Programa}, o.Argumentos...), " "))
 	o.Directorio, _ = os.UserHomeDir()
 	ctx = procesos.ConAlIniciar(ctx, func(pid int, firma string) {
@@ -549,13 +567,11 @@ func (c *corrida) lanzar(ctx context.Context, o procesos.Orden) error {
 	}
 	switch {
 	case c.ctx.Err() != nil:
-		return c.ctx.Err()
+		return r.CodigoSalida, c.ctx.Err()
 	case err != nil:
-		return &Error{CodigoInstaladorFallo, nucleo.MensajeDe(err)}
-	case r.CodigoSalida != 0:
-		return &Error{CodigoInstaladorFallo, idioma.Tf("%s terminó con el código %d", filepath.Base(o.Programa), r.CodigoSalida)}
+		return r.CodigoSalida, &Error{CodigoInstaladorFallo, nucleo.MensajeDe(err)}
 	}
-	return nil
+	return r.CodigoSalida, nil
 }
 
 // resolver localiza el programa de una orden: el CLI del agente (su Comando) por buscar, no por el PATH del servicio, que

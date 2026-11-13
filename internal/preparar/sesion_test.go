@@ -3,6 +3,7 @@ package preparar
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -30,12 +31,20 @@ func falsoSesion(modo string) {
 		datos, _ := os.ReadFile(os.Getenv("PREPARAR_SALIDA"))
 		_, _ = os.Stdout.Write(datos)
 	}
+	if os.Getenv("PREPARAR_RECHAZAR") != "" { // como Claude con un código rechazado
+		fmt.Fprintln(os.Stderr, "Login failed: That code wasn't accepted.")
+		os.Exit(1)
+	}
 	if pegado := os.Getenv("PREPARAR_PEGADO"); pegado != "" {
 		linea, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			os.Exit(4)
 		}
-		_ = os.WriteFile(pegado, []byte(strings.TrimRight(linea, "\r\n")), 0o600)
+		linea = strings.TrimRight(linea, "\r\n")
+		_ = os.WriteFile(pegado, []byte(linea), 0o600)
+		// Repite lo leído: el registro y las líneas lo tienen que tapar.
+		fmt.Println("leído: " + linea)
+		fmt.Fprintln(os.Stderr, "leído: "+linea)
 	} else {
 		for aprobado := os.Getenv("PREPARAR_APROBADO"); ; time.Sleep(50 * time.Millisecond) {
 			if f, err := os.OpenFile(os.Getenv("PREPARAR_LATIDO"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
@@ -137,7 +146,7 @@ func TestSesionCodigoDispositivo(t *testing.T) {
 	if e.Enlace != "https://auth.openai.com/codex/device" || e.Codigo != "ABCD-12345" || e.PidePegar || e.Accion != "iniciar_sesion" {
 		t.Fatalf("estado %+v", e)
 	}
-	if err := pr.p.Codigo("falso", "abc-123"); err == nil {
+	if err := pr.p.Codigo("falso", "abc-12345"); err == nil {
 		t.Fatal("sin PidePegar no se acepta nada pegado")
 	}
 	aprobar(t, aprobado)
@@ -180,8 +189,9 @@ func TestInstalarSigueConSesion(t *testing.T) {
 	}
 	pr.p.o.Comprobada = func(_, accion, _ string) bool { return accion != "iniciar_sesion" }
 	e = iniciar(t, pr.p, "instalar")
-	if e.Estado != "listo" || e.Enlace != "" || !strings.Contains(strings.Join(e.Lineas, "\n"), "aún no está comprobado") {
-		t.Fatalf("sin la versión comprobada se instala y no se inicia sesión: %+v", e)
+	if lineas := strings.Join(e.Lineas, "\n"); e.Estado != "listo" || e.Enlace != "" ||
+		!strings.Contains(lineas, "Falso CLI 1.2.3 aún no está comprobado") || !strings.Contains(lineas, "en una consola con falso login") {
+		t.Fatalf("sin la versión comprobada se instala, no se inicia sesión y se dice la orden para la consola: %+v", e)
 	}
 }
 
@@ -195,24 +205,28 @@ func TestSesionPegarCodigo(t *testing.T) {
 	if !strings.HasPrefix(e.Enlace, "https://claude.com/cai/oauth/authorize?code=true&") || strings.ContainsAny(e.Enlace, "\x1b\r\n") || e.Codigo != "" {
 		t.Fatalf("estado %+v", e)
 	}
-	for _, malo := range []string{"", "   ", "abc\n123", "abc 123", "abc\x1b[1m", strings.Repeat("a", 2000)} {
+	for _, malo := range []string{"", "   ", "abc-123", "abc\n123", "abc 123", "abc\x1b[1m", strings.Repeat("a", 2000)} {
 		if err := pr.p.Codigo("falso", malo); err == nil || strings.TrimSpace(malo) != "" && strings.Contains(err.Error(), malo) {
 			t.Errorf("%q: se esperaba un error sin lo pegado: %v", malo, err)
 		}
 	}
-	if err := pr.p.Codigo("otro", "abc-123"); err == nil {
+	if err := pr.p.Codigo("otro", "abc-12345"); err == nil {
 		t.Error("un agente desconocido no recibe nada")
 	}
-	if err := pr.p.Codigo("falso", "abc-123"); err != nil {
+	if err := pr.p.Codigo("falso", "abc-12345"); err != nil {
 		t.Fatal(err)
 	}
 	if e = final(t, pr.p, "falso"); e.Estado != "listo" {
 		t.Fatalf("estado %+v", e)
 	}
-	if datos, err := os.ReadFile(pegado); err != nil || string(datos) != "abc-123" {
+	// El falso repitió lo pegado por stdout y por stderr: las dos líneas llegan tapadas.
+	if n := strings.Count(strings.Join(e.Lineas, "\n"), "leído: [REDACTADO]"); n != 2 {
+		t.Fatalf("lo repetido por el CLI debía llegar tapado dos veces: %q", e.Lineas)
+	}
+	if datos, err := os.ReadFile(pegado); err != nil || string(datos) != "abc-12345" {
 		t.Fatalf("el CLI recibió %q (%v)", datos, err)
 	}
-	if err := pr.p.Codigo("falso", "abc-123"); err == nil {
+	if err := pr.p.Codigo("falso", "abc-12345"); err == nil {
 		t.Error("terminado, ya no se acepta nada pegado")
 	}
 	estado, _ := json.Marshal(e)
@@ -220,7 +234,7 @@ func TestSesionPegarCodigo(t *testing.T) {
 	registro, _ := os.ReadFile(filepath.Join(carpeta, "falso.log"))
 	guardado, _ := os.ReadFile(filepath.Join(carpeta, "falso.json"))
 	for nombre, texto := range map[string][]byte{"estado": estado, "registro": registro, "guardado": guardado} {
-		if len(texto) == 0 || strings.Contains(string(texto), "abc-123") {
+		if len(texto) == 0 || strings.Contains(string(texto), "abc-12345") {
 			t.Errorf("%s vacío o con lo pegado:\n%s", nombre, texto)
 		}
 	}
@@ -339,14 +353,74 @@ func TestSesionNoSeLanza(t *testing.T) {
 		t.Fatalf("sin lector es un error de entrada: %v", err)
 	}
 
+	// Sin el CLI se dice eso, aunque su versión (ninguna) tampoco esté comprobada.
 	pr = nueva(t, fichaSesion(t, "codex", "sesion"))
+	pr.p.o.Comprobada = func(string, string, string) bool { return false }
 	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoNoEncontrado {
 		t.Fatalf("sin el CLI: %+v", e)
 	}
 
 	ponerFalso(t, pr.casa)
-	pr.p.o.Comprobada = func(string, string, string) bool { return false }
-	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoVersionNoComprobada || len(e.Lineas) != 0 {
+	if e := iniciar(t, pr.p, "iniciar_sesion"); e.Estado != "error" || e.MotivoCodigo != CodigoVersionNoComprobada || len(e.Lineas) != 0 ||
+		e.Mensaje != "Falso CLI 1.2.3 aún no está comprobado con Tramtai" {
 		t.Fatalf("sin comprobar: %+v", e)
+	}
+	// Sin versión que decir (un instalador que no la fija), el mensaje no queda con dos espacios.
+	if e := iniciar(t, pr.p, "instalar"); e.MotivoCodigo != CodigoVersionNoComprobada || e.Mensaje != "Falso CLI aún no está comprobado con Tramtai" {
+		t.Fatalf("sin versión: %+v", e)
+	}
+}
+
+// Un inicio de sesión que termina con error (Claude con un código rechazado) sale con inicio_sesion_fallo, sus líneas y la
+// orden para la consola.
+func TestSesionFalla(t *testing.T) {
+	pr := nueva(t, fichaSesion(t, "claude", "sesion", "PREPARAR_SALIDA="+salidaDe(t, "claude", "sesion-windows.txt"),
+		"PREPARAR_RECHAZAR=1"))
+	ponerFalso(t, pr.casa)
+	e := iniciar(t, pr.p, "iniciar_sesion")
+	if e.Estado != "error" || e.MotivoCodigo != CodigoInicioSesionFallo || !strings.Contains(e.Mensaje, "código 1") ||
+		!strings.Contains(e.Mensaje, "falso login") || !slices.Contains(e.Lineas, "Login failed: That code wasn't accepted.") {
+		t.Fatalf("estado %+v", e)
+	}
+}
+
+// Un inicio de sesión que el servicio dejó esperando al usuario sale interrumpido, sin su enlace, su código ni el pegar.
+func TestRecuperarSesion(t *testing.T) {
+	pr := nueva(t, fichaSesion(t, "claude", "sesion"))
+	ahora := time.Now()
+	if err := pr.p.guardar("falso", guardado{EstadoPreparacion: contrato.EstadoPreparacion{Agente: "falso", Accion: "iniciar_sesion",
+		Estado: "esperando_usuario", Enlace: "https://claude.com/x", Codigo: "ABCD-1234", PidePegar: true, Inicio: &ahora}}); err != nil {
+		t.Fatal(err)
+	}
+	p := Nuevo(pr.p.o)
+	p.Recuperar()
+	if e, _ := p.Estado("falso"); e.Estado != "error" || e.MotivoCodigo != CodigoInterrumpida || e.Enlace != "" || e.Codigo != "" || e.PidePegar {
+		t.Fatalf("estado %+v", e)
+	}
+}
+
+// Un ESC que no se reconoce (ESC ESC, un OSC sin terminador) no esconde lo que le sigue; el tope de 64 KB guarda lo que cabe.
+func TestLectorEscapesRarosYTope(t *testing.T) {
+	f, _ := agentes.Buscar("copilot")
+	linea := "To authenticate, visit https://github.com/login/device and enter code 1A2B-3C4D\n"
+	leer := func(trozos ...string) (enlace, codigo string) {
+		x := &lector{l: f.Receta.Sesion, avisar: func(e, c string, _ bool) { enlace, codigo = e, c }}
+		for _, trozo := range trozos {
+			_, _ = x.Write([]byte(trozo))
+		}
+		return enlace, codigo
+	}
+	for nombre, trozos := range map[string][]string{
+		"ESC ESC":          {"\x1b\x1b[1mhola\x1b[0m\n", linea},
+		"OSC sin terminar": {"\x1b]0;título sin fin\n" + linea},
+		"tope a mitad":     {strings.Repeat("x", maximoLector-len(linea)-10) + "\n", linea + strings.Repeat("y", 500)},
+		"ESC en la cola":   {"\x1b]8;;https://github.com/login/device\x07visit https://github.com/login/device", " and enter code 1A2B-3C4D\x1b]8;;\x07\n"},
+	} {
+		if enlace, codigo := leer(trozos...); enlace != "https://github.com/login/device" || codigo != "1A2B-3C4D" {
+			t.Errorf("%s: %q %q", nombre, enlace, codigo)
+		}
+	}
+	if enlace, _ := leer(strings.Repeat("x", maximoLector) + "\n" + linea); enlace != "" {
+		t.Error("lo que pasa del tope no se mira")
 	}
 }

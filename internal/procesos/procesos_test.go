@@ -2,6 +2,7 @@ package procesos
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"runtime"
@@ -69,6 +70,34 @@ func TestLineasEntradaYCodigo(t *testing.T) {
 	}
 	if r.CodigoSalida != 3 || r.Errores != "aviso" {
 		t.Fatalf("resultado %+v", r)
+	}
+}
+
+// EntradaAbierta llega al hijo y Ejecutar la cierra en el padre: con el hijo terminado, escribir ya no «funciona». Bruto
+// recibe stdout entero, también lo que no acaba en salto de línea.
+func TestEntradaAbiertaYBruto(t *testing.T) {
+	lectura, escritura, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer escritura.Close()
+	if _, err := escritura.WriteString("hola\n"); err != nil {
+		t.Fatal(err)
+	}
+	var bruto strings.Builder
+	o := orden("eco", "")
+	o.EntradaAbierta, o.Bruto = lectura, &bruto
+	if _, err := Ejecutar(context.Background(), o, func(string) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if bruto.String() != "linea 1\nentrada: hola\nsin salto" {
+		t.Fatalf("bruto %q", bruto.String())
+	}
+	if err := lectura.Close(); !errors.Is(err, os.ErrClosed) {
+		t.Fatalf("Ejecutar no cerró la entrada en el padre: %v", err)
+	}
+	if _, err := escritura.WriteString("tarde\n"); err == nil {
+		t.Fatal("sin nadie que lea, escribir debe fallar")
 	}
 }
 

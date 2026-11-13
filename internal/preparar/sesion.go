@@ -18,11 +18,19 @@ import (
 	"tramtai/internal/procesos"
 )
 
-// CodigoSalidaNoReconocida: el lector no encontró el enlace a tiempo, o el CLI terminó sin dejar la sesión iniciada.
-const CodigoSalidaNoReconocida = "salida_no_reconocida"
+const (
+	// CodigoSalidaNoReconocida: el lector no encontró el enlace a tiempo, o el CLI terminó sin dejar la sesión iniciada.
+	CodigoSalidaNoReconocida = "salida_no_reconocida"
+	// CodigoInicioSesionFallo: el inicio de sesión del CLI terminó con un código distinto de 0 (un código rechazado…).
+	CodigoInicioSesionFallo = "inicio_sesion_fallo"
+)
 
-// maximoPegado acota lo que se pega (Claude: «código#estado», unos 100 caracteres).
-const maximoPegado = 1024
+// minimoPegado y maximoPegado acotan lo que se pega (Claude: «código#estado», unos 100 caracteres). El mínimo es el de
+// adaptadores.Secretos: lo pegado se tapa en el registro, y algo más corto taparía texto corriente.
+const (
+	minimoPegado = 8
+	maximoPegado = 1024
+)
 
 // maximoLector es lo que el lector guarda de la salida: el enlace y el código salen en las primeras líneas.
 const maximoLector = 64 << 10
@@ -52,14 +60,19 @@ type lector struct {
 func (x *lector) Write(p []byte) (int, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	if len(x.bruto)+len(p) > maximoLector {
-		return len(p), nil // shortcut: lo que pasa de 64 KB no se mira; el plazo del lector da salida_no_reconocida
+	n := len(p)
+	if x.hay && (x.l.PidePegar == nil || x.pegar) {
+		return n, nil // ya está todo
+	}
+	// shortcut: lo que pasa de 64 KB no se mira; el plazo del lector da salida_no_reconocida.
+	if resto := maximoLector - len(x.bruto); len(p) > resto {
+		p = p[:resto]
+	}
+	if len(p) == 0 {
+		return n, nil
 	}
 	x.bruto = append(x.bruto, p...)
-	texto := escapes.ReplaceAllString(string(x.bruto), "")
-	if i := strings.IndexByte(texto, 0x1b); i >= 0 {
-		texto = texto[:i] // una secuencia a medias: lo que sigue llega en el próximo trozo
-	}
+	texto := sinEscapes(string(x.bruto))
 	enlace, hayEnlace := valor(x.l.Enlace, texto)
 	codigo, hayCodigo := "", true
 	if x.l.Codigo != nil {
@@ -70,7 +83,23 @@ func (x *lector) Write(p []byte) (int, error) {
 		x.hay, x.pegar = true, pegar
 		x.avisar(enlace, codigo, pegar)
 	}
-	return len(p), nil
+	return n, nil
+}
+
+// sinEscapes quita las secuencias de escape. Un ESC que queda en la última línea es una secuencia a medias: se corta ahí
+// y lo demás llega en el próximo trozo. Uno con un salto de línea detrás no se reconoce y se quita solo él.
+func sinEscapes(bruto string) string {
+	texto := escapes.ReplaceAllString(bruto, "")
+	for {
+		i := strings.IndexByte(texto, 0x1b)
+		if i < 0 {
+			return texto
+		}
+		if !strings.Contains(texto[i:], "\n") {
+			return texto[:i]
+		}
+		texto = texto[:i] + texto[i+1:]
+	}
 }
 
 func (x *lector) visto() bool {
@@ -101,13 +130,19 @@ func (c *corrida) sesionTrasInstalar() error {
 	}
 	version := numeroVersion(c.t.g.VersionDespues) // solo la escribe esta corrida
 	if c.p.o.Comprobada != nil && !c.p.o.Comprobada(c.agente, "iniciar_sesion", version) {
-		aviso := idioma.Tf("%s %s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté", c.f.Programa, version)
+		aviso := idioma.Tf("%s aún no está comprobado con Tramtai: el inicio de sesión automático vuelve cuando lo esté. Mientras, puedes hacerlo en una consola con %s",
+			c.conVersionSi(version), c.ordenConsola())
 		c.linea(aviso)
 		c.anotar(aviso)
 		return nil
 	}
 	c.nuevoPlazo()
 	return c.sesion(version)
+}
+
+// ordenConsola es el inicio de sesión para hacerlo a mano («claude auth login»).
+func (c *corrida) ordenConsola() string {
+	return strings.Join(append([]string{c.f.Comando}, c.r.Sesion.Argumentos...), " ")
 }
 
 // sesion lanza el inicio de sesión del CLI con tuberías (el M0 no pidió pty a ninguno) y la entrada abierta para lo
@@ -148,19 +183,23 @@ func (c *corrida) sesion(version string) error {
 	})
 	defer reloj.Stop()
 	// El entorno de la receta (Copilot: COPILOT_DEBUG_BROWSER) evita que el CLI abra un navegador.
-	err = c.lanzar(ctx, procesos.Orden{Programa: ruta, Argumentos: l.Argumentos, Entorno: entornoDe(l.Entorno),
+	// Ejecutar cierra la lectura en este proceso al lanzarlo: un Codigo tardío falla.
+	salida, err := c.lanzar(ctx, procesos.Orden{Programa: ruta, Argumentos: l.Argumentos, Entorno: entornoDe(l.Entorno),
 		EntradaAbierta: lectura, Bruto: x})
 	if c.ctx.Err() == nil && errors.Is(context.Cause(ctx), errNoReconocida) {
 		c.anotar("marcar " + version)
 		if err := c.p.Marcar(c.agente, version); err != nil {
 			c.anotar(err.Error())
 		}
-		orden := strings.Join(append([]string{c.f.Comando}, l.Argumentos...), " ")
 		return &Error{CodigoSalidaNoReconocida, idioma.Tf("no se reconoció lo que escribió %s en %d s: inicia sesión en una consola con %s",
-			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), orden)}
+			c.f.Programa, int(math.Ceil(c.p.plazoLector.Seconds())), c.ordenConsola())}
 	}
 	if err != nil {
 		return err
+	}
+	if salida != 0 {
+		return &Error{CodigoInicioSesionFallo, idioma.Tf("el inicio de sesión de %s falló (terminó con el código %d): vuelve a intentarlo o hazlo en una consola con %s",
+			c.f.Programa, salida, c.ordenConsola())}
 	}
 	c.fijar(func(g *guardado) { g.Estado, g.PidePegar = "comprobando", false })
 	if c.p.o.Comprobar != nil && c.p.o.Comprobar(c.ctx, c.agente).Estado == adaptadores.SesionSin {
@@ -177,9 +216,9 @@ func (p *Preparador) Codigo(agente, codigo string) error {
 		return errors.New(idioma.Tf("agente desconocido o sin receta: %s", agente))
 	}
 	codigo = strings.TrimSpace(codigo)
-	if codigo == "" || len(codigo) > maximoPegado || !utf8.ValidString(codigo) ||
+	if len(codigo) < minimoPegado || len(codigo) > maximoPegado || !utf8.ValidString(codigo) ||
 		strings.ContainsFunc(codigo, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
-		return errors.New(idioma.Tf("el código pegado no es válido: una sola línea sin espacios, de hasta %d caracteres", maximoPegado))
+		return errors.New(idioma.Tf("el código pegado no es válido: una sola línea sin espacios, de %d a %d caracteres", minimoPegado, maximoPegado))
 	}
 	p.mu.Lock()
 	t := p.tareas[agente]
@@ -188,7 +227,7 @@ func (p *Preparador) Codigo(agente, codigo string) error {
 		return errors.New(idioma.Tf("%s no está esperando ningún código", f.Programa))
 	}
 	t.pegados = append(t.pegados, codigo)
-	if antes, _, ok := strings.Cut(codigo, "#"); ok && len(antes) >= 8 {
+	if antes, _, ok := strings.Cut(codigo, "#"); ok && len(antes) >= minimoPegado {
 		t.pegados = append(t.pegados, antes) // por si el CLI repite solo el código, sin el estado
 	}
 	entrada := t.entrada

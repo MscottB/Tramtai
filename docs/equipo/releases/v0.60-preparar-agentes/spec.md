@@ -189,7 +189,8 @@ Bajo la instancia, con la sesión de la Web UI o la clave del espacio, como el r
 - Las pantallas siguen el estado con un sondeo corto mientras hay una preparación en marcha, como el conversor
   (`seguirPreparacion` en `web/src/conversor.ts`); el canal de eventos de la instancia solo lleva peticiones y no cambia.
 - Errores con código: `requisito_falta`, `version_no_comprobada`, `peticiones_en_curso`, `ya_en_curso`,
-  `instalador_fallo`, `no_encontrado_tras_instalar`, `plazo_agotado`, `salida_no_reconocida`, `sin_red`,
+  `instalador_fallo`, `no_encontrado_tras_instalar`, `plazo_agotado`, `salida_no_reconocida`, `inicio_sesion_fallo` (el
+  inicio de sesión del CLI terminó con error), `sin_red`,
   `no_disponible_en_servidor` (lo que el M0 diga para Windows Server).
 - Los tipos salen de `internal/contrato` (`go generate ./internal/contrato`).
 
