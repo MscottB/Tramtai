@@ -26,7 +26,7 @@ func init() {
 		"solo se descarga por HTTPS: %s":                            "downloads only go over HTTPS: %s",
 		"demasiadas redirecciones":                                  "too many redirects",
 		"no hay descarga para la arquitectura %s":                   "there is no download for the %s architecture",
-		"%s no está en la lista de sumas de la versión":             "%s is not in the version's checksum list",
+		"%s no está en la lista de sumas de la versión":             "%s is not in the version’s checksum list",
 		"la suma SHA-256 de %s no coincide con la publicada":        "the SHA-256 checksum of %s does not match the published one",
 		"no se pudo descargar %s: %s":                               "could not download %s: %s",
 		"%s respondió %d":                                           "%s answered %d",
