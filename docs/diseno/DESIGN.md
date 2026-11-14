@@ -1,6 +1,6 @@
 ---
 name: Tramtai
-description: Pasarela local que convierte los CLI de IA en API; su Web UI se lee como la señalética de una red de tranvía.
+description: Sistema visual de Tramtai en dos partes: el sitio público (v0.61, plano técnico) y la Web UI de la app (señalética de una red de tranvía).
 colors:
   acento: "#0b6e64"
   acento-texto: "#ffffff"
@@ -167,6 +167,149 @@ components:
 
 # Design System: Tramtai
 
+Este documento tiene dos sistemas visuales, cada uno con su alcance:
+
+- **Parte 1, el sitio público** (`site/`, v0.61): plano técnico, oscuro con el acento `#2dd4bf`, Inter e Instrument Serif. Describe lo que hay en `site/estilo.css` y `site/sitio.js`; si el código y este texto difieren, manda el código.
+- **Parte 2, la Web UI de la app** (`web/src/`): la «Red de tranvía». No cambió en la v0.61. Su bloque `colors:` de arriba son los tokens de la Web UI y de la terminal (`TestColoresDeDesign` los compara con `internal/tui/tema.go`), así que no lleva los del sitio.
+
+Las dos partes comparten la marca (el verde azulado, los colores de línea de los agentes y la terminal), no las variables ni las letras.
+
+# Parte 1 · El sitio
+
+## Visión
+
+El sitio es un sitio de producto con siete páginas con la misma barra (Inicio, Producto, Agentes, Servidor, Desarrolladores, Ayuda y Descargar). Su público es quien programa y ya usa el SDK de OpenAI o el de Anthropic. La estructura es la de un plano técnico: una cuadrícula fina arriba, tarjetas de borde fino discontinuo y rótulos «FIG n» sobre cada figura. Los colores son los de una herramienta de desarrollo actual (casi negro y un único acento verde azulado) y lo que se mueve es lo que enseña cómo funciona Tramtai, nunca el texto que se está leyendo.
+
+**Dial:** `Dial sitio: ENERGY 2 / RHYTHM 2 / MOTION 2`. MOTION 2: la terminal, los diagramas y los puntos de estado se mueven solos porque enseñan el recorrido de una petición y la app; se activan al entrar en pantalla, tienen pausa donde son largos y quedan quietos con «reducir movimiento». RHYTHM 2: las secciones abren a la izquierda o centradas, sin etiqueta sobre el h2.
+
+## Colores
+
+Todas son variables de `:root` con `light-dark(claro, oscuro)`. El sistema decide el tema (`color-scheme: dark light`) y `data-tema="claro"` o `"oscuro"` en `<html>` lo fuerza (el selector Sistema, Claro u Oscuro de la barra lo guarda en `localStorage`, clave `tramtai.tema`; un script del `<head>` lo aplica antes de pintar). El diseño parte del oscuro y el claro es papel cálido con el acento oscurecido. Texto, texto suave y acento pasan AA (4,5:1) sobre el fondo y las dos superficies en los dos temas, y los bordes de controles, 3:1.
+
+| Variable | Claro | Oscuro | Uso |
+|---|---|---|---|
+| `--fondo` | `#f7f5f0` | `#0b0d10` | fondo de página |
+| `--superficie` | `#fffdf9` | `#11151a` | tarjetas, menús, diálogos |
+| `--superficie-suave` | `#f0ede6` | `#161b21` | barra de la ventana, código en línea, cabeceras de tabla |
+| `--borde` | `#e3ded4` | `#1f262e` | separadores |
+| `--borde-fuerte` | `#cbc4b6` | `#2e3742` | contorno de ventanas |
+| `--borde-discontinuo` | `#c4bcad` | `#353f4b` | borde fino discontinuo de las tarjetas (decorativo) |
+| `--borde-control` | `#78715f` | `#64707c` | campos, pestañas, ES/EN (3:1) |
+| `--texto` | `#16191d` | `#eef1f4` | texto principal |
+| `--texto-suave` | `#5b5f66` | `#9aa3ad` | texto secundario |
+| `--acento` | `#0b6e64` | `#2dd4bf` | enlaces, foco, botón principal, líneas de los diagramas |
+| `--acento-texto` | `#ffffff` | `#04201c` | texto sobre el acento |
+| `--acento-suave` | `rgba(11,110,100,.09)` | `rgba(45,212,191,.1)` | velos: hover, fila elegida, aviso |
+| `--claude` | `#c4561d` | `#f28a4f` | solo su punto o línea |
+| `--codex` | `#2563eb` | `#5b8def` | idem |
+| `--copilot` | `#1f883d` | `#3fb950` | idem |
+| `--gemini` | `#7c3aed` | `#a78bfa` | idem |
+| `--antigravity` | `#db2777` | `#f472b6` | idem |
+| `--rejilla` | `rgba(22,25,29,.06)` | `rgba(255,255,255,.05)` | cuadrícula del arranque |
+| `--tablero` | `#16191d` | `#080a0d` | tinta de los bloques de código y del tablero |
+| `--tablero-texto`, `--tablero-suave`, `--tablero-clave` | `#eef1f4`, `#a3acb6`, `#7dd3c8` | los mismos | texto, comentarios y cadenas sobre la tinta |
+| `--borde-tablero` | `transparent` | `#1f262e` | de noche la tinta casi se funde con el fondo y lleva borde |
+
+`--sombra` solo acompaña al borde de día (de noche es transparente) y `--radio` vale 10 px. Las reglas de color:
+
+- **Un acento.** El verde azulado es el único color de marca: los diagramas son de una línea de un píxel en el acento.
+- **Los colores de agente, solo en sus puntos y líneas** (`.punto`, el router de Agentes, `.t-claude` y hermanas en la terminal). Nunca para estados, categorías ni decoración.
+- **Un estado se escribe además de pintarse:** un punto de color con su palabra (listo, versión nueva, sin instalar), el que no está instalado es un punto hueco.
+- **Borde antes que sombra.** Las tarjetas son borde discontinuo y sin sombra; la ventana de la terminal, la de «cuatro formas» y las capturas llevan borde y `--sombra`.
+
+## Letra
+
+Alojadas en `site/`, subconjuntos con los caracteres del sitio en español e inglés (lista en `web/scripts/letras-caracteres.txt`; cómo rehacerlas, en `docs/equipo/desarrollo.md`). Cada una con su licencia OFL al lado.
+
+| Variable | Letra | Archivo | Para qué |
+|---|---|---|---|
+| `--fuente` | Inter variable (`wght` 100 a 900) con la pila del sistema detrás | `inter.woff2`, 48 KB | texto y títulos |
+| `--serifa` | Instrument Serif cursiva | `instrument-italica.woff2`, 16 KB | la parte clave de cada titular |
+| `--mono` | `Tramtai Mono`, un subconjunto de Cascadia Mono (el nombre «Cascadia Code» está reservado por la licencia) | `cascadia.woff2`, 19 KB | código, comandos, rótulos, terminal |
+
+Inter y Instrument Serif suman unos 64 KB; el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila `sitio.test.ts`, que además comprueba que cada carácter del texto está en la lista.
+
+- **Cuerpo:** Inter 16 px con interlineado 1,6.
+- **Títulos** (`h1` a `h4`): peso 600, letras algo juntas (`-0.025em`) e interlineado 1,15. `h2`, de 1,6 a 2,2 rem según el ancho.
+- **`.titular`** (el h1 de cada página): de 2,4 a 4,2 rem, 600, `-0.03em`. En las páginas de documentación, de 2 a 2,75 rem.
+- **La parte clave** va en `<em>`: `h2 em, .titular em` pasan a Instrument Serif cursiva, peso 400 y color de acento («Tus agentes de IA, *como una API local.*»).
+- **Cifras** con `font-variant-numeric: tabular-nums`; `.cifra-numero` mide 2,5 rem y pesa 600.
+- **Mono** (`--mono`): código a 0,9 rem con interlineado 1,7 y código en línea a 0,88 em.
+- **`.fig`:** el rótulo «FIG n · …» sobre cada figura, diagrama o recorte, en mono de 0,72 rem, mayúsculas y `0.06em`. Con `.tablero-cabecera` (la cabecera del tablero de Privacidad) son los únicos textos en mayúsculas espaciadas del sitio.
+
+## Piezas
+
+Clases de `site/estilo.css` comunes a todas las páginas:
+
+- **`.arranque`:** la cabecera de cada página de presentación. Lleva detrás la cuadrícula de plano (`--rejilla`, celdas de 56 px, enmascarada para que solo se vea arriba) y el brillo del acento (un radial al 20 %) detrás del titular. Va debajo del contenido (`isolation: isolate`).
+- **`.tarjeta`:** `--superficie`, borde de 1 px discontinuo en `--borde-discontinuo`, esquinas de 10 px, relleno de 22 px y sin sombra. `a.tarjeta` es una tarjeta que es un enlace y, al pasar el cursor, su borde pasa al acento.
+- **`.mosaico`:** rejilla de `--col` columnas (3 por defecto, 2 en Agentes hasta 1000 px) con huecos de 12 px. `.ancha` ocupa dos columnas y `.alta`, dos filas; hasta 720 px, una sola columna.
+- **`.fig`:** el rótulo de arriba; el pie de una figura es `.fig-pie`.
+- **`.bloque-codigo` y `.codigo`:** tinta `--tablero`, borde `--borde-tablero`, esquinas de 10 px, con el botón Copiar (`.copiar`, 44 px) arriba a la derecha que añade `sitio.js`. Dentro, `.c` es un comentario, `.s` una cadena y `.k` una palabra clave en negrita. El ámbar queda para las cifras de la Web UI y no entra aquí.
+- **Botones** (`.boton`): 44 px de alto como mínimo, esquinas de 8 px; `.principal` va en el acento y `.secundario`, con borde discontinuo. El paso del cursor solo cambia el borde, sin levantarse.
+- **`.chapa`:** una píldora con punto para un estado real, como «Tu sistema» en Descargar.
+- **`.cifras`:** una franja de cuatro cifras en una tarjeta de borde discontinuo (2×2 hasta 900 px). Las cifras son del producto y se pueden comprobar en la propia página; no hay cifras de uso.
+- **`.tablero`:** el bloque de tinta de Privacidad, con su cabecera en mayúsculas espaciadas y una fila por riesgo.
+- **`.ventana`, `.ventana-barra` y `.ventana-terminal`:** un marco con borde fuerte, una barra de `--superficie-suave` con tres puntos de semáforo decorativos, las pestañas y un rótulo. La terminal se describe abajo.
+- **`.paradas`, `.ciclo`, `.diagrama`, `.pasos`:** listas numeradas para recorridos, con el número en mono y el acento.
+- **Documentación** (`.doc`): la plantilla de tres columnas de Servidor, Desarrolladores y la Ayuda. Índice de 228 px a la izquierda, el contenido en `.prosa` y «En esta página» de 200 px a la derecha, las dos columnas fijas al bajar (`position: sticky`). La barra, el pie y el contenido de estas páginas llegan a 1360 px; las de presentación, a 1120. Por debajo de 1180 px «En esta página» pasa encima del contenido, en fila; por debajo de 900 hay una sola columna y el índice se abre con su botón (sin JavaScript, abierto). Nada se pone encima del texto.
+- **Buscador** (`dialog.buscador`): Ctrl K, ⌘K o `/` (y el botón de la barra o el campo del índice) abren un diálogo con el cuadro, la lista (`role="listbox"`) y el pie con las teclas. Busca en `buscar.json`, en el idioma que se ve.
+
+## Movimiento
+
+Lo vivo es CSS y SVG, nunca vídeo, y solo cambia la opacidad o el trazo: el texto no se desplaza.
+
+- **`.vivo`** marca un bloque animado. `sitio.js` le pone `.visto` la primera vez que se ve (un cuarto de él, con `IntersectionObserver`) y entonces sus piezas se mueven: `.aparece` (con `--retraso`), `.dibuja` (un trazo SVG con `pathLength="1"`), `.flujo` (corre por la línea), `.pulso` (late), `.cursor` (parpadea) y `.escribe` (una orden que se teclea sola, letra a letra, con `--pasos`).
+- **Solo con `html.js` y `prefers-reduced-motion: no-preference`** existen los estados de partida (oculto, sin dibujar). Sin una de las dos cosas todo está en su estado final: sin JavaScript no hay `html.js` y sin la preferencia, la regla no aplica.
+- **`prefers-reduced-motion: reduce`:** `animation` y `transition` en `none !important` en todo el sitio y `scroll-behavior: auto`.
+- **Sin observador** (`IntersectionObserver` ausente), `sitio.js` marca todo como visto de golpe.
+- **La demo del recorrido guiado** (Producto) avanza sola cada 6 s, con pausa, y se queda quieta fuera de la pantalla, con la pestaña oculta, con el foco dentro o con «reducir movimiento».
+
+## Accesibilidad
+
+- **Contraste AA** (4,5:1 el texto, 3:1 los bordes de controles) en los dos temas; se comprueba con los valores de la tabla de colores.
+- **Foco visible:** `:focus-visible` con contorno de 2 px del acento separado 2 px. Sobre la tinta del código, el contorno va en `--tablero-clave`; donde el contenedor recorta (la ventana, la pantalla de la terminal), por dentro.
+- **Controles de 44 px o más** en alto y en ancho: botones, enlaces del pie y de las listas, pestañas, Copiar, el botón del menú. La excepción está abajo.
+- **Reducir movimiento:** todo queda quieto y en su estado final.
+- **Sin JavaScript** cada página se ve completa: las pestañas se ven una debajo de otra, la demo muestra todos sus pasos, el índice de la documentación está abierto, la barra baja a una segunda fila y no se queda fija, y los anclajes de la portada de antes llevan a su sitio por un enlace visible. Las animaciones, en su estado final.
+- **Pestañas** con teclado y ARIA de pestañas (`role="tablist"`, `tab` y `tabpanel`, flechas, Inicio y Fin); la elección de lenguaje se recuerda.
+- **Idioma:** las dos lenguas en la misma página (`lang="es"` y `lang="en"` en cada trozo; `html[lang]` oculta la otra), con el selector ES/EN (`tramtai.idioma`). Las capturas y los comandos salen en el idioma elegido.
+- **«Saltar al contenido»** es lo primero al tabular.
+
+## Páginas
+
+| Página | Archivo | Lleva |
+|---|---|---|
+| Inicio | `index.html` | arranque con «Descargar para tu sistema» y cómo se instala, mosaico FIG 1 a 5, la ventana de cuatro formas (Web UI, Terminal, CLI, Servidor) y «Sigue por aquí» |
+| Producto | `producto.html` | cómo funciona, funciones, por qué Tramtai con la comparativa plegada, y privacidad y riesgos |
+| Agentes | `agentes.html` | la tarjeta del router y una tarjeta por agente |
+| Servidor | `servidor.html` | el modo servidor, con la plantilla de documentación |
+| Desarrolladores | `desarrolladores.html` | la guía con ejemplos en Python, JavaScript, Go y curl, con la plantilla de documentación |
+| Ayuda | `ayuda/` y `ayuda/<tema>.html` | los 20 temas, generados desde `web/src/ayuda` |
+| Descargar | `descargar.html` | el sistema detectado, todos los paquetes y los requisitos |
+
+Además, `404.html`, `ayuda.html` (que lleva a `ayuda/`), `sitemap.xml`, `buscar.json`, el manifiesto, los iconos y `og.png`. La barra, el pie y la cabecera de cada página las escribe `web/scripts/sitio.ts` en las zonas `comun:`; las direcciones de antes (`#descargar`, `#como`, `#funciones`, `#agentes`…) saltan a su sitio nuevo (`ANCLAS_PORTADA`).
+
+## Terminal en el sitio
+
+La ventana de terminal sigue el tema del sitio: blanca de día (`#ffffff`, tinta `#0f1b1e`) y oscura de noche (`#0b0d10`, `#e5edf0`), con `light-dark()`. La pantalla es texto real (`<pre class="pantalla">`, seleccionable) en `Tramtai Mono`, de 100 columnas y entre 11 y 15 px; si no cabe, se desplaza dentro de su marco. Las pestañas son «1 Inicio · 4 Mis APIs · 5 Historial» y el rótulo, «tramtai terminal · ssh».
+
+Los colores son clases `.t-<token>` (`acento`, `texto`, `suave`, `ok`, `error`, `aviso`, `claude`, `codex`, `copilot`, `gemini`, `antigravity`), `.tf-velo` de fondo y `.t-b` de negrita; cada una vale exactamente el color de la paleta de la Web UI en su tema (con la excepción de `t-claude`), y un color que no esté en la tabla hace fallar la captura. Cada flecha, forma o símbolo va en `<span class="g">` (una celda de `1ch`, centrada) para que las columnas cuadren con cualquier letra.
+
+Sus colores de línea se usan solo donde la terminal pinta el nombre o la estación de un agente. El FIG 1 de Inicio (`.terminal-viva`) es otra cosa: un guion escrito a mano sobre la tinta del tablero en los dos temas.
+
+## Excepciones del sitio
+
+- **Controles de 44 px.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
+- **Barra y menú.** Hasta 1100 px (y en tabletas táctiles hasta 1180) las secciones, el idioma y el tema van en un panel que abre el botón del menú. Hasta 640 px, Descargar queda en un botón con su icono y, hasta 420, el nombre de la marca solo lo oyen los lectores.
+- **`t-claude` de día.** Vale `#ba521c`, el valor de la chapa de la Web UI, y no `#c4561d`: es texto sobre el fondo blanco de la ventana y el color de la ficha da 4,47:1. De noche conserva `#f28a4f`. La variable `--claude` del sitio, que solo pinta puntos y líneas, sí es `#c4561d`.
+- **Código sobre tinta.** El foco usa `--tablero-clave` porque el acento no llega a 3:1 sobre la tinta.
+- **Sin pulso en la Web UI, con pulso en el sitio.** Los puntos de estado de los diagramas del sitio laten porque son una demostración con pausa y se detienen con «reducir movimiento»; la Web UI no late (ver la Parte 2).
+
+# Parte 2 · La Web UI de la app
+
+La «Red de tranvía» de abajo describe solo la Web UI y la terminal; el sitio no la usa. La Web UI no cambió en la v0.61.
+
 ## Overview
 
 **Creative North Star: "La red de tranvía"**
@@ -177,7 +320,7 @@ De día es un andén gris frío con superficies blancas y tinta profunda; de noc
 
 El sistema rechaza el panel SaaS de tarjetas iguales con un icono dentro de un recuadro tintado: cuando algo necesita marca visual, lleva la barra o el punto de su línea, no un icono decorativo.
 
-**Dial:** `Dial app: ENERGY 2 / RHYTHM 2 / MOTION 2` y `Dial sitio: ENERGY 2 / RHYTHM 2 / MOTION 2` (motivos en «Excepciones»).
+**Dial:** `Dial app: ENERGY 2 / RHYTHM 2 / MOTION 2` (motivo en «Excepciones»).
 
 **Key Characteristics:**
 - Navegación lateral como una línea vertical continua con estaciones; la actual se rellena del acento.
@@ -241,7 +384,7 @@ Un acento verde azulado de marca sobre neutros fríos, más una paleta de línea
 ### Named Rules
 **The Cifras Tabulares Rule.** Toda cifra (tablas, metadatos, versiones, números de paso, tablero) usa `font-variant-numeric: tabular-nums`.
 
-**The Mayúsculas Solo en el Tablero Rule.** Las mayúsculas espaciadas pertenecen a la cabecera del tablero de salidas (en la Web, `.tablero__cabecera`; en el sitio, `.tablero-cabecera` del tablero de Privacidad). Ningún otro título, etiqueta o sección las usa: ni los títulos de grupo del menú ni los de las notas de versión, ni las etiquetas del sitio.
+**The Mayúsculas Solo en el Tablero Rule.** Las mayúsculas espaciadas pertenecen a la cabecera del tablero de salidas (en la Web, `.tablero__cabecera`). Ningún otro título, etiqueta o sección las usa: ni los títulos de grupo del menú ni los de las notas de versión.
 
 ## Layout
 
@@ -267,7 +410,7 @@ Híbrido plano: la profundidad la dan los bordes y el tono de superficie, con so
 
 ## Shapes
 
-Esquinas suaves y escalonadas por tamaño: 12 px para tarjetas, menús, notificaciones y tablero; 10 px para cajas internas (código, avisos, fichas, opciones, segmentado, estaciones del menú); 8 px para controles (botones, campos, elementos de lista); 6 px para tooltips y la dirección del servicio; píldora completa para etiquetas de estado y el indicador del servicio. Los botones redondos son círculos. El sitio usa la misma escala: 12 (tarjetas, mapa, tablero, destacado), 10 (código, cajas internas, control segmentado) y 8 (botones, campos, pestañas).
+Esquinas suaves y escalonadas por tamaño: 12 px para tarjetas, menús, notificaciones y tablero; 10 px para cajas internas (código, avisos, fichas, opciones, segmentado, estaciones del menú); 8 px para controles (botones, campos, elementos de lista); 6 px para tooltips y la dirección del servicio; píldora completa para etiquetas de estado y el indicador del servicio. Los botones redondos son círculos.
 
 La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen del mapa) y 4 px (líneas de agente) con extremos redondeados; estaciones de 15 px con aro de 3 px; giros a 45° entre tramos rectos en el mapa; chapas de línea de 18 px de alto (28 px la grande) con radio de 5 px.
 
@@ -350,19 +493,11 @@ Filtros como un control segmentado de 10 px con 3 px de relleno sobre superficie
 - **Orden de los agentes**: Claude, Codex, GitHub Copilot, Gemini API, Antigravity en toda la interfaz (`ordenAgentes`, según el `orden` de cada ficha).
 - **Valor vacío**: «Sin dato» (`sinDato`, traducido), nunca una raya.
 - **Iconos**: un icono acompaña a un texto y tiene que ver con él; nada de destellos, varitas, robots ni cerebros para decir «IA». Plantilla usa `o_description`, Corregir `o_build` y el esfuerzo `o_speed`; los selectores y las ideas de Probar no llevan icono.
-- **Página del producto**: selector de tema Sistema, Claro u Oscuro junto al de idioma; las capturas siguen el tema efectivo. Hasta 1100 px, las secciones, el idioma y el tema van en el panel del menú.
 - **Fila con interruptor** (pestaña Herramientas de Mis APIs): una fila por herramienta con su nombre, el chip de estado (punto más palabra: No detectada, Detectada, Activa, Desactivada, Desactualizada, Solo global), el modelo y la ruta del archivo que toca en `codigo`, el motivo en aviso con icono, y a la derecha el interruptor (`q-toggle`, con su `aria-label` por herramienta), «Volver a activar» si está desactualizada y «⋯» con Cambiar el modelo, Olvidar y, aparte y en color de error, Restaurar la copia. «Activar todas» y «Desactivar todas» van arriba, como botones planos. En el modo servidor la pestaña es un estado vacío que lo explica.
-- **Ventana de terminal** (sitio): un marco de `--radio` con borde fuerte y sombra de reposo, una barra de `--superficie-suave` con tres puntos de semáforo (de `--borde-fuerte`, decorativos), las pestañas «1 Inicio · 4 Mis APIs · 5 Historial» (el patrón de pestañas de las escenas del mapa) y el rótulo «tramtai terminal · ssh» en mono a la derecha. **Sigue el tema del sitio**: blanca de día (`#ffffff`, tinta `#0f1b1e`) y oscura de noche (`#0a1116`, `#e5edf0`), con `light-dark()`. La pantalla es texto real (`<pre class="pantalla">`, seleccionable) con la fuente `Tramtai Mono` (subconjunto de Cascadia Mono, OFL), 100×28, entre 11 y 15 px; en móvil se desplaza dentro del marco. Los colores son clases `.t-<token>` (`acento`, `texto`, `suave`, `ok`, `error`, `aviso`, `claude`, `codex`, `copilot`, `gemini`, `antigravity`), `.tf-velo` de fondo y `.t-b`; cada una vale exactamente el color de la paleta de su tema (salvo `t-claude` de día; ver «Excepciones»), y un color que no esté en la tabla hace fallar la captura. Cada flecha, forma o símbolo va en `<span class="g">` (una celda de `1ch`, centrado), para que las columnas cuadren con cualquier fuente. Debajo, un pie de figura en texto y una leyenda de teclas en `<kbd>`.
-- **Franja de cifras y línea de ventajas** (sitio): cuatro cifras en una banda de superficie con borde, cada una con el número en Overpass 700 de 2,75 rem en el acento, tabular, y su etiqueta pequeña en tinta suave (2×2 hasta 900 px). Debajo, la **línea de ventajas**: dos listas ordenadas de tres paradas (título y una frase de unas 25 palabras) con la vía y las estaciones del plano de «Funciones», en el acento y nunca en colores de agente; desde 901 px van lado a lado y, hasta 900 px, se leen como una sola línea de seis. Las cifras son del producto y se pueden comprobar en la propia página; no hay cifras de uso.
 
 ## Excepciones (con su motivo)
 
 - **Sin pulso.** La etiqueta «en curso» y la estación actual del trayecto no laten (la versión anterior de este documento lo pedía). Motivo: un pulso sin fin compite con el contenido y no añade información (antislop R-19); el estado ya lo dicen la palabra, el halo fijo y el tranvía, que solo se mueve cuando cambia la etapa.
 - **Dial de la app: ENERGY 2 / RHYTHM 2 / MOTION 2.** Herramienta de operador, densidad equilibrada; el único movimiento es el tranvía (trayecto y mapa vivo), que avanza cuando cambia la etapa de una petición y salta con «reducir movimiento».
-- **Dial del sitio: ENERGY 2 / RHYTHM 2 / MOTION 2.** MOTION 2: el tranvía del mapa y la demo del recorrido se mueven solos porque enseñan el recorrido de una petición y la app; tienen pausa, quedan quietos con «reducir movimiento» y se paran fuera de la pantalla. RHYTHM 2: las secciones abren a la izquierda o centradas, sin etiqueta sobre el h2.
-- **Controles de 44 px en el sitio.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
-- **Vía muerta en el sitio.** Va en `--borde-control` (3:1 con el fondo) en lugar de borde fuerte (1,6:1 de noche), porque en la portada Antigravity tiene que verse aunque esté sin servicio.
 - **Fila elegida en la terminal.** Lleva el velo del acento al 18 % (20 % de noche), no al 9 % (11 % de noche) de la Web UI, con la tinta del texto encima: en muchas paletas de terminal el 9 % no se distingue del fondo y no se vería qué fila está elegida (`internal/tui/tema.go`).
 - **Chapa de Claude.** De día su fondo es `#ba521c` y no el `#c4561d` de su línea: con texto blanco el color de la ficha da 4,47:1 y no llega a 4,5:1. El resto de su línea (mapa, barras) conserva el color de la ficha.
-- **`t-claude` de día en la terminal del sitio.** Vale `#ba521c`, el valor de la chapa, y no `#c4561d`: es texto sobre el fondo blanco de la ventana y el color de la ficha da 4,47:1. De noche conserva el de la ficha (`#f28a4f`).
-- **Colores de línea en la terminal del sitio.** `.t-claude`, `.t-codex`, `.t-copilot`, `.t-gemini` y `.t-antigravity` se usan solo donde la TUI pinta el nombre o la estación de un agente, como el resto del sitio; nunca para estados.
