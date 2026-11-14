@@ -88,6 +88,23 @@ test('Descargar tiene cada archivo del release', () => {
   assert.doesNotMatch(sitio('descargar.html'), /winget/)
 })
 
+test('pestanaDe: Linux en cualquier arquitectura, y ninguna en móvil, tableta o ChromeOS', () => {
+  const js = sitio('sitio.js')
+  const f = (n: string) => js.match(new RegExp(`\\nfunction ${n}\\([\\s\\S]*?\\n\\}`))![0]
+  const pestanaDe = new Function(`${f('sistemaDe')}\n${f('pestanaDe')}\nreturn pestanaDe`)()
+  const casos: [string, string, string | null][] = [
+    ['Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 Firefox/128.0', 'Linux aarch64', 'linux'],
+    ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36', 'Linux x86_64', 'linux'],
+    ['Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36', 'Linux armv81', null],
+    ['Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 Chrome/126 Safari/537.36', 'Linux x86_64', null],
+    ['Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1', 'iPad', null],
+    ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36', 'Win32', 'windows'],
+  ]
+  for (const [ua, plataforma, esperado] of casos) assert.equal(pestanaDe(ua, plataforma), esperado, ua)
+  // El iPad con Safari de escritorio se presenta como un Mac: sitio.js lo anula con maxTouchPoints.
+  assert.match(js, /if \(tuya === 'macos' && navigator\.maxTouchPoints > 1\) tuya = null;/)
+})
+
 test('las pestañas de Descargar', () => {
   const grupo = sitio('descargar.html').match(/<div class="[^"]*" data-pestanas="descargar">([\s\S]*?)<script type="application\/json" id="descargas">/)?.[1] ?? ''
   assert.match(grupo, /<div class="pestanas-lista" role="tablist"[^>]* hidden>/, 'sin JavaScript se ven las tres, una debajo de otra')
@@ -95,7 +112,7 @@ test('las pestañas de Descargar', () => {
   assert.deepEqual(pestanas.map((p) => p[5]), ['windows', 'macos', 'linux'])
   assert.deepEqual(pestanas.map((p) => p[3]), ['true', 'false', 'false'])
   for (const [, id, panel, , , sistema] of pestanas)
-    assert.match(grupo, new RegExp(`<article class="tarjeta" id="${panel}" aria-labelledby="${id}" data-sistema="${sistema}">`))
+    assert.match(grupo, new RegExp(`<article class="tarjeta" id="${panel}" aria-labelledby="${id}" tabindex="0" data-sistema="${sistema}">`))
   // Linux enseña a la vez .deb y .rpm, sin elegir por la persona.
   const linux = grupo.slice(grupo.indexOf('data-sistema="linux"'))
   assert.match(linux, /data-archivo="linux-amd64\.deb"/)

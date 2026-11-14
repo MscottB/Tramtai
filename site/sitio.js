@@ -142,6 +142,14 @@ function sistemaDe(ua, plataforma) {
   return null;
 }
 
+// pestanaDe dice qué pestaña de Descargar abrir: la de sistemaDe y, si no hay, Linux en cualquier arquitectura (Firefox en
+// aarch64, por ejemplo). Móvil, tableta y ChromeOS, ninguna. El botón del arranque sigue con sistemaDe.
+function pestanaDe(ua, plataforma) {
+  var s = sistemaDe(ua, plataforma);
+  if (s) return s;
+  return /linux|x11/i.test((plataforma || '') + ' ' + (ua || '')) && !/android|iphone|ipad|ipod|mobile|cros/i.test((plataforma || '') + ' ' + (ua || '')) ? 'linux' : null;
+}
+
 // destinoDescarga dice adónde lleva el botón [data-descarga]: al archivo del release (archivos, de #descargas) del
 // primer [data-archivo] del bloque del sistema. En Linux no: .deb o .rpm depende de la distribución y se elige en
 // Descargar. null deja el botón en descargar.html.
@@ -167,8 +175,9 @@ function destinoDescarga(sistema, archivo, archivos) {
   if (sistema === 'macos' && navigator.maxTouchPoints > 1) sistema = null;
   // Inicio enseña solo cómo se instala en ese sistema (estilo.css).
   if (sistema) document.documentElement.dataset.tuSistema = sistema;
-  // El sistema de escritorio aunque sea ARM: Descargar abre su pestaña, que enseña los dos paquetes.
-  var tuya = sistema;
+  // La pestaña de Descargar que se abre: la de tu sistema, y la de Linux en cualquier arquitectura (enseña los dos paquetes).
+  var tuya = sistema || pestanaDe(navigator.userAgent, navigator.platform);
+  if (tuya === 'macos' && navigator.maxTouchPoints > 1) tuya = null;
   var datos = {};
   try { datos = JSON.parse(document.getElementById('descargas').textContent); } catch (e) {}
 

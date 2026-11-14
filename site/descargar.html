@@ -82,7 +82,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <div class="pestanas descargas" data-pestanas="descargar">
         <div class="pestanas-lista" role="tablist" aria-label="Sistema operativo" data-aria-en="Operating system" hidden><button type="button" role="tab" id="sis-windows" aria-controls="sis-windows-panel" aria-selected="true" tabindex="0" data-lenguaje="windows">Windows</button><button type="button" role="tab" id="sis-macos" aria-controls="sis-macos-panel" aria-selected="false" tabindex="-1" data-lenguaje="macos">macOS</button><button type="button" role="tab" id="sis-linux" aria-controls="sis-linux-panel" aria-selected="false" tabindex="-1" data-lenguaje="linux">Linux</button></div>
 
-        <article class="tarjeta" id="sis-windows-panel" aria-labelledby="sis-windows" data-sistema="windows">
+        <article class="tarjeta" id="sis-windows-panel" aria-labelledby="sis-windows" tabindex="0" data-sistema="windows">
           <h2>Windows 10 · 11</h2>
           <p class="suave"><span lang="es">El instalador (<code>…-instalador-windows-x64.exe</code>) es para tu usuario, no pide permisos de administrador y se actualiza con un clic. También hay una copia portable en <code>.zip</code>.</span><span lang="en">The installer (<code>…-instalador-windows-x64.exe</code>) is per user, needs no administrator rights and updates with one click. There’s also a portable <code>.zip</code>.</span></p>
           <p><a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="instalador-windows-x64.exe"><span lang="es">Descargar el instalador</span><span lang="en">Download the installer</span></a></p>
@@ -90,7 +90,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <p class="otras"><a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="portable-windows-x64.zip">Portable (.zip)</a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="conversor-windows-x64.zip"><span lang="es">Conversor de archivos sin conexión (.zip)</span><span lang="en">Offline file converter (.zip)</span></a></p>
         </article>
 
-        <article class="tarjeta" id="sis-macos-panel" aria-labelledby="sis-macos" data-sistema="macos">
+        <article class="tarjeta" id="sis-macos-panel" aria-labelledby="sis-macos" tabindex="0" data-sistema="macos">
           <h2>macOS 11+</h2>
           <p class="suave"><span lang="es">El <code>.dmg</code> sirve para Intel y Apple Silicon. Con Homebrew se instala sin el aviso de Gatekeeper:</span><span lang="en">The <code>.dmg</code> works on Intel and Apple Silicon. With Homebrew it installs without the Gatekeeper prompt:</span></p>
           <pre class="bloque-codigo"><code>brew tap mscottb/tramtai https://github.com/MscottB/Tramtai
@@ -99,7 +99,7 @@ brew install --cask tramtai</code></pre>
           <p class="otras"><span lang="es">Solo CLI y servicio:</span><span lang="en">CLI and service only:</span> <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-arm64.tar.gz">Apple Silicon</a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-amd64.tar.gz">Intel</a></p>
         </article>
 
-        <article class="tarjeta" id="sis-linux-panel" aria-labelledby="sis-linux" data-sistema="linux">
+        <article class="tarjeta" id="sis-linux-panel" aria-labelledby="sis-linux" tabindex="0" data-sistema="linux">
           <h2>Linux</h2>
           <p class="suave"><span lang="es">Paquetes con la app de escritorio, para x64 y ARM: <code>.deb</code> en Debian, Ubuntu y derivadas, y <code>.rpm</code> en Fedora, RHEL y derivadas.</span><span lang="en">Packages with the desktop app, for x64 and ARM: <code>.deb</code> on Debian, Ubuntu and derivatives, and <code>.rpm</code> on Fedora, RHEL and derivatives.</span></p>
           <p class="botones">
