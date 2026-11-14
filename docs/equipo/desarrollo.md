@@ -8,7 +8,7 @@ Documentación interna para desarrollar Tramtai. La de usuario está en el [READ
 | [pendientes.md](pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
 | [versionado.md](versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits, y etiquetas con notas |
 | [M0B.md](M0B.md) | Validación de los modos con clave de API (pendiente con claves reales) |
-| [Diseño](../diseno/DESIGN.md) | Sistema visual «Red de tranvía» de la Web UI y la página, y [contexto de producto](../diseno/PRODUCT.md) |
+| [Diseño](../diseno/DESIGN.md) | Sistema visual del sitio (plano técnico, v0.61) y de la Web UI («Red de tranvía»), y [contexto de producto](../diseno/PRODUCT.md) |
 
 El documento de diseño original del proyecto no forma parte del repositorio.
 
@@ -85,8 +85,9 @@ desde los mismos datos.
 - **La regla del estilo es una prueba** (`estilo.test.ts`): resumen de una línea (140 caracteres), pasos, notas y
   respuestas de 200 como máximo, diagrama donde hay un recorrido, un tema por página de la app, anclas únicas y ningún
   texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 5 MB en total (las de los pasos de los recorridos, `recorrido-<ancla>`, incluidas).
-- **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/` y la página de paso `site/ayuda.html`; el CI lo regenera y
-  falla si lo guardado no coincide.
+- **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/`, la página de paso `site/ayuda.html`, `404.html`,
+  `sitemap.xml`, `buscar.json` y las zonas comunes de las páginas escritas a mano (abajo, en **El sitio**); el CI lo
+  regenera y falla si lo guardado no coincide.
 - **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`, varios separados por comas) compila Tramtai en `bin/`, la arranca
   portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
   inglés, el elemento de cada paso de los recorridos con su anillo (`-- --recorridos` saca solo esas; una ancla que la demo no muestra va en `SIN_CAPTURA`, con su motivo) y las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
@@ -163,6 +164,38 @@ desde los mismos datos.
   Las dos juntas pesan unos 65 KB (49 y 17); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
   `sitio.test.ts`. La misma prueba comprueba que cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni
   scripts, que pinta Tramtai Mono) está en la lista. Si falta alguno, se añade a la lista y se rehacen las dos.
+- **El sitio (v0.61):** siete páginas con la misma barra: Inicio (`index.html`), Producto, Agentes, Servidor,
+  Desarrolladores, Ayuda (`ayuda/`) y Descargar. El sistema visual está en [DESIGN.md](../diseno/DESIGN.md) (Parte 1).
+  - **Escritas a mano:** `index.html`, `producto.html`, `agentes.html`, `servidor.html`, `desarrolladores.html` y
+    `descargar.html`. `npm run sitio` solo pone al día sus zonas comunes (`<!-- comun:x --> … <!-- /comun:x -->`, en
+    `rellenar` de `web/scripts/sitio.ts`): `cabeza`, `cabecera` y `pie` en todas; `anclas` (el salto de los anclajes
+    viejos) en Inicio; `riesgos` y `riesgos-servidor`; `terminal` y `terminal-recorte`; `camino`, y `indice-boton` y
+    `en-esta-pagina` en las de documentación. Las opcionales solo se rellenan donde la página las trae.
+  - **Generadas:** `ayuda/*.html` y `ayuda.html` salen de `web/src/ayuda`, y `404.html`, `sitemap.xml` y `buscar.json`,
+    de `sitio.ts`.
+  - **Documentación en tres columnas:** `columnasDoc` (índice, contenido y «En esta página») es la plantilla de la Ayuda;
+    `servidor.html` y `desarrolladores.html` la escriben a mano con el mismo marcado y `rellenar` les pone el botón del
+    índice y «En esta página» desde sus `<section id>`.
+  - **Buscador:** Ctrl K, ⌘K o `/` abren un diálogo que busca en `site/buscar.json` (una entrada por tema y apartado de
+    Ayuda, Desarrolladores y Servidor, en los dos idiomas; 100 KB como máximo). Se genera con `npm run sitio`; no hay
+    servicio externo.
+  - **Anclajes viejos:** `#descargar`, `#como`, `#funciones`, `#por-que`, `#privacidad`, `#agentes`, `#servidor`, `#app`,
+    `#terminal` (y los de antes de la v0.59) llevan a su página con `ANCLAS_PORTADA` y `destinoPortada`, que Inicio
+    incrusta como salto en el `<head>`. `servidor.html`, `desarrolladores.html`, `ayuda/<tema>.html` y `descargar.html`
+    son direcciones que enlazan las apps y el README: no se cambian de nombre. `enlaces.test.ts` comprueba cada enlace
+    interno y cada anclaje.
+  - **Versión y descargas:** `web/scripts/descargas.mjs` escribe el número de versión (`[data-version]`) y el JSON
+    `#descargas` con la URL de cada archivo del último release en las páginas que se le pasan. El workflow «Página» le
+    pasa `site/index.html` (el botón del arranque) y `site/descargar.html`; sin páginas, las mismas dos. Una página nueva
+    con descargas se añade a esa lista y a la del workflow, y su prueba es `descargas.test.ts`.
+  - **`sitio.js`, sin librerías:** el tema (`tramtai.tema`) y el idioma (`tramtai.idioma`), el menú, el buscador, las
+    pestañas, Copiar, «En esta página» y el índice, lo vivo (`.vivo` pasa a `.visto` al entrar en pantalla) y la
+    demo. `sistemaDe`, `pestanaDe` y `destinoDescarga` eligen el sistema, la pestaña de Descargar y el archivo del
+    botón; sin un sistema seguro (móvil, tableta, ChromeOS, Linux ARM o sin datos) el botón dice «Descargar» y lleva a
+    `descargar.html`, nunca a un archivo equivocado.
+  - **Pruebas:** `sitio.test.ts` (páginas, `buscar.json`, `sitemap.xml`, letras), `portada.test.ts` (Inicio,
+    Producto y Agentes), `enlaces.test.ts`, `descargas.test.ts` y `estilo-textos.test.ts`; en Go,
+    `TestComandosDelSitioExisten` (`cmd/tramtai/sitio_test.go`): cada orden de `tramtai` que enseña un `<pre>` existe.
 - **La ventana en `site/index.html`:** no se escribe a mano. `npm run sitio` rellena la zona `<!-- comun:terminal -->`
   (`ventanaTerminal` en `web/scripts/sitio.ts`) con el semáforo, las pestañas «1 Inicio · 4 Mis APIs · 5 Historial», el
   rótulo y un panel por página e idioma tomado de `terminal.json`; el CI falla si lo guardado no coincide. Los colores

@@ -2,7 +2,7 @@
 
 Todo lo que necesitas para usar Tramtai desde tu código. Cada tema tiene ejemplos que funcionan tal cual en Python,
 JavaScript, Go y curl, en [docs/ejemplos](ejemplos); el CI los ejecuta en cada cambio. La misma guía, con el código a
-la vista, está en la [página del producto](https://mscottb.github.io/Tramtai/desarrolladores.html). Todas las rutas y
+la vista, está en el [sitio de Tramtai](https://mscottb.github.io/Tramtai/desarrolladores.html). Todas las rutas y
 opciones están en la [referencia de la API](api.md), y los nombres que usan la app y esta guía (espacio, API, clave,
 petición), con su equivalente técnico, en el [glosario](GLOSARIO.md).
 
@@ -28,7 +28,7 @@ hasta que la creas (**Mis APIs → Clave del espacio**, o `tramtai global token 
 `tramtai proyecto token --rotar` en un proyecto) y se ve una sola vez, al crearla o regenerarla. En la API propia,
 las rutas `/api/v1/instancia` se refieren a ese espacio: el global o el de un proyecto.
 
-Si aún no conoces la app, [el recorrido guiado](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
+Si aún no conoces la app, [el recorrido guiado](https://mscottb.github.io/Tramtai/producto.html#demo) la enseña en la página Producto del sitio, y
 en Tramtai el botón **?** de cada página tiene **Muéstrame en pantalla**. La API no cambia.
 
 Desde la terminal, `tramtai espacios` lista los espacios, `tramtai espacio iniciar|detener|olvidar` los gestiona y
@@ -184,4 +184,4 @@ on the computer where Tramtai runs. Tab opens the menu, 1 to 7 go to each page, 
 back, `W` opens the Web UI, `r` retries when the service doesn’t respond and `q` quits; in the Playground, `c` cancels a
 running request. Against a Tramtai server, the SDK base URL is its `https://` address, with a key created on that
 server. The
-[product page](https://mscottb.github.io/Tramtai/desarrolladores.html#terminal) has this section in English.
+[developer guide on the website](https://mscottb.github.io/Tramtai/desarrolladores.html#terminal) has this section in English.
