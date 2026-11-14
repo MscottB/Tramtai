@@ -98,6 +98,37 @@
         ],
         "createdAt": "2026-11-13T23:52:37.189Z",
         "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-14T17:16:12.449Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada (como en producto, agentes y descargar)"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "site/*.html",
+          "site/ayuda/*.html",
+          "site/estilo.css"
+        ],
+        "createdAt": "2026-11-14T17:16:12.528Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: la cuadrícula de plano, muy tenue y solo arriba de cada página (estructura de la dirección C)"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/agentes.html",
+          "site/descargar.html",
+          "site/producto.html"
+        ],
+        "createdAt": "2026-11-14T17:16:12.608Z",
+        "reason": "Agente (T11), medido: .idioma son botones de 44 px con el texto centrado; .recorte-terminal recorta a propósito la pantalla de la terminal por abajo (FIG 17, 16 filas); .tabla envuelve una tabla con celdas de 0 14px y enlaces de 44 px"
       }
     ]
   }
