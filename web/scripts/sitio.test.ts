@@ -418,3 +418,34 @@ test('iconos, imagen para compartir, manifest y datos estructurados', () => {
   assert.equal(ld['@type'], 'SoftwareApplication')
   assert.match(leer('sitio.js'), /'tramtai\.lenguaje-ayuda'/, 'la Ayuda recuerda su lenguaje aparte de la guía')
 })
+
+// funcionDe saca una función de arriba del todo de sitio.js (sin sangría) para probarla sin navegador, como el script de
+// la página de paso.
+const funcionDe = (nombre: string) =>
+  new Function(`${leer('sitio.js').match(new RegExp(`\\nfunction ${nombre}\\([\\s\\S]*?\\n\\}`))![0]}\nreturn ${nombre}`)()
+
+// Pendiente de la Tarea 1: con el margen de abajo recortado un 20 %, un .vivo corto al final de la página no llegaba.
+test('lo vivo arranca con un cuarto a la vista, también al final de la página o si es más alto que ella', () => {
+  const visto = funcionDe('bastanteVisto')
+  const e = (ratio: number, alto: number) => ({ intersectionRatio: ratio, intersectionRect: { height: alto } })
+  assert.equal(visto(e(1, 80), 900), true, 'corto y entero a la vista, al final de la página')
+  assert.equal(visto(e(0.1, 60), 900), false, 'solo asoma')
+  assert.equal(visto(e(0.12, 300), 900), true, 'más alto que la pantalla: un cuarto de ella')
+  assert.equal(visto(e(0.2, 200), 900), false)
+  assert.match(leer('sitio.js'), /\{ threshold: \[0, 0\.25\] \}/)
+  assert.doesNotMatch(leer('sitio.js'), /rootMargin: '0px 0px -20% 0px'/)
+})
+
+// Pendientes de la Tarea 3.
+test('en el buscador, Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña', () => {
+  assert.match(leer('sitio.js'), /e\.key === 'Enter' && activo >= 0\) \{[\s\S]{0,80}opciones\[activo\]\.dispatchEvent\(new MouseEvent\('click', \{[^}]*ctrlKey: e\.ctrlKey, metaKey: e\.metaKey/)
+})
+
+test('cada tema de buscar.json tiene texto donde buscar', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en'])
+    for (const t of temas) {
+      const e = indice[idioma].find((x: { u: string }) => x.u === `ayuda/${t.id}.html`)
+      assert.ok(e?.x.trim(), `${idioma}: ${t.id}`)
+    }
+})

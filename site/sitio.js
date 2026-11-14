@@ -1,3 +1,9 @@
+// bastanteVisto dice si un .vivo ya se ve lo bastante para arrancar: un cuarto de él o, si es muy alto, un cuarto de la
+// pantalla. Sin margen recortado: un .vivo corto al final de la página también llega.
+function bastanteVisto(e, alto) {
+  return e.intersectionRatio >= 0.25 || e.intersectionRect.height >= alto * 0.25;
+}
+
 // Lo vivo (estilo.css) arranca su animación cuando entra en pantalla: .visto, una sola vez. Sin observador, ya. Va lo
 // primero para que un fallo más abajo no deje nada esperando oculto. Este bloque solo ve los .vivo que ya están en la
 // página: un .vivo creado después tiene que ponerse .visto él mismo.
@@ -5,8 +11,8 @@
   var vivos = document.querySelectorAll('.vivo');
   if (!('IntersectionObserver' in window)) return vivos.forEach(function (v) { v.classList.add('visto'); });
   var vigia = new IntersectionObserver(function (entradas) {
-    entradas.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('visto'); vigia.unobserve(e.target); } });
-  }, { rootMargin: '0px 0px -20% 0px' });
+    entradas.forEach(function (e) { if (bastanteVisto(e, innerHeight)) { e.target.classList.add('visto'); vigia.unobserve(e.target); } });
+  }, { threshold: [0, 0.25] });
   vivos.forEach(function (v) { vigia.observe(v); });
 })();
 
@@ -392,7 +398,11 @@
     campo.addEventListener('input', buscar);
     campo.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); mover(activo + (e.key === 'ArrowDown' ? 1 : -1)); }
-      else if (e.key === 'Enter' && activo >= 0) { e.preventDefault(); opciones[activo].click(); }
+      // Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña, como Ctrl+clic: el clic lleva las teclas.
+      else if (e.key === 'Enter' && activo >= 0) {
+        e.preventDefault();
+        opciones[activo].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey }));
+      }
     });
     // Clic en el fondo (el propio diálogo, sin su caja) cierra.
     dialogo.addEventListener('click', function (e) { if (e.target === dialogo) dialogo.close(); });
