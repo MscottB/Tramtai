@@ -210,9 +210,87 @@ ${paneles.join('\n')}
 </div>`
 }
 
+// CAMINO es el dibujo de tu app → Tramtai → los agentes (comun:camino): FIG 2 de Inicio y FIG 1 de Desarrolladores. Cada
+// página pone su <figure class="tarjeta fig-camino vivo"> y su rótulo; las líneas se dibujan al aparecer y el flujo
+// corre por ellas.
+export const CAMINO = `<svg viewBox="0 0 352 196" role="img" aria-label="Tu app habla con Tramtai, y Tramtai con Claude Code, Codex, GitHub Copilot y la Gemini API" data-aria-en="Your app talks to Tramtai, and Tramtai to Claude Code, Codex, GitHub Copilot and the Gemini API">
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linejoin="round">
+    <path class="dibuja" pathLength="1" d="M8 140 L44 122 L80 140 L44 158 Z M8 140 V150 L44 168 L80 150 V140 M44 158 V168"/>
+    <path class="dibuja" pathLength="1" style="--retraso: .4s" d="M102 88 L148 65 L194 88 L148 111 Z M102 88 V100 L148 123 L194 100 V88 M148 111 V123"/>
+  </g>
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+    <path class="base" d="M62 131 L125 99.5 M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M62 131 L125 99.5"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+  </g>
+  <circle class="pulso" cx="236" cy="38" r="5" fill="var(--claude)"/>
+  <circle class="pulso" cx="236" cy="70" r="5" fill="var(--codex)" style="--retraso: .6s"/>
+  <circle class="pulso" cx="236" cy="102" r="5" fill="var(--copilot)" style="--retraso: 1.2s"/>
+  <circle class="pulso" cx="236" cy="134" r="5" fill="var(--gemini)" style="--retraso: 1.8s"/>
+  <g font-size="13">
+    <text x="44" y="190" text-anchor="middle" lang="es">tu app</text><text x="44" y="190" text-anchor="middle" lang="en">your app</text>
+    <text class="nombre" x="148" y="92.5" text-anchor="middle">Tramtai</text>
+    <text x="246" y="42.5">Claude Code</text>
+    <text x="246" y="74.5">Codex</text>
+    <text x="246" y="106.5">GitHub Copilot</text>
+    <text x="246" y="138.5">Gemini API</text>
+  </g>
+</svg>`
+
+// Apartado es una entrada de «En esta página»: el id de su sección y su título en cada idioma, en texto.
+export interface Apartado { id: string; es: string; en: string }
+
+// BOTON_INDICE abre el índice de la documentación en el móvil: sitio.js lo enciende; sin JavaScript se queda oculto y el
+// índice se ve abierto encima del contenido.
+const BOTON_INDICE = `<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden>${svg('<path d="M4 7h16M4 12h10M4 17h13"/>')}${bilingue('Índice', 'Contents')}</button>`
+
+// enEstaPagina es la columna de la derecha de la documentación: un enlace por apartado; sitio.js marca al bajar el que se
+// está leyendo.
+function enEstaPagina(apartados: Apartado[]): string {
+  if (!apartados.length) return '<aside class="doc-pagina"></aside>'
+  return `<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true">${bilingue('En esta página', 'On this page')}</p>
+<ul>${apartados.map((a) => `\n  <li><a href="#${a.id}">${bilingue(a.es, a.en)}</a></li>`).join('')}
+</ul>
+</nav>
+</aside>`
+}
+
+// columnasDoc es la plantilla de documentación (spec §6) de la Ayuda: el índice a la izquierda (indice, sus grupos y
+// enlaces), el contenido en medio y «En esta página» a la derecha. servidor.html y desarrolladores.html la escriben a
+// mano con el mismo marcado y rellenar les pone el botón y «En esta página».
+export function columnasDoc(indice: string, contenido: string, apartados: Apartado[]): string {
+  return `<div class="doc">
+<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+${BOTON_INDICE}
+<div class="doc-indice-lista" id="doc-indice-lista">
+${indice}
+</div>
+</nav>
+<article id="contenido" tabindex="-1" class="prosa">
+${contenido}
+</article>
+${enEstaPagina(apartados)}
+</div>`
+}
+
+// apartadosDe da los apartados del contenido de una página escrita a mano (de <article id="contenido"> a su «En esta
+// página»): cada <section id> con su <h2>, en los dos idiomas.
+function apartadosDe(html: string): Apartado[] {
+  const desde = html.indexOf('<article id="contenido"')
+  const hasta = html.indexOf('<!-- comun:en-esta-pagina -->')
+  if (desde < 0 || hasta < desde) return []
+  const contenido = html.slice(desde, hasta)
+  const en = apartados(contenido, 'en')
+  return apartados(contenido, 'es').map((a) => ({ id: a.id, es: a.titulo, en: en.find((b) => b.id === a.id)?.titulo ?? a.titulo }))
+}
+
 // rellenar pone al día las zonas comunes (<!-- comun:x --> … <!-- /comun:x -->) de una página escrita a mano, con su
-// título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor) y la terminal
-// (comun:terminal) solo van donde la página los pide, con los textos de los catálogos y las pantallas de terminal.json.
+// título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor), la terminal
+// (comun:terminal), el camino (comun:camino) y las piezas de la documentación (comun:indice-boton y
+// comun:en-esta-pagina) solo van donde la página
+// los pide, con los textos de los catálogos, las pantallas de terminal.json y los apartados de la propia página.
 export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos; terminal?: Terminal }): string {
   const titulo = desescapar(html.match(/<title[^>]*>([^<]*)<\/title>/)?.[1] ?? 'Tramtai')
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)"[^>]*>/)?.[1] ?? '')
@@ -221,6 +299,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
     anclas: saltoPortada(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
+    'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)), camino: CAMINO,
   }
   for (const [zona, contenido] of [...Object.entries(zonas), ...Object.entries(opcionales)]) {
     const re = new RegExp(`<!-- comun:${zona} -->[\\s\\S]*?<!-- /comun:${zona} -->`)
@@ -297,8 +376,8 @@ export const AVISO_DESCARGA = {
   en: 'You need at least one agent: Tramtai installs the CLI of Claude Code, Codex, GitHub Copilot or Antigravity and helps you sign in; for Gemini, a Gemini API key is enough. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.',
 }
 
-// pagina es el armazón de cada página generada; clase es la del <main> (con índice lateral, «ayuda»).
-function pagina(l: Lugar, titulo: [string, string], descripcion: string, cuerpo: string, clase = 'ayuda-temas'): string {
+// pagina es el armazón de cada página generada; main es su <main> entero (el de la Ayuda, mainAyuda).
+function pagina(l: Lugar, titulo: [string, string], descripcion: string, main: string): string {
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -311,14 +390,44 @@ ${cabeza(l, `${titulo[0]} · Tramtai`, descripcion)}
 <body>
 ${cabecera(l.rel, l.actual)}
 
-<main id="contenido" tabindex="-1" class="envoltura ${clase}">
-${cuerpo}
-</main>
+${main}
 
 ${pie(l.rel, l.actual)}
 </body>
 </html>
 `
+}
+
+// mainAyuda es el <main> de la Ayuda, con la plantilla de documentación dentro. tema-ayuda le dice a sitio.js que la
+// Ayuda recuerda su lenguaje de ejemplo aparte.
+const mainAyuda = (doc: string) => `<main class="envoltura doc-envoltura tema-ayuda">\n${doc}\n</main>`
+
+// GRUPOS_AYUDA ordenan los temas en el índice de la Ayuda y en su inicio; cada tema va en uno, en el orden de temas.
+export const GRUPOS_AYUDA: (Apartado & { temas: string[] })[] = [
+  { id: 'g-empezar', es: 'Empezar', en: 'Get started', temas: ['empezar', 'agentes', 'preparar', 'probar'] },
+  { id: 'g-apps', es: 'Desde tus apps', en: 'From your apps', temas: ['conectar', 'conectar-herramientas', 'archivos', 'json', 'recetas', 'herramientas'] },
+  { id: 'g-dia', es: 'Día a día', en: 'Day to day', temas: ['presupuestos', 'historial', 'espacios', 'claves', 'ajustes'] },
+  { id: 'g-servidor', es: 'Servidor', en: 'Server', temas: ['servidor', 'entornos'] },
+  { id: 'g-dudas', es: 'Dudas y errores', en: 'Questions and errors', temas: ['problemas', 'conceptos', 'preguntas'] },
+]
+const LUPA = svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')
+
+// indiceAyuda es la columna de la izquierda de la Ayuda: el buscador, el inicio, los temas por grupos (el actual, con
+// aria-current) y las dos guías.
+function indiceAyuda(f: Fuente, actual: string): string {
+  const titulo = (id: string) => {
+    const t = f.temas.find((x) => x.id === id)
+    if (!t) throw new Error(`GRUPOS_AYUDA cita un tema que no existe: ${id}`)
+    return bilingue(f.es[t.titulo] ?? id, f.en[t.titulo] ?? id)
+  }
+  const enlace = (href: string, texto: string, marcado = false) => `\n  <li><a href="${href}"${marcado ? ' aria-current="page"' : ''}>${texto}</a></li>`
+  return `<button type="button" class="buscar-campo" data-buscar hidden>${LUPA}<span>${bilingue('Buscar', 'Search')}</span><kbd>Ctrl K</kbd></button>
+<ul>${enlace('index.html', bilingue('Inicio de la Ayuda', 'Help home'), actual === '')}
+</ul>
+${GRUPOS_AYUDA.map((g) => `<p class="fig doc-grupo" id="i-${g.id}">${bilingue(g.es, g.en)}</p>\n<ul aria-labelledby="i-${g.id}">${g.temas.map((id) => enlace(`${id}.html`, titulo(id), id === actual)).join('')}\n</ul>`).join('\n')}
+<p class="fig doc-grupo" id="i-mas">${bilingue('Más documentación', 'More documentation')}</p>
+<ul aria-labelledby="i-mas">${enlace('../servidor.html', bilingue('Guía del servidor', 'Server guide'))}${enlace('../desarrolladores.html', bilingue('Guía del desarrollador', 'Developer guide'))}
+</ul>`
 }
 
 function tarjetas(f: Fuente, lista: Tema[]): string {
@@ -425,62 +534,63 @@ function paginaTema(f: Fuente, tema: Tema): string {
   secciones.push({ id: '', titulo: ['', ''], partes: [`<p class="aviso">${tx(tema.terminal)}</p>`] })
   if (relacionados.length) secciones.push({ id: 's-relacionados', titulo: ['Temas relacionados', 'Related topics'], partes: [tarjetas(f, relacionados)] })
   const conTitulo = secciones.filter((s) => s.id && s.partes.length)
-  const indice = conTitulo.length >= 3
-    ? `<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-  <ol>${conTitulo.map((s) => `\n    <li><a href="#${s.id}">${bilingue(...s.titulo)}</a></li>`).join('')}
-  </ol>
-</nav>
-`
-    : ''
   const cuerpo = secciones.filter((s) => s.partes.length).map((s) => (s.id
     ? `<section id="${s.id}"><h2>${bilingue(...s.titulo)}</h2>\n${s.partes.join('\n\n')}\n</section>`
     : s.partes.join('\n\n'))).join('\n\n')
-  const articulo = `${indice}<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html">${bilingue('Ayuda', 'Help')}</a> › ${tx(tema.titulo)} · <button type="button" class="enlace-boton" data-buscar hidden>${bilingue('Buscar', 'Search')}</button></nav>
-<header>
-  <h1>${tx(tema.titulo)}</h1>
+  const grupo = GRUPOS_AYUDA.find((g) => g.temas.includes(tema.id))
+  const contenido = `<header class="doc-cabeza">
+  <p class="fig doc-ruta">${bilingue('Ayuda', 'Help')}${grupo ? ` · ${bilingue(grupo.es, grupo.en)}` : ''}</p>
+  <h1 class="titular">${tx(tema.titulo)}</h1>
   <p class="entradilla">${tx(tema.resumen)}</p>
 </header>
 
-${cuerpo}
-</article>`
+${cuerpo}`
   return pagina({ rel: '../', ruta: `ayuda/${tema.id}.html`, actual: 'ayuda' }, [f.es[tema.titulo] ?? tema.id, f.en[tema.titulo] ?? tema.id],
-    f.es[tema.resumen] ?? '', articulo, indice ? 'ayuda' : 'ayuda-temas')
+    f.es[tema.resumen] ?? '', mainAyuda(columnasDoc(indiceAyuda(f, tema.id), contenido, conTitulo.map((s) => ({ id: s.id, es: s.titulo[0], en: s.titulo[1] })))))
 }
 
 function paginaInicio(f: Fuente): string {
-  const cuerpo = `<article class="doc tema-ayuda">
-<header>
-  <h1>${bilingue('Ayuda', 'Help')}</h1>
+  const grupos = GRUPOS_AYUDA.map((g) => `<section id="${g.id}"><h2>${bilingue(g.es, g.en)}</h2>
+${tarjetas(f, g.temas.map((id) => f.temas.find((t) => t.id === id)!))}
+</section>`).join('\n\n')
+  const mas: [string, string] = ['Más documentación', 'More documentation']
+  const contenido = `<header class="doc-cabeza">
+  <p class="fig doc-ruta">${bilingue('Ayuda', 'Help')}</p>
+  <h1 class="titular"><span lang="es">La Ayuda de Tramtai, <em>tema a tema.</em></span><span lang="en">Tramtai’s Help, <em>topic by topic.</em></span></h1>
   <p class="entradilla">${bilingue('Qué hace Tramtai, cómo empezar, cada función y qué hacer si algo falla.', 'What Tramtai does, how to start, every feature and what to do if something fails.')}</p>
 </header>
-<button type="button" class="buscar-campo" data-buscar hidden>${svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}<span>${bilingue('Buscar en el sitio', 'Search the site')}</span><kbd>Ctrl K</kbd></button>
-${tarjetas(f, f.temas)}
-<h2>${bilingue('Más documentación', 'More documentation')}</h2>
-<ul>
+<button type="button" class="buscar-campo" data-buscar hidden>${LUPA}<span>${bilingue('Buscar en el sitio', 'Search the site')}</span><kbd>Ctrl K</kbd></button>
+
+${grupos}
+
+<section id="mas"><h2>${bilingue(...mas)}</h2>
+<ul class="lista-enlaces">
   <li><a href="../desarrolladores.html">${bilingue('Guía del desarrollador', 'Developer guide')}</a></li>
   <li><a href="../servidor.html">${bilingue('Guía del servidor', 'Server guide')}</a></li>
   <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/inicio.md">${bilingue('Documentación completa en GitHub', 'Full documentation on GitHub')}</a></li>
 </ul>
-</article>`
+</section>`
+  const enPagina = [...GRUPOS_AYUDA, { id: 'mas', es: mas[0], en: mas[1] }]
   return pagina({ rel: '../', ruta: 'ayuda/', actual: 'ayuda' }, ['Ayuda', 'Help'],
-    'Ayuda de Tramtai: instalar, conectar agentes y apps, archivos, JSON, recetas, herramientas y errores.', cuerpo)
+    'Ayuda de Tramtai: instalar, conectar agentes y apps, archivos, JSON, recetas, herramientas y errores.', mainAyuda(columnasDoc(indiceAyuda(f, ''), contenido, enPagina)))
 }
 
 // pagina404 la sirve GitHub Pages en cualquier ruta que no existe: por eso todo va con la dirección absoluta.
 function pagina404(): string {
-  const cuerpo = `<article class="doc tema-ayuda">
-<header>
-  <h1>${bilingue('Esta página no existe', 'This page does not exist')}</h1>
+  const main = `<main id="contenido" tabindex="-1" class="envoltura pagina-sola">
+<article class="prosa">
+<header class="doc-cabeza">
+  <h1 class="titular">${bilingue('Esta página no existe', 'This page does not exist')}</h1>
   <p class="entradilla">${bilingue('Puede que la dirección esté mal escrita o que la página se haya movido.', 'The address may be mistyped, or the page may have moved.')}</p>
 </header>
-<ul>
+<ul class="lista-enlaces">
   <li><a href="${URL_SITIO}">${bilingue('La portada de Tramtai', 'Tramtai’s home page')}</a></li>
   <li><a href="${URL_SITIO}ayuda/">${bilingue('La Ayuda, con su buscador', 'The Help, with its search box')}</a></li>
   <li><a href="${URL_SITIO}descargar.html">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></li>
 </ul>
-</article>`
-  return pagina({ rel: URL_SITIO, ruta: null, actual: '' }, ['Página no encontrada', 'Page not found'], 'Esta página no existe.', cuerpo)
+</article>
+</main>`
+  return pagina({ rel: URL_SITIO, ruta: null, actual: '' }, ['Página no encontrada', 'Page not found'], 'Esta página no existe.', main)
 }
 
 function sitemap(f: Fuente): string {
