@@ -14,7 +14,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 [![Windows, macOS y Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-55666a)](LICENSE.md)
 
-[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda/) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [English](#english)
+[**Descargar**](https://mscottb.github.io/Tramtai/descargar.html) · [Sitio](https://mscottb.github.io/Tramtai/) · [Producto](https://mscottb.github.io/Tramtai/producto.html) · [Agentes](https://mscottb.github.io/Tramtai/agentes.html) · [Servidor](https://mscottb.github.io/Tramtai/servidor.html) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda/) · [English](#english)
 
 <br>
 
@@ -38,7 +38,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 
 ## Empezar
 
-1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/#descargar) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
+1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/descargar.html) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
 2. En **Agentes**, prepara al menos uno: Tramtai instala su CLI y te ayuda a iniciar sesión (al terminar, «Usar mi
    suscripción»), o le pones una clave de API. La primera vez, la bienvenida te lo ofrece («Prepara tus agentes»).
 3. En **Mis APIs**, copia la URL y crea la clave (se ve una sola vez) para tu aplicación:
@@ -93,7 +93,7 @@ Tramtai para la cuenta del servicio (`sudo tramtai-servidor agentes instalar cla
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento y seguridad |
 | [Desarrollo](docs/equipo/desarrollo.md) | Compilar desde el código, pruebas y publicación |
 
-La app trae su propia **Ayuda**, con guías paso a paso y qué hacer ante cada error.
+La app trae su propia **Ayuda**, con guías paso a paso y qué hacer ante cada error. El [sitio](https://mscottb.github.io/Tramtai/) reúne el producto, los agentes, el modo servidor, la guía de desarrolladores y la misma Ayuda, en español e inglés y con un buscador (Ctrl K).
 
 ## Aviso
 
@@ -153,9 +153,10 @@ URL and the key. Antigravity, for now, only from the Playground, the terminal an
 5. Tramtai is free and provided as is, without warranties.
 <!-- /riesgos:en -->
 
-[**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, set up an agent in *Agents* (Tramtai installs its CLI and helps you sign in, then “Use my subscription”)
+[**Download**](https://mscottb.github.io/Tramtai/descargar.html) for Windows, macOS or Linux, set up an agent in *Agents* (Tramtai installs its CLI and helps you sign in, then “Use my subscription”)
 and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal
-and CLI are in English and Spanish; the detailed documentation is in Spanish, and the
-[product page](https://mscottb.github.io/Tramtai/) has an English overview. Free for personal and non-commercial use
+and CLI are in English and Spanish; the detailed guides in this repository are in Spanish, and the
+[website](https://mscottb.github.io/Tramtai/) has the product, agents, server mode, developer guide and Help in
+English too, with search (Ctrl K). Free for personal and non-commercial use
 under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact [MscottB](https://github.com/MscottB) for commercial
 licensing.
