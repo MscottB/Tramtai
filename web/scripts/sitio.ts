@@ -303,7 +303,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)"[^>]*>/)?.[1] ?? '')
   const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel, l.actual) }
   const opcionales: Record<string, string> = {
-    anclas: saltoPortada(),
+    anclas: saltoPortada(), 'anclas-sin-js': anclasSinJs(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal), 'terminal-recorte': recorteTerminal(textos.terminal) } : {}),
     'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)), camino: CAMINO,
@@ -360,6 +360,34 @@ function saltoPortada(): string {
   saltar();
   addEventListener('hashchange', saltar);
 })();</script>`
+}
+
+// DESTINOS_PORTADA nombra cada destino de ANCLAS_PORTADA para la lista que se ve sin JavaScript.
+const DESTINOS_PORTADA: Record<string, [string, string]> = {
+  'descargar.html': ['Descargar', 'Download'], 'producto.html#como': ['Producto · Cómo funciona', 'Product · How it works'],
+  'producto.html#funciones': ['Producto · Funciones', 'Product · Features'], 'producto.html#por-que': ['Producto · Por qué Tramtai', 'Product · Why Tramtai'],
+  'producto.html#privacidad': ['Producto · Privacidad', 'Product · Privacy'], 'agentes.html': ['Agentes', 'Agents'],
+  '#formas': ['Inicio · Cuatro formas de usarla', 'Home · Four ways to use it'], 'servidor.html': ['Servidor', 'Server'],
+}
+
+// anclasSinJs es la lista de Inicio (comun:anclas-sin-js, spec §7) que hace el salto sin JavaScript: cada destino, con
+// los anclajes viejos que llevan a él, en un <noscript>.
+export function anclasSinJs(): string {
+  const porDestino = new Map<string, string[]>()
+  for (const [ancla, destino] of Object.entries(ANCLAS_PORTADA)) porDestino.set(destino, [...(porDestino.get(destino) ?? []), ancla])
+  const filas = [...porDestino].map(([destino, anclas]) => {
+    const nombre = DESTINOS_PORTADA[destino]
+    if (!nombre) throw new Error(`falta el nombre de ${destino} en DESTINOS_PORTADA`)
+    return `    <li>${anclas.map((a) => `<code>#${a}</code>`).join(' ')} → <a href="${destino}">${bilingue(nombre[0], nombre[1])}</a></li>`
+  })
+  return `<noscript>
+  <div class="anclas-viejas">
+    <p class="nota">${bilingue('¿Llegas por una dirección de antes? Lo que había allí está ahora aquí:', 'Followed an old link? What was there is now here:')}</p>
+    <ul class="lista-enlaces">
+${filas.join('\n')}
+    </ul>
+  </div>
+</noscript>`
 }
 
 export function escapar(s: string): string {

@@ -135,8 +135,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <figure class="tarjeta fig-codigo">
         <figcaption class="fig"><span lang="es">FIG 2 · Tu código</span><span lang="en">FIG 2 · Your code</span></figcaption>
         <!-- El mismo mensaje por las tres puertas. Sin JavaScript no hay pestañas y queda el primer ejemplo; sitio.js las
-             enciende con el patrón de la guía del desarrollador (flechas, Inicio y Fin). -->
-        <div class="pestanas" data-pestanas>
+             enciende con el patrón de la guía del desarrollador (flechas, Inicio y Fin). Es su propio juego («sdk»): elegir
+             Anthropic aquí no cambia el lenguaje elegido en Desarrolladores. -->
+        <div class="pestanas" data-pestanas="sdk">
           <div class="pestanas-lista" role="tablist" aria-label="Ejemplo" data-aria-en="Example" hidden><button type="button" role="tab" id="como-openai" aria-controls="como-openai-panel" aria-selected="true" tabindex="0" data-lenguaje="openai">OpenAI</button><button type="button" role="tab" id="como-anthropic" aria-controls="como-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Anthropic</button><button type="button" role="tab" id="como-curl" aria-controls="como-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
 <pre class="codigo" id="como-openai-panel" aria-labelledby="como-openai" tabindex="0"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 

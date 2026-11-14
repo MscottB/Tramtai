@@ -248,8 +248,8 @@ function destinoDescarga(sistema, archivo, archivos) {
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
-  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía, «Cómo funciona» en Producto) comparte uno. Si el
-  // guardado no está en la página, sale la primera pestaña.
+  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía) comparte uno. «Cómo funciona» en Producto es su
+  // propio juego («sdk»). Si el guardado no está en la página, sale la primera pestaña.
   var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
   // Cada data-pestanas="nombre" es un juego aparte (el de lenguajes no tiene nombre; Linux · Windows Server es
   // «sistema»): sus pestañas cambian a la vez y recuerdan su elección sin tocar las del otro juego.
@@ -296,7 +296,7 @@ function destinoDescarga(sistema, archivo, archivos) {
   });
   var guardado = null;
   try { guardado = localStorage.getItem(clave); } catch (e) {}
-  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en «Cómo funciona»). Sin JavaScript se ven
+  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña. Sin JavaScript se ven
   // todos los paneles de la guía, cada uno con su enlace a GitHub.
   elegir(guardado || 'python');
   // Cada juego con nombre (Linux · Windows Server es «sistema»; las cuatro formas de Inicio, «formas», que no se
@@ -552,7 +552,8 @@ function escribirLeyenda(leyenda, partes) {
   var leyenda = caja.querySelector('.demo-leyenda');
   var pausa = caja.querySelector('.demo-pausa');
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var movil = window.matchMedia('(max-width: 899px)');
+  // El mismo corte que estilo.css (en em, como allí: sigue a la letra del navegador).
+  var movil = window.matchMedia('(max-width: 56.1875em)');
   var CADA_MS = 6000;
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
   // foco: el foco está dentro de la demo; el avance solo se para mientras tanto (patrón de carrusel), sin contar como pausa.

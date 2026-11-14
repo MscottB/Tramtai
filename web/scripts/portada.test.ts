@@ -236,7 +236,8 @@ test('la ventana tiene cuatro pestañas', () => {
   assert.match(js, /function pestanasDe\(g\) \{ return g\.querySelector\('\[role="tablist"\]'\)\.querySelectorAll\('\[role="tab"\]'\); \}/)
   assert.match(js, /if \(guardar && nombre !== 'formas' && nombre !== 'descargar'\)/)
   assert.match(js, /if \(nombre !== 'formas' && nombre !== 'descargar'\) try \{ elegido = localStorage\.getItem\('tramtai\.' \+ nombre\); \}/, 'tampoco lee lo que guardaba antes')
-  // La clave del lenguaje no depende de una página: Producto, la guía y quien venga la comparten; la Ayuda, la suya.
+  // La clave del lenguaje no depende de una página: la guía y quien venga la comparten; la Ayuda, la suya (y Producto
+  // guarda su SDK aparte, en tramtai.sdk).
   assert.match(js, /var clave = document\.querySelector\('\.tema-ayuda'\) \? 'tramtai\.lenguaje-ayuda' : 'tramtai\.lenguaje';/)
   assert.doesNotMatch(js, /lenguaje-portada/)
 })
@@ -291,7 +292,7 @@ test('la hoja pinta cada token de la terminal en claro y oscuro, con Cascadia au
   const fuente = css.match(/@font-face \{[^}]*cascadia\.woff2[^}]*\}/)?.[0] ?? ''
   assert.match(fuente, /font-family: 'Tramtai Mono'/, 'Cascadia Code es nombre reservado (OFL)')
   assert.match(css, /\.ventana-pantalla \{[^}]*overflow-x: auto/)
-  assert.match(css, /\.pantalla \{[^}]*clamp\(11px,/)
+  assert.match(css, /\.pantalla \{[^}]*clamp\(\.6875rem,/)
 })
 
 const luz = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
@@ -312,6 +313,8 @@ test('«Sigue por aquí» lleva a las seis páginas, con una línea cada una', (
   const tarjetas = seccion('sigue', inicio).match(/<a class="tarjeta pagina"[\s\S]*?<\/a>/g) ?? []
   assert.deepEqual(tarjetas.map((t) => t.match(/href="([^"]+)"/)?.[1]), ['producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html'])
   for (const t of tarjetas) assert.match(t, /<h3><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/h3>\s*<p><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/p>/)
+  // La tarjeta de Descargar lleva el id del anclaje viejo: las reglas de la sección #descargar de descargar.html no la tocan.
+  assert.match(css, /section#descargar, #todas, #requisitos, #empezar \{ padding: 36px 0; \}/)
 })
 
 test('los anclajes viejos saltan a su sitio nuevo, y sin JavaScript caen en lo que lleva allí', () => {
@@ -337,6 +340,18 @@ test('los anclajes viejos saltan a su sitio nuevo, y sin JavaScript caen en lo q
   }
   for (const ancla of Object.keys(ANCLAS_PORTADA)) assert.match(inicio, new RegExp(`\\sid="${ancla}"`), ancla)
   assert.doesNotMatch(js, /pagas: 'por-que'/, 'el salto de antes de la v0.59 va ahora en ANCLAS_PORTADA')
+})
+
+// Ruling 12: sin JavaScript, un enlace visible en Inicio lleva cada anclaje viejo a su sitio exacto (spec §7).
+test('sin JavaScript, Inicio enseña adónde va cada anclaje viejo', () => {
+  const zona = inicio.match(/<!-- comun:anclas-sin-js -->([\s\S]*?)<!-- \/comun:anclas-sin-js -->/)?.[1] ?? ''
+  assert.match(zona, /^\s*<noscript>[\s\S]*<\/noscript>\s*$/, 'falta comun:anclas-sin-js (cd web; npm run sitio)')
+  assert.ok(seccion('sigue', inicio).includes(zona), 'va en «Sigue por aquí», donde caen los anclajes')
+  for (const [ancla, destino] of Object.entries(ANCLAS_PORTADA)) {
+    const fila = zona.match(new RegExp(`<li>[^\\n]*<code>#${ancla}</code>[^\\n]*</li>`))?.[0] ?? ''
+    assert.ok(fila.includes(`→ <a href="${destino}">`), `#${ancla} → ${destino}`)
+    assert.match(fila, /<span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/a>/, `#${ancla}: el nombre en los dos idiomas`)
+  }
 })
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -674,10 +689,12 @@ describe('agentes', () => {
     assert.match(destinos[4], /fuera de tus apps/)
     assert.doesNotMatch(figura, /style="[^"]*(opacity|display)|\shidden[\s>]/)
     // Las filas crecen con el texto (WCAG 1.4.4 y 1.4.10): cinco iguales y el SVG, de su alto; en un teléfono estrecho, fuera.
-    assert.match(css, /\.router-destinos \{[^}]*grid-auto-rows: minmax\(64px, 1fr\)/)
+    assert.match(css, /\.router-destinos \{[^}]*grid-auto-rows: minmax\(4rem, 1fr\)/)
+    // El SVG mide en rem, como las filas: con la letra más grande sus líneas siguen llegando a su punto.
+    assert.doesNotMatch(css, /\.router-(lineas|cuerpo) \{[^}]*\d+px/)
     assert.doesNotMatch(css, /\.router-destinos li \{[^}]*[^-]height:/)
     assert.match(css, /\.router-lineas \{[^}]*height: 100%/)
-    assert.match(css, /@media \(max-width: 420px\) \{[^@]*\.router-lineas \{ display: none; \}/)
+    assert.match(css, /@media \(max-width: 26\.25em\) \{[^@]*\.router-lineas \{ display: none; \}/)
   })
 
   test('cada agente dice cómo se conecta', () => {
@@ -767,7 +784,9 @@ test('«Cómo funciona» tiene pestañas OpenAI, Anthropic y curl, con su panel 
   assert.match(js, /elegir\(b\.dataset\.lenguaje, null, true\)/)
   // Cada juego de pestañas (data-pestanas="nombre") cambia y se recuerda aparte: elegir Windows no toca OpenAI · curl.
   assert.match(js, /if \(\(g\.dataset\.pestanas \|\| ''\) !== nombre\) return;/)
-  const pre = (id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}"[^>]*>([\\s\\S]*?)</pre>`))?.[1] ?? ''
+  // Su juego es «sdk», no el de lenguajes de Desarrolladores: elegir Anthropic aquí no pisa tramtai.lenguaje.
+  assert.match(como, /<div class="pestanas" data-pestanas="sdk">/)
+  const pre =(id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}"[^>]*>([\\s\\S]*?)</pre>`))?.[1] ?? ''
   assert.match(pre('como-openai-panel').replace(/<[^>]+>/g, ''), /from openai import OpenAI/)
   assert.match(pre('como-openai-panel'), /stream=<span class="k">True/)
   assert.match(pre('como-anthropic-panel'), /anthropic/)
