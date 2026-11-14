@@ -68,11 +68,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <h1><span lang="es">Ayuda</span><span lang="en">Help</span></h1>
   <p class="entradilla"><span lang="es">Qué hace Tramtai, cómo empezar, cada función y qué hacer si algo falla.</span><span lang="en">What Tramtai does, how to start, every feature and what to do if something fails.</span></p>
 </header>
-<div class="buscar-ayuda" hidden>
-  <input type="search" id="buscar-ayuda" placeholder="Buscar en la ayuda" data-placeholder-en="Search help" aria-label="Buscar en la ayuda" data-aria-en="Search help">
-  <p id="cuenta-ayuda" class="solo-lectores" aria-live="polite"></p>
-  <ol id="resultados-ayuda"></ol>
-</div>
+<button type="button" class="buscar-campo" data-buscar hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span><span lang="es">Buscar en el sitio</span><span lang="en">Search the site</span></span><kbd>Ctrl K</kbd></button>
 <div class="tarjetas-temas">
   <a class="tarjeta-tema" href="empezar.html"><strong><span lang="es">Empezar</span><span lang="en">Get started</span></strong><span><span lang="es">Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.</span><span lang="en">Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.</span></span></a>
   <a class="tarjeta-tema" href="agentes.html"><strong><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></strong><span><span lang="es">Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.</span><span lang="en">Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.</span></span></a>
