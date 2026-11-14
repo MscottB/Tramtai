@@ -66,29 +66,74 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </header>
 <!-- /comun:cabecera -->
 
-<main id="contenido" tabindex="-1" class="envoltura">
-  <h1 class="titular"><span lang="es">Tus agentes de IA, <em>una sola</em> API local.</span><span lang="en">Your AI agents, <em>one</em> local API.</span></h1>
+<main id="contenido" tabindex="-1" class="producto">
+  <!-- El arranque corto: el titular y un índice de la página. -->
+  <div class="arranque">
+    <div class="envoltura">
+      <h1 class="titular"><span lang="es">Tus agentes de IA, <em>una sola</em> API local.</span><span lang="en">Your AI agents, <em>one</em> local API.</span></h1>
+      <p class="entrada"><span lang="es">Cómo funciona, qué hace, por qué usarlo y qué datos salen de tu equipo.</span><span lang="en">How it works, what it does, why use it and which data leaves your computer.</span></p>
+      <nav class="acciones" aria-label="En esta página" data-aria-en="On this page">
+        <a class="boton secundario" href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+        <a class="boton secundario" href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+        <a class="boton secundario" href="#demo"><span lang="es">Recorrido guiado</span><span lang="en">Guided tour</span></a>
+        <a class="boton secundario" href="#por-que"><span lang="es">Por qué Tramtai</span><span lang="en">Why Tramtai</span></a>
+        <a class="boton secundario" href="#privacidad"><span lang="es">Privacidad</span><span lang="en">Privacy</span></a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Cómo funciona: los tres pasos en perspectiva, que se dibujan al entrar en pantalla (lo vivo de estilo.css; sin
+       JavaScript o con «reducir movimiento», ya dibujados), con el texto de cada uno debajo de su pieza. -->
   <section id="como">
     <div class="envoltura">
       <div class="cabeza">
-        <h2><span lang="es">Tres paradas y tu app ya habla con un agente.</span><span lang="en">Three stops and your app is talking to an agent.</span></h2>
+        <h2><span lang="es">Tres pasos y tu app <em>ya habla con un agente.</em></span><span lang="en">Three steps and your app <em>is talking to an agent.</em></span></h2>
       </div>
-      <div class="como">
-        <ol class="paradas">
+      <figure class="tarjeta fig-camino vivo">
+        <figcaption class="fig"><span lang="es">FIG 1 · Cómo funciona</span><span lang="en">FIG 1 · How it works</span></figcaption>
+        <svg class="pasos-svg" viewBox="0 0 720 200" role="img" aria-label="Tres pasos: instala Tramtai, prepara tus agentes y cambia la URL y la clave de tu app" data-aria-en="Three steps: install Tramtai, set up your agents and change your app’s URL and key">
+          <g fill="var(--acento-suave)">
+            <path class="aparece" style="--retraso: 0.6s" d="M50 142 L120 107 L190 142 L120 177 Z"/>
+            <path class="aparece" style="--retraso: 1.2s" d="M290 107 L360 72 L430 107 L360 142 Z"/>
+            <path class="aparece" style="--retraso: 1.8s" d="M530 72 L600 37 L670 72 L600 107 Z"/>
+          </g>
+          <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linejoin="round">
+            <path class="dibuja" pathLength="1" d="M50 142 L120 107 L190 142 L120 177 Z M50 142 V156 L120 191 L190 156 V142 M120 177 V191"/>
+            <path class="dibuja" pathLength="1" style="--retraso: 0.6s" d="M290 107 L360 72 L430 107 L360 142 Z M290 107 V121 L360 156 L430 121 V107 M360 142 V156"/>
+            <path class="dibuja" pathLength="1" style="--retraso: 1.2s" d="M530 72 L600 37 L670 72 L600 107 Z M530 72 V86 L600 121 L670 86 V72 M600 107 V121"/>
+          </g>
+          <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+            <path class="base" d="M190 142 L290 107 M430 107 L530 72"/>
+            <path class="flujo" stroke-dasharray="4 6" d="M190 142 L290 107"/>
+            <path class="flujo" stroke-dasharray="4 6" d="M430 107 L530 72"/>
+          </g>
+          <g text-anchor="middle">
+            <text class="nombre" x="120" y="149" font-size="20">1</text>
+            <text class="nombre" x="360" y="114" font-size="20">2</text>
+            <text class="nombre" x="600" y="79" font-size="20">3</text>
+            <text class="mono" x="120" y="95">.exe · .dmg · .deb</text>
+            <text class="mono" x="360" y="60">claude · codex · copilot</text>
+            <text class="mono" x="600" y="25">base_url · api_key</text>
+          </g>
+        </svg>
+        <ol class="pasos-como">
           <li>
             <h3><span lang="es">Instala Tramtai</span><span lang="en">Install Tramtai</span></h3>
-            <p class="suave"><span lang="es">En Windows, macOS o Linux. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">On Windows, macOS or Linux. It sits in the system tray with the service running.</span></p>
+            <p><span lang="es">En Windows, macOS o Linux. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">On Windows, macOS or Linux. It sits in the system tray with the service running.</span></p>
           </li>
           <li>
-            <h3><span lang="es">Conecta un agente</span><span lang="en">Connect an agent</span></h3>
-            <p class="suave"><span lang="es">Usa tu suscripción de Claude, ChatGPT o GitHub Copilot para uso personal, o una clave de API. Si no tienes su CLI, Tramtai lo instala y te ayuda a iniciar sesión.</span><span lang="en">Use your Claude, ChatGPT or GitHub Copilot subscription for personal use, or an API key. If you don’t have its CLI, Tramtai installs it and helps you sign in.</span></p>
+            <h3><span lang="es">Prepara tus agentes</span><span lang="en">Set up your agents</span></h3>
+            <p><span lang="es">Usa tu suscripción de Claude, ChatGPT o GitHub Copilot para uso personal, o una clave de API. Si no tienes su CLI, Tramtai lo instala y te ayuda a iniciar sesión.</span><span lang="en">Use your Claude, ChatGPT or GitHub Copilot subscription for personal use, or an API key. If you don’t have its CLI, Tramtai installs it and helps you sign in.</span></p>
           </li>
           <li>
-            <h3><span lang="es">Apunta tu aplicación</span><span lang="en">Point your app</span></h3>
-            <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
-            <p class="suave"><span lang="es">A Claude Code, Codex, Continue, opencode y Kilo los apunta Tramtai por ti, en Mis APIs → Herramientas: antes guarda una copia de su configuración, y un interruptor los deja como estaban. <a href="ayuda/conectar-herramientas.html">Conectar tus herramientas</a></span><span lang="en">Tramtai points Claude Code, Codex, Continue, opencode and Kilo at itself for you, in My APIs → Tools: it first saves a copy of their configuration, and a switch puts them back as they were. <a href="ayuda/conectar-herramientas.html">Connect your tools</a></span></p>
+            <h3><span lang="es">Cambia la URL y la clave</span><span lang="en">Change the URL and the key</span></h3>
+            <p><span lang="es">En tu SDK de OpenAI o Anthropic, la URL base y la clave de Tramtai; el agente y el modelo van en el campo <code>model</code>.</span><span lang="en">In your OpenAI or Anthropic SDK, Tramtai’s base URL and key; the agent and model go in the <code>model</code> field.</span></p>
+            <p><span lang="es">A Claude Code, Codex, Continue, opencode y Kilo los apunta Tramtai por ti, en Mis APIs → Herramientas: antes guarda una copia de su configuración, y un interruptor los deja como estaban. <a href="ayuda/conectar-herramientas.html">Conectar tus herramientas</a></span><span lang="en">Tramtai points Claude Code, Codex, Continue, opencode and Kilo at itself for you, in My APIs → Tools: it first saves a copy of their configuration, and a switch puts them back as they were. <a href="ayuda/conectar-herramientas.html">Connect your tools</a></span></p>
           </li>
         </ol>
+      </figure>
+      <figure class="tarjeta fig-codigo">
+        <figcaption class="fig"><span lang="es">FIG 2 · Tu código</span><span lang="en">FIG 2 · Your code</span></figcaption>
         <!-- El mismo mensaje por las tres puertas. Sin JavaScript no hay pestañas y queda el primer ejemplo; sitio.js las
              enciende con el patrón de la guía del desarrollador (flechas, Inicio y Fin). -->
         <div class="pestanas" data-pestanas>
@@ -120,165 +165,229 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
   -H <span class="s">"Authorization: Bearer <span lang="es">tu-clave-de-tramtai</span><span lang="en">your-tramtai-key</span>"</span> -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"model": "claude/haiku", "messages": [{"role": "user", "content": "<span lang="es">Resume este contrato en tres puntos</span><span lang="en">Summarize this contract in three points</span>"}]}'</span></pre>
         </div>
-      </div>
+      </figure>
     </div>
   </section>
+
+  <!-- Funciones: las cinco pantallas de la app y, debajo, cada función en su línea (conecta, controla, protege y usa),
+       cada una con la zona de la app que la enseña. Después, el recorrido guiado de 14 pasos (#demo). -->
   <section id="funciones">
     <div class="envoltura">
       <div class="cabeza">
-        <h2><span lang="es">Una red con una línea por agente.</span><span lang="en">A network with one line per agent.</span></h2>
-        <p class="suave"><span lang="es">En la app, cada petición viaja en vivo por la línea de su agente. Aquí, cada línea es lo que hace Tramtai: conectar, controlar, proteger y usar, con tres paradas cada una.</span><span lang="en">In the app, every request travels live along its agent’s line. Here, each line is what Tramtai does: connect, control, protect and use, with three stops each.</span></p>
+        <h2><span lang="es">Lo que hace, <em>a la vista.</em></span><span lang="en">What it does, <em>at a glance.</em></span></h2>
+        <p class="suave"><span lang="es">Cinco pantallas de la app y, debajo, cada función en su línea: conecta, controla, protege y usa. Y para empezar, <a href="#demo">el recorrido guiado, paso a paso</a>.</span><span lang="en">Five screens of the app and, below, each feature on its line: connect, control, protect and use. And to get started, <a href="#demo">the guided tour, step by step</a>.</span></p>
       </div>
-      <!-- Un plano de metro: una línea por grupo y una parada por función. Sin JavaScript, o por debajo de 900 px, cada línea
-           va en vertical con el texto de sus paradas; con JavaScript y pantalla ancha, sitio.js la pone en horizontal, el
-           título de cada parada pasa a ser un botón y enseña su texto en el panel de debajo. Las líneas van en el acento:
-           el color de línea es de los agentes (DESIGN.md). -->
-      <div class="metro">
-        <section class="metro-linea" data-linea="conecta">
-          <h3><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
-          <ol>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
-              <p class="parada-texto"><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
-              <p class="parada-texto"><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
-              <p class="parada-texto"><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
-            </li>
-          </ol>
-        </section>
-        <section class="metro-linea" data-linea="controla">
-          <h3><span lang="es">Controla</span><span lang="en">Control</span></h3>
-          <ol>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
-              <p class="parada-texto"><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
-              <p class="parada-texto"><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
-              <p class="parada-texto"><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
-            </li>
-          </ol>
-        </section>
-        <section class="metro-linea" data-linea="protege">
-          <h3><span lang="es">Protege</span><span lang="en">Protect</span></h3>
-          <ol>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
-              <p class="parada-texto"><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
-              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran. La clave que Tramtai da a Continue, opencode o Kilo Code va además en el archivo de cada herramienta, dentro de tu carpeta de usuario.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak. The key Tramtai gives Continue, opencode or Kilo Code also goes in each tool’s file, inside your user folder.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
-              <p class="parada-texto"><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and doesn’t get the other agents’ keys.</span></p>
-            </li>
-          </ol>
-        </section>
-        <section class="metro-linea" data-linea="usa">
-          <h3><span lang="es">Usa</span><span lang="en">Use</span></h3>
-          <ol>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
-              <p class="parada-texto"><span lang="es">Las ocho páginas de la app en <a href="./#formas"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="./#formas"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
-              <p class="parada-texto"><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
-            </li>
-            <li class="parada">
-              <h4 class="parada-titulo"><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
-              <p class="parada-texto"><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
-            </li>
-          </ol>
-        </section>
-        <div class="metro-panel" aria-live="polite" hidden></div>
-      </div>
-    </div>
-  </section>
-  <section id="app">
-    <div class="envoltura">
-      <div class="cabeza centrada">
-        <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
-        <p class="suave"><span lang="es">Y para empezar, <a href="#demo">el recorrido guiado, paso a paso</a>.</span><span lang="en">And to get started, <a href="#demo">the guided tour, step by step</a>.</span></p>
-      </div>
-      <article class="par">
-        <div>
-          <span class="etiqueta"><span lang="es">Inicio</span><span lang="en">Home</span></span>
+      <div class="mosaico pantallas" style="--col: 3">
+        <article class="tarjeta funcion ancha alta">
+          <span class="fig"><span lang="es">FIG 3 · Inicio</span><span lang="en">FIG 3 · Home</span></span>
           <h3><span lang="es">El mapa en vivo de tu red</span><span lang="en">A live map of your network</span></h3>
-          <p class="suave"><span lang="es">Cada petición viaja en vivo por la línea de su agente: ves qué apps llegan a Tramtai, qué agentes están en servicio y por dónde va cada una.</span><span lang="en">Every request travels live along its agent’s line: see which apps reach Tramtai, which agents are in service and where each request is.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/inicio-claro-es-1440.webp" srcset="capturas/inicio-claro-es-640.webp 640w, capturas/inicio-claro-es-960.webp 960w, capturas/inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
-          <img class="solo-claro" lang="en" src="capturas/inicio-claro-en-1440.webp" srcset="capturas/inicio-claro-en-640.webp 640w, capturas/inicio-claro-en-960.webp 960w, capturas/inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
-          <img class="solo-oscuro" lang="es" src="capturas/inicio-oscuro-es-1440.webp" srcset="capturas/inicio-oscuro-es-640.webp 640w, capturas/inicio-oscuro-es-960.webp 960w, capturas/inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
-          <img class="solo-oscuro" lang="en" src="capturas/inicio-oscuro-en-1440.webp" srcset="capturas/inicio-oscuro-en-640.webp 640w, capturas/inicio-oscuro-en-960.webp 960w, capturas/inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
-        </figure>
-      </article>
-      <article class="par invertido">
-        <div>
-          <span class="etiqueta"><span lang="es">Espacios</span><span lang="en">Workspaces</span></span>
+          <p><span lang="es">Cada petición viaja en vivo por la línea de su agente: ves qué apps llegan a Tramtai, qué agentes están en servicio y por dónde va cada una.</span><span lang="en">Every request travels live along its agent’s line: see which apps reach Tramtai, which agents are in service and where each request is.</span></p>
+          <figure class="captura">
+            <img class="solo-claro" lang="es" src="capturas/inicio-claro-es-1440.webp" srcset="capturas/inicio-claro-es-640.webp 640w, capturas/inicio-claro-es-960.webp 960w, capturas/inicio-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
+            <img class="solo-claro" lang="en" src="capturas/inicio-claro-en-1440.webp" srcset="capturas/inicio-claro-en-640.webp 640w, capturas/inicio-claro-en-960.webp 960w, capturas/inicio-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
+            <img class="solo-oscuro" lang="es" src="capturas/inicio-oscuro-es-1440.webp" srcset="capturas/inicio-oscuro-es-640.webp 640w, capturas/inicio-oscuro-es-960.webp 960w, capturas/inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente">
+            <img class="solo-oscuro" lang="en" src="capturas/inicio-oscuro-en-1440.webp" srcset="capturas/inicio-oscuro-en-640.webp 640w, capturas/inicio-oscuro-en-960.webp 960w, capturas/inicio-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Home: the live map with your apps, Tramtai and one line per agent">
+          </figure>
+        </article>
+        <article class="tarjeta funcion">
+          <span class="fig"><span lang="es">FIG 4 · Espacios</span><span lang="en">FIG 4 · Workspaces</span></span>
           <h3><span lang="es">Un espacio por proyecto</span><span lang="en">One workspace per project</span></h3>
-          <p class="suave"><span lang="es">El espacio global y uno por cada proyecto, con su historial, sus APIs y sus ajustes. Actívalos o detenlos, y si mueves la carpeta de un proyecto, la vuelves a ubicar sin perder nada.</span><span lang="en">The global workspace and one per project, each with its history, APIs and settings. Start or stop them, and if you move a project’s folder, point Tramtai to it again without losing anything.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/espacios-claro-es-1440.webp" srcset="capturas/espacios-claro-es-640.webp 640w, capturas/espacios-claro-es-960.webp 960w, capturas/espacios-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
-          <img class="solo-claro" lang="en" src="capturas/espacios-claro-en-1440.webp" srcset="capturas/espacios-claro-en-640.webp 640w, capturas/espacios-claro-en-960.webp 960w, capturas/espacios-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
-          <img class="solo-oscuro" lang="es" src="capturas/espacios-oscuro-es-1440.webp" srcset="capturas/espacios-oscuro-es-640.webp 640w, capturas/espacios-oscuro-es-960.webp 960w, capturas/espacios-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
-          <img class="solo-oscuro" lang="en" src="capturas/espacios-oscuro-en-1440.webp" srcset="capturas/espacios-oscuro-en-640.webp 640w, capturas/espacios-oscuro-en-960.webp 960w, capturas/espacios-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
-        </figure>
-      </article>
-      <article class="par">
-        <div>
-          <span class="etiqueta"><span lang="es">Probar</span><span lang="en">Playground</span></span>
+          <p><span lang="es">El espacio global y uno por cada proyecto, con su historial, sus APIs y sus ajustes. Actívalos o detenlos, y si mueves la carpeta de un proyecto, la vuelves a ubicar sin perder nada.</span><span lang="en">The global workspace and one per project, each with its history, APIs and settings. Start or stop them, and if you move a project’s folder, point Tramtai to it again without losing anything.</span></p>
+          <figure class="captura">
+            <img class="solo-claro" lang="es" src="capturas/espacios-claro-es-1440.webp" srcset="capturas/espacios-claro-es-640.webp 640w, capturas/espacios-claro-es-960.webp 960w, capturas/espacios-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
+            <img class="solo-claro" lang="en" src="capturas/espacios-claro-en-1440.webp" srcset="capturas/espacios-claro-en-640.webp 640w, capturas/espacios-claro-en-960.webp 960w, capturas/espacios-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+            <img class="solo-oscuro" lang="es" src="capturas/espacios-oscuro-es-1440.webp" srcset="capturas/espacios-oscuro-es-640.webp 640w, capturas/espacios-oscuro-es-960.webp 960w, capturas/espacios-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones">
+            <img class="solo-oscuro" lang="en" src="capturas/espacios-oscuro-en-1440.webp" srcset="capturas/espacios-oscuro-en-640.webp 640w, capturas/espacios-oscuro-en-960.webp 960w, capturas/espacios-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+          </figure>
+        </article>
+        <article class="tarjeta funcion">
+          <span class="fig"><span lang="es">FIG 5 · Probar</span><span lang="en">FIG 5 · Playground</span></span>
           <h3><span lang="es">De la prueba al código en un clic</span><span lang="en">From test to code in one click</span></h3>
-          <p class="suave"><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/probar-claro-es-1440.webp" srcset="capturas/probar-claro-es-640.webp 640w, capturas/probar-claro-es-960.webp 960w, capturas/probar-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
-          <img class="solo-claro" lang="en" src="capturas/probar-claro-en-1440.webp" srcset="capturas/probar-claro-en-640.webp 640w, capturas/probar-claro-en-960.webp 960w, capturas/probar-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
-          <img class="solo-oscuro" lang="es" src="capturas/probar-oscuro-es-1440.webp" srcset="capturas/probar-oscuro-es-640.webp 640w, capturas/probar-oscuro-es-960.webp 960w, capturas/probar-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
-          <img class="solo-oscuro" lang="en" src="capturas/probar-oscuro-en-1440.webp" srcset="capturas/probar-oscuro-en-640.webp 640w, capturas/probar-oscuro-en-960.webp 960w, capturas/probar-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
-        </figure>
-      </article>
-      <article class="par invertido">
-        <div>
-          <span class="etiqueta"><span lang="es">Mis APIs</span><span lang="en">My APIs</span></span>
+          <p><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
+          <figure class="captura">
+            <img class="solo-claro" lang="es" src="capturas/probar-claro-es-1440.webp" srcset="capturas/probar-claro-es-640.webp 640w, capturas/probar-claro-es-960.webp 960w, capturas/probar-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
+            <img class="solo-claro" lang="en" src="capturas/probar-claro-en-1440.webp" srcset="capturas/probar-claro-en-640.webp 640w, capturas/probar-claro-en-960.webp 960w, capturas/probar-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
+            <img class="solo-oscuro" lang="es" src="capturas/probar-oscuro-es-1440.webp" srcset="capturas/probar-oscuro-es-640.webp 640w, capturas/probar-oscuro-es-960.webp 960w, capturas/probar-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje">
+            <img class="solo-oscuro" lang="en" src="capturas/probar-oscuro-en-1440.webp" srcset="capturas/probar-oscuro-en-640.webp 640w, capturas/probar-oscuro-en-960.webp 960w, capturas/probar-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Playground: the recipe with instructions, agent, model and effort, ready for the first message">
+          </figure>
+        </article>
+        <article class="tarjeta funcion ancha">
+          <span class="fig"><span lang="es">FIG 6 · Mis APIs</span><span lang="en">FIG 6 · My APIs</span></span>
           <h3><span lang="es">Cada app con su clave y su presupuesto</span><span lang="en">Each app with its own key and budget</span></h3>
-          <p class="suave"><span lang="es">Búscalas, fíltralas y mira cómo conectar cada una. La clave del espacio queda para ti y tus scripts.</span><span lang="en">Search, filter and see how to connect each one. The workspace key is for you and your scripts.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/mis-apis-claro-es-1440.webp" srcset="capturas/mis-apis-claro-es-640.webp 640w, capturas/mis-apis-claro-es-960.webp 960w, capturas/mis-apis-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
-          <img class="solo-claro" lang="en" src="capturas/mis-apis-claro-en-1440.webp" srcset="capturas/mis-apis-claro-en-640.webp 640w, capturas/mis-apis-claro-en-960.webp 960w, capturas/mis-apis-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-          <img class="solo-oscuro" lang="es" src="capturas/mis-apis-oscuro-es-1440.webp" srcset="capturas/mis-apis-oscuro-es-640.webp 640w, capturas/mis-apis-oscuro-es-960.webp 960w, capturas/mis-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
-          <img class="solo-oscuro" lang="en" src="capturas/mis-apis-oscuro-en-1440.webp" srcset="capturas/mis-apis-oscuro-en-640.webp 640w, capturas/mis-apis-oscuro-en-960.webp 960w, capturas/mis-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-        </figure>
-      </article>
-      <article class="par">
-        <div>
-          <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
+          <p><span lang="es">Búscalas, fíltralas y mira cómo conectar cada una. La clave del espacio queda para ti y tus scripts.</span><span lang="en">Search, filter and see how to connect each one. The workspace key is for you and your scripts.</span></p>
+          <figure class="captura">
+            <img class="solo-claro" lang="es" src="capturas/mis-apis-claro-es-1440.webp" srcset="capturas/mis-apis-claro-es-640.webp 640w, capturas/mis-apis-claro-es-960.webp 960w, capturas/mis-apis-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
+            <img class="solo-claro" lang="en" src="capturas/mis-apis-claro-en-1440.webp" srcset="capturas/mis-apis-claro-en-640.webp 640w, capturas/mis-apis-claro-en-960.webp 960w, capturas/mis-apis-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+            <img class="solo-oscuro" lang="es" src="capturas/mis-apis-oscuro-es-1440.webp" srcset="capturas/mis-apis-oscuro-es-640.webp 640w, capturas/mis-apis-oscuro-es-960.webp 960w, capturas/mis-apis-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas">
+            <img class="solo-oscuro" lang="en" src="capturas/mis-apis-oscuro-en-1440.webp" srcset="capturas/mis-apis-oscuro-en-640.webp 640w, capturas/mis-apis-oscuro-en-960.webp 960w, capturas/mis-apis-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 660px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          </figure>
+        </article>
+        <article class="tarjeta funcion">
+          <span class="fig"><span lang="es">FIG 7 · Agentes</span><span lang="en">FIG 7 · Agents</span></span>
           <h3><span lang="es">Suscripción o clave de API, en cada agente</span><span lang="en">Subscription or API key, per agent</span></h3>
-          <p class="suave"><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Ves con qué cuenta entró cada CLI, Tramtai te avisa si la sesión cambió y puedes desconectar un agente cuando quieras.</span><span lang="en">With your subscription or with a key stored encrypted in the system. See which account each CLI is signed in with; Tramtai warns you if the session changed, and you can disconnect an agent whenever you like.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" lang="es" src="capturas/agentes-claro-es-1440.webp" srcset="capturas/agentes-claro-es-640.webp 640w, capturas/agentes-claro-es-960.webp 960w, capturas/agentes-claro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
-          <img class="solo-claro" lang="en" src="capturas/agentes-claro-en-1440.webp" srcset="capturas/agentes-claro-en-640.webp 640w, capturas/agentes-claro-en-960.webp 960w, capturas/agentes-claro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
-          <img class="solo-oscuro" lang="es" src="capturas/agentes-oscuro-es-1440.webp" srcset="capturas/agentes-oscuro-es-640.webp 640w, capturas/agentes-oscuro-es-960.webp 960w, capturas/agentes-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
-          <img class="solo-oscuro" lang="en" src="capturas/agentes-oscuro-en-1440.webp" srcset="capturas/agentes-oscuro-en-640.webp 640w, capturas/agentes-oscuro-en-960.webp 960w, capturas/agentes-oscuro-en-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
-        </figure>
-      </article>
+          <p><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Ves con qué cuenta entró cada CLI, Tramtai te avisa si la sesión cambió y puedes desconectar un agente cuando quieras.</span><span lang="en">With your subscription or with a key stored encrypted in the system. See which account each CLI is signed in with; Tramtai warns you if the session changed, and you can disconnect an agent whenever you like.</span></p>
+          <figure class="captura">
+            <img class="solo-claro" lang="es" src="capturas/agentes-claro-es-1440.webp" srcset="capturas/agentes-claro-es-640.webp 640w, capturas/agentes-claro-es-960.webp 960w, capturas/agentes-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
+            <img class="solo-claro" lang="en" src="capturas/agentes-claro-en-1440.webp" srcset="capturas/agentes-claro-en-640.webp 640w, capturas/agentes-claro-en-960.webp 960w, capturas/agentes-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
+            <img class="solo-oscuro" lang="es" src="capturas/agentes-oscuro-es-1440.webp" srcset="capturas/agentes-oscuro-es-640.webp 640w, capturas/agentes-oscuro-es-960.webp 960w, capturas/agentes-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo">
+            <img class="solo-oscuro" lang="en" src="capturas/agentes-oscuro-en-1440.webp" srcset="capturas/agentes-oscuro-en-640.webp 640w, capturas/agentes-oscuro-en-960.webp 960w, capturas/agentes-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
+          </figure>
+        </article>
+      </div>
       <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17388; la tuya usa el 17373 si no lo cambias, como los ejemplos de código.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17388; yours uses 17373 unless you change it, like the code examples.</span></p>
-      <!-- El recorrido guiado va justo después de las capturas; #demo es su ancla desde Funciones y la guía. -->
+      <div class="linea-funciones">
+        <h3><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
+        <div class="mosaico" style="--col: 3">
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 8 · Tus SDK</span><span lang="en">FIG 8 · Your SDKs</span></span>
+            <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
+            <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-2-claro-es-1440.webp" srcset="capturas/bienvenida-2-claro-es-960.webp 960w, capturas/bienvenida-2-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio con la guía de primeros pasos resaltada">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-2-claro-en-1440.webp" srcset="capturas/bienvenida-2-claro-en-960.webp 960w, capturas/bienvenida-2-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Home with the first-steps guide highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-2-oscuro-es-1440.webp" srcset="capturas/bienvenida-2-oscuro-es-960.webp 960w, capturas/bienvenida-2-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio con la guía de primeros pasos resaltada">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-2-oscuro-en-1440.webp" srcset="capturas/bienvenida-2-oscuro-en-960.webp 960w, capturas/bienvenida-2-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Home with the first-steps guide highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 9 · API propia</span><span lang="en">FIG 9 · Native API</span></span>
+            <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
+            <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-9-claro-es-1440.webp" srcset="capturas/bienvenida-9-claro-es-960.webp 960w, capturas/bienvenida-9-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con el botón «Ver como código» resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-9-claro-en-1440.webp" srcset="capturas/bienvenida-9-claro-en-960.webp 960w, capturas/bienvenida-9-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the “View as code” button highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-9-oscuro-es-1440.webp" srcset="capturas/bienvenida-9-oscuro-es-960.webp 960w, capturas/bienvenida-9-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con el botón «Ver como código» resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-9-oscuro-en-1440.webp" srcset="capturas/bienvenida-9-oscuro-en-960.webp 960w, capturas/bienvenida-9-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the “View as code” button highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 10 · Respuestas con forma</span><span lang="en">FIG 10 · Shaped responses</span></span>
+            <h4><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
+            <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-7-claro-es-1440.webp" srcset="capturas/bienvenida-7-claro-es-960.webp 960w, capturas/bienvenida-7-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-7-claro-en-1440.webp" srcset="capturas/bienvenida-7-claro-en-960.webp 960w, capturas/bienvenida-7-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-7-oscuro-es-1440.webp" srcset="capturas/bienvenida-7-oscuro-es-960.webp 960w, capturas/bienvenida-7-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-7-oscuro-en-1440.webp" srcset="capturas/bienvenida-7-oscuro-en-960.webp 960w, capturas/bienvenida-7-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
+            </figure>
+          </article>
+        </div>
+      </div>
+      <div class="linea-funciones">
+        <h3><span lang="es">Controla</span><span lang="en">Control</span></h3>
+        <div class="mosaico" style="--col: 3">
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 11 · Espacios</span><span lang="en">FIG 11 · Workspaces</span></span>
+            <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
+            <p><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-3-claro-es-1440.webp" srcset="capturas/bienvenida-3-claro-es-960.webp 960w, capturas/bienvenida-3-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="El selector de espacio de la cabecera, resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-3-claro-en-1440.webp" srcset="capturas/bienvenida-3-claro-en-960.webp 960w, capturas/bienvenida-3-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The workspace selector in the header, highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-3-oscuro-es-1440.webp" srcset="capturas/bienvenida-3-oscuro-es-960.webp 960w, capturas/bienvenida-3-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="El selector de espacio de la cabecera, resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-3-oscuro-en-1440.webp" srcset="capturas/bienvenida-3-oscuro-en-960.webp 960w, capturas/bienvenida-3-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The workspace selector in the header, highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 12 · Una API por app</span><span lang="en">FIG 12 · One API per app</span></span>
+            <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
+            <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-11-claro-es-1440.webp" srcset="capturas/bienvenida-11-claro-es-960.webp 960w, capturas/bienvenida-11-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs con el botón «Nueva API» resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-11-claro-en-1440.webp" srcset="capturas/bienvenida-11-claro-en-960.webp 960w, capturas/bienvenida-11-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs with the “New API” button highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-11-oscuro-es-1440.webp" srcset="capturas/bienvenida-11-oscuro-es-960.webp 960w, capturas/bienvenida-11-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs con el botón «Nueva API» resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-11-oscuro-en-1440.webp" srcset="capturas/bienvenida-11-oscuro-en-960.webp 960w, capturas/bienvenida-11-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs with the “New API” button highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 13 · Modelo y esfuerzo</span><span lang="en">FIG 13 · Model and effort</span></span>
+            <h4><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
+            <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-5-claro-es-1440.webp" srcset="capturas/bienvenida-5-claro-es-960.webp 960w, capturas/bienvenida-5-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes con la lista de agentes y su estado resaltada">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-5-claro-en-1440.webp" srcset="capturas/bienvenida-5-claro-en-960.webp 960w, capturas/bienvenida-5-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents with the agent list and their status highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-5-oscuro-es-1440.webp" srcset="capturas/bienvenida-5-oscuro-es-960.webp 960w, capturas/bienvenida-5-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes con la lista de agentes y su estado resaltada">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-5-oscuro-en-1440.webp" srcset="capturas/bienvenida-5-oscuro-en-960.webp 960w, capturas/bienvenida-5-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents with the agent list and their status highlighted">
+            </figure>
+          </article>
+        </div>
+      </div>
+      <div class="linea-funciones">
+        <h3><span lang="es">Protege</span><span lang="en">Protect</span></h3>
+        <div class="mosaico" style="--col: 3">
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 14 · Respaldo</span><span lang="en">FIG 14 · Fallback</span></span>
+            <h4><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
+            <p><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-6-claro-es-1440.webp" srcset="capturas/bienvenida-6-claro-es-960.webp 960w, capturas/bienvenida-6-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes con los filtros de estado resaltados">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-6-claro-en-1440.webp" srcset="capturas/bienvenida-6-claro-en-960.webp 960w, capturas/bienvenida-6-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents with the status filters highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-6-oscuro-es-1440.webp" srcset="capturas/bienvenida-6-oscuro-es-960.webp 960w, capturas/bienvenida-6-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes con los filtros de estado resaltados">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-6-oscuro-en-1440.webp" srcset="capturas/bienvenida-6-oscuro-en-960.webp 960w, capturas/bienvenida-6-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Agents with the status filters highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 15 · Claves cifradas</span><span lang="en">FIG 15 · Encrypted keys</span></span>
+            <h4><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
+            <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran. La clave que Tramtai da a Continue, opencode o Kilo Code va además en el archivo de cada herramienta, dentro de tu carpeta de usuario.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak. The key Tramtai gives Continue, opencode or Kilo Code also goes in each tool’s file, inside your user folder.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-10-claro-es-1440.webp" srcset="capturas/bienvenida-10-claro-es-960.webp 960w, capturas/bienvenida-10-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs con la clave del espacio resaltada">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-10-claro-en-1440.webp" srcset="capturas/bienvenida-10-claro-en-960.webp 960w, capturas/bienvenida-10-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs with the workspace key highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-10-oscuro-es-1440.webp" srcset="capturas/bienvenida-10-oscuro-es-960.webp 960w, capturas/bienvenida-10-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs con la clave del espacio resaltada">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-10-oscuro-en-1440.webp" srcset="capturas/bienvenida-10-oscuro-en-960.webp 960w, capturas/bienvenida-10-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="My APIs with the workspace key highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 16 · Sin terminal ni web</span><span lang="en">FIG 16 · No terminal, no web</span></span>
+            <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
+            <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and doesn’t get the other agents’ keys.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-13-claro-es-1440.webp" srcset="capturas/bienvenida-13-claro-es-960.webp 960w, capturas/bienvenida-13-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios con el botón «Abrir un proyecto» resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-13-claro-en-1440.webp" srcset="capturas/bienvenida-13-claro-en-960.webp 960w, capturas/bienvenida-13-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces with the “Open a project” button highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-13-oscuro-es-1440.webp" srcset="capturas/bienvenida-13-oscuro-es-960.webp 960w, capturas/bienvenida-13-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios con el botón «Abrir un proyecto» resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-13-oscuro-en-1440.webp" srcset="capturas/bienvenida-13-oscuro-en-960.webp 960w, capturas/bienvenida-13-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Workspaces with the “Open a project” button highlighted">
+            </figure>
+          </article>
+        </div>
+      </div>
+      <div class="linea-funciones">
+        <h3><span lang="es">Usa</span><span lang="en">Use</span></h3>
+        <div class="mosaico" style="--col: 3">
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 17 · La terminal</span><span lang="en">FIG 17 · The terminal</span></span>
+            <h4><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
+            <p><span lang="es">Las ocho páginas de la app en <a href="./#formas"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="./#formas"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-1-claro-es-1440.webp" srcset="capturas/bienvenida-1-claro-es-960.webp 960w, capturas/bienvenida-1-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-1-claro-en-1440.webp" srcset="capturas/bienvenida-1-claro-en-960.webp 960w, capturas/bienvenida-1-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Home with the live map highlighted: your apps, Tramtai and one line per agent">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-1-oscuro-es-1440.webp" srcset="capturas/bienvenida-1-oscuro-es-960.webp 960w, capturas/bienvenida-1-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-1-oscuro-en-1440.webp" srcset="capturas/bienvenida-1-oscuro-en-960.webp 960w, capturas/bienvenida-1-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Home with the live map highlighted: your apps, Tramtai and one line per agent">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 18 · Adjuntos</span><span lang="en">FIG 18 · Attachments</span></span>
+            <h4><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
+            <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-8-claro-es-1440.webp" srcset="capturas/bienvenida-8-claro-es-960.webp 960w, capturas/bienvenida-8-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con el campo del mensaje de prueba resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-8-claro-en-1440.webp" srcset="capturas/bienvenida-8-claro-en-960.webp 960w, capturas/bienvenida-8-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the test message field highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-8-oscuro-es-1440.webp" srcset="capturas/bienvenida-8-oscuro-es-960.webp 960w, capturas/bienvenida-8-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar con el campo del mensaje de prueba resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-8-oscuro-en-1440.webp" srcset="capturas/bienvenida-8-oscuro-en-960.webp 960w, capturas/bienvenida-8-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The Playground with the test message field highlighted">
+            </figure>
+          </article>
+          <article class="tarjeta funcion">
+            <span class="fig"><span lang="es">FIG 19 · Recorrido y Ayuda</span><span lang="en">FIG 19 · Tour and Help</span></span>
+            <h4><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
+            <p><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
+            <figure class="captura">
+              <img class="solo-claro" lang="es" src="capturas/bienvenida-4-claro-es-1440.webp" srcset="capturas/bienvenida-4-claro-es-960.webp 960w, capturas/bienvenida-4-claro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="El botón ? junto al título de la página, resaltado">
+              <img class="solo-claro" lang="en" src="capturas/bienvenida-4-claro-en-1440.webp" srcset="capturas/bienvenida-4-claro-en-960.webp 960w, capturas/bienvenida-4-claro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The ? button next to the page title, highlighted">
+              <img class="solo-oscuro" lang="es" src="capturas/bienvenida-4-oscuro-es-1440.webp" srcset="capturas/bienvenida-4-oscuro-es-960.webp 960w, capturas/bienvenida-4-oscuro-es-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="El botón ? junto al título de la página, resaltado">
+              <img class="solo-oscuro" lang="en" src="capturas/bienvenida-4-oscuro-en-1440.webp" srcset="capturas/bienvenida-4-oscuro-en-960.webp 960w, capturas/bienvenida-4-oscuro-en-1440.webp 1440w" sizes="(max-width: 720px) calc(100vw - 66px), 310px" width="1440" height="900" loading="lazy" decoding="async" alt="The ? button next to the page title, highlighted">
+            </figure>
+          </article>
+        </div>
+      </div>
+      <!-- El recorrido guiado: #demo es su ancla desde Funciones, el arranque y la guía del desarrollador. -->
       <div id="demo">
       <div class="cabeza centrada">
         <h2 id="demo-titulo"><span lang="es">Aprende la app con un recorrido guiado.</span><span lang="en">Learn the app with a guided tour.</span></h2>
@@ -512,16 +621,60 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
     </div>
   </section>
 
-  <!-- Por qué Tramtai (v0.59): el antes y el después en SVG con su texto visible (v0.56), cuatro cifras del producto que
-       se comprueban en esta misma página y la línea de siete ventajas. El color de cada agente solo aparece en «Con
-       Tramtai», en la línea de su agente; la línea de ventajas va en el acento. -->
-  <section id="por-que" class="destacado">
+  <!-- Por qué Tramtai: cuatro cifras del producto (cada una se comprueba en esta página), las siete ventajas en un mosaico
+       y, plegada debajo, la comparativa sin y con Tramtai. -->
+  <section id="por-que">
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
         <p class="suave"><span lang="es">Sin servidores en la nube de por medio ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No cloud servers in between, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
       </div>
-      <div class="pagas-diagramas">
+      <ul class="cifras">
+        <li class="cifra"><span class="cifra-numero">4</span><span class="cifra-texto"><span lang="es">agentes desde tus apps</span><span lang="en">agents from your apps</span></span></li>
+        <li class="cifra"><span class="cifra-numero">3</span><span class="cifra-texto"><span lang="es">APIs: OpenAI, Anthropic y la propia</span><span lang="en">APIs: OpenAI, Anthropic and the native one</span></span></li>
+        <li class="cifra"><span class="cifra-numero">0</span><span class="cifra-texto"><span lang="es">telemetría y ningún servidor nuestro</span><span lang="en">telemetry and no server of ours</span></span></li>
+        <li class="cifra"><span class="cifra-numero">2</span><span class="cifra-texto"><span lang="es">cambios en tu app: la URL y la clave</span><span lang="en">changes in your app: the URL and the key</span></span></li>
+      </ul>
+      <ol class="mosaico ventajas" style="--col: 3">
+        <li class="tarjeta ancha">
+          <span class="fig" aria-hidden="true">01</span>
+          <h3><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
+          <p><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
+        </li>
+        <li class="tarjeta">
+          <span class="fig" aria-hidden="true">02</span>
+          <h3><span lang="es">Tramtai instala y conecta tus agentes</span><span lang="en">Tramtai installs and connects your agents</span></h3>
+          <p><span lang="es">Instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.</span><span lang="en">It installs Claude Code, Codex, GitHub Copilot or Antigravity, helps you sign in and keeps them up to date, with no other console.</span></p>
+        </li>
+        <li class="tarjeta">
+          <span class="fig" aria-hidden="true">03</span>
+          <h3><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
+          <p><span lang="es">Con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue, opencode and Kilo Code at itself.</span></p>
+        </li>
+        <li class="tarjeta">
+          <span class="fig" aria-hidden="true">04</span>
+          <h3><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
+          <p><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
+        </li>
+        <li class="tarjeta">
+          <span class="fig" aria-hidden="true">05</span>
+          <h3><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
+          <p><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store, except Continue’s, opencode’s and Kilo Code’s: in each tool’s file.</span></p>
+        </li>
+        <li class="tarjeta">
+          <span class="fig" aria-hidden="true">06</span>
+          <h3><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
+          <p><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
+        </li>
+        <li class="tarjeta ancha">
+          <span class="fig" aria-hidden="true">07</span>
+          <h3><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
+          <p><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH, or always on your server.</span></p>
+        </li>
+      </ol>
+      <details class="comparativa" id="comparativa">
+        <summary><span lang="es">Sin Tramtai y con Tramtai</span><span lang="en">Without and with Tramtai</span></summary>
+        <div class="pagas-diagramas">
         <figure class="pagas-diagrama sin">
           <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
           <svg viewBox="0 0 340 200" role="img" aria-label="Tres apps, cada una con su clave y su SDK hacia OpenAI, Anthropic o Google" data-aria-en="Three apps, each with its own key and SDK to OpenAI, Anthropic or Google">
@@ -602,54 +755,9 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
           <figcaption><span lang="es">Una URL local y los agentes que ya tienes.</span><span lang="en">One local URL and the agents you already have.</span></figcaption>
         </figure>
       </div>
-      <!-- Cifras del producto, no de uso: cada una se comprueba en esta página (Agentes, Funciones, Privacidad y el código
-           de Cómo funciona). -->
-      <ul class="cifras">
-        <li class="cifra"><span class="cifra-numero">4</span><span class="cifra-texto"><span lang="es">agentes desde tus apps</span><span lang="en">agents from your apps</span></span></li>
-        <li class="cifra"><span class="cifra-numero">3</span><span class="cifra-texto"><span lang="es">APIs: OpenAI, Anthropic y la propia</span><span lang="en">APIs: OpenAI, Anthropic and the native one</span></span></li>
-        <li class="cifra"><span class="cifra-numero">0</span><span class="cifra-texto"><span lang="es">telemetría y ningún servidor nuestro</span><span lang="en">telemetry and no server of ours</span></span></li>
-        <li class="cifra"><span class="cifra-numero">2</span><span class="cifra-texto"><span lang="es">cambios en tu app: la URL y la clave</span><span lang="en">changes in your app: the URL and the key</span></span></li>
-      </ul>
-      <!-- La línea de ventajas: una vía con siete estaciones en el acento (la de preparar los agentes, v0.60). Son tres listas, de tres, tres y una: en el móvil se leen como una sola línea de siete; desde 901 px, las dos primeras van lado a lado, cada una con sus paradas a su ritmo, y la séptima debajo, a lo ancho. -->
-      <div class="ventajas">
-      <ol class="ventajas-linea">
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
-          <p class="parada-texto"><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
-        </li>
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Tramtai instala y conecta tus agentes</span><span lang="en">Tramtai installs and connects your agents</span></h3>
-          <p class="parada-texto"><span lang="es">Instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.</span><span lang="en">It installs Claude Code, Codex, GitHub Copilot or Antigravity, helps you sign in and keeps them up to date, with no other console.</span></p>
-        </li>
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
-          <p class="parada-texto"><span lang="es">Con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue, opencode and Kilo Code at itself.</span></p>
-        </li>
-      </ol>
-      <ol class="ventajas-linea" start="4">
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
-          <p class="parada-texto"><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
-        </li>
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
-          <p class="parada-texto"><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store, except Continue’s, opencode’s and Kilo Code’s: in each tool’s file.</span></p>
-        </li>
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
-          <p class="parada-texto"><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
-        </li>
-      </ol>
-      <ol class="ventajas-linea" start="7">
-        <li class="parada parada-ventaja">
-          <h3 class="parada-titulo"><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
-          <p class="parada-texto"><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH, or always on your server.</span></p>
-        </li>
-      </ol>
-      </div>
+      </details>
     </div>
   </section>
-  <section id="comparativa"></section>
   <section id="privacidad">
     <div class="envoltura">
       <div class="tablero">
