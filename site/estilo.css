@@ -145,6 +145,8 @@ section[id] { scroll-margin-top: 72px; }
 .barra nav a { color: var(--texto-suave); text-decoration: none; font-size: .95rem; padding: 10px 0; }
 .barra nav a:hover, .barra nav a[aria-current="page"] { color: var(--texto); }
 .barra nav a[aria-current="page"] { font-weight: 600; }
+/* «Descargar» ya es el botón de la barra: su entrada de la lista solo se ve dentro del menú del móvil. */
+.barra nav a.solo-menu { display: none; }
 .github { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; color: var(--texto-suave); }
 .github:hover { color: var(--texto); background: var(--acento-suave); }
 .github svg { width: 22px; height: 22px; }
@@ -471,6 +473,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .idioma button { min-width: 44px; }
   .barra nav { flex-direction: column; gap: 0; margin: 0; }
   .barra nav a { padding: 10px 12px; border-radius: 8px; }
+  .barra nav a.solo-menu { display: block; }
   .barra nav a:hover { background: var(--acento-suave); }
   .preferencias { display: flex; flex-wrap: wrap; gap: 8px; }
   .tema { margin: 0; }

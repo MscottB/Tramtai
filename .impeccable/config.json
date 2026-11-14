@@ -71,6 +71,33 @@
         "value": "instrument serif",
         "createdAt": "2026-11-13T23:37:21.811Z",
         "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: Instrument Serif cursiva para la parte clave del titular"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/descargar.html"
+        ],
+        "createdAt": "2026-11-13T23:52:36.531Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/agentes.html"
+        ],
+        "createdAt": "2026-11-13T23:52:36.853Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/producto.html"
+        ],
+        "createdAt": "2026-11-13T23:52:37.189Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
       }
     ]
   }

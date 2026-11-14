@@ -299,7 +299,7 @@ func TestOrdenesDelSitioIdioma(t *testing.T) {
 	}
 }
 
-// TestComandosDelSitioExisten: cada orden de tramtai que enseñan los <pre> de index.html, servidor.html y
+// TestComandosDelSitioExisten: cada orden de tramtai que enseñan los <pre> de las seis páginas escritas a mano (index, producto, agentes, servidor, desarrolladores y descargar) y
 // desarrolladores.html, sus frases y las de la Ayuda (site/ayuda/*.html) existe, y las de los lang="en" existen con
 // nombres en inglés. Lo que no está dentro de ningún lang se lee como español (se enseña en los
 // dos idiomas, así que las Tareas 15 y 16 lo marcan por idioma). Solo lee archivos y llama a Find: no ejecuta nada.
@@ -310,7 +310,7 @@ func TestComandosDelSitioExisten(t *testing.T) {
 		ingles, enLinea bool
 	}
 	var lineas []linea
-	for _, archivo := range []string{"index.html", "servidor.html", "desarrolladores.html"} {
+	for _, archivo := range []string{"index.html", "producto.html", "agentes.html", "servidor.html", "desarrolladores.html", "descargar.html"} {
 		datos, err := os.ReadFile("../../site/" + archivo)
 		if err != nil {
 			t.Fatal(err)
@@ -333,7 +333,8 @@ func TestComandosDelSitioExisten(t *testing.T) {
 				lineas = append(lineas, linea{archivo + " (en una frase)", c.texto, c.lang == "en", true})
 			}
 		}
-		if len(lineas) == antes {
+		// Las páginas nuevas (producto, agentes, descargar) empiezan vacías y se llenan en las Tareas 4 a 7.
+		if len(lineas) == antes && (archivo == "index.html" || archivo == "servidor.html" || archivo == "desarrolladores.html") {
 			t.Fatalf("%s: no hay ningún <pre>: ¿cambió el marcado?", archivo)
 		}
 	}
