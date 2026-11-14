@@ -169,7 +169,7 @@ components:
 
 Este documento tiene dos sistemas visuales, cada uno con su alcance:
 
-- **Parte 1, el sitio público** (`site/`, v0.61): plano técnico, oscuro con el acento `#2dd4bf`, Inter e Instrument Serif. Describe lo que hay en `site/estilo.css` y `site/sitio.js`; si el código y este texto difieren, manda el código.
+- **Parte 1, el sitio público** (`site/`, v0.61): plano técnico, oscuro de partida (manda el sistema salvo que se elija un tema) con el acento `#2dd4bf`, claro con el acento oscurecido, Inter e Instrument Serif. Describe lo que hay en `site/estilo.css` y `site/sitio.js`; si el código y este texto difieren, manda el código.
 - **Parte 2, la Web UI de la app** (`web/src/`): la «Red de tranvía». No cambió en la v0.61. Su bloque `colors:` de arriba son los tokens de la Web UI y de la terminal (`TestColoresDeDesign` los compara con `internal/tui/tema.go`), así que no lleva los del sitio.
 
 Las dos partes comparten la marca (el verde azulado, los colores de línea de los agentes y la terminal), no las variables ni las letras.
@@ -251,7 +251,11 @@ Clases de `site/estilo.css` comunes a todas las páginas:
 - **`.cifras`:** una franja de cuatro cifras en una tarjeta de borde discontinuo (2×2 hasta 900 px). Las cifras son del producto y se pueden comprobar en la propia página; no hay cifras de uso.
 - **`.tablero`:** el bloque de tinta de Privacidad, con su cabecera en mayúsculas espaciadas y una fila por riesgo.
 - **`.ventana`, `.ventana-barra` y `.ventana-terminal`:** un marco con borde fuerte, una barra de `--superficie-suave` con tres puntos de semáforo decorativos, las pestañas y un rótulo. La terminal se describe abajo.
-- **`.paradas`, `.ciclo`, `.diagrama`, `.pasos`:** listas numeradas para recorridos, con el número en mono y el acento.
+- **Listas de pasos:**
+  - `.paradas`: un círculo numerado de borde de acento unido por una línea de un píxel.
+  - `.ciclo` y `.pasos-como`: el número («01») en mono y en el acento, sobre cada paso.
+  - `.pasos`: un disco del acento con el número en Inter 700.
+  - `.diagrama`: no numera, une sus pasos con flechas.
 - **Documentación** (`.doc`): la plantilla de tres columnas de Servidor, Desarrolladores y la Ayuda. Índice de 228 px a la izquierda, el contenido en `.prosa` y «En esta página» de 200 px a la derecha, las dos columnas fijas al bajar (`position: sticky`). La barra, el pie y el contenido de estas páginas llegan a 1360 px; las de presentación, a 1120. Por debajo de 1180 px «En esta página» pasa encima del contenido, en fila; por debajo de 900 hay una sola columna y el índice se abre con su botón (sin JavaScript, abierto). Nada se pone encima del texto.
 - **Buscador** (`dialog.buscador`): Ctrl K, ⌘K o `/` (y el botón de la barra o el campo del índice) abren un diálogo con el cuadro, la lista (`role="listbox"`) y el pie con las teclas. Busca en `buscar.json`, en el idioma que se ve.
 

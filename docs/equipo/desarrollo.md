@@ -161,7 +161,7 @@ desde los mismos datos.
   uv tool run --from "fonttools[woff]" pyftsubset InstrumentSerif-Italic.ttf --flavor=woff2 --text-file=web/scripts/letras-caracteres.txt --output-file=site/instrument-italica.woff2
   ```
 
-  Las dos juntas pesan unos 65 KB (49 y 17); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
+  Las dos juntas pesan unos 64 KB (48 y 16); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
   `sitio.test.ts`. La misma prueba comprueba que cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni
   scripts, que pinta Tramtai Mono) está en la lista. Si falta alguno, se añade a la lista y se rehacen las dos.
 - **El sitio (v0.61):** siete páginas con la misma barra: Inicio (`index.html`), Producto, Agentes, Servidor,
