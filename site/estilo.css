@@ -1,10 +1,20 @@
-/* Estilos compartidos del sitio de Tramtai: portada, guía del desarrollador, Ayuda y 404. Siguen docs/diseno/DESIGN.md:
-   radios 12/10/8, borde antes que sombra (de noche sin sombra), ámbar solo para cifras y mayúsculas solo en la cabecera
-   del tablero. Cada control mide al menos 44 px de alto (y de ancho, salvo ES/EN y tema con ratón en escritorio). */
+/* Estilos compartidos del sitio de Tramtai (v0.61, spec §1): la estructura de plano técnico (cuadrícula fina arriba,
+   tarjetas de borde discontinuo y rótulos «FIG»), los colores oscuros con el acento #2dd4bf y lo vivo, que solo se mueve
+   con JavaScript y sin «reducir movimiento». Borde antes que sombra (de noche sin sombra). Cada control mide al menos
+   44 px de alto (y de ancho, salvo ES/EN y tema con ratón en escritorio). */
+/* Inter variable (OFL, INTER-OFL.txt) para el texto y los títulos, e Instrument Serif cursiva (OFL, INSTRUMENT-OFL.txt)
+   para la parte clave de cada titular: subconjuntos con las letras del sitio (docs/equipo/desarrollo.md). */
 @font-face {
-  font-family: 'Overpass Variable';
-  src: url('overpass.woff2') format('woff2');
+  font-family: 'Inter';
+  src: url('inter.woff2') format('woff2');
   font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('instrument-italica.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 400;
   font-display: swap;
 }
 /* Cascadia Mono (OFL, CASCADIA-OFL.txt), un subconjunto con lo que pinta la terminal. Va con otro nombre porque
@@ -15,37 +25,52 @@
   font-weight: 200 700;
   font-display: swap;
 }
+/* Colores: oscuro casi negro con superficies un punto más claras; claro en papel cálido con el acento oscurecido. Texto,
+   texto suave y acento pasan AA (4,5:1) sobre el fondo y las dos superficies en los dos temas; los bordes de controles,
+   3:1. Los colores de cada agente, solo en sus puntos y líneas. */
 :root {
-  --fondo: light-dark(#eef2f1, #0a1116); --superficie: light-dark(#ffffff, #111c23); --superficie-suave: light-dark(#f4f7f6, #15222a);
-  --borde: light-dark(#dce3e2, #1f2f38); --borde-fuerte: light-dark(#c2cccb, #2d404b);
+  --fondo: light-dark(#f7f5f0, #0b0d10); --superficie: light-dark(#fffdf9, #11151a); --superficie-suave: light-dark(#f0ede6, #161b21);
+  --borde: light-dark(#e3ded4, #1f262e); --borde-fuerte: light-dark(#cbc4b6, #2e3742);
+  /* El borde de las tarjetas: fino y discontinuo, decorativo. */
+  --borde-discontinuo: light-dark(#c4bcad, #353f4b);
   /* Bordes de controles (campos, pestañas, ES/EN): al menos 3:1 con el fondo. */
-  --borde-control: light-dark(#6f8286, #5d7480);
-  --texto: light-dark(#0f1b1e, #e5edf0); --texto-suave: light-dark(#55666a, #93a5ac);
-  --acento: light-dark(#0b6e64, #2dd4bf); --acento-texto: light-dark(#ffffff, #042f2b); --acento-suave: light-dark(rgba(11, 110, 100, 0.09), rgba(45, 212, 191, .11));
+  --borde-control: light-dark(#78715f, #64707c);
+  --texto: light-dark(#16191d, #eef1f4); --texto-suave: light-dark(#5b5f66, #9aa3ad);
+  --acento: light-dark(#0b6e64, #2dd4bf); --acento-texto: light-dark(#ffffff, #04201c); --acento-suave: light-dark(rgba(11, 110, 100, .09), rgba(45, 212, 191, .1));
   --claude: light-dark(#c4561d, #f28a4f); --codex: light-dark(#2563eb, #5b8def); --copilot: light-dark(#1f883d, #3fb950);
   --gemini: light-dark(#7c3aed, #a78bfa); --antigravity: light-dark(#db2777, #f472b6);
-  --tablero: light-dark(#0f1b1e, #060b0e); --tablero-texto: #eef3f2; --tablero-suave: #9fb3b8; --tablero-clave: #7dd3c8;
+  /* La cuadrícula de plano del arranque. */
+  --rejilla: light-dark(rgba(22, 25, 29, .06), rgba(255, 255, 255, .05));
+  --tablero: light-dark(#16191d, #080a0d); --tablero-texto: #eef1f4; --tablero-suave: #a3acb6; --tablero-clave: #7dd3c8;
   /* En oscuro el tablero casi se funde con el fondo: lleva borde. */
-  --borde-tablero: light-dark(transparent, #2d404b);
+  --borde-tablero: light-dark(transparent, #1f262e);
   /* La sombra solo acompaña al borde de día; de noche desaparece. */
-  --sombra: 0 1px 2px light-dark(rgba(15, 27, 30, .05), transparent), 0 8px 24px light-dark(rgba(15, 27, 30, .06), transparent);
-  --radio: 12px;
-  --fuente: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
-  --titulo: 'Overpass Variable', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-  --mono: 'Cascadia Code', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
-  color-scheme: light dark;
+  --sombra: 0 1px 2px light-dark(rgba(22, 25, 29, .05), transparent), 0 8px 24px light-dark(rgba(22, 25, 29, .06), transparent);
+  --radio: 10px;
+  --fuente: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
+  --serifa: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --mono: 'Tramtai Mono', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
+  /* El orden no fuerza el oscuro: manda la preferencia del sistema, salvo que se elija Claro u Oscuro (abajo). */
+  color-scheme: dark light;
 }
 /* Tema: el del sistema, salvo que se elija Claro u Oscuro (data-tema en <html>, ver sitio.js). */
 :root[data-tema="claro"] { color-scheme: light; }
 :root[data-tema="oscuro"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
-body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.6 var(--fuente); -webkit-font-smoothing: antialiased; }
+/* Con «reducir movimiento» todo queda quieto; lo vivo, en su estado final (sus estados de partida solo existen sin
+   esta preferencia, más abajo). */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .vivo, .vivo * { animation: none !important; }
+}
+body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.6 var(--fuente); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
 html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none; }
 a { color: var(--acento); }
 .envoltura { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-h1, h2, h3, h4 { font-family: var(--titulo); letter-spacing: -0.022em; line-height: 1.15; margin: 0; }
+/* Títulos en Inter, de peso medio y con las letras algo juntas. */
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; margin: 0; }
 h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
 h3, h4 { font-size: 1.25rem; letter-spacing: -0.01em; }
 p { margin: 0; }
@@ -54,6 +79,7 @@ p { margin: 0; }
    tinta, el acento no llega a 3:1 y va el verde claro del tablero. */
 :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .codigo :focus-visible { outline-color: var(--tablero-clave); }
+.bloque-codigo :focus-visible { outline-color: var(--tablero-clave); }
 main:focus { outline: none; }
 /* La barra fija no tapa el principio de la sección a la que lleva un ancla. */
 section[id] { scroll-margin-top: 72px; }
@@ -63,10 +89,53 @@ section[id] { scroll-margin-top: 72px; }
 .saltar { position: absolute; left: 16px; top: -60px; z-index: 30; background: var(--acento); color: var(--acento-texto); padding: 10px 16px; border-radius: 8px; font-weight: 600; }
 .saltar:focus { top: 12px; }
 
+/* Piezas del sistema (v0.61), comunes a todas las páginas. */
+/* El arranque: la cuadrícula de plano, muy tenue y solo arriba, y el brillo del acento detrás del titular. */
+.arranque { position: relative; isolation: isolate; }
+.arranque::before, .arranque::after { content: ''; position: absolute; z-index: -1; pointer-events: none; }
+.arranque::before { inset: 0; background: linear-gradient(90deg, var(--rejilla) 1px, transparent 1px) 0 0 / 56px 56px, linear-gradient(var(--rejilla) 1px, transparent 1px) 0 0 / 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 35%, transparent 80%); }
+.arranque::after { top: -160px; left: 0; right: 0; margin: 0 auto; width: min(760px, 100%); height: 460px; background: radial-gradient(closest-side, color-mix(in srgb, var(--acento) 20%, transparent), transparent); }
+/* El titular en dos partes: la clave en serifa cursiva y en el acento. */
+.titular { font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.06; }
+.titular em, .portada h1 em { font-family: var(--serifa); font-style: italic; font-weight: 400; letter-spacing: -0.01em; color: var(--acento); }
+/* Tarjetas: borde fino discontinuo, esquinas de 10 px y sin sombra. */
+.tarjeta { background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); padding: 22px; }
+.tarjeta h3, .tarjeta h4 { margin-bottom: 8px; }
+.tarjeta p { color: var(--texto-suave); font-size: .95rem; }
+/* El mosaico: --col columnas; .ancha ocupa dos y .alta, dos filas. En el móvil, una sola columna. */
+.mosaico { display: grid; grid-template-columns: repeat(var(--col, 3), minmax(0, 1fr)); gap: 12px; }
+.mosaico > .ancha { grid-column: span 2; }
+.mosaico > .alta { grid-row: span 2; }
+@media (max-width: 720px) {
+  .mosaico { grid-template-columns: minmax(0, 1fr); }
+  .mosaico > .ancha, .mosaico > .alta { grid-column: auto; grid-row: auto; }
+}
+/* El rótulo «FIG n · …» sobre cada figura, diagrama o recorte: mayúsculas pequeñas monoespaciadas. */
+.fig { display: block; margin: 0 0 10px; font: 500 .72rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--texto-suave); }
+/* Lo vivo: sin JavaScript o con «reducir movimiento» se ve en su estado final. Con JavaScript espera a que sitio.js le
+   ponga .visto (al entrar en pantalla) y entonces sus piezas se mueven: .aparece (con --retraso), .dibuja (un trazo
+   SVG con pathLength="1"), .flujo (corre por la línea), .pulso (late) y .cursor (parpadea). Solo cambia la opacidad o
+   el trazo: el texto no se desplaza. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js .vivo:not(.visto) .aparece { opacity: 0; }
+  html.js .vivo:not(.visto) .dibuja { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  html.js .vivo.visto .aparece { animation: aparece .4s var(--retraso, 0s) both; }
+  html.js .vivo.visto .dibuja { stroke-dasharray: 1; animation: dibuja 1.2s var(--retraso, 0s) ease-out both; }
+  html.js .vivo.visto .flujo { stroke-dasharray: 4 6; animation: corre 1.2s linear infinite; }
+  html.js .vivo.visto .pulso { animation: late 2.4s ease-in-out var(--retraso, 0s) infinite; }
+  html.js .vivo.visto .cursor { animation: parpadeo 1s steps(1) infinite; }
+}
+@keyframes aparece { from { opacity: 0; } }
+@keyframes dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes corre { to { stroke-dashoffset: -20; } }
+@keyframes late { 50% { opacity: .35; } }
+@keyframes parpadeo { 50% { opacity: 0; } }
+
 /* Barra superior */
 .barra { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--fondo) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--borde); }
 .barra .envoltura { position: relative; display: flex; align-items: center; gap: 12px; height: 64px; }
-.marca { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 700 1.15rem var(--titulo); color: var(--texto); text-decoration: none; }
+.marca { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 700 1.15rem var(--fuente); color: var(--texto); text-decoration: none; }
 .marca img { width: 30px; height: 30px; }
 /* En escritorio el panel del menú no existe: sus secciones y preferencias se colocan en la barra. */
 .menu-panel, .preferencias { display: contents; }
@@ -97,7 +166,7 @@ section[id] { scroll-margin-top: 72px; }
 .boton { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: border-color .15s ease; }
 .boton:hover { border-color: var(--texto); }
 .boton.principal { background: var(--acento); color: var(--acento-texto); }
-.boton.secundario { background: var(--superficie); color: var(--texto); border-color: var(--borde-control); }
+.boton.secundario { background: var(--superficie); color: var(--texto); border: 1px dashed var(--borde-control); }
 .boton.secundario:hover { border-color: var(--acento); }
 .boton svg { width: 18px; height: 18px; flex: none; }
 
@@ -141,7 +210,7 @@ section { padding: 72px 0; }
    pantalla hasta 11 px y, si aun así no cabe, la pantalla se desplaza dentro de su marco. */
 .terminal-figura { margin: 0; }
 .terminal-figura figcaption { margin-top: 12px; font-size: .9rem; }
-.ventana-terminal { width: fit-content; max-width: 100%; border: 1px solid var(--borde-fuerte); border-radius: var(--radio); overflow: hidden; background: light-dark(#ffffff, #0a1116); color: light-dark(#0f1b1e, #e5edf0); box-shadow: var(--sombra); }
+.ventana-terminal { width: fit-content; max-width: 100%; border: 1px solid var(--borde-fuerte); border-radius: var(--radio); overflow: hidden; background: light-dark(#ffffff, #0b0d10); color: var(--texto); box-shadow: var(--sombra); }
 .ventana-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 6px 12px; background: var(--superficie-suave); border-bottom: 1px solid var(--borde); }
 .ventana-semaforo { display: inline-flex; gap: 6px; }
 .ventana-semaforo span { width: 12px; height: 12px; border-radius: 50%; background: var(--borde-fuerte); }
@@ -202,7 +271,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .paradas li { counter-increment: parada; position: relative; padding: 0 0 30px 64px; }
 .paradas li:last-child { padding-bottom: 0; }
 .paradas li::before { content: counter(parada); position: absolute; left: 0; top: -4px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--fondo); border: 6px solid var(--acento); font: 700 .95rem var(--titulo); color: var(--texto); box-sizing: border-box; }
+  background: var(--fondo); border: 6px solid var(--acento); font: 700 .95rem var(--fuente); color: var(--texto); box-sizing: border-box; }
 .paradas h3 { margin-bottom: 6px; }
 .paradas p + p { margin-top: 8px; }
 .como .codigo { margin: 0; position: relative; padding-top: 56px; }
@@ -224,11 +293,11 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .pagas-diagrama text { font-family: var(--fuente); }
 .pagas-diagrama figcaption { font-weight: 600; }
 @media (max-width: 720px) { .pagas-diagramas { grid-template-columns: 1fr; } }
-/* Cuatro cifras del producto en una franja: número en Overpass tabular y etiqueta pequeña. */
+/* Cuatro cifras del producto en una franja: número en Inter tabular y etiqueta pequeña. */
 .cifras { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
 .cifra { display: flex; flex-direction: column; gap: 6px; padding: 20px 24px; }
 .cifra + .cifra { border-left: 1px solid var(--borde); }
-.cifra-numero { font: 700 2.75rem/1 var(--titulo); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--acento); }
+.cifra-numero { font: 700 2.75rem/1 var(--fuente); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--acento); }
 .cifra-texto { color: var(--texto-suave); font-size: .95rem; line-height: 1.4; }
 @media (max-width: 900px) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -259,10 +328,12 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .par h3 { font-size: 1.45rem; margin-bottom: 12px; }
 /* Código: tinta del tablero; las cadenas en el verde claro y las palabras clave en negrita (el ámbar es solo para cifras). */
 /* Relativo: el botón Copiar (sitio.js) va en su esquina; sin esto, el de la terminal salía arriba de la página. */
-.codigo { position: relative; margin: 40px 0 0; border: 1px solid var(--borde-tablero); background: var(--tablero); color: var(--tablero-texto); border-radius: 10px; padding: 22px 24px; overflow-x: auto; font: .9rem/1.7 var(--mono); }
-.codigo .c { color: var(--tablero-suave); }
-.codigo .s { color: var(--tablero-clave); }
-.codigo .k { color: var(--tablero-texto); font-weight: 700; }
+.codigo, .bloque-codigo { position: relative; margin: 40px 0 0; border: 1px solid var(--borde-tablero); background: var(--tablero); color: var(--tablero-texto); border-radius: 10px; padding: 22px 24px; overflow-x: auto; font: .9rem/1.7 var(--mono); }
+.codigo .c, .bloque-codigo .c { color: var(--tablero-suave); }
+.codigo .s, .bloque-codigo .s { color: var(--tablero-clave); }
+.codigo .k, .bloque-codigo .k { color: var(--tablero-texto); font-weight: 700; }
+/* El bloque de código nuevo deja sitio al botón Copiar arriba a la derecha. */
+.bloque-codigo { margin: 0; padding-top: 56px; }
 
 /* Funciones: un plano de metro (sitio.js), una línea por grupo y una parada por función. Sin JavaScript, o por debajo de
    900 px, cada línea va en vertical: un tramo de 5 px entre estación y estación y el texto de cada parada a la vista.
@@ -296,14 +367,14 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .metro--plano .parada-titulo:has(> [aria-current="true"])::before { background: var(--acento); }
 .metro--plano .parada-texto { display: none; }
 .metro-panel { margin-left: 136px; padding: 20px 24px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
-.metro-panel-titulo { font: 700 1.05rem/1.15 var(--titulo); letter-spacing: -0.01em; margin-bottom: 6px; }
+.metro-panel-titulo { font: 700 1.05rem/1.15 var(--fuente); letter-spacing: -0.01em; margin-bottom: 6px; }
 .metro-panel p { max-width: 70ch; }
 /* Agentes: una tarjeta por agente con su sigla y el color de su línea (--c); el color de línea solo aparece aquí. */
 .agentes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 16px; }
 .agente { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; }
 .agente header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .agente h3 { margin: 0; font-size: 1.15rem; }
-.sigla { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--c); font: 700 .72rem var(--titulo); color: var(--texto); }
+.sigla { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--c); font: 700 .72rem var(--fuente); color: var(--texto); }
 /* Vía Muerta: Antigravity no sirve a las apps, su aro va punteado en borde fuerte. */
 .agente.sin-apps .sigla { border: 3px dashed var(--borde-control); }
 .agente.sin-apps .solo { display: block; margin: 0 0 10px; font-size: .86rem; color: var(--texto); font-weight: 600; }
@@ -311,20 +382,17 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .agente ul { margin: 0; padding-left: 18px; color: var(--texto-suave); font-size: .86rem; }
 .agente code { font: .82rem var(--mono); }
 .nota-agentes, .nota-capturas { margin: 20px 0 0; font-size: .92rem; max-width: 52em; }
-.tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; }
-.tarjeta h3, .tarjeta h4 { margin-bottom: 8px; }
-.tarjeta p { color: var(--texto-suave); font-size: .95rem; }
 
 /* Privacidad: tablero de salidas. Su cabecera es lo único en mayúsculas espaciadas del sitio. */
 .tablero { border: 1px solid var(--borde-tablero); background: var(--tablero); color: var(--tablero-texto); border-radius: var(--radio); padding: 36px; display: grid; grid-template-columns: 1fr 1.3fr; gap: 36px; }
 .tablero h2 { color: var(--tablero-texto); }
 .tablero .cabeza { margin: 0; }
 .tablero .cabeza p { color: var(--tablero-suave); }
-.tablero-cabecera { display: block; margin-bottom: 10px; font: 700 .8rem var(--titulo); letter-spacing: .06em; text-transform: uppercase; color: var(--tablero-suave); }
+.tablero-cabecera { display: block; margin-bottom: 10px; font: 700 .8rem var(--fuente); letter-spacing: .06em; text-transform: uppercase; color: var(--tablero-suave); }
 .tablero ul { list-style: none; margin: 0; padding: 0; }
 .tablero li { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(255, 255, 255, .08); }
 .tablero li:first-child { border-top: 0; }
-.tablero b { font: 650 .95rem var(--titulo); color: var(--tablero-texto); }
+.tablero b { font: 650 .95rem var(--fuente); color: var(--tablero-texto); }
 .tablero li > span { color: var(--tablero-suave); }
 .tablero strong { color: var(--tablero-texto); font-weight: 600; }
 
@@ -488,7 +556,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .pestanas .codigo a { color: var(--tablero-texto); }
 .ciclo { list-style: none; counter-reset: paso; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 !important; margin: 4px 0 22px !important; }
 .ciclo li { counter-increment: paso; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
-.ciclo li::before { content: counter(paso); display: block; font: 700 .8rem var(--titulo); color: var(--acento); margin-bottom: 4px; }
+.ciclo li::before { content: counter(paso); display: block; font: 700 .8rem var(--fuente); color: var(--acento); margin-bottom: 4px; }
 @media (max-width: 900px) { .ciclo { grid-template-columns: 1fr; } }
 .doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
 .opcion-cli { white-space: nowrap; } /* una opción de la CLI (--comprobar) no se parte tras el guion */
@@ -533,7 +601,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .diagrama-rama { color: var(--texto-suave); font-size: .92rem; }
 .pasos { counter-reset: paso; list-style: none; padding: 0 !important; display: grid; gap: 10px; }
 .pasos li { counter-increment: paso; display: flex; gap: 10px; align-items: flex-start; margin: 0; }
-.pasos li::before { content: counter(paso); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--acento); color: var(--acento-texto); font: 700 .8rem var(--titulo); }
+.pasos li::before { content: counter(paso); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--acento); color: var(--acento-texto); font: 700 .8rem var(--fuente); }
 /* «Qué verás en pantalla»: cada paso con su captura debajo del texto (el ancho máximo de cada imagen va en su style, para
    no estirar las pequeñas) y con el borde y la sombra de las demás capturas, que cambian con el tema por las variables
    de :root. */
@@ -572,7 +640,7 @@ html[lang="es"] .captura a[lang="en"], html[lang="en"] .captura a[lang="es"] { d
 .mapa-pestana:hover { color: var(--texto); }
 .mapa-pestana[aria-selected="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
 .mapa-panel { margin-top: 16px; background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); padding: 24px; min-width: 0; }
-.mapa-titulo { font: 700 1.25rem/1.25 var(--titulo); letter-spacing: -0.01em; }
+.mapa-titulo { font: 700 1.25rem/1.25 var(--fuente); letter-spacing: -0.01em; }
 .mapa-leyenda { margin: 6px 0 16px; min-height: 3em; font-size: .95rem; line-height: 1.5; color: var(--texto-suave); }
 .mapa-codigos { display: grid; }
 /* En el panel las líneas largas saltan en vez de esconderse a la derecha; Copiar copia el texto, sin los saltos. La
@@ -635,7 +703,7 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 .demo-paso img { background: var(--superficie-suave); }
 .demo-paso figcaption { margin-top: 16px; }
 .demo-donde { margin: 0; font-size: .9rem; color: var(--texto-suave); }
-.demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--titulo); }
+.demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--fuente); }
 .demo-texto { margin: 0; font-size: 1.05rem; line-height: 1.6; }
 /* El enlace a la imagen a tamaño real: la del tema y el idioma que se ven (los otros se ocultan como sus img). */
 .demo-ampliar { margin: 8px 0 0; font-size: .9rem; }

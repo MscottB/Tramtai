@@ -59,6 +59,18 @@
         ],
         "createdAt": "2026-11-13T20:35:32.737Z",
         "reason": "Agente (final v0.60): intencional y anterior a la v0.60, medido: los h3/h4 de 1.05rem (16,8 px) son títulos de tarjeta y estación (.parada, .virtud, .metro-linea) sobre su propio texto de .95rem (15,2 px), con la familia de titulares y negrita; los h3 de sección van a 1.25rem y los h2 hasta 2.2rem"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-13T23:37:21.053Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: Inter variable para texto y títulos"
+      },
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "createdAt": "2026-11-13T23:37:21.811Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: Instrument Serif cursiva para la parte clave del titular"
       }
     ]
   }

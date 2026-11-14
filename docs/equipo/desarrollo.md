@@ -134,6 +134,25 @@ desde los mismos datos.
 
   Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo; por eso
   los glifos van en `span.g` (arriba).
+- **Fuentes del texto (v0.61):** `site/inter.woff2` es Inter variable entera (ejes `wght` 100–900 y `opsz` 14–32) e
+  `site/instrument-italica.woff2`, Instrument Serif cursiva, las dos OFL-1.1 con su licencia al lado
+  (`site/INTER-OFL.txt`, `site/INSTRUMENT-OFL.txt`). `InterVariable.ttf` sale del
+  [lanzamiento oficial](https://github.com/rsms/inter/releases) (`Inter-<versión>.zip`, la 4.1 al hacerlo) e
+  `InstrumentSerif-Italic.ttf` y su `OFL.txt`, de `ofl/instrumentserif/` en el
+  [repositorio de Google Fonts](https://github.com/google/fonts), en una carpeta aparte y sin guardarlos en el
+  repositorio. La lista de caracteres se guarda en `web/scripts/letras-caracteres.txt`: cada carácter distinto del
+  texto de `site/*.html`, `site/ayuda/*.html` y `site/sitio.js` (sin las etiquetas y con las entidades resueltas) más
+  los 95 de `0x20` a `0x7e`, `«»’“”…·→—–` y las mayúsculas y minúsculas acentuadas del español (`ÁÉÍÓÚÜÑáéíóúüñ¡¿`).
+  `tnum` se añade a las funciones que se guardan porque las cifras usan `font-variant-numeric: tabular-nums`:
+
+  ```
+  uv tool run --from "fonttools[woff]" pyftsubset InterVariable.ttf --flavor=woff2 --text-file=web/scripts/letras-caracteres.txt --layout-features+=tnum --output-file=site/inter.woff2
+  uv tool run --from "fonttools[woff]" pyftsubset InstrumentSerif-Italic.ttf --flavor=woff2 --text-file=web/scripts/letras-caracteres.txt --output-file=site/instrument-italica.woff2
+  ```
+
+  Las dos juntas pesan unos 65 KB (49 y 17); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
+  `sitio.test.ts`. La misma prueba comprueba que cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni
+  scripts, que pinta Tramtai Mono) está en la lista. Si falta alguno, se añade a la lista y se rehacen las dos.
 - **La ventana en `site/index.html`:** no se escribe a mano. `npm run sitio` rellena la zona `<!-- comun:terminal -->`
   (`ventanaTerminal` en `web/scripts/sitio.ts`) con el semáforo, las pestañas «1 Inicio · 4 Mis APIs · 5 Historial», el
   rótulo y un panel por página e idioma tomado de `terminal.json`; el CI falla si lo guardado no coincide. Los colores

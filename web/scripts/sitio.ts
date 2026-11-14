@@ -76,12 +76,12 @@ export function cabeza(l: Lugar, titulo: string, descripcion: string): string {
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="${l.rel}favicon.svg" type="image/svg+xml">
 <link rel="icon" href="${l.rel}favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="${l.rel}apple-touch-icon.png">
 <link rel="manifest" href="${l.rel}manifest.webmanifest">
-<link rel="preload" href="${l.rel}overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${l.rel}inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${l.rel}estilo.css">
 <script src="${l.rel}sitio.js" defer></script>
 ${PRIMERO}`
