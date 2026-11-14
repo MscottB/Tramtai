@@ -229,7 +229,7 @@ Alojadas en `site/`, subconjuntos con los caracteres del sitio en español e ing
 
 Inter y Instrument Serif suman unos 64 KB; el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila `sitio.test.ts`, que además comprueba que cada carácter del texto está en la lista.
 
-- **Cuerpo:** Inter 16 px con interlineado 1,6.
+- **Cuerpo:** Inter a 1rem (16 px si quien lee no cambió la letra de su navegador) con interlineado 1,6.
 - **Títulos** (`h1` a `h4`): peso 600, letras algo juntas (`-0.025em`) e interlineado 1,15. `h2`, de 1,6 a 2,2 rem según el ancho.
 - **`.titular`** (el h1 de cada página): de 2,4 a 4,2 rem, 600, `-0.03em`. En las páginas de documentación, de 2 a 2,75 rem.
 - **La parte clave** va en `<em>`: `h2 em, .titular em` pasan a Instrument Serif cursiva, peso 400 y color de acento («Tus agentes de IA, *como una API local.*»).
@@ -256,7 +256,7 @@ Clases de `site/estilo.css` comunes a todas las páginas:
   - `.ciclo` y `.pasos-como`: el número («01») en mono y en el acento, sobre cada paso.
   - `.pasos`: un disco del acento con el número en Inter 700.
   - `.diagrama`: no numera, une sus pasos con flechas.
-- **Documentación** (`.doc`): la plantilla de tres columnas de Servidor, Desarrolladores y la Ayuda. Índice de 228 px a la izquierda, el contenido en `.prosa` y «En esta página» de 200 px a la derecha, las dos columnas fijas al bajar (`position: sticky`). La barra, el pie y el contenido de estas páginas llegan a 1360 px; las de presentación, a 1120. Por debajo de 1180 px «En esta página» pasa encima del contenido, en fila; por debajo de 900 hay una sola columna y el índice se abre con su botón (sin JavaScript, abierto). Nada se pone encima del texto.
+- **Documentación** (`.doc`): la plantilla de tres columnas de Servidor, Desarrolladores y la Ayuda. Índice de 228 px a la izquierda, el contenido en `.prosa` y «En esta página» de 200 px a la derecha, las dos columnas fijas al bajar (`position: sticky`). La barra, el pie y el contenido de estas páginas llegan a 1360 px; las de presentación, a 1120. Por debajo de 1180 px «En esta página» pasa encima del contenido, en fila; por debajo de 900 hay una sola columna y el índice se abre con su botón (sin JavaScript, abierto); ahí «En esta página» solo queda en la Ayuda, porque en Servidor y Desarrolladores el índice ya lleva a los apartados. Nada se pone encima del texto.
 - **Buscador** (`dialog.buscador`): Ctrl K, ⌘K o `/` (y el botón de la barra o el campo del índice) abren un diálogo con el cuadro, la lista (`role="listbox"`) y el pie con las teclas. Busca en `buscar.json`, en el idioma que se ve.
 
 ## Movimiento
@@ -275,7 +275,7 @@ Lo vivo es CSS y SVG, nunca vídeo, y solo cambia la opacidad o el trazo: el tex
 - **Foco visible:** `:focus-visible` con contorno de 2 px del acento separado 2 px. Sobre la tinta del código, el contorno va en `--tablero-clave`; donde el contenedor recorta (la ventana, la pantalla de la terminal), por dentro.
 - **Controles de 44 px o más** en alto y en ancho: botones, enlaces del pie y de las listas, pestañas, Copiar, el botón del menú. La excepción está abajo.
 - **Reducir movimiento:** todo queda quieto y en su estado final.
-- **Sin JavaScript** cada página se ve completa: las pestañas se ven una debajo de otra, la demo muestra todos sus pasos, el índice de la documentación está abierto, la barra baja a una segunda fila y no se queda fija, y los anclajes de la portada de antes llevan a su sitio por un enlace visible. Las animaciones, en su estado final.
+- **Sin JavaScript** cada página se ve completa: las pestañas se ven una debajo de otra, la demo muestra todos sus pasos, el índice de la documentación está abierto, la barra baja a una segunda fila, no se queda fija y no enseña ES/EN ni el tema (los cambia sitio.js), y los anclajes de la portada de antes llevan a su sitio por un enlace visible. Las animaciones, en su estado final.
 - **Pestañas** con teclado y ARIA de pestañas (`role="tablist"`, `tab` y `tabpanel`, flechas, Inicio y Fin); la elección de lenguaje se recuerda.
 - **Idioma:** las dos lenguas en la misma página (`lang="es"` y `lang="en"` en cada trozo; `html[lang]` oculta la otra), con el selector ES/EN (`tramtai.idioma`). Las capturas y los comandos salen en el idioma elegido.
 - **«Saltar al contenido»** es lo primero al tabular.
@@ -305,6 +305,7 @@ Sus colores de línea se usan solo donde la terminal pinta el nombre o la estaci
 ## Excepciones del sitio
 
 - **Controles de 44 px.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
+- **Cortes en em.** Los anchos de las media queries van en m (los px de este documento son a 16 px por em): con la letra del navegador al 200 %, una pantalla de 1440 px se maqueta como una de 720 y no hay desplazamiento horizontal.
 - **Barra y menú.** Hasta 1100 px (y en tabletas táctiles hasta 1180) las secciones, el idioma y el tema van en un panel que abre el botón del menú. Hasta 640 px, Descargar queda en un botón con su icono y, hasta 420, el nombre de la marca solo lo oyen los lectores.
 - **`t-claude` de día.** Vale `#ba521c`, el valor de la chapa de la Web UI, y no `#c4561d`: es texto sobre el fondo blanco de la ventana y el color de la ficha da 4,47:1. De noche conserva `#f28a4f`. La variable `--claude` del sitio, que solo pinta puntos y líneas, sí es `#c4561d`.
 - **Código sobre tinta.** El foco usa `--tablero-clave` porque el acento no llega a 3:1 sobre la tinta.
