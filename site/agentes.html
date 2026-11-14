@@ -68,6 +68,66 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 
 <main id="contenido" tabindex="-1" class="envoltura">
   <h1 class="titular"><span lang="es">Cada agente, <em>detrás</em> de la misma puerta.</span><span lang="en">Every agent, <em>behind</em> the same door.</span></h1>
+  <section id="agentes">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Cinco agentes; cuatro desde tus apps.</span><span lang="en">Five agents; four from your apps.</span></h2>
+        <p class="suave"><span lang="es">Tu app pide <code>agente/modelo</code> en el campo <code>model</code> y Tramtai la lleva por la línea de ese agente.</span><span lang="en">Your app asks for <code>agent/model</code> in the <code>model</code> field and Tramtai sends it down that agent’s line.</span></p>
+      </div>
+      <div class="agentes">
+        <article class="agente" style="--c: var(--claude)">
+          <header><span class="sigla">CL</span><h3>Claude Code</h3></header>
+          <p><span lang="es">Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.</span><span lang="en">Your Claude subscription (personal use) or an Anthropic API key.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--codex)">
+          <header><span class="sigla">CX</span><h3>Codex</h3></header>
+          <p><span lang="es">Tu cuenta de ChatGPT (uso personal) o una clave de API de OpenAI.</span><span lang="en">Your ChatGPT account (personal use) or an OpenAI API key.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a muy alto</span><span lang="en">Effort from low to very high</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--copilot)">
+          <header><span class="sigla">GH</span><h3>GitHub Copilot CLI</h3></header>
+          <p><span lang="es">Tu cuenta de GitHub Copilot (Free, Pro o de empresa) con <code>copilot login</code>, o una clave de GitHub. Cada petición gasta créditos de tu plan.</span><span lang="en">Your GitHub Copilot account (Free, Pro or business) with <code>copilot login</code>, or a GitHub key. Every request uses credits from your plan.</span></p>
+          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--gemini)">
+          <header><span class="sigla">GM</span><h3>Gemini API</h3></header>
+          <p><span lang="es">Tu clave de la Gemini API, sin instalar ningún CLI.</span><span lang="en">Your Gemini API key, with no CLI to install.</span></p>
+          <ul><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
+        </article>
+        <article class="agente sin-apps">
+          <header><span class="sigla">AG</span><h3>Antigravity</h3></header>
+          <span class="solo"><span lang="es">Todavía no desde tus apps</span><span lang="en">Not from your apps yet</span></span>
+          <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas. Por ahora se usa desde Probar, la terminal y la CLI; llegará a tus apps cuando pase la prueba de abajo.</span><span lang="en">Google’s CLI with your Gemini API key, without tools. For now you use it from the Playground, the terminal and the CLI; it will reach your apps once it passes the test below.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+        </article>
+      </div>
+      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real, hecha por última vez el 2026-10-18 en Windows: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI, last run on 2026-10-18 on Windows: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
+      <div class="conexiones">
+        <div class="panel">
+          <h3 class="panel-titulo"><span lang="es">Conecta estos agentes</span><span lang="en">Works with these agents</span></h3>
+          <ul class="fichas">
+            <li style="--c: var(--claude)"><span class="punto"></span>Claude Code</li>
+            <li style="--c: var(--codex)"><span class="punto"></span>Codex</li>
+            <li style="--c: var(--copilot)"><span class="punto"></span>GitHub Copilot CLI</li>
+            <li style="--c: var(--gemini)"><span class="punto"></span>Gemini API</li>
+            <li class="sin-apps"><span class="punto"></span>Antigravity <span lang="es">(fuera de tus apps)</span><span lang="en">(not for your apps)</span></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3 class="panel-titulo"><span lang="es">Desde tus apps y SDK</span><span lang="en">From your apps and SDKs</span></h3>
+          <ul class="fichas">
+            <li><span class="punto"></span><span lang="es">SDK de OpenAI</span><span lang="en">OpenAI SDK</span></li>
+            <li><span class="punto"></span><span lang="es">SDK de Anthropic</span><span lang="en">Anthropic SDK</span></li>
+            <li><span class="punto"></span>curl</li>
+            <li><span class="punto"></span>LangChain</li>
+            <li><span class="punto"></span>n8n</li>
+            <li><span class="punto"></span><span lang="es">API propia (OpenAPI)</span><span lang="en">Native API (OpenAPI)</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
   <section id="router"></section>
   <section id="claude"></section>
   <section id="codex"></section>

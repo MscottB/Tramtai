@@ -126,7 +126,8 @@ Corta, con un solo propósito: enseñar qué es y llevar a cada página. Cuatro 
    - Detrás, el brillo y la cuadrícula.
 2. **Mosaico «FIG»:**
    - **FIG 1, grande:** la terminal viva. El cambio de dos líneas (`- base_url` del proveedor y `+` la de Tramtai), luego
-     `tramtai serve` y las peticiones que llegan con su agente, modelo y tiempo.
+     la orden que arranca el servicio (`tramtai servicio iniciar`, en inglés `tramtai service start`; `tramtai serve` no
+     existe) y las peticiones que llegan con su agente, modelo y tiempo.
    - **FIG 2:** el camino tu app → Tramtai → agentes, en líneas en perspectiva con el flujo corriendo.
    - **FIG 3:** el estado de los agentes, con puntos que laten (listo, versión nueva, sin instalar).
    - **FIG 4 y 5:** dos recortes reales de la app, Mis APIs y el mapa del servidor.
