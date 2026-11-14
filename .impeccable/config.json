@@ -1,0 +1,95 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "web/src/estilos.css"
+        ],
+        "createdAt": "2026-11-13T19:34:00.832Z",
+        "reason": "Agente (T15a): es la cita (blockquote) del Markdown que devuelven los agentes, filete gris neutro de 3 px; no es una tarjeta con acento"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "site/servidor.html"
+        ],
+        "createdAt": "2026-11-13T19:34:01.178Z",
+        "reason": "Agente (T15a): es kbd (tecla W) con el borde inferior de 2 px de una tecla física, no una tarjeta con acento"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-13T23:37:21.053Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: Inter variable para texto y títulos"
+      },
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "createdAt": "2026-11-13T23:37:21.811Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: Instrument Serif cursiva para la parte clave del titular"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/descargar.html"
+        ],
+        "createdAt": "2026-11-13T23:52:36.531Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/agentes.html"
+        ],
+        "createdAt": "2026-11-13T23:52:36.853Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/producto.html"
+        ],
+        "createdAt": "2026-11-13T23:52:37.189Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada"
+      },
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-14T17:16:12.449Z",
+        "reason": "Usuario eligió en el brainstorming de la v0.61 (2026-11-13) la dirección C con la parte clave del titular en serifa cursiva; spec v0.61 §1 aprobada (como en producto, agentes y descargar)"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "site/*.html",
+          "site/ayuda/*.html",
+          "site/estilo.css"
+        ],
+        "createdAt": "2026-11-14T17:16:12.528Z",
+        "reason": "Spec v0.61 §1 aprobada por el usuario el 2026-11-13: la cuadrícula de plano, muy tenue y solo arriba de cada página (estructura de la dirección C)"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/*.html",
+          "site/ayuda/*.html"
+        ],
+        "createdAt": "2026-11-14T17:46:53.118Z",
+        "reason": "Agente (cierre v0.61, T11), medido en el navegador: .idioma es un control segmentado de botones de 44 px con el texto centrado; .tabla envuelve una tabla cuyas celdas llevan 10px 14px (la de paquetes, 0 14px con enlaces de 44 px); el ul del índice y de «En esta página» lleva la línea a la izquierda y cada enlace, 14 px de relleno hasta ella; .recorte-terminal (FIG 17) recorta a propósito la terminal por abajo"
+      }
+    ]
+  }
+}

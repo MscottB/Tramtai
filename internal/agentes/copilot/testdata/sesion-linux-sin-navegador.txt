@@ -1,0 +1,4 @@
+To authenticate, visit https://github.com/login/device and enter code 1A2B-3C4D
+Waiting for authorization...
+Failed to open browser. Please visit https://github.com/login/device and enter the code 1A2B-3C4D manually.
+Failed to copy to clipboard. Please visit https://github.com/login/device and enter the code 1A2B-3C4D manually.

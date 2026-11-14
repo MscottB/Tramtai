@@ -802,12 +802,14 @@ func TestEventosInstanciaSinActividad(t *testing.T) {
 		for r.Context().Err() == nil {
 			_, _ = w.Write([]byte(": latido\n\n"))
 			f.Flush()
-			time.Sleep(40 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	})
-	ctx, cancelar := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	// Con latidos el plazo es holgado (1 s frente a un latido cada 50 ms): con -race y la máquina cargada, 150 ms se
+	// pasaban entre dos latidos y la prueba fallaba sin motivo.
+	ctx, cancelar := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelar()
-	if err := latidos.EventosInstanciaVigilado(ctx, "global", 150*time.Millisecond, func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
+	if err := latidos.EventosInstanciaVigilado(ctx, "global", time.Second, func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("con latidos solo termina el contexto: %v", err)
 	}
 

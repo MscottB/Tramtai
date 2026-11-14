@@ -2,7 +2,7 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="agentes" :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
       <template #acciones>
-        <q-btn data-recorrido="agentes.recomprobar" flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="cargar" />
+        <q-btn data-recorrido="agentes.recomprobar" flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando || comprobandoVersiones" @click="recomprobar" />
       </template>
     </CabeceraPagina>
 
@@ -20,7 +20,8 @@
 
       <q-card v-if="filtro !== 'instalar'" data-captura="agente" data-recorrido="agentes.tarjeta">
         <q-list separator>
-          <q-expansion-item v-for="a in visibles" :key="a.agente" group="agentes" header-class="q-py-sm">
+          <q-expansion-item v-for="a in visibles" :key="a.agente" header-class="q-py-sm" :model-value="abierto === a.agente"
+            @update:model-value="(v: boolean) => (abierto = v ? a.agente : abierto === a.agente ? '' : abierto)">
             <template #header>
               <q-item-section avatar>
                 <span class="linea__chapa linea__chapa--grande" :class="['linea--' + a.agente, { 'linea__chapa--apagada': !listo(a) }]" aria-hidden="true">{{ codigoLinea(a.agente) }}</span>
@@ -37,6 +38,25 @@
               </q-item-section>
             </template>
             <div class="q-px-md q-pb-md">
+        <!-- Su CLI, desde aquí: la versión nueva, la acción principal de preparar (o el aviso si su versión no está
+             comprobada), «⋯» con el resto y, mientras se prepara, su panel. Un agente listo sin nada de eso no tiene esta
+             fila: su «⋯» va junto a «Probar». -->
+        <div v-if="(versiones[a.agente] || paneles[a.agente]) && !soloMenu(a)" class="q-mb-md" data-recorrido="agentes.preparar">
+          <PanelPreparacion v-if="paneles[a.agente]" :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion"
+            :borrar-datos="paneles[a.agente].borrar" :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
+          <template v-else>
+            <div v-if="versionNueva(versiones[a.agente])" class="text-body2 q-mb-xs">
+              {{ t('preparar.hayNueva', { ultima: versionNueva(versiones[a.agente]), instalada: versiones[a.agente].instalada ?? '' }) }}</div>
+            <div v-if="principal(a).aviso" class="aviso text-body2 q-mb-sm">{{ principal(a).aviso }}</div>
+            <div class="row items-center q-gutter-sm">
+              <!-- Con el agente listo, la principal de la tarjeta es «Probar»: actualizar va contorneado, sin competir con ella. -->
+              <q-btn v-if="principal(a).accion" :unelevated="!listo(a)" :outline="listo(a)" dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)"
+                @click="preparar(a.agente, principal(a).accion!)" />
+              <MenuPreparacion :agente="a.agente" :versiones="versiones[a.agente]" :comprobando="comprobandoVersiones" @comprobar="cargarVersiones(true)"
+                @preparar="preparar(a.agente, $event)" @registro="verRegistro(a.agente)" @desinstalar="desinstalar(a.agente)" />
+            </div>
+          </template>
+        </div>
         <!-- Desconectado: no se usa ni como respaldo hasta que se conecte -->
         <template v-if="a.estado === 'desconectado'">
           <div class="text-body2">{{ t('agentes.desconectadoTexto') }}</div>
@@ -57,6 +77,9 @@
           <q-btn v-if="suscripcion(a) ? puedeVolver(a) : puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
             :label="suscripcion(a) ? t('agentes.cambiarAClave') : t('agentes.cambiarASuscripcion')"
             @click="suscripcion(a) ? cambiar(a, 'clave_api') : confirmarSuscripcion(a)" />
+          <MenuPreparacion v-if="soloMenu(a)" class="q-mt-md" :agente="a.agente" :versiones="versiones[a.agente]" :comprobando="comprobandoVersiones"
+            data-recorrido="agentes.preparar" @comprobar="cargarVersiones(true)" @preparar="preparar(a.agente, $event)" @registro="verRegistro(a.agente)"
+            @desinstalar="desinstalar(a.agente)" />
         </template>
 
         <!-- Falta conectarlo: las dos opciones, lado a lado -->
@@ -76,23 +99,24 @@
                 <div class="opcion full-height">
                   <div class="text-weight-medium"><q-icon name="o_key" class="q-mr-xs" />{{ t('agentes.opcionClave') }}</div>
                   <div class="text-caption texto-suave q-mt-xs">{{ t('agentes.opcionClaveTexto') }}</div>
-                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+                  <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
                   <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
                 </div>
               </div>
             </div>
           </template>
-          <!-- En el servidor, en lugar de «Usar mi suscripción»: la orden del inicio de sesión del CLI (en local) o de la
-               suscripción personal con sus condiciones (abierto a la red), y la clave con tramtai-servidor. -->
+          <!-- En el servidor, en lugar de «Usar mi suscripción»: las dos órdenes, el inicio de sesión del CLI y después
+               la suscripción (en local), o la suscripción personal con sus condiciones (abierto a la red), y la clave con
+               tramtai-servidor. Cada botón de copiar dice qué orden copia. -->
           <template v-else-if="forma !== 'elegir' && admite(a)">
             <div class="text-body2">{{ t(forma === 'personal' ? 'agentes.servidorPersonal' : 'agentes.servidorEntrar') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+            <OrdenesCopiables :ordenes="ordenesSuscripcion(a.agente, forma)" class="q-mt-sm" />
             <div class="text-body2 q-mt-md">{{ t('agentes.servidorClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
           </template>
           <template v-else>
             <div class="text-body2">{{ t('agentes.soloClave') }}</div>
-            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarOrden', { orden: comando(a) })" @click="copiar(comando(a))" /></div>
             <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
           </template>
         </template>
@@ -100,7 +124,8 @@
         <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
         <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
-          <div v-if="forma !== 'elegir'" class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+          <!-- Ya en suscripción, solo le falta la sesión: la primera orden (entrar), sin volver a pedir «acepto». -->
+          <OrdenesCopiables v-if="forma !== 'elegir'" :ordenes="ordenesSuscripcion(a.agente, forma).slice(0, 1)" class="q-mt-sm" />
           <q-btn v-if="puedeVolver(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
@@ -143,23 +168,34 @@
       <q-card v-if="filtro === 'instalar' && !otros.length">
         <EstadoVacio :titulo="t('agentes.sinResultados')" :accion="t('historial.quitarFiltros')" @accion="quitarFiltros" />
       </q-card>
-      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
+      <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'" data-recorrido="agentes.instalar">
         <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
           :label="t('agentes.otros', { n: otros.length })" :caption="t('agentes.otrosTexto')" @update:model-value="(v: boolean) => (otrosAbierto = v)">
           <q-list separator>
-            <q-item v-for="a in otros" :key="a.agente">
+            <template v-for="a in otros" :key="a.agente">
+            <q-item>
               <q-item-section avatar>
                 <span class="linea__chapa linea__chapa--grande linea__chapa--apagada" :class="'linea--' + a.agente" aria-hidden="true">{{ codigoLinea(a.agente) }}</span>
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-medium">{{ nombreAgente(a.agente) }}</q-item-label>
-                <q-item-label caption>{{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}</q-item-label>
+                <q-item-label v-if="principal(a).accion" caption>{{ t(conSesion(a.agente) ? 'preparar.instalarTexto' : 'preparar.instalarTextoClave') }}</q-item-label>
+                <q-item-label v-else caption>{{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}</q-item-label>
+                <q-item-label v-if="principal(a).aviso" caption class="text-body2 q-mt-xs">{{ principal(a).aviso }}</q-item-label>
               </q-item-section>
-              <q-item-section v-if="fichaDe(a.agente)?.url_instalacion" side>
+              <q-item-section v-if="principal(a).accion && !paneles[a.agente]" side>
+                <q-btn unelevated dense no-caps color="primary" class="q-px-md" :label="t(principal(a).etiqueta!)" @click="preparar(a.agente, principal(a).accion!)" />
+              </q-item-section>
+              <q-item-section v-else-if="fichaDe(a.agente)?.url_instalacion && !paneles[a.agente]" side>
                 <q-btn flat dense no-caps color="primary" icon-right="o_open_in_new" :label="t('agentes.comoInstalar')"
                   :href="fichaDe(a.agente)!.url_instalacion" target="_blank" rel="noopener noreferrer" />
               </q-item-section>
             </q-item>
+            <div v-if="paneles[a.agente]" class="q-px-md q-pb-md">
+              <PanelPreparacion :key="paneles[a.agente].n" :agentes="[a.agente]" :accion="paneles[a.agente].accion" :borrar-datos="paneles[a.agente].borrar"
+                :confirmar="paneles[a.agente].confirmar" @lanzada="soloMirar(a.agente)" @fin="alTerminar" @cerrar="delete paneles[a.agente]" />
+            </div>
+            </template>
           </q-list>
           <div class="q-px-md q-pb-md">
             <div class="text-caption texto-suave q-mb-xs">{{ t('agentes.archivoConfig') }}</div>
@@ -177,6 +213,23 @@
         <q-card class="q-pa-md"><q-skeleton type="text" width="40%" /><q-skeleton v-for="m in 3" :key="m" type="text" /></q-card>
       </div>
     </div>
+
+    <!-- «Ver registro»: las últimas líneas de la última preparación, tal cual, con los enlaces resaltados. -->
+    <q-dialog :model-value="!!registro" @update:model-value="(v: boolean) => !v && (registro = null)">
+      <q-card v-if="registro" style="width: 720px; max-width: 92vw">
+        <q-card-section class="row items-center no-wrap">
+          <h2 class="titulo-seccion col">{{ t('preparar.registroTitulo', { agente: nombreAgente(registro.agente) }) }}</h2>
+          <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" />
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <div v-if="registro.estado?.lineas?.length" class="bloque-codigo sin-ajuste text-caption" role="log" tabindex="0" :aria-label="t('preparar.registro')">
+            <div v-for="(linea, i) in registro.estado.lineas" :key="i"><template v-for="(trozo, j) in trozos(linea)" :key="j"><mark v-if="j % 2">{{ trozo }}</mark><template v-else>{{ trozo }}</template></template></div>
+          </div>
+          <div v-else class="texto-suave">{{ t('preparar.sinRegistro') }}</div>
+          <div v-if="registro.estado?.mensaje" class="text-caption texto-suave q-mt-sm romper">{{ registro.estado.mensaje }}</div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -184,15 +237,20 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
+import PanelPreparacion from '../componentes/PanelPreparacion.vue'
+import MenuPreparacion from '../componentes/MenuPreparacion.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
-import type { Adaptador } from '../api/tipos'
+import type { Adaptador, EstadoPreparacion, VersionesAgente } from '../api/tipos'
+import { accionPrincipal, confirmarDesinstalar, conSesion, enMarcha, trozos, versionNueva, type Accion } from '../preparacion'
 import { sesion } from '../estado'
 import type { Destino } from '../navegacion'
-import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
+import { adaptadoresConocidos, agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
-import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import { estadoServidor, formaSuscripcion, ordenClave, ordenesSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
+import OrdenesCopiables from '../componentes/OrdenesCopiables.vue'
+import { aceptarRiesgoSuscripcion } from '../suscripcion'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -292,16 +350,8 @@ async function cargar() {
 }
 
 // La suscripción solo se activa si el usuario acepta el riesgo con los términos del proveedor (TERMINOS.md, punto 4).
-function confirmarSuscripcion(a: Adaptador) {
-  $q.dialog({ title: t('agentes.confirmarTitulo', { agente: nombreAgente(a.agente) }),
-    message: t('agentes.confirmarSuscripcion', { cli: cli(a) }) + '\n\n' + t('agentes.riesgoSuscripcion'),
-    style: 'white-space: pre-line',
-    options: { type: 'checkbox', model: [], items: [{ label: t('agentes.aceptoRiesgo'), value: 'acepto' }] },
-    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('agentes.usarSuscripcion'), unelevated: true, noCaps: true } })
-    .onOk((elegidas: string[]) => {
-      if (elegidas.includes('acepto')) cambiar(a, 'suscripcion')
-      else avisarError(new Error(t('agentes.faltaAceptar')))
-    })
+async function confirmarSuscripcion(a: Adaptador) {
+  if (await aceptarRiesgoSuscripcion(a.agente)) cambiar(a, 'suscripcion')
 }
 
 // conectar conecta o desconecta el agente en todos los espacios (al desconectar, pide confirmación).
@@ -338,6 +388,89 @@ async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
   }
 }
 
+// Preparar los CLI desde aquí. versiones lanza --version de cada CLI en el servicio: se pide al abrir la página y con
+// «Volver a comprobar» o «Comprobar versión» (forzar), nunca en el sondeo de cada 5 minutos.
+const versiones = ref<Record<string, VersionesAgente>>({})
+const comprobandoVersiones = ref(false)
+async function cargarVersiones(forzar = false) {
+  comprobandoVersiones.value = true
+  try {
+    versiones.value = Object.fromEntries((await api.versionesAgentes(forzar)).map((v) => [v.agente, v]))
+  } catch (e) {
+    if (forzar) avisarError(e) // al abrir, sin versiones las tarjetas siguen como antes
+  } finally {
+    comprobandoVersiones.value = false
+  }
+}
+function recomprobar() {
+  cargar()
+  cargarVersiones(true)
+}
+const principal = (a: Adaptador) => accionPrincipal(a, versiones.value[a.agente])
+// soloMenu: listo, sin panel, sin versión nueva ni acción ni aviso de preparar: la fila de preparar solo tendría «⋯», que
+// va entonces junto a «Probar».
+const soloMenu = (a: Adaptador) => listo(a) && !!versiones.value[a.agente] && !paneles.value[a.agente] && !versionNueva(versiones.value[a.agente])
+  && !principal(a).accion && !principal(a).aviso
+// abierto es la tarjeta desplegada de los instalados (la de una preparación se abre sola).
+const abierto = ref('')
+// paneles: la preparación que enseña cada agente; n cambia con cada acción para lanzar un panel nuevo.
+const paneles = ref<Record<string, { accion?: Accion; borrar?: boolean; confirmar?: boolean; n: number }>>({})
+let lanzadas = 0
+function preparar(agente: string, accion?: Accion, opciones: { borrar?: boolean; confirmar?: boolean } = {}) {
+  paneles.value[agente] = { accion, ...opciones, n: ++lanzadas }
+  if (adaptadores.value?.find((a) => a.agente === agente && instalado(a))) abierto.value = agente
+  else otrosAbierto.value = true
+}
+// soloMirar: en cuanto el servicio acepta la acción, el panel pasa a solo seguir su estado. Si el agente cambia de lista
+// a mitad (cualquier cargar: el sondeo de 5 minutos, «Volver a comprobar», el final de otro panel), el panel se vuelve a
+// montar y no debe lanzarla otra vez.
+function soloMirar(agente: string) {
+  const panel = paneles.value[agente]
+  if (panel) Object.assign(panel, { accion: undefined, confirmar: undefined })
+}
+// Un agente con panel que cambia de lista (se instaló o se desinstaló) se enseña desplegado con su panel.
+watch(() => instalados.value.map((a) => a.agente), (ahora, antes) => {
+  for (const agente of Object.keys(paneles.value)) {
+    if (ahora.includes(agente) && !antes?.includes(agente)) abierto.value = agente
+    else if (!ahora.includes(agente) && antes?.includes(agente)) otrosAbierto.value = true
+  }
+})
+// Una comprobación hecha fuera de la página (el panel, tras «Usar mi suscripción») también pone las tarjetas al día.
+watch(adaptadoresConocidos, (lista) => lista && (adaptadores.value = lista))
+// alTerminar refresca las tarjetas.
+function alTerminar() {
+  cargar()
+  cargarVersiones()
+}
+// Al abrir la página se siguen las preparaciones que ya estaban en marcha (otra pantalla, o antes de recargar).
+async function seguirEnMarcha() {
+  await Promise.all(Object.keys(versiones.value).map(async (agente) => {
+    const e = await api.preparacion(agente).catch(() => null)
+    if (enMarcha(e) && !paneles.value[agente]) preparar(agente)
+  }))
+}
+
+// desinstalar pide confirmación (el CLI deja de estar también fuera de Tramtai) y, con la casilla, borra su sesión y sus
+// ajustes. Con la versión sin comprobar lo avisa y confirma con el mismo diálogo.
+function desinstalar(agente: string) {
+  const v = versiones.value[agente]
+  const nombre = nombreAgente(agente)
+  const aviso = confirmarDesinstalar(v) ? '\n\n' + t('preparar.noComprobadaTitulo', { agente: nombre }) + '. ' + t('preparar.noComprobada.desinstalar') : ''
+  $q.dialog({ title: t('preparar.desinstalarTitulo', { agente: nombre }), message: t('preparar.desinstalarTexto') + aviso, style: 'white-space: pre-line',
+    options: { type: 'checkbox', model: [], items: [{ label: t('preparar.borrarDatos'), value: 'borrar' }] },
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('preparar.desinstalar'), unelevated: true, noCaps: true } })
+    .onOk((elegidas: string[]) => preparar(agente, 'desinstalar', { borrar: elegidas.includes('borrar'), confirmar: confirmarDesinstalar(v) }))
+}
+
+const registro = ref<{ agente: string; estado: EstadoPreparacion | null } | null>(null)
+async function verRegistro(agente: string) {
+  try {
+    registro.value = { agente, estado: await api.preparacion(agente) }
+  } catch (e) {
+    avisarError(e)
+  }
+}
+
 // Mientras la página está a la vista se vuelve a comprobar cada 5 minutos: si el CLI cerró sesión o cambió de cuenta,
 // se ve sin tocar nada.
 let comprobacion = 0
@@ -347,6 +480,7 @@ onMounted(() => {
   asegurarFichas()
   cargarRutaConfig()
   cargar()
+  cargarVersiones().then(seguirEnMarcha)
   api.catalogo().then((lista) => {
     for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []
     for (const m of lista) {

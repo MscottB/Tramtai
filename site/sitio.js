@@ -1,3 +1,23 @@
+// bastanteVisto dice si un .vivo ya se ve lo bastante para arrancar: un cuarto de él o, si es muy alto, un cuarto de la
+// pantalla. Sin margen recortado: un .vivo corto al final de la página también llega.
+function bastanteVisto(e, alto) {
+  return e.intersectionRatio >= 0.25 || e.intersectionRect.height >= alto * 0.25;
+}
+
+// Lo vivo (estilo.css) arranca su animación cuando entra en pantalla: .visto, una sola vez. Sin observador, ya. Va lo
+// primero para que un fallo más abajo no deje nada esperando oculto. Este bloque solo ve los .vivo que ya están en la
+// página: un .vivo creado después tiene que ponerse .visto él mismo. vivo-listo le dice al script de la cabeza que
+// sitio.js llegó: sin ella, a los 3 s, lo vivo pasa a su estado final.
+(function () {
+  document.documentElement.classList.add('vivo-listo');
+  var vivos = document.querySelectorAll('.vivo');
+  if (!('IntersectionObserver' in window)) return vivos.forEach(function (v) { v.classList.add('visto'); });
+  var vigia = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) { if (bastanteVisto(e, innerHeight)) { e.target.classList.add('visto'); vigia.unobserve(e.target); } });
+  }, { threshold: [0, 0.25] });
+  vivos.forEach(function (v) { vigia.observe(v); });
+})();
+
 // Idioma: el elegido antes o, si no, el del navegador. Sin almacenamiento disponible también funciona.
 (function () {
   var botones = document.querySelectorAll('[data-idioma]');
@@ -35,21 +55,6 @@
   });
 })();
 
-// Anclas de la portada de antes de la v0.59: un enlace guardado a #pagas, #capturas o #aviso llega a su sección nueva.
-// Solo si el ancla vieja ya no existe en la página (servidor.html tiene su propio #aviso). Al cargar y al cambiar el ancla
-// con la página abierta.
-(function () {
-  var nuevas = { pagas: 'por-que', capturas: 'app', aviso: 'privacidad' };
-  function llevar() {
-    var vieja = location.hash.slice(1);
-    if (!Object.prototype.hasOwnProperty.call(nuevas, vieja) || document.getElementById(vieja)) return;
-    var destino = document.getElementById(nuevas[vieja]);
-    if (destino) { history.replaceState(null, '', '#' + nuevas[vieja]); destino.scrollIntoView(); }
-  }
-  llevar();
-  window.addEventListener('hashchange', llevar);
-})();
-
 // Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
 (function () {
   var botones = document.querySelectorAll('button[data-tema]'); // <html> también lleva data-tema
@@ -80,7 +85,7 @@
     boton.setAttribute('aria-expanded', String(si));
   }
   boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true'); });
-  document.getElementById('menu').addEventListener('click', function (e) { if (e.target.closest('a')) abrir(false); });
+  document.getElementById('menu').addEventListener('click', function (e) { if (e.target.closest('a, [data-buscar]')) abrir(false); });
   document.addEventListener('click', function (e) { if (!barra.contains(e.target)) abrir(false); });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape' || !barra.classList.contains('abierta')) return;
@@ -94,7 +99,7 @@
   if (!navigator.clipboard) return;
   var copiar = '<span lang="es">Copiar</span><span lang="en">Copy</span>';
   var copiado = '<span lang="es">Copiado</span><span lang="en">Copied</span>';
-  document.querySelectorAll('pre.codigo').forEach(function (pre) {
+  document.querySelectorAll('pre.codigo, pre.bloque-codigo').forEach(function (pre) {
     var boton = document.createElement('button');
     boton.type = 'button';
     boton.className = 'copiar';
@@ -114,22 +119,77 @@
   });
 })();
 
-// Índice de la ayuda: marca la sección que se está leyendo.
+// Documentación (la Ayuda, servidor.html y desarrolladores.html): «En esta página» y los enlaces del índice a la propia
+// página marcan al bajar el apartado que se está leyendo. En el móvil el índice se abre con su botón y se cierra con él,
+// con Escape o al elegir; sin JavaScript el botón sigue oculto y el índice se ve abierto.
 (function () {
-  var enlaces = document.querySelectorAll('.indice a');
-  if (!enlaces.length || !('IntersectionObserver' in window)) return;
-  var observador = new IntersectionObserver(function (entradas) {
-    entradas.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      enlaces.forEach(function (a) { a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)); });
-    });
-  }, { rootMargin: '-80px 0px -70% 0px' });
-  document.querySelectorAll('.doc section[id]').forEach(function (s) { observador.observe(s); });
+  var enlaces = document.querySelectorAll('.doc-pagina a, .doc-indice a[href^="#"]');
+  if (enlaces.length && 'IntersectionObserver' in window) {
+    var observador = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        enlaces.forEach(function (a) {
+          if (a.getAttribute('href') === '#' + e.target.id) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    document.querySelectorAll('#contenido section[id]').forEach(function (s) { observador.observe(s); });
+  }
+  var indice = document.querySelector('.doc-indice');
+  // El índice de la Ayuda es más alto que su columna: se desplaza solo él (no la página) hasta dejar a la vista el tema actual.
+  var actual = indice && indice.querySelector('[aria-current="page"]');
+  if (actual && indice.scrollHeight > indice.clientHeight) indice.scrollTop = actual.offsetTop - indice.clientHeight / 2;
+  var boton = indice && indice.querySelector('.doc-indice-boton');
+  if (!boton) return;
+  boton.hidden = false;
+  function abrir(si) {
+    indice.classList.toggle('abierto', si);
+    boton.setAttribute('aria-expanded', String(si));
+  }
+  boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true'); });
+  indice.addEventListener('click', function (e) { if (e.target.closest('a')) abrir(false); });
+  indice.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || boton.getAttribute('aria-expanded') !== 'true') return;
+    abrir(false);
+    boton.focus();
+  });
 })();
+
+// sistemaDe dice el sistema de escritorio del visitante por su navegador: 'windows', 'macos', 'linux' (x64) o null si no
+// hay un paquete seguro para él (móvil, tableta, ChromeOS, Linux ARM o sin datos). Mejor «Descargar» a secas, que lleva
+// a Descargar, que un archivo equivocado.
+function sistemaDe(ua, plataforma) {
+  var p = (plataforma || '') + ' ' + (ua || '');
+  if (/android|iphone|ipad|ipod|mobile|cros/i.test(p)) return null;
+  if (/\bwin(dows|32|64)\b/i.test(p)) return 'windows';
+  if (/mac/i.test(p)) return 'macos';
+  // Solo Linux: FreeBSD u OpenBSD también dicen X11 y amd64, y los paquetes .deb y .rpm no son para ellos.
+  if (/linux/i.test(p) && /x86_64|amd64/i.test(p) && !/aarch64|arm/i.test(p)) return 'linux';
+  return null;
+}
+
+// pestanaDe dice qué pestaña de Descargar abrir: la de sistemaDe y, si no hay, Linux en cualquier arquitectura (Firefox en
+// aarch64, por ejemplo). Móvil, tableta y ChromeOS, ninguna. El botón del arranque sigue con sistemaDe.
+function pestanaDe(ua, plataforma) {
+  var s = sistemaDe(ua, plataforma);
+  if (s) return s;
+  return /linux|x11/i.test((plataforma || '') + ' ' + (ua || '')) && !/android|iphone|ipad|ipod|mobile|cros/i.test((plataforma || '') + ' ' + (ua || '')) ? 'linux' : null;
+}
+
+// destinoDescarga dice adónde lleva el botón [data-descarga]: al archivo del release (archivos, de #descargas) del
+// primer [data-archivo] del bloque del sistema. En Linux no: .deb o .rpm depende de la distribución y se elige en
+// Descargar. null deja el botón en descargar.html.
+function destinoDescarga(sistema, archivo, archivos) {
+  if (!sistema || sistema === 'linux' || !archivo) return null;
+  return archivos[archivo] || null;
+}
 
 // Descargas: enlaza cada botón con su archivo del último release (los nombres llevan la versión) y marca el sistema
 // del visitante. Los archivos y la versión los escribe la publicación del sitio en #descargas (web/scripts/descargas.mjs):
 // ninguna visita consulta la API de GitHub. Sin JavaScript o sin esos datos, los enlaces llevan a la página del release.
+// El botón [data-descarga] dice «Descargar para <sistema>» y lleva al archivo del primer [data-archivo] de su bloque
+// [data-sistema] (destinoDescarga); sin sistema se queda en «Descargar», que lleva a Descargar.
 (function () {
   if (!document.querySelector('[data-archivo]')) return;
   var nombres = {
@@ -137,41 +197,53 @@
     macos: '<span lang="es">Descargar para macOS</span><span lang="en">Download for macOS</span>',
     linux: '<span lang="es">Descargar para Linux</span><span lang="en">Download for Linux</span>'
   };
-  var plataforma = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
-  var movil = /android|iphone|ipad/i.test(navigator.userAgent);
-  var sistema = movil ? '' : /win/i.test(plataforma) ? 'windows' : /mac/i.test(plataforma) ? 'macos' : /linux|x11|cros/i.test(plataforma) ? 'linux' : '';
-  var tarjeta = sistema && document.querySelector('[data-sistema="' + sistema + '"]');
-  if (tarjeta) {
-    tarjeta.classList.add('tu-sistema');
-    tarjeta.insertAdjacentHTML('afterbegin', '<span class="chapa"><span lang="es">Tu sistema</span><span lang="en">Your system</span></span>');
-    document.querySelectorAll('[data-descarga] .texto-descarga').forEach(function (t) { t.innerHTML = nombres[sistema]; });
-  }
-  var principal = tarjeta && tarjeta.querySelector('a.boton[data-archivo]');
+  var sistema = sistemaDe(navigator.userAgent, navigator.platform);
+  // El iPad con Safari de escritorio se presenta como un Mac: con pantalla táctil, no lo es.
+  if (sistema === 'macos' && navigator.maxTouchPoints > 1) sistema = null;
+  // Inicio enseña solo cómo se instala en ese sistema (estilo.css).
+  if (sistema) document.documentElement.dataset.tuSistema = sistema;
+  // La pestaña de Descargar que se abre: la de tu sistema, y la de Linux en cualquier arquitectura (enseña los dos paquetes).
+  var tuya = sistema || pestanaDe(navigator.userAgent, navigator.platform);
+  if (tuya === 'macos' && navigator.maxTouchPoints > 1) tuya = null;
+  var datos = {};
+  try { datos = JSON.parse(document.getElementById('descargas').textContent); } catch (e) {}
 
-  function enlazar(archivos) {
+  function enlazar() {
+    var archivos = datos.archivos || {};
     document.querySelectorAll('[data-archivo]').forEach(function (a) {
       var url = archivos[a.dataset.archivo];
       if (url) a.href = url;
     });
-    if (principal && archivos[principal.dataset.archivo]) {
-      document.querySelectorAll('[data-descarga]').forEach(function (a) { a.href = principal.href; });
-    }
+    // Las pestañas de Descargar (el código de más abajo las prepara antes de que esto corra): abre la de tu sistema.
+    var pestana = tuya && document.querySelector('[data-pestanas="descargar"] [role="tab"][data-lenguaje="' + tuya + '"]');
+    if (pestana) pestana.click();
+    var bloque = sistema && document.querySelector('[data-sistema="' + sistema + '"]');
+    if (!bloque) return;
+    document.querySelectorAll('[data-descarga] .texto-descarga').forEach(function (t) { t.innerHTML = nombres[sistema]; });
+    document.querySelectorAll('article[data-sistema="' + sistema + '"]').forEach(function (t) {
+      t.classList.add('tu-sistema');
+      t.insertAdjacentHTML('afterbegin', '<span class="chapa"><span lang="es">Tu sistema</span><span lang="en">Your system</span></span>');
+    });
+    var principal = bloque.querySelector('[data-archivo]');
+    var destino = destinoDescarga(sistema, principal && principal.dataset.archivo, archivos);
+    if (destino) document.querySelectorAll('[data-descarga]').forEach(function (a) { a.href = destino; });
   }
 
-  // En Linux con ARM (solo lo dicen los navegadores Chromium) el botón principal ofrece la versión ARM.
+  // Linux con ARM (solo lo dicen los navegadores Chromium, aunque su texto diga x86_64): Descargar ofrece los paquetes
+  // ARM y el botón se queda en «Descargar».
   function arquitectura() {
     if (sistema !== 'linux' || !navigator.userAgentData || !navigator.userAgentData.getHighEntropyValues) return Promise.resolve();
     return navigator.userAgentData.getHighEntropyValues(['architecture']).then(function (v) {
       if (v.architecture !== 'arm') return;
+      sistema = null;
+      delete document.documentElement.dataset.tuSistema;
       document.querySelectorAll('[data-sistema="linux"] [data-arm]').forEach(function (a) { a.dataset.archivo = a.dataset.arm; });
       document.querySelectorAll('[data-sistema="linux"] [data-arq]').forEach(function (s) { s.textContent = '(ARM)'; });
       document.querySelectorAll('[data-sistema="linux"] [data-arq-otra]').forEach(function (s) { s.textContent = '(x64)'; });
     }).catch(function () {});
   }
 
-  var datos = {};
-  try { datos = JSON.parse(document.getElementById('descargas').textContent); } catch (e) {}
-  arquitectura().then(function () { enlazar(datos.archivos || {}); });
+  arquitectura().then(enlazar);
 })();
 
 // Pestañas de lenguaje de la guía del desarrollador: todas cambian a la vez y se recuerda la elección. Cada panel carga
@@ -179,20 +251,24 @@
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
-  // La Ayuda y la portada tienen otras pestañas que la guía: cada una recuerda la suya.
-  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : document.querySelector('.portada') ? 'tramtai.lenguaje-portada' : 'tramtai.lenguaje';
+  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía) comparte uno. «Cómo funciona» en Producto es su
+  // propio juego («sdk»). Si el guardado no está en la página, sale la primera pestaña.
+  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
   // Cada data-pestanas="nombre" es un juego aparte (el de lenguajes no tiene nombre; Linux · Windows Server es
   // «sistema»): sus pestañas cambian a la vez y recuerdan su elección sin tocar las del otro juego.
   function juego(lenguaje) {
     var b = document.querySelector('[data-pestanas] [role="tab"][data-lenguaje="' + CSS.escape(lenguaje) + '"]');
     return b ? b.closest('[data-pestanas]').dataset.pestanas : '';
   }
+  // pestanasDe da las pestañas del juego, las de su primera lista: un panel puede llevar dentro otras (la terminal de
+  // Inicio, en la ventana de cuatro formas), que no son suyas.
+  function pestanasDe(g) { return g.querySelector('[role="tablist"]').querySelectorAll('[role="tab"]'); }
   // elegir enseña la pestaña; solo se recuerda la que elige la persona (guardar), no la de por defecto al cargar.
   function elegir(lenguaje, foco, guardar) {
     var nombre = juego(lenguaje);
     grupos.forEach(function (g) {
       if ((g.dataset.pestanas || '') !== nombre) return;
-      var botones = g.querySelectorAll('[role="tab"]');
+      var botones = pestanasDe(g);
       var hay = Array.prototype.some.call(botones, function (b) { return b.dataset.lenguaje === lenguaje; });
       botones.forEach(function (b, i) {
         var activo = hay ? b.dataset.lenguaje === lenguaje : i === 0;
@@ -202,11 +278,11 @@
         if (activo && foco === g) b.focus();
       });
     });
-    // El sistema elegido vale en la portada y en servidor.html.
-    if (guardar) try { localStorage.setItem(nombre ? 'tramtai.' + nombre : clave, lenguaje); } catch (e) {}
+    // El sistema elegido vale en la portada y en servidor.html. La ventana de Inicio siempre abre en su primera forma.
+    if (guardar && nombre !== 'formas' && nombre !== 'descargar') try { localStorage.setItem(nombre ? 'tramtai.' + nombre : clave, lenguaje); } catch (e) {}
   }
   grupos.forEach(function (g) {
-    var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
+    var botones = Array.prototype.slice.call(pestanasDe(g));
     // En la portada, sin JavaScript, las pestañas esperan ocultas y se ve el primer ejemplo: aquí se encienden.
     var lista = g.querySelector('[role="tablist"]');
     lista.hidden = false;
@@ -223,16 +299,16 @@
   });
   var guardado = null;
   try { guardado = localStorage.getItem(clave); } catch (e) {}
-  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en la portada). Sin JavaScript se ven
+  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña. Sin JavaScript se ven
   // todos los paneles de la guía, cada uno con su enlace a GitHub.
   elegir(guardado || 'python');
-  // Linux · Windows Server: el guardado, si sigue siendo de ese juego, o la primera (Linux). Sin JavaScript se ven los dos.
-  var sistema = document.querySelector('[data-pestanas="sistema"] [role="tab"]');
-  if (sistema) {
-    var elegido = null;
-    try { elegido = localStorage.getItem('tramtai.sistema'); } catch (e) {}
-    elegir(elegido && juego(elegido) === 'sistema' ? elegido : sistema.dataset.lenguaje);
-  }
+  // Cada juego con nombre (Linux · Windows Server es «sistema»; las cuatro formas de Inicio, «formas», que no se
+  // recuerda): el guardado, si sigue siendo de ese juego, o su primera pestaña. Sin JavaScript se ven todos sus paneles.
+  document.querySelectorAll('[data-pestanas]:not([data-pestanas=""])').forEach(function (g) {
+    var nombre = g.dataset.pestanas, elegido = null;
+    if (nombre !== 'formas' && nombre !== 'descargar') try { elegido = localStorage.getItem('tramtai.' + nombre); } catch (e) {}
+    elegir(elegido && juego(elegido) === nombre ? elegido : pestanasDe(g)[0].dataset.lenguaje);
+  });
   // Cada panel lleva un <code lang="es"> y uno lang="en" (los de docs/ejemplos/*/en): el CSS enseña el del idioma
   // elegido, y Copiar solo copia ese.
   document.querySelectorAll('code[data-ejemplo]').forEach(function (code) {
@@ -284,15 +360,18 @@
   elegir(0);
 })();
 
-// Buscador de la Ayuda (site/ayuda/): busca por palabras en indice.json, en el idioma que se ve. Sin JavaScript queda
-// oculto y se navega por las tarjetas.
+// Buscador del sitio: Ctrl K, ⌘K, / o un botón con data-buscar (la barra, el campo de la Ayuda) abren un diálogo que busca
+// por palabras en buscar.json, en el idioma que se ve. Las flechas mueven, Enter abre, Esc cierra y el foco vuelve a quien
+// lo abrió. Sin JavaScript los botones siguen ocultos y se navega por la barra y las tarjetas.
 (function () {
-  var caja = document.querySelector('.buscar-ayuda');
-  var campo = document.getElementById('buscar-ayuda');
-  var lista = document.getElementById('resultados-ayuda');
-  if (!caja || !campo || !lista) return;
-  var indice = null;
-  caja.hidden = false;
+  var botones = document.querySelectorAll('[data-buscar]');
+  if (!botones.length || typeof HTMLDialogElement !== 'function') return;
+  // buscar.json está en la raíz del sitio, junto a este script, desde cualquier página.
+  var script = document.currentScript || document.querySelector('script[src*="sitio.js"]');
+  var base = script ? new URL('.', script.src).href : '';
+  var dialogo, campo, lista, cuenta, indice = null, cargando = null, opciones = [], activo = -1, quien = null;
+  function lengua() { return document.documentElement.lang === 'en' ? 'en' : 'es'; }
+  function tx(es, en) { return lengua() === 'en' ? en : es; }
   function normalizar(s) {
     return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim();
   }
@@ -302,50 +381,140 @@
     var corta = p.replace(/(aciones|acion|adas|ados|ada|ado|idas|idos|ida|ido|es|s)$/, '');
     return corta.length >= 4 ? corta : p;
   }
-  function mostrar() {
+  function cargar() {
+    if (!cargando) cargando = fetch(base + 'buscar.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
+      ['es', 'en'].forEach(function (l) { datos[l].forEach(function (e) { e.n = normalizar(e.ti + ' ' + e.d); }); });
+      indice = datos;
+    }).catch(function () { cargando = null; });
+    return cargando;
+  }
+  function mover(n) {
+    if (!opciones.length) return;
+    activo = (n + opciones.length) % opciones.length;
+    opciones.forEach(function (o, i) { o.setAttribute('aria-selected', String(i === activo)); });
+    campo.setAttribute('aria-activedescendant', opciones[activo].id);
+    opciones[activo].scrollIntoView({ block: 'nearest' });
+  }
+  function buscar() {
     var palabras = normalizar(campo.value).split(' ').filter(Boolean).map(raiz);
-    var cuenta = document.getElementById('cuenta-ayuda');
-    lista.innerHTML = '';
-    if (cuenta) cuenta.textContent = '';
-    if (!palabras.length || !indice) return;
-    var entradas = indice[document.documentElement.lang === 'en' ? 'en' : 'es'] || [];
-    var hallados = entradas.filter(function (e) {
-      return palabras.every(function (p) { return e.x.indexOf(p) >= 0; });
+    lista.textContent = '';
+    opciones = [];
+    activo = -1;
+    cuenta.textContent = '';
+    campo.removeAttribute('aria-activedescendant');
+    campo.setAttribute('aria-expanded', 'false');
+    if (!palabras.length) return;
+    if (!indice) { if (!cargando) cuenta.textContent = tx('No se pudo cargar el buscador.', 'The search could not load.'); return; }
+    var coincide = function (e, p) { return e.x.indexOf(p) >= 0 || e.n.indexOf(p) >= 0; };
+    var hallados = indice[lengua()].filter(function (e) {
+      return palabras.every(function (p) { return coincide(e, p); });
     }).sort(function (a, b) {
-      var pa = palabras.every(function (p) { return normalizar(a.d).indexOf(p) >= 0; }) ? 0 : 1;
-      var pb = palabras.every(function (p) { return normalizar(b.d).indexOf(p) >= 0; }) ? 0 : 1;
+      var pa = palabras.every(function (p) { return a.n.indexOf(p) >= 0; }) ? 0 : 1;
+      var pb = palabras.every(function (p) { return b.n.indexOf(p) >= 0; }) ? 0 : 1;
       return pa - pb;
     }).slice(0, 30);
-    hallados.forEach(function (e) {
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.href = e.t + '.html' + (e.a ? '#' + e.a : '');
-      a.textContent = e.d;
-      if (e.d !== e.ti) {
-        var donde = document.createElement('span');
-        donde.textContent = e.ti;
-        a.appendChild(donde);
-      }
-      li.appendChild(a);
+    hallados.forEach(function (e, i) {
+      // Un enlace real: Ctrl+clic, clic central y lectores de pantalla lo tratan como tal.
+      var li = document.createElement('a');
+      li.href = base + e.u;
+      li.tabIndex = -1;
+      li.id = 'buscador-' + i;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
+      var ti = document.createElement('span');
+      ti.textContent = e.ti;
+      var d = document.createElement('span');
+      d.className = 'b-d';
+      d.textContent = e.d;
+      li.append(ti, d);
+      li.addEventListener('mousedown', function (ev) { ev.preventDefault(); }); // el foco se queda en el campo
+      // Con un clic normal el diálogo se cierra y el navegador sigue el enlace; con Ctrl, ⌘ o Mayús se abre aparte y queda.
+      li.addEventListener('click', function (ev) { if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)) dialogo.close(); });
       lista.appendChild(li);
+      opciones.push(li);
     });
-    var en = document.documentElement.lang === 'en';
-    if (cuenta) cuenta.textContent = hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'));
-    if (!hallados.length) {
-      var vacio = document.createElement('li');
-      vacio.textContent = (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
-      lista.appendChild(vacio);
-    }
+    var en = lengua() === 'en';
+    cuenta.textContent = hallados.length
+      ? hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'))
+      : (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
+    if (hallados.length) { campo.setAttribute('aria-expanded', 'true'); mover(0); }
   }
-  fetch('indice.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
-    indice = datos;
-    mostrar();
-  }).catch(function () { caja.hidden = true; });
-  campo.addEventListener('input', mostrar);
-  // Desde «Buscar» de cada tema se llega con el campo listo para escribir.
-  if (location.hash === '#buscar-ayuda') campo.focus();
-  // Al cambiar de idioma, los resultados se rehacen en el nuevo.
-  document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
+  function crear() {
+    dialogo = document.createElement('dialog');
+    dialogo.className = 'buscador';
+    dialogo.setAttribute('aria-labelledby', 'buscador-titulo');
+    dialogo.innerHTML = '<div class="buscador-caja">' +
+      '<h2 id="buscador-titulo" class="solo-lectores"><span lang="es">Buscar en el sitio</span><span lang="en">Search the site</span></h2>' +
+      '<input type="text" role="combobox" aria-controls="buscador-lista" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false" enterkeyhint="search">' +
+      '<p id="buscador-cuenta" class="buscador-cuenta" aria-live="polite"></p>' +
+      '<div id="buscador-lista" role="listbox"></div>' +
+      '<p class="buscador-pie" aria-hidden="true"><span lang="es"><kbd>↑</kbd> <kbd>↓</kbd> para moverte, <kbd>Enter</kbd> para abrir, <kbd>Esc</kbd> para cerrar</span><span lang="en"><kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Enter</kbd> to open, <kbd>Esc</kbd> to close</span></p></div>';
+    document.body.appendChild(dialogo);
+    campo = dialogo.querySelector('input');
+    lista = dialogo.querySelector('[role="listbox"]');
+    cuenta = dialogo.querySelector('.buscador-cuenta');
+    campo.addEventListener('input', buscar);
+    campo.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); mover(activo + (e.key === 'ArrowDown' ? 1 : -1)); }
+      // Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña, como Ctrl+clic: el clic lleva las teclas.
+      else if (e.key === 'Enter' && activo >= 0) {
+        e.preventDefault();
+        opciones[activo].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey }));
+      }
+    });
+    // Clic en el fondo (el propio diálogo, sin su caja) cierra.
+    dialogo.addEventListener('click', function (e) { if (e.target === dialogo) dialogo.close(); });
+    // El foco vuelve a quien lo abrió; si era el botón del menú de la barra, ya cerrado, vuelve al botón del menú.
+    dialogo.addEventListener('close', function () {
+      var menu = document.querySelector('.menu-boton:not([hidden])');
+      var f = quien && quien.offsetParent ? quien : menu && menu.offsetParent ? menu : document.body;
+      quien = null;
+      f.focus();
+    });
+  }
+  function abrir() {
+    if (!dialogo) crear();
+    if (dialogo.open) return;
+    quien = document.activeElement;
+    var rotulo = tx('Buscar en el sitio', 'Search the site');
+    campo.placeholder = rotulo;
+    campo.setAttribute('aria-label', rotulo);
+    lista.setAttribute('aria-label', tx('Resultados', 'Results'));
+    campo.value = '';
+    buscar();
+    dialogo.showModal();
+    campo.focus();
+    cargar().then(function () { if (dialogo.open) buscar(); });
+  }
+  botones.forEach(function (b) {
+    b.hidden = false;
+    b.setAttribute('aria-keyshortcuts', 'Control+K Meta+K /');
+    b.addEventListener('click', abrir);
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    var escribiendo = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (dialogo && dialogo.open) dialogo.close(); else abrir();
+    } else if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !escribiendo) {
+      e.preventDefault();
+      abrir();
+    }
+  });
+})();
+// Los desplegables (<details class="desplegable">: los otros sistemas junto a Descargar, en Inicio) se cierran con Escape
+// o al pulsar fuera.
+(function () {
+  var menus = document.querySelectorAll('details.desplegable');
+  if (!menus.length) return;
+  document.addEventListener('click', function (e) {
+    menus.forEach(function (d) { if (d.open && !d.contains(e.target)) d.open = false; });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    menus.forEach(function (d) { if (d.open) { d.open = false; d.querySelector('summary').focus(); } });
+  });
 })();
 
 // Al llegar a una pregunta de la Ayuda por su ancla (#terminos), también desde un enlace de la misma página, se abre.
@@ -368,228 +537,8 @@ function escribirLeyenda(leyenda, partes) {
   }, 100);
 }
 
-// Recorrido de la portada: el tranvía va de una app a Tramtai y sigue por la línea de un agente hasta su estación, con
-// cuatro escenas que se turnan (una, el respaldo: Claude falla a mitad y sigue Codex). Cada escena tiene su pestaña, y el
-// panel de al lado enseña su título, la línea que la explica y su código. La rotación se para con el ratón o el foco en
-// el bloque, al elegir una pestaña o con la pausa, y no hay animación con «reducir movimiento».
-(function () {
-  var datos = document.getElementById('ejemplos-mapa');
-  var caja = document.querySelector('.mapa-ejemplos');
-  var bloque = document.querySelector('.escenas');
-  var ancho = document.querySelector('.mapa-ancho');
-  var alto = document.querySelector('.mapa-alto');
-  if (!datos || !caja || !bloque || !ancho || !alto || !Element.prototype.animate) return;
-  var ejemplos = JSON.parse(datos.textContent);
-  var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var quieto = movimiento.matches;
-  var ORIGENES = ['M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143', 'M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153',
-    'M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163'];
-  var LINEAS = ['M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37', 'M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95',
-    'M 460 153 L 479 153 C 515 153 515 153 551 153 L 570 153', 'M 460 163 L 472 163 C 515 163 515 211 558 211 L 570 211',
-    'M 460 173 L 472 173 C 515 173 515 269 558 269 L 570 269'];
-  var ALTO_ORIGEN = [14, 52, 90];
-  var ALTO_LINEA = [210, 248, 286, 324, 362];
-  var ROJO = '#d64545';
-  var trams = [ancho.querySelector('.tranvia'), alto.querySelector('.tranvia-alto')];
-
-  // largo mide un camino con un path suelto, fuera de la página: meterlo en el svg obligaba al navegador a recalcular
-  // estilos y maquetar todo (reflow forzado). Si algún navegador no mide un path suelto, se mide dentro del svg.
-  // Cada camino se mide una sola vez.
-  var medidas = {};
-  function largo(svg, d) {
-    if (medidas[d] !== undefined) return medidas[d];
-    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', d);
-    var l = 0;
-    try { l = p.getTotalLength(); } catch (e) {}
-    if (!l) {
-      svg.appendChild(p);
-      l = p.getTotalLength();
-      svg.removeChild(p);
-    }
-    medidas[d] = l;
-    return l;
-  }
-  // camino devuelve, para cada mapa, el recorrido de un origen a un agente y dónde están la entrada, el centro y la
-  // salida de Tramtai (en % del camino).
-  function camino(origen, agente) {
-    var yLinea = parseFloat(LINEAS[agente].split(' ')[2]);
-    var dAncho = ORIGENES[origen] + ' L 460 ' + yLinea + ' ' + LINEAS[agente].replace(/^M/, 'L');
-    var total = largo(ancho, dAncho);
-    var entrada = largo(ancho, ORIGENES[origen]);
-    var salida = entrada + Math.hypot(170, yLinea - parseFloat(ORIGENES[origen].split(' ').pop()));
-    var oy = ALTO_ORIGEN[origen], ly = ALTO_LINEA[agente];
-    var dAlto = 'M 18 ' + oy + ' L 18 ' + ly + ' L 52 ' + ly;
-    var totalAlto = (ly - oy) + 34;
-    return [
-      { d: dAncho, entrada: entrada / total * 100, centro: (entrada + salida) / 2 / total * 100, salida: salida / total * 100 },
-      { d: dAlto, entrada: (120 - oy) / totalAlto * 100, centro: (149 - oy) / totalAlto * 100, salida: (178 - oy) / totalAlto * 100 }
-    ];
-  }
-
-  // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
-  // raton y foco: el ratón o el foco están en el bloque; la escena se queda mientras tanto, sin contar como pausa.
-  var actual = 0, pausado = quieto, pausaManual = false, temporizador = null, animaciones = [], iniciado = false;
-  var raton = false, foco = false;
-  var panel = document.getElementById('mapa-panel');
-  var titulo = panel.querySelector('.mapa-titulo');
-  var leyenda = panel.querySelector('.mapa-leyenda');
-  var pestanas = Array.prototype.slice.call(caja.querySelectorAll('.mapa-pestana'));
-  var pausa = caja.querySelector('.mapa-pausa');
-
-  function parar() {
-    animaciones.forEach(function (a) { a.cancel(); });
-    animaciones = [];
-    clearTimeout(temporizador);
-  }
-  function mover(i, desde, hasta, ms, retraso) {
-    var a = trams[i].animate([{ offsetDistance: desde + '%' }, { offsetDistance: hasta + '%' }],
-      { duration: ms, delay: retraso || 0, fill: 'forwards', easing: 'ease-in-out' });
-    animaciones.push(a);
-    return a;
-  }
-  // spans devuelve un texto del JSON en los dos idiomas, cada uno en su span.
-  function spans(es, en) {
-    return [['es', es], ['en', en]].map(function (par) {
-      var s = document.createElement('span');
-      s.lang = par[0];
-      s.textContent = par[1];
-      return s;
-    });
-  }
-  function mostrar(n) {
-    var e = ejemplos[n];
-    titulo.replaceChildren.apply(titulo, spans(e.titulo_es, e.titulo_en));
-    escribirLeyenda(leyenda, spans(e.es, e.en));
-    pestanas.forEach(function (p, i) {
-      p.setAttribute('aria-selected', String(i === n));
-      p.tabIndex = i === n ? 0 : -1;
-    });
-    panel.setAttribute('aria-labelledby', pestanas[n].id);
-    // El código que no toca se oculta (desde 980 px sin dejar de medir: el panel no salta; ver estilo.css).
-    ejemplos.forEach(function (x) {
-      var pre = document.getElementById(x.codigo);
-      if (!pre) return;
-      pre.hidden = false;
-      pre.classList.toggle('oculto', x !== e);
-    });
-  }
-  // programar deja lista la escena siguiente, salvo en pausa o con el ratón o el foco en el bloque.
-  function programar() {
-    clearTimeout(temporizador);
-    if (quieto || pausado || raton || foco) return;
-    temporizador = setTimeout(function () { anunciar(false); recorrer((actual + 1) % ejemplos.length); }, 6500);
-  }
-  // recorrer anima el ejemplo n en los dos mapas (uno se ve según el ancho) y programa el siguiente. animar hace el viaje
-  // aunque esté en pausa: la escena que elige la persona con una pestaña se ve una vez entera.
-  function recorrer(n, animar) {
-    iniciado = true;
-    parar();
-    actual = n;
-    var e = ejemplos[n];
-    mostrar(n);
-    var primero = camino(e.origen, e.agentes[0]);
-    var segundo = e.agentes[1] !== undefined ? camino(e.origen, e.agentes[1]) : null;
-    trams.forEach(function (t, i) {
-      t.style.offsetPath = "path('" + primero[i].d + "')";
-      t.style.opacity = '1';
-      t.setAttribute('fill', 'var(--acento)');
-      if (quieto || (pausado && !animar)) {
-        var fin = segundo || primero;
-        t.style.offsetPath = "path('" + fin[i].d + "')";
-        t.style.offsetDistance = '100%';
-        return;
-      }
-      if (!segundo) {
-        mover(i, 0, primero[i].centro, 1800);
-        mover(i, primero[i].centro, 100, 2400, 1800 + (e.pausaCentro ? 900 : 200));
-        return;
-      }
-      var mitad = primero[i].salida + (100 - primero[i].salida) / 2;
-      mover(i, 0, mitad, 2200).finished.then(function () {
-        t.setAttribute('fill', ROJO);
-        return mover(i, mitad, primero[i].centro, 900, 400).finished;
-      }).then(function () {
-        t.setAttribute('fill', 'var(--acento)');
-        t.style.offsetPath = "path('" + segundo[i].d + "')";
-        return mover(i, segundo[i].centro, 100, 1800, 200).finished;
-      }).catch(function () {});
-    });
-    programar();
-  }
-
-  // La leyenda se anuncia cuando la elige la persona, no cada vez que rota sola.
-  function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
-  function rotulo() {
-    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
-  }
-  // Elegir una pestaña (con el ratón o con las flechas, patrón de tablist) para la rotación: la pausa pasa a «Seguir».
-  function elegir(i) {
-    anunciar(true);
-    pausaManual = true;
-    pausado = true;
-    rotulo();
-    recorrer(i, true);
-  }
-  pestanas.forEach(function (p, i) {
-    p.addEventListener('click', function () { elegir(i); });
-    p.addEventListener('keydown', function (e) {
-      var siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: pestanas.length - 1 }[e.key];
-      if (siguiente === undefined) return;
-      e.preventDefault();
-      siguiente = (siguiente + pestanas.length) % pestanas.length;
-      pestanas[siguiente].focus();
-      elegir(siguiente);
-    });
-  });
-  pausa.addEventListener('click', function () {
-    pausado = !pausado;
-    pausaManual = pausado;
-    // «Seguir» es querer el giro: el ratón y el foco, que siguen en la pausa, no lo paran hasta volver a entrar.
-    if (!pausado) raton = foco = false;
-    anunciar(true);
-    rotulo();
-    recorrer(actual);
-  });
-  // Con el ratón o el foco en el bloque, la escena se queda; al salir, la rotación sigue (si no está en pausa).
-  bloque.addEventListener('mouseenter', function () { raton = true; programar(); });
-  bloque.addEventListener('mouseleave', function () { raton = false; if (iniciado) programar(); });
-  bloque.addEventListener('focusin', function () { foco = true; programar(); });
-  bloque.addEventListener('focusout', function (e) {
-    if (bloque.contains(e.relatedTarget)) return;
-    foco = false;
-    if (iniciado) programar();
-  });
-  // En una pestaña oculta no se anima ni se acumulan animaciones; al volver sigue donde iba.
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) parar();
-    else if (iniciado) recorrer(actual);
-  });
-  // «Reducir movimiento» se respeta también si cambia con la página abierta.
-  movimiento.addEventListener('change', function () {
-    quieto = movimiento.matches;
-    pausado = quieto || pausaManual;
-    pausa.hidden = quieto;
-    rotulo();
-    if (iniciado) recorrer(actual);
-  });
-  if (quieto) pausa.hidden = true;
-  caja.hidden = false;
-  panel.setAttribute('role', 'tabpanel'); // sin JavaScript no hay pestañas: el panel es un div sin rol
-  mostrar(0);
-  // Medir los caminos y animar el tranvía espera a que el mapa esté cerca de la pantalla: no cuesta nada al cargar.
-  if ('IntersectionObserver' in window) {
-    var vigia = new IntersectionObserver(function (entradas) {
-      if (!entradas[entradas.length - 1].isIntersecting) return;
-      vigia.disconnect();
-      if (!iniciado) recorrer(actual);
-    }, { rootMargin: '200px 0px' });
-    vigia.observe(caja);
-  } else recorrer(0);
-})();
-
-// Demo del recorrido guiado: la zona de la app que señala cada paso de la bienvenida, un paso cada 6 s, con el mismo
-// patrón que el recorrido del tranvía: pausa que cambia su texto, la leyenda solo se anuncia cuando elige la persona,
+// Demo del recorrido guiado (en Producto): la zona de la app que señala cada paso de la bienvenida, un paso cada 6 s:
+// pausa que cambia su texto, la leyenda solo se anuncia cuando elige la persona,
 // quieta con «reducir movimiento» y sin avanzar con la pestaña oculta, fuera de la pantalla ni con el foco dentro. La
 // lista de pasos (un desplegable en el móvil) y las flechas eligen el paso; ← → solo con el foco dentro de la demo. Sin
 // JavaScript se ven todos los pasos, uno debajo de otro, con su texto.
@@ -606,7 +555,8 @@ function escribirLeyenda(leyenda, partes) {
   var leyenda = caja.querySelector('.demo-leyenda');
   var pausa = caja.querySelector('.demo-pausa');
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var movil = window.matchMedia('(max-width: 899px)');
+  // El mismo corte que estilo.css (en em, como allí: sigue a la letra del navegador).
+  var movil = window.matchMedia('(max-width: 56.1875em)');
   var CADA_MS = 6000;
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
   // foco: el foco está dentro de la demo; el avance solo se para mientras tanto (patrón de carrusel), sin contar como pausa.
@@ -718,58 +668,4 @@ function escribirLeyenda(leyenda, partes) {
   anterior.hidden = siguiente.hidden = controles.hidden = false;
   mostrar(0);
   programar();
-})();
-
-// Plano de metro de Funciones: sin JavaScript, o por debajo de 900 px, cada línea va en vertical con el texto de sus
-// paradas, y el título de cada una es texto. Con pantalla ancha va en horizontal (metro--plano): el título pasa a ser un
-// botón que enseña su título y su texto en el panel de debajo, y la elegida queda marcada con aria-current. Como las
-// pestañas de la cabecera, solo la elegida está en el tabulador y las flechas pasan de una a otra. Empieza elegida la
-// primera.
-(function () {
-  var metro = document.querySelector('.metro');
-  var panel = metro && metro.querySelector('.metro-panel');
-  if (!panel) return;
-  var titulos = Array.prototype.slice.call(metro.querySelectorAll('.parada-titulo'));
-  var ancho = window.matchMedia('(min-width: 900px)');
-  var elegida = 0, botones = [];
-  function elegir(n, foco) {
-    elegida = n;
-    botones.forEach(function (b, i) {
-      b.tabIndex = i === n ? 0 : -1;
-      if (i === n) b.setAttribute('aria-current', 'true');
-      else b.removeAttribute('aria-current');
-    });
-    if (foco) botones[n].focus();
-    // El título del panel es un párrafo: un h4 más saldría en el esquema de títulos colgado de la última línea.
-    panel.innerHTML = '<p class="metro-panel-titulo">' + botones[n].innerHTML + '</p><p>' + titulos[n].closest('.parada').querySelector('.parada-texto').innerHTML + '</p>';
-  }
-  function boton(titulo, i) {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'parada-boton';
-    b.append.apply(b, Array.prototype.slice.call(titulo.childNodes));
-    titulo.appendChild(b);
-    b.addEventListener('click', function () { elegir(i); });
-    b.addEventListener('keydown', function (e) {
-      var siguiente = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: titulos.length - 1 }[e.key];
-      if (siguiente === undefined || e.altKey || e.ctrlKey || e.metaKey) return;
-      e.preventDefault();
-      elegir((siguiente + titulos.length) % titulos.length, true);
-    });
-    return b;
-  }
-  // En vertical el texto ya se ve: el botón vuelve a ser el texto del título, sin un botón que no haría nada.
-  function modo() {
-    var plano = ancho.matches;
-    metro.classList.toggle('metro--plano', plano);
-    if (plano && !botones.length) botones = titulos.map(boton);
-    if (!plano) {
-      botones.forEach(function (b) { b.replaceWith.apply(b, Array.prototype.slice.call(b.childNodes)); });
-      botones = [];
-    }
-    if (plano) elegir(elegida); // con el panel aún oculto: el texto inicial no se anuncia
-    panel.hidden = !plano;
-  }
-  ancho.addEventListener('change', modo);
-  modo();
 })();

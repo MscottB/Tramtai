@@ -65,6 +65,13 @@ func (c *Cliente) BuscarActualizaciones(ctx context.Context, buscar bool) (contr
 	return e, c.pedir(ctx, "PUT", "/api/v1/servicio/actualizacion", "", cuerpoJSON(map[string]bool{"buscar": buscar}), "application/json", &e)
 }
 
+// BuscarVersionesAgentes activa o desactiva la comprobación de versiones nuevas de los CLI de los agentes (no toca la
+// búsqueda de actualizaciones de Tramtai) y devuelve el estado.
+func (c *Cliente) BuscarVersionesAgentes(ctx context.Context, buscar bool) (contrato.EstadoActualizacion, error) {
+	var e contrato.EstadoActualizacion
+	return e, c.pedir(ctx, "PUT", "/api/v1/servicio/actualizacion", "", cuerpoJSON(map[string]bool{"buscar_versiones_agentes": buscar}), "application/json", &e)
+}
+
 // Actualizar empieza a descargar e instalar la versión nueva en el servicio (o se une a la que ya está en curso) y
 // devuelve su número; el avance se sigue con ProgresoActualizacion.
 func (c *Cliente) Actualizar(ctx context.Context) (string, error) {

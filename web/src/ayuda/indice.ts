@@ -3,6 +3,7 @@ import type { Clave } from '../idiomas/es'
 import type { Pagina, Tema } from './tipos'
 import { empezar } from './temas/empezar'
 import { agentes } from './temas/agentes'
+import { preparar } from './temas/preparar'
 import { probar } from './temas/probar'
 import { conectar } from './temas/conectar'
 import { conectarHerramientas } from './temas/conectar-herramientas'
@@ -22,7 +23,7 @@ import { conceptos } from './temas/conceptos'
 import { preguntas } from './temas/preguntas'
 
 export const temas: Tema[] = [
-  empezar, agentes, probar, conectar, conectarHerramientas, archivos, json, recetas, herramientas, presupuestos, historial, espacios, claves, ajustes,
+  empezar, agentes, preparar, probar, conectar, conectarHerramientas, archivos, json, recetas, herramientas, presupuestos, historial, espacios, claves, ajustes,
   servidor, entornos, problemas, conceptos, preguntas,
 ]
 

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Agents · Tramtai">Agentes · Tramtai</title>
+<meta name="description" content="Los agentes que Tramtai conecta (Claude Code, Codex, GitHub Copilot, Gemini y Antigravity), el router y cómo se prepara cada uno." data-en="The agents Tramtai connects (Claude Code, Codex, GitHub Copilot, Gemini and Antigravity), the router and how each one is set up.">
+<!-- comun:cabeza -->
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/agentes.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/agentes.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Agentes · Tramtai">
+<meta property="og:description" content="Los agentes que Tramtai conecta (Claude Code, Codex, GitHub Copilot, Gemini y Antigravity), el router y cómo se prepara cada uno.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="estilo.css">
+<script src="sitio.js" defer></script>
+<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
+<!-- /comun:cabeza -->
+</head>
+<body>
+<!-- comun:cabecera -->
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="./"><img src="favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+        <a href="agentes.html" aria-current="page"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
+        <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+        <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="descargar.html" class="solo-menu"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      </nav>
+      <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span lang="es" class="solo-lectores">Buscar</span><span lang="en" class="solo-lectores">Search</span></button>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+          <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+          <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+        </div>
+      </div>
+    </div>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="boton principal" href="./descargar.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+<!-- /comun:cabecera -->
+
+<main id="contenido" tabindex="-1" class="agentes-pagina">
+  <!-- El arranque corto: el titular y un índice de la página. -->
+  <div class="arranque">
+    <div class="envoltura">
+      <h1 class="titular"><span lang="es">Tus agentes,<br> <em>detrás de una URL.</em></span><span lang="en">Your agents,<br> <em>behind one URL.</em></span></h1>
+      <p class="entrada"><span lang="es">Claude Code, Codex, GitHub Copilot, la Gemini API y Antigravity, con tu suscripción o tu clave de API. Tramtai instala cada CLI, te ayuda a iniciar sesión y lo mantiene al día.</span><span lang="en">Claude Code, Codex, GitHub Copilot, the Gemini API and Antigravity, with your subscription or your API key. Tramtai installs each CLI, helps you sign in and keeps it up to date.</span></p>
+      <nav class="acciones" aria-label="En esta página" data-aria-en="On this page">
+        <a class="boton secundario" href="#router"><span lang="es">El router</span><span lang="en">The router</span></a>
+        <a class="boton secundario" href="#agentes"><span lang="es">Cada agente</span><span lang="en">Each agent</span></a>
+        <a class="boton secundario" href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- La tarjeta «router» (spec §5; la idea es de OpenRouter) sustituye al diagrama de antes: de Tramtai salen líneas de un
+       píxel en el acento, y el color de cada agente va solo en su punto. El SVG solo dibuja las líneas (se dibujan al
+       entrar en pantalla y el flujo corre por las cuatro que llegan a tus apps); cada destino es texto de la lista de al
+       lado, en cinco filas iguales de 64 px o más, así que se lee igual en el móvil y con la letra más grande. El SVG
+       mide lo que la lista y crece con ella (slice): cada línea es curva hasta x = 92 y recta después, así que al
+       recortarse por la derecha (132 px en el móvil) sigue llegando a su punto aunque las filas crezcan hasta un 40 %.
+       En un teléfono estrecho se oculta: es decoración y los puntos llevan el color. Sin JavaScript o con «reducir
+       movimiento», todo queda dibujado y quieto. -->
+  <section id="router">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Tu app elige el agente <em>en el campo model.</em></span><span lang="en">Your app picks the agent <em>in the model field.</em></span></h2>
+        <p class="suave"><span lang="es">Pide <code>agente/modelo</code> y Tramtai lleva la petición a ese agente. Lo demás de tu código no cambia.</span><span lang="en">Ask for <code>agent/model</code> and Tramtai takes the request to that agent. The rest of your code stays the same.</span></p>
+      </div>
+      <div class="mosaico">
+        <figure class="tarjeta ancha router vivo">
+          <figcaption class="fig"><span lang="es">FIG 1 · El router</span><span lang="en">FIG 1 · The router</span></figcaption>
+          <p class="router-cabeza"><code>model: "claude/sonnet"</code></p>
+          <div class="router-cuerpo">
+            <svg class="router-lineas" viewBox="0 0 280 320" preserveAspectRatio="xMinYMid slice" aria-hidden="true">
+              <circle cx="8" cy="160" r="4" fill="var(--acento)"/>
+              <text class="nombre" x="0" y="144">Tramtai</text>
+              <g fill="none" stroke-width="1" stroke-linecap="round">
+                <g stroke="var(--acento)" stroke-opacity=".45">
+                  <path class="dibuja" pathLength="1" d="M12 160 C 56 160, 52 32, 92 32 H 280"/>
+                  <path class="dibuja" pathLength="1" style="--retraso: .15s" d="M12 160 C 56 160, 52 96, 92 96 H 280"/>
+                  <path class="dibuja" pathLength="1" style="--retraso: .3s" d="M12 160 H 280"/>
+                  <path class="dibuja" pathLength="1" style="--retraso: .45s" d="M12 160 C 56 160, 52 224, 92 224 H 280"/>
+                </g>
+                <!-- Antigravity aún no llega a tus apps: su línea va en el borde de controles, sin flujo. -->
+                <path class="dibuja" pathLength="1" style="--retraso: .6s" stroke="var(--borde-control)" d="M12 160 C 56 160, 52 288, 92 288 H 280"/>
+                <g stroke="var(--acento)">
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 32, 92 32 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 96, 92 96 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 224, 92 224 H 280"/>
+                </g>
+              </g>
+            </svg>
+            <ol class="router-destinos" aria-label="Agentes" data-aria-en="Agents">
+              <li><span class="punto pulso" style="--c: var(--claude)"></span><a href="#claude"><span class="router-nombre">Claude Code</span> <span class="router-conexion"><span lang="es">suscripción o clave</span><span lang="en">subscription or key</span></span></a> <span class="router-hace"><span lang="es">esfuerzo hasta máximo</span><span lang="en">effort up to max</span></span></li>
+              <li><span class="punto pulso" style="--c: var(--codex); --retraso: .6s"></span><a href="#codex"><span class="router-nombre">Codex</span> <span class="router-conexion"><span lang="es">suscripción o clave</span><span lang="en">subscription or key</span></span></a> <span class="router-hace"><span lang="es">con esquema JSON</span><span lang="en">JSON schema responses</span></span></li>
+              <li><span class="punto pulso" style="--c: var(--copilot); --retraso: 1.2s"></span><a href="#copilot"><span class="router-nombre">GitHub Copilot</span> <span class="router-conexion"><span lang="es">suscripción o clave</span><span lang="en">subscription or key</span></span></a> <span class="router-hace"><span lang="es">dice qué modelo eligió</span><span lang="en">shows the model it picked</span></span></li>
+              <li><span class="punto pulso" style="--c: var(--gemini); --retraso: 1.8s"></span><a href="#gemini"><span class="router-nombre">Gemini API</span> <span class="router-conexion"><span lang="es">clave de API</span><span lang="en">API key</span></span></a> <span class="router-hace"><span lang="es">por HTTP, sin CLI</span><span lang="en">over HTTP, no CLI</span></span></li>
+              <li><span class="punto hueco" style="--c: var(--antigravity)"></span><a href="#antigravity"><span class="router-nombre">Antigravity</span> <span class="router-conexion"><span lang="es">solo clave de API</span><span lang="en">API key only</span></span></a> <span class="router-hace"><span lang="es">fuera de tus apps</span><span lang="en">not for your apps</span></span></li>
+            </ol>
+          </div>
+        </figure>
+        <article class="tarjeta router-leyenda">
+          <h3><span lang="es">Cómo se lee</span><span lang="en">How to read it</span></h3>
+          <p><span lang="es">Cada línea va de Tramtai a un agente. Las cuatro en verde llegan desde tus apps; la gris, la de Antigravity, solo desde Probar, la terminal y la CLI.</span><span lang="en">Each line goes from Tramtai to an agent. The four green ones are reachable from your apps; the grey one, Antigravity’s, only from the Playground, the terminal and the CLI.</span></p>
+          <p><span lang="es">La suscripción es solo para tu uso personal: si la usas para otras apps, el proveedor podría limitar o suspender tu cuenta. Para tus apps, una clave de API. <a href="ayuda/agentes.html#terminos">¿Suscripción o clave de API?</a></span><span lang="en">A subscription is for personal use only: if you use it for other apps, the provider could limit or suspend your account. For your apps, an API key. <a href="ayuda/agentes.html#terminos">Subscription or API key?</a></span></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Una tarjeta por agente: cómo se conecta (de la sección «agentes» de antes), lo que hace y cómo se prepara desde
+       Tramtai (internal/agentes/*/ficha.go y la Ayuda «Preparar tus agentes»). -->
+  <section id="agentes">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Cinco agentes; <em>cuatro desde tus apps.</em></span><span lang="en">Five agents; <em>four from your apps.</em></span></h2>
+        <p class="suave"><span lang="es">Tramtai instala cada CLI con su instalador oficial, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas, sin abrir otra consola.</span><span lang="en">Tramtai installs each CLI with its official installer, helps you sign in and keeps it up to date, only with checked versions, without opening another console.</span></p>
+      </div>
+      <div class="mosaico">
+        <article class="tarjeta agente" id="claude">
+          <header class="agente-cabeza"><span class="punto" style="--c: var(--claude)"></span><h3>Claude Code</h3><span class="agente-de">Anthropic</span></header>
+          <p><span lang="es">Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.</span><span lang="en">Your Claude subscription (personal use) or an Anthropic API key.</span></p>
+          <ul class="agente-hace"><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+          <dl class="agente-datos">
+            <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
+            <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
+            <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
+            <dd><span lang="es">Con un enlace en tu navegador; si te da un código, lo pegas en Tramtai.</span><span lang="en">With a link in your browser; if it gives you a code, you paste it into Tramtai.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
+            <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
+            <dd><span lang="es"><code>tramtai agentes instalar claude</code></span><span lang="en"><code>tramtai agents install claude</code></span></dd>
+          </dl>
+          <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
+        </article>
+        <article class="tarjeta agente" id="codex">
+          <header class="agente-cabeza"><span class="punto" style="--c: var(--codex)"></span><h3>Codex</h3><span class="agente-de">OpenAI</span></header>
+          <p><span lang="es">Tu cuenta de ChatGPT (uso personal) o una clave de API de OpenAI.</span><span lang="en">Your ChatGPT account (personal use) or an OpenAI API key.</span></p>
+          <ul class="agente-hace"><li><span lang="es">Esfuerzo de bajo a muy alto</span><span lang="en">Effort from low to very high</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
+          <dl class="agente-datos">
+            <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
+            <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
+            <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
+            <dd><span lang="es">Con un código de dispositivo, que activas una vez en ChatGPT › Seguridad.</span><span lang="en">With a device code, which you turn on once in ChatGPT › Security.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
+            <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
+            <dd><span lang="es"><code>tramtai agentes instalar codex</code></span><span lang="en"><code>tramtai agents install codex</code></span></dd>
+          </dl>
+          <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
+        </article>
+        <article class="tarjeta agente" id="copilot">
+          <header class="agente-cabeza"><span class="punto" style="--c: var(--copilot)"></span><h3>GitHub Copilot CLI</h3><span class="agente-de">GitHub</span></header>
+          <p><span lang="es">Tu cuenta de GitHub Copilot (Free, Pro o de empresa) con <code>copilot login</code>, o una clave de GitHub. Cada petición gasta créditos de tu plan.</span><span lang="en">Your GitHub Copilot account (Free, Pro or business) with <code>copilot login</code>, or a GitHub key. Every request uses credits from your plan.</span></p>
+          <ul class="agente-hace"><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+          <dl class="agente-datos">
+            <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
+            <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; en Windows, Tramtai lo descarga de GitHub y comprueba su suma antes de instalarlo.</span><span lang="en">With its official installer, only with checked versions; on Windows, Tramtai downloads it from GitHub and checks its checksum before installing it.</span></dd>
+            <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
+            <dd><span lang="es">Con un código de dispositivo de GitHub, que escribes en github.com/login/device.</span><span lang="en">With a GitHub device code, which you enter at github.com/login/device.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
+            <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
+            <dd><span lang="es"><code>tramtai agentes instalar copilot</code></span><span lang="en"><code>tramtai agents install copilot</code></span></dd>
+          </dl>
+          <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
+        </article>
+        <article class="tarjeta agente" id="gemini">
+          <header class="agente-cabeza"><span class="punto" style="--c: var(--gemini)"></span><h3>Gemini API</h3><span class="agente-de">Google</span></header>
+          <p><span lang="es">Tu clave de la Gemini API, sin instalar ningún CLI.</span><span lang="en">Your Gemini API key, with no CLI to install.</span></p>
+          <ul class="agente-hace"><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
+          <dl class="agente-datos">
+            <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
+            <dd><span lang="es">Nada que instalar: no tiene herramientas y Tramtai la llama por HTTP.</span><span lang="en">Nothing to install: it has no tools and Tramtai calls it over HTTP.</span></dd>
+            <dt><span lang="es">La clave</span><span lang="en">The key</span></dt>
+            <dd><span lang="es"><code>tramtai claves guardar GEMINI_API_KEY</code> la guarda cifrada en el almacén del sistema.</span><span lang="en"><code>tramtai keys set GEMINI_API_KEY</code> stores it encrypted in the system store.</span></dd>
+          </dl>
+          <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
+        </article>
+        <article class="tarjeta agente" id="antigravity">
+          <header class="agente-cabeza"><span class="punto hueco" style="--c: var(--antigravity)"></span><h3>Antigravity</h3><span class="agente-de">Google</span></header>
+          <p class="agente-aviso"><span lang="es">Todavía no desde tus apps</span><span lang="en">Not from your apps yet</span></p>
+          <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas. Por ahora se usa desde Probar, la terminal y la CLI; llegará a tus apps cuando pase la prueba de abajo.</span><span lang="en">Google’s CLI with your Gemini API key, without tools. For now you use it from the Playground, the terminal and the CLI; it will reach your apps once it passes the test below.</span></p>
+          <ul class="agente-hace"><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
+          <dl class="agente-datos">
+            <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
+            <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
+            <dt><span lang="es">La clave</span><span lang="en">The key</span></dt>
+            <dd><span lang="es">No inicia sesión: solo se instala, y después le pones la clave de la Gemini API con <code>tramtai claves guardar GEMINI_API_KEY</code>.</span><span lang="en">It doesn’t sign in: it is only installed, and then you add its Gemini API key with <code>tramtai keys set GEMINI_API_KEY</code>.</span></dd>
+            <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
+            <dd><span lang="es"><code>tramtai agentes instalar antigravity</code></span><span lang="en"><code>tramtai agents install antigravity</code></span></dd>
+          </dl>
+          <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
+        </article>
+        <article class="tarjeta agente-sdk">
+          <h3><span lang="es">Desde tus apps y SDK</span><span lang="en">From your apps and SDKs</span></h3>
+          <p><span lang="es">Llegan a Tramtai por las rutas compatibles con OpenAI y Anthropic, o por su API propia.</span><span lang="en">They reach Tramtai through the OpenAI- and Anthropic-compatible routes, or its native API.</span></p>
+          <ul class="sdk">
+            <li><span lang="es">SDK de OpenAI</span><span lang="en">OpenAI SDK</span></li>
+            <li><span lang="es">SDK de Anthropic</span><span lang="en">Anthropic SDK</span></li>
+            <li>curl</li>
+            <li>LangChain</li>
+            <li>n8n</li>
+            <li><span lang="es">API propia (OpenAPI)</span><span lang="en">Native API (OpenAPI)</span></li>
+          </ul>
+          <p class="agente-pie"><a href="desarrolladores.html"><span lang="es">La guía con ejemplos</span><span lang="en">The guide with examples</span></a></p>
+        </article>
+      </div>
+      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real, hecha por última vez el 2026-10-18 en Windows: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI, last run on 2026-10-18 on Windows: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
+    </div>
+  </section>
+</main>
+
+<!-- comun:pie -->
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="./"><span lang="es">Inicio</span><span lang="en">Home</span></a>
+      <a href="producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+      <a href="agentes.html" aria-current="page"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
+      <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="descargar.html"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+<!-- /comun:pie -->
+
+</body>
+</html>

@@ -96,6 +96,15 @@ type Opciones struct {
 	PrepararConversor bool
 	// UV es la ruta de uv; vacía, la del que viene con Tramtai (documentos.BuscarUV).
 	UV string
+	// PrepararAgentes crea la preparación de los CLI de los agentes (internal/preparar): /api/v1/agentes/{id}/preparacion
+	// y la comprobación diaria de sus versiones. false en las pruebas que no la usan: no lanza ni consulta nada.
+	PrepararAgentes bool
+	// OrdenConsola es, en el modo servidor, el inicio de sesión a mano como la cuenta del servicio
+	// (preparar.Opciones.OrdenConsola); nil fuera de él.
+	OrdenConsola func(cli string, args []string) string
+	// Preparacion, si no es nil, es la preparación de los CLI en lugar de la real: las pruebas de las pantallas ponen una
+	// que no instala nada.
+	Preparacion Preparacion
 	// Almacen guarda las claves de las herramientas (Claude Code, Codex); nil = el almacén del sistema (credenciales). Las
 	// pruebas no tocan el del equipo.
 	Almacen Almacen
@@ -180,6 +189,17 @@ type Servicio struct {
 
 	conversor *documentos.Preparacion // markitdown, compartido por todas las instancias; nil sin RaizUsuario
 
+	// preparar instala, actualiza y desinstala los CLI de los agentes para todo el servicio; nil sin PrepararAgentes.
+	// versiones es su última comprobación de versiones (versionesEn, cuándo empezó), que se sirve sin repetirla.
+	// buscarVersiones es servicio.buscar_versiones_agentes, en marcha (fijarBusquedas); calculo, la comprobación en
+	// marcha, que comparten quienes la piden a la vez.
+	preparar        preparacion
+	buscarVersiones atomic.Bool
+	muVersiones     sync.Mutex
+	versiones       []contrato.VersionesAgente
+	versionesEn     time.Time
+	calculo         *calculoVersiones
+
 	local    net.Listener // con TLS propio: el oyente HTTP de 127.0.0.1 para los clientes de este equipo; nil sin TLS
 	localSrv *http.Server
 
@@ -245,6 +265,14 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 			s.conversor.Preparar()
 		}
 	}
+	// Antes de abrir ningún oyente: lo que dejó a medias el servicio anterior ya está recogido.
+	s.buscarVersiones.Store(opc.Config.Booleano("servicio.buscar_versiones_agentes"))
+	if opc.PrepararAgentes {
+		s.preparar = s.nuevaPreparacion()
+	}
+	if opc.Preparacion != nil {
+		s.preparar = opc.Preparacion
+	}
 	// Con proxies de confianza, la CLI no comparte oyente con el proxy, que puede estar en 127.0.0.1 (R35).
 	if opc.TLS != nil || len(opc.Confiables) > 0 {
 		if s.local, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
@@ -256,6 +284,9 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	var vigilancia context.Context
 	vigilancia, s.pararVigilancia = context.WithCancel(context.Background())
 	s.fondo.Go(func() { s.vigilarEnFondo(vigilancia) }) // Cerrar la para y la espera
+	if s.preparar != nil {
+		s.fondo.Go(func() { s.buscarVersionesAgentes(vigilancia) })
+	}
 	return s, nil
 }
 
@@ -477,6 +508,9 @@ func (s *Servicio) Cerrar() {
 	s.pararVigilancia()
 	if s.conversor != nil {
 		s.conversor.Cerrar() // uv no sobrevive al servicio
+	}
+	if s.preparar != nil {
+		s.preparar.Cerrar() // ni un instalador: queda interrumpida y su árbol, cerrado
 	}
 	s.mu.Lock()
 	s.cerrado = true

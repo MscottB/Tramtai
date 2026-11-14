@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { idioma, t } from '../i18n.ts'
 import { conArranque, filasServidor, modosArranque, ofrecerInstalar, pestanasAjustes } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
@@ -42,18 +43,29 @@ test('Ajustes → Servidor: cada dato con la orden (o la clave de config.yaml) q
   assert.deepEqual(de('servidor.https'), { etiqueta: 'servidor.https', valor: t('servidor.tlsLetsencrypt'), clave: 'servicio.tls.modo' })
   assert.deepEqual(de('servidor.dominios'), { etiqueta: 'servidor.dominios', valor: 'tramtai.ejemplo.org', clave: 'servicio.dominios' })
   assert.equal(de('servidor.confiables')?.clave, 'servicio.proxy.confiables')
-  assert.equal(de('servidor.suscripciones')?.orden, 'tramtai-servidor agentes suscripcion <agente> --personal', 'expuesto: la personal')
+  assert.deepEqual(de('servidor.suscripciones')?.ordenes, ['tramtai-servidor agentes suscripcion <agente> --personal'], 'expuesto: la personal')
   assert.equal(de('servidor.confiables')?.valor, t('servidor.ninguno'))
   assert.deepEqual(de('servidor.vence'), { etiqueta: 'servidor.vence', valor: '2027-01-02', nota: t('servidor.renuevaSolo') })
-  assert.deepEqual(de('servidor.administrador'), { etiqueta: 'servidor.administrador', valor: t('servidor.sinTotp'), orden: 'tramtai-servidor administrador totp activar' })
+  assert.deepEqual(de('servidor.administrador'), { etiqueta: 'servidor.administrador', valor: t('servidor.sinTotp'), ordenes: ['tramtai-servidor administrador totp activar'] })
   assert.equal(de('servidor.suscripciones')?.valor, t('servidor.suscripcionPersonal', { agente: 'CLAUDE', n: 2 }))
-  for (const f of filas) assert.ok(f.orden || f.clave || f.nota, `${f.etiqueta} dice cómo se cambia`)
+  for (const f of filas) assert.ok(f.ordenes?.length || f.clave || f.nota, `${f.etiqueta} dice cómo se cambia`)
 
   const sinNada = filasServidor({ ...e, tls: 'ninguno', dominios: [], vence_certificado: undefined, administrador: false, expuesto: false, suscripciones: [] }, String, String)
-  assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.orden, 'tramtai-servidor agentes entrar <agente>', 'en local: el inicio de sesión del CLI')
+  assert.deepEqual(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.ordenes, ['tramtai-servidor agentes entrar <agente>', 'tramtai-servidor agentes suscripcion <agente>'],
+    'en local: el inicio de sesión del CLI y después la suscripción')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.vence'), undefined, 'sin certificado propio no hay vencimiento')
-  assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.administrador')?.orden, 'tramtai-servidor administrador contraseña')
+  assert.deepEqual(sinNada.find((f) => f.etiqueta === 'servidor.administrador')?.ordenes, ['tramtai-servidor administrador contraseña'])
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.valor, t('servidor.sinSuscripciones'))
+})
+
+test('«Comprobar versiones nuevas de los agentes» va junto a las actualizaciones y cambia el ajuste en marcha', () => {
+  const pagina = readFileSync(new URL('./Configuracion.vue', import.meta.url), 'utf8')
+  assert.ok(pagina.includes('actualizacion.buscar_versiones_agentes') && pagina.includes('api.buscarVersionesAgentes('))
+  for (const lengua of ['es', 'en'] as const) {
+    idioma.value = lengua
+    assert.ok(t('versionesAgentes.texto').includes('GitHub'), `${lengua}: dice a qué sitios se conecta`)
+  }
+  idioma.value = 'es'
 })
 
 test('los textos de Servidor existen en los dos idiomas', () => {
@@ -62,8 +74,9 @@ test('los textos de Servidor existen en los dos idiomas', () => {
     for (const clave of ['config.pestanaServidor', 'servidor.texto', 'servidor.cambiaEn', 'servidor.tlsNinguno', 'servidor.renovarArchivos'] as const) {
       assert.notEqual(t(clave), clave, `${lengua}: ${clave}`)
     }
-    // Las órdenes de antes aún no tienen alias en inglés (llegan en la v0.62).
-    assert.ok(t('actualizacion.servidor').includes('tramtai-servidor actualizar') && t('servidor.cambiaEn').includes('tramtai-servidor reiniciar'), lengua)
+    // Cada idioma cita la orden con su nombre: en inglés, su alias.
+    const [actualizar, reiniciar] = lengua === 'es' ? ['actualizar', 'reiniciar'] : ['update', 'restart']
+    assert.ok(t('actualizacion.servidor').includes(`tramtai-servidor ${actualizar}`) && t('servidor.cambiaEn').includes(`tramtai-servidor ${reiniciar}`), lengua)
   }
   idioma.value = 'es'
 })

@@ -7,7 +7,25 @@ import { pasosBienvenida } from '../src/recorrido.ts'
 // guardado son valores de localStorage que la página necesita (la pestaña de Ajustes donde está la zona). servidor dice
 // que sale del Tramtai en modo servidor (en contenedores, detrás de Caddy); cabecera, que la zona es la cabecera fija;
 // ancho, el de la ventana si no es el de siempre (1280).
-export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number }[] = [
+// Las de sitio no son de la Ayuda: son los recortes de FIG 4 y 5 de Inicio y de las tarjetas de funciones de Producto
+// (site/capturas/<id>-<es|en>-<claro|oscuro>.webp, a 2×). zona es lo que se recorta (si casa con varios elementos, el
+// recorte los abarca a todos), con margen px alrededor (12 si no se dice) y hasta alto px; preparar, JavaScript que deja la zona a la vista y da true cuando ya está
+// (se repite hasta entonces). Salen en una ventana estrecha (ancho, 420 si no se dice) para que se lean también en el
+// móvil, y sin el Historial: no hacen peticiones reales.
+export interface Captura {
+  id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number
+  sitio?: true; zona?: string; preparar?: string; alto?: number; margen?: number
+}
+// Lo que preparan los recortes del sitio: el panel de la Ayuda de Inicio (el «?» de su cabecera) y las opciones de la
+// receta de Probar, plegadas al abrirla.
+const AYUDA = `(() => { if (document.querySelector('.panel-ayuda .vista-tema')) return true; document.querySelector('[data-recorrido="app.ayuda"]')?.click(); return false })()`
+const OPCIONES = `document.querySelector('[data-recorrido="ejecutar.receta"] .q-expansion-item')`
+const ABRIR_OPCIONES = `(() => { const e = ${OPCIONES}; if (!e) return false; if (e.classList.contains('q-expansion-item--expanded')) return true; e.querySelector('.q-item').click(); return false })()`
+const EN_OPCIONES = '[data-recorrido="ejecutar.receta"] .q-expansion-item__content > div'
+// salida estructurada: el segundo interruptor de las opciones (el primero es «forzar el modelo»), con su texto debajo
+const SALIDA = `${EN_OPCIONES} > div:has(> .q-toggle + .text-caption)`
+const GUIA = '[data-captura="mis-apis"] .guia-url'
+export const CAPTURAS: Captura[] = [
   { id: 'inicio', pagina: 'inicio' },
   { id: 'agente', pagina: 'agentes' },
   { id: 'receta', pagina: 'ejecutar' },
@@ -24,7 +42,79 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   { id: 'marca', pagina: 'inicio', servidor: true, cabecera: true, ancho: 720 },
   { id: 'servidor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'servidor' }, servidor: true },
   { id: 'seguridad', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'seguridad' }, servidor: true },
+  // La oferta «Prepara tus agentes» de la bienvenida: sale si la bienvenida no tiene respuesta y ningún agente está listo
+  // (SIMULAR con tramtai.capturas.sinListos; no se instala ni se quita ningún CLI).
+  { id: 'preparar', pagina: 'inicio', guardado: { 'tramtai.bienvenida': 'pendiente', 'tramtai.capturas.sinListos': true } },
+  // FIG 4 y 5 de Inicio: Mis APIs y el mapa de Inicio del Tramtai en modo servidor, en vertical (el de las ventanas de
+  // menos de 600 px: el horizontal mide al menos 860 y no se leería en el móvil).
+  { id: 'portada-fig-apis', pagina: 'conectar', sitio: true, zona: '[data-captura="mis-apis"] .q-tab-panel', alto: 600, margen: 0 },
+  { id: 'portada-fig-servidor', pagina: 'inicio', sitio: true, servidor: true, zona: '[data-captura="inicio"]', alto: 760 },
+  // Las tarjetas de funciones de Producto, en su orden (FIG 8 a 19; la 17, la terminal, es texto: terminal.json).
+  { id: 'funcion-sdk', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' },
+    zona: `[data-captura="mis-apis"] .text-weight-medium:has(+ .row .guia-url), ${GUIA}:not(:has(a.enlace))` },
+  { id: 'funcion-api-propia', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' }, zona: `${GUIA}:has(a.enlace)` },
+  // del interruptor a «Añadir campo»: sin el ejemplo de respuesta ni los reintentos, que van debajo
+  { id: 'funcion-forma', pagina: 'ejecutar', sitio: true, zona: `${SALIDA}, ${SALIDA} ~ :not(.q-expansion-item, .q-select)`,
+    preparar: `(() => { if (!${ABRIR_OPCIONES}) return false
+      if (document.querySelector('${EN_OPCIONES} .q-btn-toggle')) return true
+      document.querySelector('${SALIDA} .q-toggle')?.click(); return false })()` },
+  { id: 'funcion-espacios', pagina: 'espacios', sitio: true, zona: '[data-captura="espacios"]' },
+  // el diálogo entero no cabe en una tarjeta: su cabecera y sus cuatro primeros campos (nombre, grupo, instrucciones y
+  // agente y modelo), cerrado justo bajo el último
+  { id: 'funcion-una-api', pagina: 'conectar', sitio: true,
+    zona: '.q-dialog .q-card > .q-card__section:first-child, .q-dialog form > .q-card__section > .q-field, .q-dialog form > .q-card__section > div > .q-field:nth-child(-n+2)',
+    preparar: `(() => { if (document.querySelector('.q-dialog .q-card')) return true; document.querySelector('[data-recorrido="conectar.nueva"]')?.click(); return false })()` },
+  // el modelo (el primero que ofrece) y, debajo, el esfuerzo: los dos selectores sueltos de la receta (el de respaldo va
+  // en las opciones). Elegido el modelo, la lista se cierra con Esc y el campo pierde el foco; si no ofrece ninguno (sin
+  // agentes listos), sale vacío.
+  { id: 'funcion-modelo', pagina: 'ejecutar', sitio: true, zona: '[data-recorrido="ejecutar.receta"] > div > .q-select, [data-recorrido="ejecutar.receta"] > div > .q-select ~ .text-caption',
+    preparar: `(() => {
+      const campo = document.querySelector('[data-recorrido="ejecutar.receta"] > div > .q-select')
+      if (!campo) return false
+      window.intentosModelo = (window.intentosModelo ?? 0) + 1
+      if (campo.querySelector('.q-field__native')?.innerText.trim() || window.intentosModelo > 40) {
+        if (!document.querySelector('.q-menu')) { document.activeElement?.blur(); return true }
+        campo.querySelector('input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }))
+        return false
+      }
+      const opcion = document.querySelector('.q-menu .q-item:not(.disabled)')
+      const entrada = campo.querySelector('input')
+      if (opcion) opcion.click()
+      else if (!document.querySelector('.q-menu')) { entrada.focus(); entrada.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true })) }
+      return false })()` },
+  // el respaldo, con lo que hace: hasta tres agentes que siguen si el principal falla
+  { id: 'funcion-respaldo', pagina: 'ejecutar', sitio: true, zona: `${EN_OPCIONES} > .q-select`, preparar: ABRIR_OPCIONES },
+  // las dos clases de clave: la del espacio y la de cada API, que se ven una sola vez y se revocan por separado
+  { id: 'funcion-claves', pagina: 'conectar', sitio: true, zona: '.q-card:has([data-recorrido="conectar.clave-espacio"])' },
+  // Sin pantalla propia: la nota de la Ayuda de Inicio que lo cuenta (el último .info-caja es la de la terminal).
+  { id: 'funcion-aislados', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .info-caja:not(:last-child)' },
+  { id: 'funcion-adjuntos', pagina: 'ejecutar', sitio: true, zona: '[data-captura="receta"] .q-file, [data-captura="receta"] .q-file ~ .text-caption' },
+  // el recorrido de la página, en el panel que abre su «?»
+  { id: 'funcion-recorrido', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .apilado:has(> .pasos-guia):has(> div > .q-btn)' },
 ]
+
+// SIMULAR corre en cada página antes que la app (Page.addScriptToEvaluateOnNewDocument) y cambia lo que el servicio
+// responde de los agentes, sin tocar ningún CLI real: en Agentes, Antigravity sale sin instalar, para que se vea
+// «Instalar» (el ancla agentes.instalar) en cualquier equipo; con tramtai.capturas.sinListos en localStorage, ningún
+// agente está listo y la bienvenida ofrece prepararlos (la captura preparar).
+export const SIMULAR = `(() => {
+  const original = window.fetch
+  window.fetch = async (...args) => {
+    const r = await original(...args)
+    const url = String(args[0]?.url ?? args[0])
+    // los agentes llegan con las capacidades (Agentes, Probar) y con los primeros pasos (Inicio)
+    const capacidades = ['/api/v1/capacidades', '/api/v1/instancia/pasos'].some((r) => url.includes(r)), versiones = url.includes('/api/v1/agentes/versiones')
+    if (!r.ok || !(capacidades || versiones)) return r
+    const enAgentes = location.hash.startsWith('#agentes'), sinListos = localStorage.getItem('tramtai.capturas.sinListos') !== null
+    const datos = await r.clone().json()
+    if (capacidades)
+      for (const a of datos.adaptadores)
+        if ((enAgentes && a.agente === 'antigravity') || (sinListos && a.estado === 'listo')) Object.assign(a, { estado: 'no_instalado', version_detectada: '' })
+    if (versiones && enAgentes)
+      for (const v of datos) if (v.agente === 'antigravity') Object.assign(v, { instalada: undefined, acciones: ['instalar'], comprobadas: { instalar: true }, motivo_codigo: undefined, motivo: undefined })
+    return new Response(JSON.stringify(datos), { status: r.status, statusText: r.statusText, headers: r.headers })
+  }
+})()`
 
 // POR_SACAR son las capturas de la Ayuda que un tema ya cita y todavía no se han sacado, con el motivo: mientras tanto el tema sale
 // sin imagen (la Web UI y el sitio la omiten). Al sacarla (npm run capturas) la entrada sobra y la prueba lo avisa.
@@ -124,12 +214,29 @@ export function ansiAHtml(ansi: string): string {
 
 // ANCLAS son los elementos que señalan los recorridos guiados (data-recorrido): una captura por ancla aunque salga en
 // varias páginas, la primera que la cita. Salen de los temas, así que un paso nuevo trae su captura sin tocar esta lista.
-export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string }
+export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string; arriba?: string }
+// ARRIBA hace empezar el recorte de un ancla en el borde de arriba de su contenedor (closest): una fila suelta, con el
+// margen de 16 px, dejaba ver medio renglón de lo de encima. La fila de preparar sale con la cabecera de su agente.
+const ARRIBA: Record<string, string> = { 'agentes.preparar': '.q-expansion-item' }
 // PREPARAR deja visible un ancla que la página no muestra al abrirla: es JavaScript que corre en la página y da true
 // cuando ya hizo lo suyo (se repite hasta entonces, por si los datos aún no llegaron).
 const PREPARAR: Record<string, string> = {
   // el detalle de un trabajo es el panel que se abre al pulsar una fila del Historial
   'historial.detalle': `(() => { const fila = document.querySelector('[data-recorrido="historial.lista"] tbody tr'); fila?.click(); return !!fila })()`,
+  // los que faltan por instalar van plegados: se despliegan para que se vea su «Instalar»
+  'agentes.instalar': `(() => {
+    const e = document.querySelector('[data-recorrido="agentes.instalar"]')
+    if (e?.querySelector('.q-expansion-item--expanded .q-btn')?.getBoundingClientRect().height) return true
+    if (e && !e.querySelector('.q-expansion-item--expanded')) e.querySelector('.q-item')?.click()
+    return false
+  })()`,
+  // lo de preparar un agente está en su tarjeta desplegada: se abre la primera si no hay ninguna abierta (pulsar otra vez
+  // la cerraría) y se espera a que lleguen sus versiones
+  'agentes.preparar': `(() => {
+    if ([...document.querySelectorAll('[data-recorrido="agentes.preparar"]')].some((e) => e.getBoundingClientRect().height > 0)) return true
+    if (!document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item--expanded')) document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item .q-item')?.click()
+    return false
+  })()`,
 }
 export const ANCLAS: AnclaCaptura[] = []
 for (const tema of temas)
@@ -137,7 +244,7 @@ for (const tema of temas)
     if (bloque.tipo === 'recorrido')
       for (const { ancla } of bloque.pasos)
         if (tema.paginaApp && !ANCLAS.some((a) => a.ancla === ancla))
-          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla] })
+          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla], arriba: ARRIBA[ancla] })
 
 // SIN_CAPTURA son las anclas que la demo no puede mostrar, con el motivo: su paso sale en el sitio sin imagen.
 // Primero se intenta que los datos de demostración la hagan visible; esto es el último recurso.

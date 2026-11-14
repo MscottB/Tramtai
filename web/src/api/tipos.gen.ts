@@ -189,6 +189,7 @@ export interface AjustesServicio {
 export interface EstadoActualizacion {
   actual: string
   buscar: boolean
+  buscar_versiones_agentes: boolean
   disponible: boolean
   version: string
   url: string
@@ -273,6 +274,41 @@ export interface ActivarHerramientas {
   ids?: string[]
   todas?: boolean
   modelo?: string
+}
+
+export interface PedidoPreparacion {
+  accion: 'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'
+  borrar_datos: boolean
+  confirmar: boolean
+}
+
+export interface EstadoPreparacion {
+  agente: string
+  accion: 'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'
+  estado: 'instalando' | 'actualizando' | 'desinstalando' | 'comprobando' | 'esperando_usuario' | 'listo' | 'error' | 'cancelado'
+  etapa?: 'descarga' | 'orden' | 'borrado'
+  enlace?: string
+  codigo?: string
+  pide_pegar?: boolean
+  motivo_codigo?: 'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'interrumpida'
+  mensaje?: string
+  orden_consola?: string
+  lineas?: string[]
+  version_antes?: string
+  version_despues?: string
+  inicio?: string
+  fin?: string
+}
+
+export interface VersionesAgente {
+  agente: string
+  instalada?: string
+  ultima?: string
+  comprobadas: Record<string, boolean>
+  acciones: string[]
+  motivo_codigo?: 'version_no_comprobada' | 'sin_red'
+  motivo?: string
+  orden_consola?: string
 }
 
 export interface Uso {

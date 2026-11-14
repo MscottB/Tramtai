@@ -8,6 +8,7 @@
 # Tres tramos, uno detrás de otro, limpiando entre ellos:
 #   1. Desde el .tar.gz: instalar, contraseña del administrador, TLS propio con un certificado de prueba, iniciar
 #      sesión, una petición al Claude simulado, guardar una clave con una petición larga en curso (debe terminar),
+#      instalar y desinstalar Antigravity para la cuenta del servicio (con su instalador oficial: necesita red),
 #      actualizar con «servidor instalar» desde el .tar.gz nuevo y desinstalar con --borrar-datos.
 #   2. Con el paquete en la máquina limpia: apt install del .deb (no arranca nada) y «tramtai-servidor instalar»; lo
 #      mismo que en 1; actualizar el paquete (try-restart) y quitarlo (prerm: disable --now).
@@ -130,6 +131,28 @@ FIN
 	wait "$cliente" || : # su conexión puede cortarse con el reinicio; lo que cuenta es el trabajo
 }
 
+# probar_agentes: el servicio prepara un CLI para su cuenta (v0.60). Antigravity, que no inicia sesión, con su instalador
+# oficial: queda en la casa de la cuenta (HOME = /var/lib/tramtai, «~» de la receta), a su nombre, Tramtai guarda su ruta
+# en comandos_agentes (está fuera del PATH del servicio) y la orden de la consola (servidor.OrdenConsola) lo lanza como
+# esa cuenta. Desinstalar lo quita y quita la ruta.
+probar_agentes() {
+	agy=/var/lib/tramtai/.local/bin/agy
+	codigo=0
+	salida=$(tramtai-servidor agentes instalar antigravity --confirmar 2>&1) || codigo=$?
+	# 3: instalado, pero le falta su clave de API.
+	[ "$codigo" = 0 ] || [ "$codigo" = 3 ] || falla "agentes instalar antigravity salió con $codigo: $salida"
+	[ -x "$agy" ] || falla "agentes instalar no dejó $agy: $salida"
+	[ "$(stat -c %U "$agy")" = tramtai ] || falla "$agy no es de la cuenta tramtai"
+	grep -qF "antigravity: $agy" /var/lib/tramtai/config.yaml ||
+		falla "comandos_agentes no apunta a $agy: $(cat /var/lib/tramtai/config.yaml)"
+	tramtai-servidor agentes versiones | grep -Eq 'antigravity +[0-9]' || falla "agentes versiones no ve Antigravity instalado"
+	sudo -u tramtai -H env -i HOME=/var/lib/tramtai PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin "$agy" --version >/dev/null ||
+		falla "la orden de la consola no lanza $agy como la cuenta tramtai"
+	salida=$(tramtai-servidor agentes desinstalar antigravity --confirmar 2>&1) || falla "agentes desinstalar antigravity: $salida"
+	[ ! -e "$agy" ] || falla "agentes desinstalar deja $agy"
+	! grep -q "antigravity:" /var/lib/tramtai/config.yaml || falla "agentes desinstalar deja comandos_agentes.antigravity"
+}
+
 echo "== 1. desde el .tar.gz"
 salida=$("$trabajo/viejo/tramtai/tramtai" servidor instalar --acepto-terminos 2>&1) || falla "instalar desde el .tar.gz: $salida"
 for f in /opt/tramtai/tramtai /opt/tramtai/uv /usr/local/bin/tramtai-servidor /etc/systemd/system/tramtai.service; do
@@ -138,6 +161,7 @@ done
 [ "$(systemctl is-active tramtai)" = active ] || falla "el servicio no quedó en marcha"
 esperar
 probar_en_marcha
+probar_agentes
 # 7. Actualizar desde un paquete local: «servidor instalar» desde el .tar.gz de otra versión.
 antes=$(pid)
 salida=$("$trabajo/nuevo/tramtai/tramtai" servidor instalar --acepto-terminos 2>&1) || falla "actualizar desde el .tar.gz nuevo: $salida"

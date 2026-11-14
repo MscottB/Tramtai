@@ -61,9 +61,10 @@ test('Empezar tiene la sección «Solo con la terminal» con el servicio en segu
   assert.ok(seccion?.tipo === 'pasos' && seccion.titulo, 'falta la sección')
   assert.equal(es[seccion.titulo], 'Solo con la terminal')
   assert.equal(en[seccion.titulo], 'Terminal only')
-  for (const textos of [es, en] as Record<string, string>[]) {
+  // Cada idioma, con los nombres de las órdenes en su idioma (los alias en inglés que cobra conoce).
+  for (const [textos, iniciar] of [[es, 'tramtai servicio iniciar -d'], [en, 'tramtai service start -d']] as [Record<string, string>, string][]) {
     const pasos = seccion.pasos.map((p) => textos[p]).join(' ')
-    for (const orden of ['tramtai servicio iniciar -d', 'tramtai terminal', 'SSH', 'NO_COLOR', 'TRAMTAI_ASCII']) assert.ok(pasos.includes(orden), orden)
+    for (const orden of [iniciar, 'tramtai terminal', 'SSH', 'NO_COLOR', 'TRAMTAI_ASCII']) assert.ok(pasos.includes(orden), orden)
   }
 })
 
@@ -118,15 +119,15 @@ test('Servidor tiene el aviso con riesgos.1 a riesgos.5, Dos entornos su tabla y
   assert.ok(aviso?.tipo === 'pasos', 'falta la sección Aviso en Servidor')
   assert.deepEqual(aviso.pasos, ['riesgos.1', 'riesgos.2', 'riesgos.3', 'riesgos.4', 'riesgos.5'])
   assert.ok(temaPorId('entornos')?.bloques.some((b) => b.tipo === 'tabla'), 'Dos entornos sin tabla')
-  for (const textos of [es, en] as Record<string, string>[]) {
+  for (const [textos, instalar] of [[es, 'tramtai-servidor instalar'], [en, 'tramtai-servidor install']] as [Record<string, string>, string][]) {
     const ajustes = temaPorId('ajustes')!.bloques.flatMap((b) => (b.tipo === 'pasos' ? b.pasos : b.tipo === 'preguntas' ? b.preguntas.map((p) => p.respuesta) : []))
       .map((c) => textos[c]).join(' ')
-    for (const forma of [textos['arranque.app'], textos['arranque.servicio'], 'tramtai-servidor instalar']) assert.ok(ajustes.includes(forma), forma)
+    for (const forma of [textos['arranque.app'], textos['arranque.servicio'], instalar]) assert.ok(ajustes.includes(forma), forma)
   }
 })
 
-test('están los 19 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 19)
+test('están los 20 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 20)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 

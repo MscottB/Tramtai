@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"tramtai/internal/credenciales"
@@ -230,9 +231,25 @@ func ClaveAlmacen(nombres ...string) (string, error) {
 	return "", fallo
 }
 
+// rutasGuardadas son las rutas que la preparación de los agentes guardó en comandos_agentes con el servicio en marcha,
+// por nombre del programa: el adaptador, creado con ese nombre al arrancar, las usa sin reiniciar el servicio.
+var rutasGuardadas sync.Map
+
+// FijarRutaPrograma hace que ResolverPrograma(nombre) busque ruta (vacía: vuelve a buscar nombre).
+func FijarRutaPrograma(nombre, ruta string) {
+	if ruta == "" {
+		rutasGuardadas.Delete(nombre)
+		return
+	}
+	rutasGuardadas.Store(nombre, ruta)
+}
+
 // ResolverPrograma localiza el ejecutable. Rechaza los envoltorios .cmd/.bat: pasarían los argumentos por
 // cmd.exe, y el claude.cmd de npm resultó estar roto.
 func ResolverPrograma(nombre string) (string, error) {
+	if ruta, ok := rutasGuardadas.Load(nombre); ok {
+		nombre = ruta.(string)
+	}
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
 		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se encontró el ejecutable %s; instálalo o configura comandos_agentes", nombre))

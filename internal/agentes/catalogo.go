@@ -120,6 +120,14 @@ func AdmiteSuscripcion(nombre string) bool {
 	return slices.Contains(f.Autenticaciones, adaptadores.AutenticacionSuscripcion)
 }
 
+// AvisoSesion es lo que la cuenta del proveedor exige antes de iniciar sesión (clave de texto y enlace); vacíos si no hay.
+func AvisoSesion(nombre string) (clave, enlace string) {
+	if f, ok := Buscar(nombre); ok && f.Receta != nil && f.Receta.Sesion != nil {
+		return f.Receta.Sesion.Aviso, f.Receta.Sesion.AvisoEnlace
+	}
+	return "", ""
+}
+
 // PermitidoEnApps indica si el agente se puede usar desde apps y APIs: su canario pasó o
 // adaptadores.<nombre>.permitir_apps lo habilita. Un agente fuera del catálogo (los simulados de las pruebas) sí.
 func PermitidoEnApps(c *configuracion.Configuracion, nombre string) bool {

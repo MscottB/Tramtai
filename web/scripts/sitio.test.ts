@@ -1,12 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { brotliDecompressSync } from 'node:zlib'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
-import { ANCLAS_VIEJAS, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
+import { bloquesVisibles } from '../src/ayuda/vista.ts'
+import { ANCLAS_VIEJAS, CAMINO, GRUPOS_AYUDA, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
 
+const SITIO = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
 const fuente: Fuente = {
+  paginas: { 'servidor.html': SITIO('servidor.html'), 'desarrolladores.html': SITIO('desarrolladores.html') },
   temas, es, en, capturas: new Map([['inicio.claro.es.webp', { ancho: 1280, alto: 720 }]]),
   ejemplos: (_b, idioma) => [{ id: 'python', titulo: 'Python', codigo: idioma === 'es' ? 'print("<hola> & adiós")' : 'print("hi")' }],
 }
@@ -16,10 +20,10 @@ test('escapar deja el texto sin HTML', () => {
   assert.equal(escapar(`<a & "b" 'c'>`), '&lt;a &amp; &quot;b&quot; &#39;c&#39;&gt;')
 })
 
-test('genera el inicio, una página por tema, el índice de búsqueda y la página de paso', () => {
+test('genera el inicio, una página por tema, el buscador y la página de paso', () => {
   assert.ok(paginas.has('ayuda/index.html'))
   for (const t of temas) assert.ok(paginas.has(`ayuda/${t.id}.html`), t.id)
-  assert.ok(paginas.has('ayuda/indice.json'))
+  assert.ok(paginas.has('buscar.json'))
   assert.ok(paginas.has('ayuda.html'))
 })
 
@@ -65,9 +69,33 @@ test('el script de la página de paso funciona tal cual sale en ayuda.html', () 
   }
 })
 
-test('el índice de búsqueda tiene los 19 temas en los dos idiomas', () => {
-  const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
-  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 19)
+test('buscar.json tiene una entrada por tema y apartado', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en']) {
+    const us: string[] = indice[idioma].map((e: { u: string }) => e.u)
+    for (const t of temas) assert.ok(us.includes('ayuda/' + t.id + '.html'), t.id)
+    assert.ok(us.some((u) => u.startsWith('ayuda/agentes.html#')), 'anclas de un tema')
+    for (const p of ['servidor.html#', 'desarrolladores.html#']) assert.ok(us.some((u) => u.startsWith(p)), p)
+    for (const e of indice[idioma]) assert.deepEqual(Object.keys(e), ['u', 'ti', 'd', 'x'])
+  }
+  const [s] = indice.es.filter((e: { u: string }) => e.u === 'servidor.html#red')
+  assert.equal(s.ti, 'Abrir a la red')
+  assert.match(s.x, /servidor solo atiende/, 'lleva el párrafo, no el título')
+  assert.equal(indice.en.find((e: { u: string }) => e.u === 'servidor.html#red').ti, 'Open to the network')
+})
+
+test('buscar.json no pasa de 100 KB', () => {
+  assert.ok(Buffer.byteLength(paginas.get('buscar.json')!) <= 100 * 1024)
+})
+
+test('cada u de buscar.json lleva a un ancla que existe', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en'])
+    for (const { u } of indice[idioma] as { u: string }[]) {
+      const [archivo, ancla] = u.split('#')
+      const html = paginas.get(archivo) ?? SITIO(archivo)
+      if (ancla) assert.match(html, new RegExp('\\sid="' + ancla + '"'), u)
+    }
 })
 
 const leer = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
@@ -90,7 +118,7 @@ test('cada #ancla interno de la portada, la guía y la Ayuda lleva a un id que e
 })
 
 test('la portada y las guías tienen al día la cabeza, la barra, el pie y el aviso de sitio.ts', () => {
-  assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'desarrolladores.html', 'servidor.html'])
+  assert.deepEqual(PAGINAS_FIJAS.map((p) => p.archivo), ['index.html', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'descargar.html'])
   const terminal = JSON.parse(leer('capturas/terminal.json'))
   for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p, { es, en, terminal }), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
 })
@@ -103,7 +131,7 @@ test('riesgos da los cinco riesgos de los catálogos, con la variante del escrit
 })
 
 test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en los dos idiomas', () => {
-  for (const [archivo, servidor] of [['index.html', false], ['servidor.html', true]] as const) {
+  for (const [archivo, servidor] of [['producto.html', false], ['servidor.html', true]] as const) {
     const html = fijas.get(archivo)!
     const zona = html.match(new RegExp(`<!-- comun:${servidor ? 'riesgos-servidor' : 'riesgos'} -->([\\s\\S]*?)<!-- /comun:`))?.[1] ?? ''
     for (const [i, r] of riesgos(es, servidor).entries()) assert.ok(zona.includes(`<span lang="es">${escapar(r)}</span>`), `${archivo}: riesgo ${i + 1} en español`)
@@ -112,16 +140,16 @@ test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en l
   }
 })
 
-// v0.59 (spec §6): servidor.html abre con una cabecera que presenta el modo servidor (titular, entrada, el mapa de la
-// portada en grande, «¿Es para ti?», tres pasos por sistema y dos capturas reales), y debajo sigue la documentación.
+// v0.59 (spec §6): servidor.html abre presentando el modo servidor (titular, entrada, el mapa, «¿Es para ti?», tres pasos
+// por sistema y dos capturas reales), y debajo sigue la documentación; desde la v0.61, todo en la columna del contenido.
 const servidor = fijas.get('servidor.html')!
-const cabeceraServidor = servidor.slice(servidor.indexOf('<main'), servidor.indexOf('<nav class="indice"'))
+const cabeceraServidor = servidor.slice(servidor.indexOf('<article id="contenido"'), servidor.indexOf('<section id="que-es">'))
 test('servidor.html: la cabecera nueva tiene titular, entrada, mapa, «¿Es para ti?» y las capturas en es/en', () => {
-  assert.match(cabeceraServidor, /<div class="servidor-cabecera">\s*<header>\s*<h1>/)
+  assert.match(cabeceraServidor, /^<article id="contenido"[^>]*>\s*<header class="doc-cabeza">[\s\S]*?<h1 class="titular">/)
   const entrada = cabeceraServidor.match(/<p class="entrada"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/p>/)
   assert.ok(entrada, 'falta la entrada')
   for (const t of entrada.slice(1)) assert.ok(Math.abs(t.split(/\s+/).length - 30) <= 8, `unas 30 palabras: ${t}`)
-  const mapa = cabeceraServidor.match(/<figure class="mapa-servidor">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  const mapa = cabeceraServidor.match(/<figure class="tarjeta fig-mapa vivo">[\s\S]*?<\/figure>/)?.[0] ?? ''
   assert.equal((mapa.match(/<svg [^>]*role="img" aria-label="[^"]+" data-aria-en="[^"]+"/g) ?? []).length, 2)
   assert.match(cabeceraServidor, /<section id="para-ti">[\s\S]*<article class="tarjeta">[\s\S]*El escritorio, si…[\s\S]*<article class="tarjeta">[\s\S]*El servidor, si…/)
   // Dos pantallas reales, en claro y oscuro y en los dos idiomas, cada una con su alt en su idioma.
@@ -160,7 +188,7 @@ test('servidor.html: tres pasos por sistema (instalar, contraseña, HTTPS o prox
 test('servidor.html: el aviso de los cinco riesgos va justo antes de Instalar, también en «En esta página»', () => {
   const ids = [...servidor.matchAll(/<section id="([^"]+)"/g)].map((m) => m[1])
   assert.equal(ids[ids.indexOf('instalar') - 1], 'aviso')
-  const indice = [...(servidor.match(/<nav class="indice"[\s\S]*?<\/nav>/)?.[0] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
+  const indice = [...(servidor.match(/<aside class="doc-pagina">[\s\S]*?<\/aside>/)?.[0] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
   assert.deepEqual(indice, ids.filter((id) => indice.includes(id)), 'el índice sigue el orden de la página')
   assert.equal(indice[indice.indexOf('instalar') - 1], 'aviso')
   const aviso = servidor.match(/<section id="aviso">[\s\S]*?<\/section>/)?.[0] ?? ''
@@ -191,18 +219,20 @@ test('el README y la guía del servidor tienen al día el aviso de riesgos.* (np
 })
 
 test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
-  const destinos = (html: string) => {
-    const zona = (html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '') + (html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '')
+  const destinos = (zona: string) => {
     return [...zona.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1].replace(URL_SITIO, '').replace(/^(\.\.\/|\.\/)+/, ''))
   }
-  const esperados = ['#descargar', 'ayuda/empezar.html', '#agentes', 'ayuda/', 'desarrolladores.html', 'servidor.html', 'https://github.com/MscottB/Tramtai',
+  const esperados = ['', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html', 'ayuda/empezar.html', 'https://github.com/MscottB/Tramtai',
     'https://github.com/MscottB/Tramtai/releases', 'https://github.com/MscottB/Tramtai/blob/main/LICENSE.md', 'https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md']
   const casos: [string, string][] = [...fijas, ['ayuda/agentes.html', paginas.get('ayuda/agentes.html')!], ['404.html', paginas.get('404.html')!]]
   for (const [ruta, html] of casos) {
-    // Desde la Ayuda, «ayuda/» es «./» o «index.html».
-    const d = destinos(html).map((x) => (ruta.startsWith('ayuda/') && !x.startsWith('http') && !x.includes('#') && !x.includes('.html') && !x.startsWith('ayuda/') ? 'ayuda/' + x : x))
-      .map((x) => (ruta.startsWith('ayuda/') && /^(index\.html|empezar\.html)$/.test(x) ? 'ayuda/' + x.replace('index.html', '') : x))
-    for (const e of esperados) assert.ok(d.includes(e), `${ruta}: falta ${e} (hay ${d.join(', ')})`)
+    // Cada zona por separado: el logo de la barra ya lleva a Inicio, así que el pie debe llevar con su propio enlace.
+    const zonas = { barra: html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? '', pie: html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? '' }
+    for (const e of esperados.slice(0, 7)) {
+      assert.ok(destinos(zonas.barra).includes(e), `${ruta}: la barra no lleva a «${e}»`)
+      assert.ok(destinos(zonas.pie).includes(e), `${ruta}: el pie no lleva a «${e}»`)
+    }
+    for (const e of esperados.slice(7)) assert.ok(destinos(zonas.pie).includes(e), `${ruta}: el pie no lleva a «${e}»`)
   }
 })
 
@@ -219,7 +249,7 @@ test('cada página tiene «Saltar al contenido», canonical y Open Graph absolut
   for (const [ruta, html] of todas) {
     if (ruta === '404.html') continue
     assert.match(html, /<a class="saltar" href="#contenido">/, ruta)
-    assert.match(html, /<main id="contenido"/, ruta)
+    assert.match(html, /<(main|article) id="contenido"/, ruta)
     const url = URL_SITIO + (ruta === 'index.html' ? '' : ruta.replace(/index\.html$/, ''))
     assert.ok(html.includes(`<link rel="canonical" href="${url}">`), `${ruta}: canonical ${url}`)
     assert.ok(html.includes(`<meta property="og:url" content="${url}">`), `${ruta}: og:url`)
@@ -255,31 +285,138 @@ const PROHIBIDAS = [/Sin cortes/, /No outages/, /Todo se queda en tu equipo/i, /
   /jamás/, /no vuelve a pasar/, /won’t happen again/]
 
 test('el sitio no tiene rayas largas ni promesas absolutas', () => {
-  const textos = new Map([...todas, ['sitio.js', leer('sitio.js')], ['ayuda/indice.json', paginas.get('ayuda/indice.json')!]])
+  const textos = new Map([...todas, ['sitio.js', leer('sitio.js')], ['buscar.json', paginas.get('buscar.json')!]])
   for (const [ruta, html] of textos) {
     assert.ok(!html.includes('—'), `${ruta}: raya larga`)
     for (const p of PROHIBIDAS) assert.ok(!p.test(html), `${ruta}: ${p}`)
   }
 })
 
-test('Empezar avisa, junto al botón de descargar, del CLI del agente y del aviso de Windows', () => {
+test('Empezar avisa, junto al botón de descargar, de que hace falta un agente (que Tramtai instala) y del aviso de Windows', () => {
   const html = paginas.get('ayuda/empezar.html')!
   const tras = html.slice(html.indexOf('Descargar Tramtai'))
-  assert.match(tras.slice(0, 1500), /Antes necesitas el CLI de al menos un agente[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
+  assert.match(tras.slice(0, 1500), /Necesitas al menos un agente: Tramtai instala el CLI[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
+  assert.doesNotMatch(html, /Tramtai no los instala|doesn’t install them/)
 })
 
-test('sitemap.xml lista la portada, las dos guías, la Ayuda y sus 19 temas', () => {
+test('sitemap.xml lista las siete páginas y los 20 temas de la Ayuda', () => {
   const urls = [...paginas.get('sitemap.xml')!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
-  for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'servidor.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
+  for (const u of [URL_SITIO, ...['producto', 'agentes', 'servidor', 'desarrolladores', 'descargar'].map((p) => `${URL_SITIO}${p}.html`), URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])
     assert.ok(urls.includes(u), u)
-  assert.equal(urls.length, 4 + 19)
+  assert.equal(urls.length, 7 + 20)
 })
 
 test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absolutas', () => {
   const html = paginas.get('404.html')!
   assert.match(html, /<meta name="robots" content="noindex">/)
-  for (const u of [URL_SITIO, URL_SITIO + 'ayuda/', URL_SITIO + '#descargar']) assert.ok(html.includes(`href="${u}"`), u)
+  for (const u of [URL_SITIO, URL_SITIO + 'ayuda/', URL_SITIO + 'descargar.html']) assert.ok(html.includes(`href="${u}"`), u)
   assert.doesNotMatch(html, /(href|src)="(?!https?:|#)/, 'en una ruta cualquiera, lo relativo no carga')
+})
+
+// v0.61 (spec §1): Inter e Instrument Serif alojadas, con su licencia; Cascadia (la terminal) no cuenta para el tope.
+const estilo = leer('estilo.css')
+test('las letras de Inicio no pasan de 150 KB', () => {
+  const letras = [...estilo.matchAll(/@font-face \{[^}]*url\('([^']+)'\)/g)].map((m) => m[1]).filter((f) => f !== 'cascadia.woff2')
+  assert.ok(letras.length >= 2, letras.join(', '))
+  const total = letras.reduce((s, f) => s + statSync(new URL('../../site/' + f, import.meta.url)).size, 0)
+  assert.ok(total <= 150 * 1024, `${Math.round(total / 1024)} KB`)
+})
+
+test('no queda Overpass', () => {
+  assert.doesNotMatch(estilo, /overpass/i)
+  for (const [ruta, html] of todas) assert.doesNotMatch(html, /overpass/i, ruta)
+})
+
+test('cada letra lleva su licencia', () => {
+  for (const f of ['INTER-OFL.txt', 'INSTRUMENT-OFL.txt', 'CASCADIA-OFL.txt']) assert.ok(existsSync(new URL('../../site/' + f, import.meta.url)), f)
+})
+
+const html_ = readdirSync(new URL('../../site/', import.meta.url), { recursive: true }).filter((f) => String(f).endsWith('.html')).map((f) => [String(f), leer(String(f))] as const)
+test('ninguna página usa var(--titulo)', () => {
+  for (const [ruta, html] of html_) assert.doesNotMatch(html, /var\(--titulo\)/, ruta)
+})
+
+// caracteresDe lee los caracteres que dibuja de verdad una letra WOFF2 del sitio: su tabla cmap (formatos 4 y 12), sin
+// dependencias (la cabecera, el directorio y los datos con Brotli, que trae node:zlib).
+function caracteresDe(archivo: string): Set<number> {
+  const b = readFileSync(new URL('../../site/' + archivo, import.meta.url))
+  assert.equal(b.toString('latin1', 0, 4), 'wOF2', archivo)
+  const ETIQUETAS = ['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post', 'cvt ', 'fpgm', 'glyf', 'loca', 'prep', 'CFF ', 'VORG', 'EBDT', 'EBLC', 'gasp',
+    'hdmx', 'kern', 'LTSH', 'PCLT', 'VDMX', 'vhea', 'vmtx', 'BASE', 'GDEF', 'GPOS', 'GSUB', 'EBSC', 'JSTF', 'MATH', 'CBDT', 'CBLC', 'COLR', 'CPAL', 'SVG ', 'sbix', 'acnt', 'avar',
+    'bdat', 'bloc', 'bsln', 'cvar', 'fdsc', 'feat', 'fmtx', 'fvar', 'gvar', 'hsty', 'just', 'lcar', 'mort', 'morx', 'opbd', 'prop', 'trak', 'Zapf', 'Silf', 'Glat', 'Gloc', 'Feat', 'Sill']
+  let p = 48
+  const base128 = () => { let v = 0; for (let i = 0; i < 5; i++) { const x = b[p++]; v = v * 128 + (x & 127); if (!(x & 128)) return v } throw new Error('UIntBase128') }
+  let desde = 0, largoCmap = -1, cmap = 0
+  for (let i = b.readUInt16BE(12); i > 0; i--) {
+    const f = b[p++]
+    const etiqueta = (f & 63) === 63 ? b.toString('latin1', p, (p += 4)) : ETIQUETAS[f & 63]
+    const original = base128()
+    const transformada = etiqueta === 'glyf' || etiqueta === 'loca' ? f >> 6 === 0 : f >> 6 !== 0
+    const largo = transformada ? base128() : original
+    if (etiqueta === 'cmap') { cmap = desde; largoCmap = largo }
+    desde += largo
+  }
+  assert.ok(largoCmap > 0, `${archivo}: sin cmap`)
+  const d = brotliDecompressSync(b.subarray(p, p + b.readUInt32BE(20))).subarray(cmap, cmap + largoCmap)
+  const hay = new Set<number>()
+  for (let t = 0; t < d.readUInt16BE(2); t++) {
+    const s = d.readUInt32BE(4 + t * 8 + 4)
+    if (d.readUInt16BE(s) === 12) {
+      for (let g = 0; g < d.readUInt32BE(s + 12); g++) for (let c = d.readUInt32BE(s + 16 + g * 12); c <= d.readUInt32BE(s + 20 + g * 12); c++) hay.add(c)
+    } else if (d.readUInt16BE(s) === 4) {
+      const n = d.readUInt16BE(s + 6) / 2
+      const fin = s + 14, inicio = fin + 2 * n + 2, delta = inicio + 2 * n, rango = delta + 2 * n
+      for (let i = 0; i < n; i++) {
+        const [a, z, dd, r] = [d.readUInt16BE(inicio + 2 * i), d.readUInt16BE(fin + 2 * i), d.readUInt16BE(delta + 2 * i), d.readUInt16BE(rango + 2 * i)]
+        for (let c = a; c <= z && c !== 0xffff; c++) {
+          const g = r === 0 ? c + dd : d.readUInt16BE(rango + 2 * i + r + 2 * (c - a))
+          if ((r === 0 ? g & 0xffff : g) !== 0) hay.add(c)
+        }
+      }
+    }
+  }
+  return hay
+}
+
+// Inter e Instrument Serif llevan las letras de letras-caracteres.txt (receta en docs/equipo/desarrollo.md), y se mira en
+// la letra misma, no en la lista: pyftsubset deja fuera sin avisar lo que la letra no tiene. El código, la terminal
+// (<pre>, <code>) y los scripts los pinta Tramtai Mono: van aparte. FUERA_DE_INTER no está en Inter y llega de la letra del
+// sistema: «⋯» es el botón de las tarjetas de la app, citado en la Ayuda (web/src/idiomas/ayuda.*.ts, que no cambia).
+const FUERA_DE_INTER = new Set(['⋯'])
+test('cada carácter del sitio lo dibuja su letra', () => {
+  const inter = caracteresDe('inter.woff2'), serifa = caracteresDe('instrument-italica.woff2')
+  assert.ok(inter.has(0x41) && inter.has(0xf1) && inter.has(0x2019), 'la cmap de Inter se lee')
+  const entidades: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" }
+  const legible = (h: string) => h.replace(/<[^>]*>/g, ' ').replace(/&[#\w]+;/g, (e) => entidades[e] ?? e)
+  for (const [ruta, html] of html_) {
+    const texto = legible(html.replace(/<(pre|code|script|style)\b[\s\S]*?<\/\1>/g, ' '))
+    const faltan = [...new Set(texto)].filter((c) => !inter.has(c.codePointAt(0)!) && !/\s/.test(c) && !FUERA_DE_INTER.has(c))
+    assert.deepEqual(faltan, [], `${ruta}: Inter no tiene estos caracteres: añádelos a letras-caracteres.txt y rehaz la letra`)
+    // La serifa cursiva solo pinta la parte clave de los titulares y de los h2 (<em>).
+    const clave = [...html.matchAll(/<(h1|h2)\b[^>]*>([\s\S]*?)<\/\1>/g)].flatMap((m) => [...m[2].matchAll(/<em>([\s\S]*?)<\/em>/g)].map((e) => legible(e[1]))).join('')
+    const sinSerifa = [...new Set(clave)].filter((c) => !serifa.has(c.codePointAt(0)!) && !/\s/.test(c))
+    assert.deepEqual(sinSerifa, [], `${ruta}: Instrument Serif no tiene estos caracteres`)
+  }
+})
+
+// WCAG 1.4.4: la letra sale de la que elige quien lee en su navegador, y los cortes van en em para que con la letra
+// grande la página pase antes a menos columnas (a 1440 px con la letra al 200 % no hay desplazamiento horizontal).
+test('la letra del navegador manda: el body en rem y los cortes en em', () => {
+  assert.match(estilo, /\nbody \{[^}]*font: 1rem\/1\.6 /)
+  for (const [, regla] of estilo.matchAll(/@(?:media|container)([^{]*)\{/g)) assert.doesNotMatch(regla, /width: [\d.]+px/, regla.trim())
+  assert.doesNotMatch(leer('sitio.js'), /matchMedia\('[^']*\d+px/, 'sitio.js usa los cortes de estilo.css')
+})
+
+test('en el móvil, «En esta página» solo queda donde el índice no lleva ya a los apartados', () => {
+  const corte = estilo.slice(estilo.indexOf('@media (max-width: 56.25em) {\n  .doc {'))
+  assert.match(corte.slice(0, corte.indexOf('\n}')), /\.doc:has\(\.doc-indice a\[href\^="#"\]\) \.doc-pagina \{ display: none; \}/)
+  for (const pagina of ['servidor.html', 'desarrolladores.html']) assert.match(leer(pagina), /class="doc-indice[\s\S]*?href="#/, pagina)
+  assert.doesNotMatch(leer('ayuda/conectar.html').match(/class="doc-indice[\s\S]*?<\/nav>/)?.[0] ?? '', /href="#/, 'la Ayuda la conserva')
+})
+
+test('reducir movimiento para lo vivo', () => {
+  const bloques = estilo.split('@media (prefers-reduced-motion: reduce)').slice(1)
+  assert.ok(bloques.some((b) => /^[^@]*\.vivo/.test(b)))
 })
 
 test('las tablas no pierden su semántica y las capturas de la Ayuda declaran su tamaño', () => {
@@ -303,7 +440,7 @@ test('cada tema de página enseña «Qué verás en pantalla»: un paso por cada
   const lista = seccion.match(/<ol class="pasos recorrido-pasos">([\s\S]*?)<\/ol>/)?.[1] ?? ''
   assert.equal((lista.match(/<li>/g) ?? []).length, pasos.length)
   for (const p of pasos) assert.ok(lista.includes(`<strong><span lang="es">${escapar(es[p.titulo])}</span>`), p.titulo)
-  assert.match(html, /<nav class="indice"[\s\S]*?href="#s-recorrido"[\s\S]*?<\/nav>/)
+  assert.match(html, /<aside class="doc-pagina">[\s\S]*?href="#s-recorrido"[\s\S]*?<\/aside>/)
   for (const t of temas.filter((x) => x.paginaApp)) assert.match(paginas.get(`ayuda/${t.id}.html`)!, /<section id="s-recorrido">/, t.id)
 })
 
@@ -334,11 +471,78 @@ test('en el sitio no hay botón «Muéstrame en pantalla»: no hay app', () => {
 
 test('los temas largos tienen «En esta página» con un h2 por sección y el buscador a mano', () => {
   const html = paginas.get('ayuda/agentes.html')!
-  const nav = html.match(/<nav class="indice"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? ''
+  const nav = html.match(/<aside class="doc-pagina">([\s\S]*?)<\/aside>/)?.[1] ?? ''
   const anclas = [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
   assert.ok(anclas.length >= 3, 'faltan secciones en el índice')
   for (const a of anclas) assert.match(html, new RegExp(`<section id="${a}"><h2>`), a)
-  assert.match(html, /<a href="index\.html#buscar-ayuda">/)
+  assert.match(html, /<nav class="doc-indice"[\s\S]*?<button type="button" class="buscar-campo" data-buscar hidden>[\s\S]*?<\/nav>/)
+})
+
+// v0.61 (spec §6): la Ayuda, Servidor y Desarrolladores comparten la plantilla de tres columnas: el índice (con un botón
+// para el móvil), el contenido y «En esta página», que sale de los <section id> con su <h2>.
+const tresColumnas = /<div class="doc">\s*<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">\s*(?:<!-- comun:indice-boton -->\s*)?<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden>[\s\S]*?<div class="doc-indice-lista" id="doc-indice-lista">[\s\S]*?<\/nav>\s*<article id="contenido" tabindex="-1" class="prosa">[\s\S]*<\/article>\s*(?:<!-- comun:en-esta-pagina -->\s*)?<aside class="doc-pagina">/
+const enLaPagina = (html: string) => {
+  const articulo = html.slice(html.indexOf('<article id="contenido"'), html.indexOf('<aside class="doc-pagina">'))
+  const secciones = [...articulo.matchAll(/<section id="([^"]+)">\s*<h2\b|<h2 id="([^"]+)"/g)].map((m) => m[1] ?? m[2])
+  const aside = html.match(/<aside class="doc-pagina">[\s\S]*?<\/aside>/)?.[0] ?? ''
+  return { secciones, enlaces: [...aside.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]) }
+}
+
+test('cada tema de la Ayuda va en tres columnas', () => {
+  assert.deepEqual(GRUPOS_AYUDA.flatMap((g) => g.temas), temas.map((t) => t.id), 'cada tema en un grupo, en el orden de temas')
+  for (const [ruta, actual] of [['ayuda/index.html', 'index.html'], ...temas.map((t) => [`ayuda/${t.id}.html`, `${t.id}.html`])]) {
+    const html = paginas.get(ruta)!
+    assert.match(html, tresColumnas, ruta)
+    const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
+    for (const t of temas) assert.ok(indice.includes(`<a href="${t.id}.html"`), `${ruta}: el índice no lleva a ${t.id}`)
+    for (const g of GRUPOS_AYUDA) assert.ok(indice.includes(`<p class="fig doc-grupo" id="i-${g.id}"><span lang="es">${g.es}</span><span lang="en">${g.en}</span></p>\n<ul aria-labelledby="i-${g.id}">`), `${ruta}: ${g.es}`)
+    assert.deepEqual([...indice.matchAll(/<a href="([^"]+)" aria-current="page"/g)].map((m) => m[1]), [actual], ruta)
+    const { secciones, enlaces } = enLaPagina(html)
+    assert.deepEqual(enlaces, secciones, `${ruta}: «En esta página» no sigue sus apartados`)
+  }
+  assert.ok(enLaPagina(paginas.get('ayuda/agentes.html')!).enlaces.length >= 3)
+})
+
+test('Servidor y Desarrolladores, en tres columnas', () => {
+  for (const archivo of ['servidor.html', 'desarrolladores.html']) {
+    const html = fijas.get(archivo)!
+    assert.match(html, tresColumnas, archivo)
+    assert.match(html, /<main class="envoltura doc-envoltura">/, archivo)
+    // El titular en dos partes, con la cursiva en <em>.
+    assert.match(html, /<h1 class="titular"><span lang="es">[^<]+<em>[^<]+<\/em><\/span><span lang="en">[^<]+<em>[^<]+<\/em><\/span><\/h1>/, archivo)
+    const { secciones, enlaces } = enLaPagina(html)
+    assert.ok(secciones.length >= 8, `${archivo}: ${secciones}`)
+    assert.deepEqual(enlaces, secciones, `${archivo}: cada <h2 id> del contenido, en «En esta página»`)
+    // El índice de la izquierda lleva a cada apartado de la página.
+    const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
+    for (const id of secciones) assert.ok(indice.includes(`href="#${id}"`), `${archivo}: el índice no lleva a #${id}`)
+    // Cada lista del índice se nombra con el rótulo de su grupo.
+    const listas = [...indice.matchAll(/<ul( aria-labelledby="([^"]+)")?>/g)]
+    assert.ok(listas.length >= 3, archivo)
+    for (const [ul, , id] of listas) assert.ok(id && indice.includes(`<p class="fig doc-grupo" id="${id}">`), `${archivo}: ${ul}`)
+  }
+  // El camino de Inicio y de Desarrolladores es el mismo dibujo, el de sitio.ts.
+  for (const archivo of ['index.html', 'desarrolladores.html'])
+    assert.equal(fijas.get(archivo)!.match(/<!-- comun:camino -->\n([\s\S]*?)\n<!-- \/comun:camino -->/)?.[1], CAMINO, archivo)
+  // Los diagramas: el mapa del servidor y, en Desarrolladores, tu app → Tramtai → agente; con su FIG y vivos.
+  assert.match(servidor, /<figure class="tarjeta fig-mapa vivo">\s*<figcaption class="fig">/)
+  assert.match(fijas.get('desarrolladores.html')!, /<figure class="tarjeta fig-camino vivo">\s*<figcaption class="fig">/)
+})
+
+// La Ayuda del sitio y la de la app salen de los mismos textos (spec, Riesgos): cada tema generado lleva los suyos.
+test('los textos de la Ayuda no cambian', () => {
+  const claves = (x: unknown): string[] => typeof x === 'string' ? (Object.hasOwn(es, x) ? [x] : [])
+    : Array.isArray(x) ? x.flatMap(claves)
+    // alt solo sale con su captura y ancla es un data-recorrido de la app, no un texto.
+    : x && typeof x === 'object' ? Object.entries(x).flatMap(([k, v]) => (k === 'alt' || k === 'ancla' ? [] : claves(v))) : []
+  const plano = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ')
+  for (const t of temas) {
+    const html = plano(paginas.get(`ayuda/${t.id}.html`)!)
+    const lista = [t.titulo, t.resumen, t.terminal, ...claves(bloquesVisibles(t, 'sitio'))]
+    assert.ok(lista.length > 5, t.id)
+    for (const k of lista)
+      for (const textos of [es, en]) assert.ok(html.includes(textos[k as keyof typeof es].replace(/\s+/g, ' ')), `${t.id}: ${k}`)
+  }
 })
 
 test('iconos, imagen para compartir, manifest y datos estructurados', () => {
@@ -348,4 +552,60 @@ test('iconos, imagen para compartir, manifest y datos estructurados', () => {
   const ld = JSON.parse(fijas.get('index.html')!.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1])
   assert.equal(ld['@type'], 'SoftwareApplication')
   assert.match(leer('sitio.js'), /'tramtai\.lenguaje-ayuda'/, 'la Ayuda recuerda su lenguaje aparte de la guía')
+})
+
+// funcionDe saca una función de arriba del todo de sitio.js (sin sangría) para probarla sin navegador, como el script de
+// la página de paso.
+const funcionDe = (nombre: string) =>
+  new Function(`${leer('sitio.js').match(new RegExp(`\\nfunction ${nombre}\\([\\s\\S]*?\\n\\}`))![0]}\nreturn ${nombre}`)()
+
+// Pendiente de la Tarea 1: con el margen de abajo recortado un 20 %, un .vivo corto al final de la página no llegaba.
+test('lo vivo arranca con un cuarto a la vista, también al final de la página o si es más alto que ella', () => {
+  const visto = funcionDe('bastanteVisto')
+  const e = (ratio: number, alto: number) => ({ intersectionRatio: ratio, intersectionRect: { height: alto } })
+  assert.equal(visto(e(1, 80), 900), true, 'corto y entero a la vista, al final de la página')
+  assert.equal(visto(e(0.1, 60), 900), false, 'solo asoma')
+  assert.equal(visto(e(0.12, 300), 900), true, 'más alto que la pantalla: un cuarto de ella')
+  assert.equal(visto(e(0.2, 200), 900), false)
+  assert.match(leer('sitio.js'), /\{ threshold: \[0, 0\.25\] \}/)
+  assert.doesNotMatch(leer('sitio.js'), /rootMargin: '0px 0px -20% 0px'/)
+})
+
+// Si sitio.js no llega (no carga o falla), la clase js de la cabeza dejaría lo vivo oculto para siempre: a los 3 s, el
+// script de la cabeza lo pasa a su estado final, salvo que sitio.js haya puesto vivo-listo.
+test('sin sitio.js, lo vivo pasa a su estado final a los 3 s', () => {
+  for (const [ruta, html] of todas) assert.ok(html.includes("classList.contains('vivo-listo')"), ruta)
+  const script = leer('index.html').match(/<script>(document\.documentElement\.classList\.add\('js'\);[\s\S]*?)<\/script>/)?.[1] ?? ''
+  assert.ok(script, 'falta el script de la cabeza en Inicio (cd web; npm run sitio)')
+  const correr = (listo: boolean) => {
+    const clases = new Set<string>(listo ? ['vivo-listo'] : [])
+    const vivos = [new Set<string>(), new Set<string>()]
+    let espera = 0
+    let alFinal = () => {}
+    const document = {
+      documentElement: { classList: { add: (c: string) => clases.add(c), contains: (c: string) => clases.has(c) }, dataset: {}, lang: '' },
+      querySelectorAll: (s: string) => (s === '.vivo' ? vivos.map((v) => ({ classList: { add: (c: string) => v.add(c) } })) : []),
+    }
+    new Function('document', 'localStorage', 'navigator', 'setTimeout', script)(document, { getItem: () => null }, { language: 'es' }, (f: () => void, ms: number) => { alFinal = f; espera = ms })
+    alFinal()
+    return { espera, vistos: vivos.filter((v) => v.has('visto')).length }
+  }
+  assert.deepEqual(correr(false), { espera: 3000, vistos: 2 }, 'sin sitio.js')
+  assert.deepEqual(correr(true), { espera: 3000, vistos: 0 }, 'con sitio.js, lo vivo espera a entrar en pantalla')
+  // sitio.js lo marca lo primero, antes de cualquier cosa que pueda fallar.
+  assert.match(leer('sitio.js'), /^[\s\S]{0,1200}?\(function \(\) \{\n {2}document\.documentElement\.classList\.add\('vivo-listo'\);\n {2}var vivos = document\.querySelectorAll\('\.vivo'\);/)
+})
+
+// Pendientes de la Tarea 3.
+test('en el buscador, Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña', () => {
+  assert.match(leer('sitio.js'), /e\.key === 'Enter' && activo >= 0\) \{[\s\S]{0,80}opciones\[activo\]\.dispatchEvent\(new MouseEvent\('click', \{[^}]*ctrlKey: e\.ctrlKey, metaKey: e\.metaKey/)
+})
+
+test('cada tema de buscar.json tiene texto donde buscar', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en'])
+    for (const t of temas) {
+      const e = indice[idioma].find((x: { u: string }) => x.u === `ayuda/${t.id}.html`)
+      assert.ok(e?.x.trim(), `${idioma}: ${t.id}`)
+    }
 })

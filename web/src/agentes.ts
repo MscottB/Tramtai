@@ -192,11 +192,17 @@ export function opcionEscrita(valor: string): OpcionModelo {
 // tarda, así que se pide una vez por sesión de la página y se renueva cuando Agentes vuelve a comprobarlos.
 export const problemasAgentes = ref<Record<string, string>>({})
 let disponibilidad: Promise<void> | undefined
+// adaptadoresConocidos es la última comprobación de los agentes (null mientras no llega ninguna): la bienvenida decide
+// con ella si ofrece preparar los agentes.
+export const adaptadoresConocidos = ref<Adaptador[] | null>(null)
 export function fijarDisponibilidad(adaptadores: Adaptador[]) {
+  adaptadoresConocidos.value = adaptadores
   problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => !agenteListo(a)).map((a) => [a.agente,
     a.estado === 'desconectado' ? t('modelo.desconectado') : a.estado === 'no_instalado' ? t('modelo.noInstalado')
       : a.estado === 'falta_clave' || a.estado === 'sin_sesion' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
 }
+// refrescarAgentes vuelve a comprobar los agentes ahora (tarda: ejecuta cada CLI); si falla, se queda lo que había.
+export const refrescarAgentes = () => api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {})
 export function cargarDisponibilidad() {
   disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {
     disponibilidad = undefined // sin respuesta no se marca nada: se vuelve a pedir la próxima vez

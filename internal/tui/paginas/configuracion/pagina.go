@@ -873,6 +873,12 @@ func (p *Pagina) teclaSeccion(sec, t string) tea.Cmd {
 			_, err := c.Cli.BuscarActualizaciones(c.Ctx, buscar)
 			return err
 		})
+	case sec == secActualizaciones && t == "v":
+		buscar := !p.act.BuscarVersionesAgentes
+		return p.accion(p.tx("versionesAgentes.titulo")+": "+siNo(p, buscar), "", func(c pagina.Contexto) error {
+			_, err := c.Cli.BuscarVersionesAgentes(c.Ctx, buscar)
+			return err
+		})
 	case sec == secActualizaciones && t == "b":
 		return p.cargarActualizacion(true)
 	case sec == secArranque && t == "enter":
@@ -1056,6 +1062,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 	case secActualizaciones:
 		poner("Espacio", map[bool]string{true: idioma.T("desactiva"), false: idioma.T("activa")}[p.act.Buscar])
 		poner("b", p.tx("actualizacion.buscarAhora"))
+		poner("v", idioma.T("versiones de los agentes"))
 	case secArranque:
 		poner("Enter", idioma.T("elige"))
 	}

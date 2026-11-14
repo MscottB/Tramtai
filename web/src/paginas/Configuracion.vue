@@ -16,13 +16,13 @@
         <q-card-section>
           <h2 class="titulo-seccion">{{ t('servidor.titulo') }}</h2>
           <div v-if="!estadoServidor" class="texto-suave text-body2 q-mt-sm" role="status">{{ t('comun.cargando') }}</div>
-          <div v-else class="ficha text-body2 q-mt-sm">
+          <div v-else class="ficha ficha--apilable text-body2 q-mt-sm">
             <template v-for="f in filas" :key="f.etiqueta">
               <div>{{ t(f.etiqueta) }}</div>
               <div>
                 <div>{{ f.valor }}</div>
                 <div class="text-caption texto-suave">
-                  <template v-if="f.orden">{{ t('servidor.cambia') }} <code class="codigo">{{ f.orden }}</code></template>
+                  <template v-if="f.ordenes">{{ t('servidor.cambia') }}<OrdenesCopiables :ordenes="f.ordenes" class="q-mt-xs" /></template>
                   <template v-else-if="f.clave">{{ t('servidor.enConfig') }} <code class="codigo">{{ f.clave }}</code></template>
                   <template v-else>{{ f.nota }}</template>
                 </div>
@@ -128,6 +128,16 @@
         </div>
         <q-toggle :model-value="actualizacion.buscar" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('actualizacion.ajustesTitulo')"
           @update:model-value="cambiarBusqueda" />
+      </q-card-section>
+      <!-- Junto a las de Tramtai: las versiones nuevas de los CLI de los agentes (servicio.buscar_versiones_agentes). -->
+      <q-separator />
+      <q-card-section class="row items-start no-wrap">
+        <div class="col">
+          <h2 class="titulo-seccion">{{ t('versionesAgentes.titulo') }}</h2>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('versionesAgentes.texto') }}</div>
+        </div>
+        <q-toggle :model-value="actualizacion.buscar_versiones_agentes" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('versionesAgentes.titulo')"
+          @update:model-value="cambiarBusquedaAgentes" />
       </q-card-section>
     </q-card>
 
@@ -274,6 +284,7 @@ import { actualizacion, sesion, sistema } from '../estado'
 import { esfuerzoEspacio, esfuerzosDe, nombreAgente, opcionModelo } from '../agentes'
 import { enRango, fecha, nombreEsfuerzo, registroCubre, terminales } from '../formato'
 import { conArranque, estadoServidor, filasServidor, modosArranque, pestanasAjustes } from '../servidor'
+import OrdenesCopiables from '../componentes/OrdenesCopiables.vue'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
@@ -475,6 +486,16 @@ async function cambiarBusqueda(buscar: boolean) {
   cambiandoBusqueda.value = true
   try {
     actualizacion.value = await api.buscarActualizaciones(buscar)
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cambiandoBusqueda.value = false
+  }
+}
+async function cambiarBusquedaAgentes(buscar: boolean) {
+  cambiandoBusqueda.value = true
+  try {
+    actualizacion.value = await api.buscarVersionesAgentes(buscar)
   } catch (e) {
     avisarError(e)
   } finally {

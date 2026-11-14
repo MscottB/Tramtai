@@ -15,7 +15,7 @@ Lo interno para desarrollar Tramtai. La documentación para usuarios está en el
 | [conversor.md](conversor.md) | El conversor de archivos: lock, uv fijado y cómo cambiar sus versiones |
 | [pendientes.md](pendientes.md) | Hitos, hoja de ruta por releases y tareas |
 | [decisiones/](decisiones/001-estado-del-agente.md) | Decisiones de arquitectura (ADR): lo derivado lo calcula el servicio |
-| [Diseño](../diseno/DESIGN.md) | Sistema visual de la Web UI y de la página |
+| [Diseño](../diseno/DESIGN.md) | Sistema visual del sitio y de la Web UI |
 
 ## Releases
 

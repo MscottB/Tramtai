@@ -18,16 +18,17 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../manifest.webmanifest">
-<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
 <script src="../sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 </head>
 <body>
 <a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
@@ -37,13 +38,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
-        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-        <a href="../#terminal">Terminal</a>
-        <a href="../#servidor"><span lang="es">Servidor</span><span lang="en">Server</span></a>
-        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
-        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+        <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
         <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../descargar.html" class="solo-menu"><span lang="es">Descargar</span><span lang="en">Download</span></a>
       </nav>
+      <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span lang="es" class="solo-lectores">Buscar</span><span lang="en" class="solo-lectores">Search</span></button>
       <div class="preferencias">
         <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
           <button type="button" data-idioma="es" aria-pressed="true">ES</button>
@@ -57,24 +59,65 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       </div>
     </div>
     <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
-    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+    <a class="boton principal" href="../descargar.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main id="contenido" tabindex="-1" class="envoltura ayuda">
-<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-  <ol>
-    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
-    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
-    <li><a href="#s-deshacer"><span lang="es">Dejarlas como estaban</span><span lang="en">Put them back as they were</span></a></li>
-    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
-    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
-  </ol>
+<main class="envoltura doc-envoltura tema-ayuda">
+<div class="doc">
+<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
+<div class="doc-indice-lista" id="doc-indice-lista">
+<button type="button" class="buscar-campo" data-buscar hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span><span lang="es">Buscar</span><span lang="en">Search</span></span><kbd>Ctrl K</kbd></button>
+<ul>
+  <li><a href="index.html"><span lang="es">Inicio de la Ayuda</span><span lang="en">Help home</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+<ul aria-labelledby="i-g-empezar">
+  <li><a href="empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
+  <li><a href="agentes.html"><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></a></li>
+  <li><a href="preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></li>
+  <li><a href="probar.html"><span lang="es">Probar</span><span lang="en">Playground</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-apps"><span lang="es">Desde tus apps</span><span lang="en">From your apps</span></p>
+<ul aria-labelledby="i-g-apps">
+  <li><a href="conectar.html"><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></a></li>
+  <li><a href="conectar-herramientas.html" aria-current="page"><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></a></li>
+  <li><a href="archivos.html"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
+  <li><a href="json.html"><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></a></li>
+  <li><a href="recetas.html"><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></a></li>
+  <li><a href="herramientas.html"><span lang="es">Herramientas</span><span lang="en">Tools</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dia"><span lang="es">Día a día</span><span lang="en">Day to day</span></p>
+<ul aria-labelledby="i-g-dia">
+  <li><a href="presupuestos.html"><span lang="es">Presupuestos</span><span lang="en">Budgets</span></a></li>
+  <li><a href="historial.html"><span lang="es">Historial</span><span lang="en">History</span></a></li>
+  <li><a href="espacios.html"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></a></li>
+  <li><a href="claves.html"><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></a></li>
+  <li><a href="ajustes.html"><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-servidor"><span lang="es">Servidor</span><span lang="en">Server</span></p>
+<ul aria-labelledby="i-g-servidor">
+  <li><a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a></li>
+  <li><a href="entornos.html"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dudas"><span lang="es">Dudas y errores</span><span lang="en">Questions and errors</span></p>
+<ul aria-labelledby="i-g-dudas">
+  <li><a href="problemas.html"><span lang="es">Algo falló</span><span lang="en">Something failed</span></a></li>
+  <li><a href="conceptos.html"><span lang="es">Conceptos</span><span lang="en">Concepts</span></a></li>
+  <li><a href="preguntas.html"><span lang="es">Preguntas frecuentes</span><span lang="en">Frequently asked questions</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+<ul aria-labelledby="i-mas">
+  <li><a href="../servidor.html"><span lang="es">Guía del servidor</span><span lang="en">Server guide</span></a></li>
+  <li><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
+</ul>
+</div>
 </nav>
-<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
-<header>
-  <h1><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></h1>
+<article id="contenido" tabindex="-1" class="prosa">
+<header class="doc-cabeza">
+  <p class="fig doc-ruta"><span lang="es">Ayuda</span><span lang="en">Help</span> · <span lang="es">Desde tus apps</span><span lang="en">From your apps</span></p>
+  <h1 class="titular"><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></h1>
   <p class="entradilla"><span lang="es">Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.</span><span lang="en">Point Claude Code, Codex, Continue, opencode and Kilo at Tramtai from My APIs, and put them back as they were whenever you want.</span></p>
 </header>
 
@@ -82,8 +125,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <div class="tabla"><table>
   <thead><tr><th></th><th><span lang="es">Archivo que toca</span><span lang="en">File it changes</span></th><th><span lang="es">Dónde queda la clave</span><span lang="en">Where the key goes</span></th></tr></thead>
   <tbody>
-    <tr><th scope="row"><span lang="es">Claude Code</span><span lang="en">Claude Code</span></th><td><span lang="es">settings.json de ~/.claude (o de CLAUDE_CONFIG_DIR); en un proyecto, .claude/settings.local.json, nunca settings.json</span><span lang="en">settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json</span></td><td><span lang="es">En el almacén cifrado del sistema: Claude Code la pide con «tramtai herramientas clave claude-code»</span><span lang="en">In the encrypted system store: Claude Code asks for it with “tramtai herramientas clave claude-code”</span></td></tr>
-    <tr><th scope="row"><span lang="es">Codex</span><span lang="en">Codex</span></th><td><span lang="es">config.toml de ~/.codex (o de CODEX_HOME): model, model_provider y un proveedor tramtai, en bloques con marcas de Tramtai</span><span lang="en">config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers</span></td><td><span lang="es">En el almacén cifrado del sistema: Codex la pide con «tramtai herramientas clave codex»</span><span lang="en">In the encrypted system store: Codex asks for it with “tramtai herramientas clave codex”</span></td></tr>
+    <tr><th scope="row"><span lang="es">Claude Code</span><span lang="en">Claude Code</span></th><td><span lang="es">settings.json de ~/.claude (o de CLAUDE_CONFIG_DIR); en un proyecto, .claude/settings.local.json, nunca settings.json</span><span lang="en">settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json</span></td><td><span lang="es">En el almacén cifrado del sistema: Claude Code la pide con «tramtai herramientas clave claude-code»</span><span lang="en">In the encrypted system store: Claude Code asks for it with “tramtai tools key claude-code”</span></td></tr>
+    <tr><th scope="row"><span lang="es">Codex</span><span lang="en">Codex</span></th><td><span lang="es">config.toml de ~/.codex (o de CODEX_HOME): model, model_provider y un proveedor tramtai, en bloques con marcas de Tramtai</span><span lang="en">config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers</span></td><td><span lang="es">En el almacén cifrado del sistema: Codex la pide con «tramtai herramientas clave codex»</span><span lang="en">In the encrypted system store: Codex asks for it with “tramtai tools key codex”</span></td></tr>
     <tr><th scope="row"><span lang="es">Continue</span><span lang="en">Continue</span></th><td><span lang="es">config.yaml de ~/.continue: un modelo llamado Tramtai</span><span lang="en">config.yaml in ~/.continue: a model named Tramtai</span></td><td><span lang="es">En su archivo, dentro de tu carpeta de usuario</span><span lang="en">In its file, inside your user folder</span></td></tr>
     <tr><th scope="row"><span lang="es">opencode</span><span lang="en">opencode</span></th><td><span lang="es">opencode.json (o opencode.jsonc) de ~/.config/opencode: un proveedor llamado tramtai</span><span lang="en">opencode.json (or opencode.jsonc) in ~/.config/opencode: a provider named tramtai</span></td><td><span lang="es">En su archivo, dentro de tu carpeta de usuario</span><span lang="en">In its file, inside your user folder</span></td></tr>
     <tr><th scope="row"><span lang="es">Kilo Code</span><span lang="en">Kilo Code</span></th><td><span lang="es">kilo.jsonc de ~/.config/kilo: un proveedor llamado tramtai</span><span lang="en">kilo.jsonc in ~/.config/kilo: a provider named tramtai</span></td><td><span lang="es">En su archivo, dentro de tu carpeta de usuario</span><span lang="en">In its file, inside your user folder</span></td></tr>
@@ -143,9 +186,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <details id="herramientas-codex-cambiar-modelo"><summary><span lang="es">¿Y si cambio el modelo de Codex con /model?</span><span lang="en">What if I change Codex’s model with /model?</span></summary><p><span lang="es">Esa línea pasa a ser tuya: al desactivar, Tramtai no la devuelve a como estaba. Si quieres otro modelo, cámbialo en config.toml.</span><span lang="en">That line becomes yours: when you turn the tool off, Tramtai does not put it back as it was. If you want another model, change it in config.toml.</span></p></details>
 <details id="herramientas-editada-a-mano"><summary><span lang="es">¿Y si edito a mano el archivo de una herramienta?</span><span lang="en">What if I edit a tool’s file by hand?</span></summary><p><span lang="es">Desactivar solo quita lo que sigue como Tramtai lo escribió y deja lo demás. Si cambias lo suyo, la fila pasa a «Desactualizada». Un archivo ilegible no se toca: la fila dice qué hacer.</span><span lang="en">Turning off removes only what is still as Tramtai wrote it and leaves the rest. If you change its part, the row becomes “Out of date”. An unreadable file is not touched: the row says what to do.</span></p></details>
 <details id="herramientas-api-mismo-nombre"><summary><span lang="es">¿Y si ya tengo una API con el nombre de la herramienta?</span><span lang="en">What if I already have an API with the tool’s name?</span></summary><p><span lang="es">Tramtai no la toca y no activa la herramienta: cámbiale el nombre en Mis APIs y vuelve a activarla.</span><span lang="en">Tramtai does not touch it and does not turn the tool on: rename it in My APIs and turn the tool on again.</span></p></details>
-<details id="herramientas-orden-clave"><summary><span lang="es">¿Para qué sirve «tramtai herramientas clave»?</span><span lang="en">What is “tramtai herramientas clave” for?</span></summary><p><span lang="es">La usan Claude Code y Codex para pedir su clave. Responde mientras Tramtai la guarda (activa o desactivada, no tras «Olvidar») y escribe solo la clave; desactivada, su API detenida no la acepta.</span><span lang="en">Claude Code and Codex use it to ask for their key. It responds while Tramtai keeps the key (on or turned off, not after “Forget”) and prints only the key; turned off, its stopped API rejects it.</span></p></details>
+<details id="herramientas-orden-clave"><summary><span lang="es">¿Para qué sirve «tramtai herramientas clave»?</span><span lang="en">What is “tramtai tools key” for?</span></summary><p><span lang="es">La usan Claude Code y Codex para pedir su clave. Responde mientras Tramtai la guarda (activa o desactivada, no tras «Olvidar») y escribe solo la clave; desactivada, su API detenida no la acepta.</span><span lang="en">Claude Code and Codex use it to ask for their key. It responds while Tramtai keeps the key (on or turned off, not after “Forget”) and prints only the key; turned off, its stopped API rejects it.</span></p></details>
 <details id="herramientas-cli"><summary><span lang="es">¿Qué órdenes tiene la CLI?</span><span lang="en">Which commands does the CLI have?</span></summary><p><span lang="es">tramtai herramientas (o tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) y clave (key).</span><span lang="en">tramtai herramientas (or tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) and clave (key).</span></p></details>
-<details id="herramientas-varias"><summary><span lang="es">¿Cómo activo o desactivo varias a la vez?</span><span lang="en">How do I turn several on or off at once?</span></summary><p><span lang="es">Con varios ids o con --todas (--all), por ejemplo «tramtai herramientas activar --todas». activar acepta --modelo (--model) con agente/modelo, como claude/sonnet.</span><span lang="en">Pass several ids or --todas (--all), for example “tramtai herramientas activar --todas”. activar takes --modelo (--model) with agent/model, such as claude/sonnet.</span></p></details>
+<details id="herramientas-varias"><summary><span lang="es">¿Cómo activo o desactivo varias a la vez?</span><span lang="en">How do I turn several on or off at once?</span></summary><p><span lang="es">Con varios ids o con <span class="opcion-cli">--todas</span> (<span class="opcion-cli">--all</span>), por ejemplo «tramtai herramientas activar <span class="opcion-cli">--todas</span>». activar acepta <span class="opcion-cli">--modelo</span> (<span class="opcion-cli">--model</span>) con agente/modelo, como claude/sonnet.</span><span lang="en">Pass several ids or <span class="opcion-cli">--all</span>, for example “tramtai tools enable <span class="opcion-cli">--all</span>”. enable takes <span class="opcion-cli">--model</span> with agent/model, such as claude/sonnet.</span></p></details>
 </section>
 
 <p class="aviso"><span lang="es">En la terminal: Mis APIs (4), ← → a Herramientas. Espacio activa o desactiva; Enter reactiva una desactualizada; t activa todas y T las desactiva; m cambia el modelo; R restaura; o olvida; r refresca.</span><span lang="en">In the terminal: My APIs (4), ← → to Tools. Space turns on or off; Enter turns on again an out-of-date tool; t turns on all and T turns them off; m changes model; R restores; o forgets; r refreshes.</span></p>
@@ -157,16 +200,32 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </div>
 </section>
 </article>
+<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true"><span lang="es">En esta página</span><span lang="en">On this page</span></p>
+<ul>
+  <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+  <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+  <li><a href="#s-deshacer"><span lang="es">Dejarlas como estaban</span><span lang="en">Put them back as they were</span></a></li>
+  <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+  <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+</ul>
+</nav>
+</aside>
+</div>
 </main>
 
 <footer>
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
-      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
-      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
-      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../"><span lang="es">Inicio</span><span lang="en">Home</span></a>
+      <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+      <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
-      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../descargar.html"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>
       <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
       <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>

@@ -68,9 +68,19 @@ export const puedeElegirSuscripcion = (admite: boolean, s: Sesion | null | undef
 // sesión remota del administrador (como en la terminal): no abre nada nuevo.
 export const puedeVolverAClave = (admite: boolean, s: Sesion | null | undefined) => admite && (!!s?.local || esServidor(s))
 
-export function ordenSuscripcion(agente: string, forma: FormaSuscripcion) {
-  return forma === 'personal' ? `tramtai-servidor agentes suscripcion ${agente} --personal` : `tramtai-servidor agentes entrar ${agente}`
+// ordenesSuscripcion son las órdenes de la suscripción en el servidor, en orden: abierto a la red, la personal; en local,
+// iniciar sesión en el CLI y después usar la suscripción (sin ese paso sigue con clave de API, Ruling 34). Se enseñan
+// cada una en su bloque (OrdenesCopiables). La primera es la que inicia la sesión: con el agente ya en suscripción y sin
+// sesión (sin_sesion), basta con ella.
+export function ordenesSuscripcion(agente: string, forma: FormaSuscripcion): string[] {
+  return forma === 'personal' ? [`tramtai-servidor agentes suscripcion ${agente} --personal`]
+    : [`tramtai-servidor agentes entrar ${agente}`, `tramtai-servidor agentes suscripcion ${agente}`]
 }
+
+// ordenUsarSuscripcion activa la suscripción de un agente con su aviso de riesgo, donde la Web UI no ofrece el botón (en
+// el servidor, o desde otro equipo); abierto a la red, como personal.
+export const ordenUsarSuscripcion = (agente: string, s: Sesion | null | undefined, e: EstadoServidor | null) =>
+  `${esServidor(s) ? 'tramtai-servidor' : 'tramtai'} agentes suscripcion ${agente}${formaSuscripcion(s, e) === 'personal' ? ' --personal' : ''}`
 
 // ordenClave guarda la clave que falta: la del servidor la pide tramtai-servidor en el propio servidor.
 export const ordenClave = (s: Sesion | null | undefined, variable: string) => `${esServidor(s) ? 'tramtai-servidor' : 'tramtai'} claves guardar ${variable}`
@@ -80,7 +90,7 @@ export const ordenClave = (s: Sesion | null | undefined, variable: string) => `$
 export interface FilaServidor {
   etiqueta: Clave
   valor: string
-  orden?: string
+  ordenes?: string[] // una o varias, una tras otra (cada una en su bloque)
   clave?: string // una clave de config.yaml (servicio.*), que no es una orden
   nota?: string
 }
@@ -100,15 +110,15 @@ export function filasServidor(e: EstadoServidor, fecha: (iso: string) => string,
   filas.push({
     etiqueta: 'servidor.administrador',
     valor: t(!e.administrador ? 'servidor.sinAdministrador' : e.totp ? 'servidor.conTotp' : 'servidor.sinTotp'),
-    orden: e.administrador && !e.totp ? 'tramtai-servidor administrador totp activar' : 'tramtai-servidor administrador contraseña',
+    ordenes: [e.administrador && !e.totp ? 'tramtai-servidor administrador totp activar' : 'tramtai-servidor administrador contraseña'],
   })
   filas.push({
     etiqueta: 'servidor.suscripciones',
     valor: e.suscripciones.length
       ? e.suscripciones.map((s) => t(s.personal ? 'servidor.suscripcionPersonal' : 'servidor.suscripcionLocal', { agente: nombre(s.agente), n: s.simultaneas })).join(' · ')
       : t('servidor.sinSuscripciones'),
-    // Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
-    orden: ordenSuscripcion('<agente>', e.expuesto ? 'personal' : 'entrar'),
+    // Como en Agentes: en local, el inicio de sesión del CLI y la suscripción; abierto a la red, la suscripción personal.
+    ordenes: ordenesSuscripcion('<agente>', e.expuesto ? 'personal' : 'entrar'),
   })
   return filas
 }

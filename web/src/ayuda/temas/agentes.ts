@@ -9,7 +9,7 @@ export const agentes: Tema = {
   terminal: 'ayuda.agentes.terminal',
   paginaApp: 'agentes',
   conDiagrama: true,
-  relacionados: ['probar', 'empezar', 'conceptos'],
+  relacionados: ['preparar', 'probar', 'empezar', 'conceptos'],
   bloques: [
     {
       tipo: 'diagrama',

@@ -22,6 +22,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -56,6 +57,11 @@ type Servidor struct {
 	Conversor *documentos.Preparacion
 	// FijarPrepararAlIniciar guarda conversion.preparar_al_iniciar en la configuración global.
 	FijarPrepararAlIniciar func(bool) error
+	// Preparacion prepara los CLI de los agentes, para todo el servicio (nil: sin /api/v1/agentes/{id}/preparacion ni
+	// /api/v1/agentes/versiones). VersionesAgentes da sus versiones: la última comprobación guardada, o una nueva con
+	// forzar.
+	Preparacion      Preparacion
+	VersionesAgentes func(ctx context.Context, forzar bool) []contrato.VersionesAgente
 }
 
 // Handler devuelve las rutas con las protecciones aplicadas y el token propio del servidor.
@@ -99,6 +105,13 @@ func (s *Servidor) Rutas() http.Handler {
 		if s.Punto == nil { // una API por aplicación ve el estado, pero no lanza una descarga de cientos de MB
 			mux.HandleFunc("POST /api/v1/conversor/preparar", s.prepararConversor)
 			mux.HandleFunc("PUT /api/v1/conversor/ajustes", s.ajustesConversor)
+		}
+		if s.Punto == nil && s.Preparacion != nil { // instala programas en el equipo: nunca desde una API por aplicación
+			mux.HandleFunc("GET /api/v1/agentes/versiones", s.versionesAgentes)
+			mux.HandleFunc("GET /api/v1/agentes/{id}/preparacion", s.estadoPreparacion)
+			mux.HandleFunc("POST /api/v1/agentes/{id}/preparacion", s.iniciarPreparacion)
+			mux.HandleFunc("DELETE /api/v1/agentes/{id}/preparacion", s.cancelarPreparacion)
+			mux.HandleFunc("POST /api/v1/agentes/{id}/preparacion/codigo", s.codigoPreparacion)
 		}
 	}
 	if contrato("openai") {

@@ -75,6 +75,19 @@ func TestFijarValor(t *testing.T) {
 	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
 		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
 	}
+	// Varias de una vez: con una no válida no se guarda ninguna.
+	if err := FijarValores(ruta, OrigenGlobal, map[string]any{"servicio.buscar_actualizaciones": false, "servicio.puerto": "abc"}); err == nil {
+		t.Fatal("un valor no válido debe rechazarse")
+	}
+	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
+		t.Fatal("con una no válida no se guarda ninguna")
+	}
+	if err := FijarValores(ruta, OrigenGlobal, map[string]any{"servicio.buscar_actualizaciones": false, "servicio.buscar_versiones_agentes": false}); err != nil {
+		t.Fatal(err)
+	}
+	if capa, _ := CargarCapa(ruta, OrigenGlobal); capa.Valores["servicio.buscar_actualizaciones"] != false || capa.Valores["servicio.buscar_versiones_agentes"] != false {
+		t.Fatalf("%v", capa.Valores)
+	}
 }
 
 // Veinte ediciones a la vez del mismo config.yaml (pestañas, la TUI, la CLI) no se pisan: al final están todas.

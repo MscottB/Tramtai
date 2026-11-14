@@ -60,6 +60,9 @@ type Opciones struct {
 	// Desconectado dice si un agente está desconectado (Agentes → Desconectar): no se acepta como principal y el
 	// respaldo lo salta. nil = todos conectados.
 	Desconectado func(agente string) bool
+	// Preparando dice si el CLI de un agente se está instalando, actualizando o desinstalando (internal/preparar): no se
+	// acepta como principal, con el error de agente no disponible. nil = ninguno.
+	Preparando func(agente string) bool
 	// Salud anota los agentes cuya petición falló por autenticación y los quita cuando una funciona (nil = no se anota).
 	Salud *adaptadores.Salud
 	// Secretos da las claves que se tapan en lo que escribe el agente; se piden en cada intento, así que una clave
@@ -226,6 +229,9 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if p.desconectado(solicitud.Agente) {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoAgenteDesconectado,
 			idioma.Tf("el agente %s está desconectado: conéctalo en Agentes o elige otro", solicitud.Agente))
+	}
+	if err := p.preparando(solicitud.Agente); err != nil {
+		return nucleo.Trabajo{}, false, err
 	}
 	for _, e := range solicitud.Respaldo {
 		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
@@ -478,6 +484,11 @@ func (p *Planificador) Listar(ctx context.Context, limite int, f persistencia.Fi
 // ContarOrigenDesde cuenta los trabajos de la instancia con ese origen desde desde (ver Almacen.ContarOrigenDesde).
 func (p *Planificador) ContarOrigenDesde(ctx context.Context, origen string, sinPunto bool, desde time.Time) (int, error) {
 	return p.almacen.ContarOrigenDesde(ctx, p.opc.Instancia, origen, sinPunto, desde)
+}
+
+// ContarEnCurso cuenta los trabajos de la instancia sin terminar con ese agente (ver Almacen.ContarEnCurso).
+func (p *Planificador) ContarEnCurso(ctx context.Context, agente string) (int, error) {
+	return p.almacen.ContarEnCurso(ctx, p.opc.Instancia, agente)
 }
 
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.

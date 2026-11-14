@@ -184,6 +184,8 @@ func comandoServicio() *cobra.Command {
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, idioma.T("inicia el servicio desacoplado de esta terminal"))
 	iniciar.Flags().BoolVar(&abrirAlIniciar, "abrir", false, idioma.T("en primer plano, abre la interfaz cuando el servicio responda (modo desarrollo)"))
 	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, idioma.T("con --abrir, usa el navegador en lugar de la app de escritorio"))
+	iniciar.Flags().BoolVar(&abrirAlIniciar, "open", false, "")
+	_ = iniciar.Flags().MarkHidden("open") // alias en inglés de --abrir
 	iniciar.Flags().StringVar(&archivoRegistro, "registro", "", idioma.T("escribe el registro en este archivo, con servicio.registro_mb y servicio.registro_copias"))
 	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
 	iniciar.Flags().BoolVar(&esperarCierre, "esperar-cierre", false, idioma.T("espera a que termine el servicio en marcha (reinicio)"))
@@ -452,12 +454,17 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (er
 	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
+	var ordenConsola func(string, []string) string
+	if carpetas.Servidor() { // a mano, el inicio de sesión de un CLI va como la cuenta del servicio
+		ordenConsola = servidor.OrdenConsola
+	}
 	sv, err := nuevoServicio(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), Expuesto: servidor.Expuesto(red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
-		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
+		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar"), PrepararAgentes: true,
+		OrdenConsola: ordenConsola})
 	if err != nil {
 		oyente.Close()
 		return err
@@ -581,6 +588,10 @@ func (e errConfiguracionServicio) Unwrap() error { return e.error }
 
 // codigoSalida es el código con el que termina el proceso tras un error.
 func codigoSalida(err error) int {
+	var con errConCodigo
+	if errors.As(err, &con) {
+		return con.codigo
+	}
 	if errors.Is(err, errReinicioPedido) {
 		return codigoReinicio
 	}

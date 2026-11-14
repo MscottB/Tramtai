@@ -561,6 +561,45 @@ func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (cont
 	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
 }
 
+// rutaPreparacion es la de la preparación del CLI de un agente.
+func rutaPreparacion(id string) string {
+	return "/api/v1/agentes/" + url.PathEscape(id) + "/preparacion"
+}
+
+// Preparacion devuelve la preparación en marcha o la última del CLI de un agente (Estado vacío si no hubo ninguna).
+func (c *Cliente) Preparacion(ctx context.Context, instancia, id string) (contrato.EstadoPreparacion, error) {
+	var e contrato.EstadoPreparacion
+	return e, c.pedir(ctx, "GET", rutaPreparacion(id), instancia, nil, "", &e)
+}
+
+// Preparar instala, actualiza o desinstala el CLI de un agente, o inicia su sesión, en segundo plano: devuelve el estado
+// con que empieza. Con otra en marcha, el error tiene el código ya_en_curso (Preparacion da la que está en marcha).
+func (c *Cliente) Preparar(ctx context.Context, instancia, id string, p contrato.PedidoPreparacion) (contrato.EstadoPreparacion, error) {
+	var e contrato.EstadoPreparacion
+	return e, c.pedir(ctx, "POST", rutaPreparacion(id), instancia, cuerpoJSON(p), "application/json", &e)
+}
+
+// CodigoPreparacion pasa al inicio de sesión en marcha el código que pegó el usuario.
+func (c *Cliente) CodigoPreparacion(ctx context.Context, instancia, id, codigo string) error {
+	return c.pedir(ctx, "POST", rutaPreparacion(id)+"/codigo", instancia, cuerpoJSON(map[string]string{"codigo": codigo}), "application/json", nil)
+}
+
+// CancelarPreparacion corta la preparación en marcha del CLI de un agente.
+func (c *Cliente) CancelarPreparacion(ctx context.Context, instancia, id string) error {
+	return c.pedir(ctx, "DELETE", rutaPreparacion(id), instancia, nil, "", nil)
+}
+
+// VersionesAgentes devuelve las versiones de los CLI: la última comprobación del servicio o, con forzar, una nueva
+// (lanza --version de cada CLI y consulta la última publicada: puede tardar unos segundos).
+func (c *Cliente) VersionesAgentes(ctx context.Context, instancia string, forzar bool) ([]contrato.VersionesAgente, error) {
+	ruta := "/api/v1/agentes/versiones"
+	if forzar {
+		ruta += "?forzar=1"
+	}
+	var v []contrato.VersionesAgente
+	return v, c.pedir(ctx, "GET", ruta, instancia, nil, "", &v)
+}
+
 // Herramientas devuelve las herramientas de terceros (Claude Code, Codex…) vistas desde el espacio.
 func (c *Cliente) Herramientas(ctx context.Context, inst string) ([]contrato.EstadoHerramienta, error) {
 	return c.herramientas(ctx, "GET", "/api/v1/herramientas", inst, nil)

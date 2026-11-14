@@ -151,6 +151,8 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		if !p.act.Comprobado.IsZero() {
 			b.lineas = append(b.lineas, e.Tenue.Render(p.tx("actualizacion.comprobado", "hora", p.act.Comprobado.Local().Format("15:04"))))
 		}
+		// Los CLI de los agentes se comprueban aparte de Tramtai: su propio ajuste (servicio.buscar_versiones_agentes).
+		b.lineas = append(b.lineas, "", casilla(p.act.BuscarVersionesAgentes)+" "+p.tx("versionesAgentes.titulo"), e.Tenue.Render(p.tx("versionesAgentes.texto")))
 		return b
 	case secArranque:
 		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: p.tx("arranque." + cmpOr(p.ajustes.ModoArranque, "no")),
@@ -210,12 +212,12 @@ func (p *Pagina) lineasServidor() []string {
 		}
 		suscripciones = strings.Join(partes, " · ")
 	}
-	// Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
-	suscribir := "tramtai-servidor agentes entrar <agente>"
+	// Como en Agentes: en local, el inicio de sesión del CLI y después la suscripción; abierto a la red, la personal.
+	l = append(l, p.tx("servidor.suscripciones")+": "+suscripciones)
 	if s.Expuesto {
-		suscribir = "tramtai-servidor agentes suscripcion <agente> --personal"
+		return append(l, orden("tramtai-servidor agentes suscripcion <agente> --personal"))
 	}
-	return append(l, p.tx("servidor.suscripciones")+": "+suscripciones, orden(suscribir))
+	return append(l, orden("tramtai-servidor agentes entrar <agente>"), orden("tramtai-servidor agentes suscripcion <agente>"))
 }
 
 // detallesDatos son cuántas peticiones terminadas y cuántas APIs hay para borrar, como las casillas de la Web UI.

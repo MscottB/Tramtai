@@ -10,8 +10,8 @@ import (
 func TestAyudaCargada(t *testing.T) {
 	for _, idioma := range []string{"es", "en"} {
 		temas := Ayuda(idioma)
-		if len(temas) != 19 { // v0.59: más «Conectar tus herramientas»
-			t.Fatalf("Ayuda(%q): %d temas, esperaba 19", idioma, len(temas))
+		if len(temas) != 20 { // v0.60: más «Preparar tus agentes»
+			t.Fatalf("Ayuda(%q): %d temas, esperaba 20", idioma, len(temas))
 		}
 		for _, tema := range temas {
 			if tema.ID == "" || tema.Titulo == "" || tema.Resumen == "" || len(tema.Bloques) == 0 {

@@ -9,7 +9,7 @@ export const empezar: Tema = {
   terminal: 'ayuda.empezar.terminal',
   paginaApp: 'inicio',
   conDiagrama: true,
-  relacionados: ['agentes', 'probar', 'conectar'],
+  relacionados: ['agentes', 'preparar', 'probar', 'conectar'],
   bloques: [
     {
       tipo: 'diagrama',
@@ -44,6 +44,7 @@ export const empezar: Tema = {
       preguntas: [
         { id: 'repetir-recorrido', pregunta: 'ayuda.empezar.pRecorrido', respuesta: 'ayuda.empezar.rRecorrido', soloWeb: true },
         { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias', soloWeb: true },
+        { id: 'instalar-agentes', pregunta: 'ayuda.empezar.pAgentes', respuesta: 'ayuda.empezar.rAgentes', tema: 'preparar' },
         { id: 'entrar', pregunta: 'ayuda.empezar.pEntrar', respuesta: 'ayuda.empezar.rEntrar' },
         { id: 'en-marcha', pregunta: 'ayuda.empezar.pMarcha', respuesta: 'ayuda.empezar.rMarcha' },
         { id: 'windows', pregunta: 'ayuda.empezar.pWindows', respuesta: 'ayuda.empezar.rWindows' },

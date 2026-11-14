@@ -14,7 +14,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 [![Windows, macOS y Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-55666a)](LICENSE.md)
 
-[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda/) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [English](#english)
+[**Descargar**](https://mscottb.github.io/Tramtai/descargar.html) · [Sitio](https://mscottb.github.io/Tramtai/) · [Producto](https://mscottb.github.io/Tramtai/producto.html) · [Agentes](https://mscottb.github.io/Tramtai/agentes.html) · [Servidor](https://mscottb.github.io/Tramtai/servidor.html) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda/) · [English](#english)
 
 <br>
 
@@ -25,6 +25,9 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 ## Qué ofrece
 
 - **Compatible con lo que ya usas:** los SDK de OpenAI y Anthropic, con respuesta en vivo y herramientas (`tools`), y una API propia para peticiones largas.
+- **Tus agentes, preparados por Tramtai:** instala Claude Code, Codex, GitHub Copilot y Antigravity con su instalador
+  oficial, te ayuda a iniciar sesión y los mantiene al día desde la app, la terminal o la CLI (`tramtai agentes instalar
+  claude codex`), solo con versiones comprobadas y sin abrir otra consola.
 - **Agente y modelo en cada petición:** `claude/sonnet`, `codex`, `copilot`, `gemini/…` o un perfil, con respaldo a otro agente si el primero falla.
 - **Archivos y respuestas con forma:** PDF, Word, Excel o PowerPoint como entrada y JSON validado como salida, sin escribir JSON Schema.
 - **Una API por aplicación,** con su clave, sus modelos, sus instrucciones y su presupuesto.
@@ -35,8 +38,9 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base y 
 
 ## Empezar
 
-1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/#descargar) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
-2. En **Agentes**, conecta al menos uno con tu suscripción o con una clave.
+1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/descargar.html) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
+2. En **Agentes**, prepara al menos uno: Tramtai instala su CLI y te ayuda a iniciar sesión (al terminar, «Usar mi
+   suscripción»), o le pones una clave de API. La primera vez, la bienvenida te lo ofrece («Prepara tus agentes»).
 3. En **Mis APIs**, copia la URL y crea la clave (se ve una sola vez) para tu aplicación:
 
 ```python
@@ -73,7 +77,9 @@ sudo tramtai-servidor administrador contraseña
 ```
 
 En Windows Server, `tramtai.exe servidor instalar` desde una consola de administrador. **Es otro entorno:** tus APIs,
-claves y ajustes de escritorio no pasan al servidor, ni al revés. Todo, en la [guía del servidor](docs/servidor.md).
+claves y ajustes de escritorio no pasan al servidor, ni al revés. Los CLI de los agentes los instala, conecta y actualiza
+Tramtai para la cuenta del servicio (`sudo tramtai-servidor agentes instalar claude`). Todo, en la
+[guía del servidor](docs/servidor.md).
 
 ## Documentación
 
@@ -87,7 +93,7 @@ claves y ajustes de escritorio no pasan al servidor, ni al revés. Todo, en la [
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento y seguridad |
 | [Desarrollo](docs/equipo/desarrollo.md) | Compilar desde el código, pruebas y publicación |
 
-La app trae su propia **Ayuda**, con guías paso a paso y qué hacer ante cada error.
+La app trae su propia **Ayuda**, con guías paso a paso y qué hacer ante cada error. El [sitio](https://mscottb.github.io/Tramtai/) reúne el producto, los agentes, el modo servidor, la guía de desarrolladores y la misma Ayuda, en español e inglés y con un buscador (Ctrl K).
 
 ## Aviso
 
@@ -121,6 +127,9 @@ API that runs on your own computer.** If your app already uses the OpenAI or Ant
 URL and the key. Antigravity, for now, only from the Playground, the terminal and the CLI.
 
 - **Compatible:** the OpenAI and Anthropic SDKs with streaming and tools, plus a native API for long-running requests.
+- **Your agents, set up by Tramtai:** it installs Claude Code, Codex, GitHub Copilot and Antigravity with their official
+  installer, helps you sign in and keeps them up to date from the app, the terminal or the CLI (`tramtai agents install
+  claude codex`), only with checked versions.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
@@ -144,9 +153,10 @@ URL and the key. Antigravity, for now, only from the Playground, the terminal an
 5. Tramtai is free and provided as is, without warranties.
 <!-- /riesgos:en -->
 
-[**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*
+[**Download**](https://mscottb.github.io/Tramtai/descargar.html) for Windows, macOS or Linux, set up an agent in *Agents* (Tramtai installs its CLI and helps you sign in, then “Use my subscription”)
 and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal
-and CLI are in English and Spanish; the detailed documentation is in Spanish, and the
-[product page](https://mscottb.github.io/Tramtai/) has an English overview. Free for personal and non-commercial use
+and CLI are in English and Spanish; the detailed guides in this repository are in Spanish, and the
+[website](https://mscottb.github.io/Tramtai/) has the product, agents, server mode, developer guide and Help in
+English too, with search (Ctrl K). Free for personal and non-commercial use
 under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact [MscottB](https://github.com/MscottB) for commercial
 licensing.

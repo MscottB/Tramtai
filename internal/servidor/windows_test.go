@@ -302,6 +302,14 @@ func TestConAviso(t *testing.T) {
 	}
 }
 
+// TestOrdenConsola: la cuenta virtual del servicio no tiene consola: no hay orden para iniciar sesión a mano (preparar
+// remite a la clave de API).
+func TestOrdenConsola(t *testing.T) {
+	if orden := OrdenConsola(`C:\Windows\ServiceProfiles\Tramtai\.local\bin\claude.exe`, []string{"auth", "login"}); orden != "" {
+		t.Fatalf("en Windows Server no hay orden de consola: %q", orden)
+	}
+}
+
 // comprobarDACL: protegida (sin herencia de ProgramData), dueño Administradores y solo SYSTEM, Administradores y el
 // servicio, con control total heredable por carpetas y archivos.
 func comprobarDACL(t *testing.T, ruta, sidServicio string) {

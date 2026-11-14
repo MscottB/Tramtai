@@ -308,3 +308,56 @@ type EstadoConversor struct {
 	// entonces se ofrece, tras un error, para cuando la red de la empresa bloquea la descarga.
 	Paquete bool `json:"paquete,omitempty"`
 }
+
+// PedidoPreparacion es lo que pide POST /api/v1/agentes/{id}/preparacion.
+type PedidoPreparacion struct {
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	// BorrarDatos, al desinstalar, borra también la sesión y los ajustes del CLI.
+	BorrarDatos bool `json:"borrar_datos"`
+	// Confirmar sigue con una versión aún no comprobada.
+	Confirmar bool `json:"confirmar"`
+}
+
+// EstadoPreparacion es el de la preparación de un agente (internal/preparar): la que está en marcha o la última.
+type EstadoPreparacion struct {
+	Agente string `json:"agente"`
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	Estado string `json:"estado" ts:"'instalando' | 'actualizando' | 'desinstalando' | 'comprobando' | 'esperando_usuario' | 'listo' | 'error' | 'cancelado'"`
+	Etapa  string `json:"etapa,omitempty" ts:"'descarga' | 'orden' | 'borrado'"`
+	// Enlace y Codigo son los del inicio de sesión; PidePegar, si el CLI espera que se le pegue un código.
+	Enlace    string `json:"enlace,omitempty"`
+	Codigo    string `json:"codigo,omitempty"`
+	PidePegar bool   `json:"pide_pegar,omitempty"`
+	// MotivoCodigo es el código del error (estado error) y Mensaje, el texto legible.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'interrumpida'"`
+	Mensaje      string `json:"mensaje,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando Mensaje dice cómo hacerlo (salida_no_reconocida,
+	// inicio_sesion_fallo o version_no_comprobada al iniciar sesión): las pantallas arman la frase en su idioma. Vacía
+	// ahí, la cuenta del servicio no tiene consola y queda la clave de API.
+	OrdenConsola string `json:"orden_consola,omitempty"`
+	// Lineas son las últimas 20 de la salida, sin nada con forma de secreto.
+	Lineas         []string   `json:"lineas,omitempty"`
+	VersionAntes   string     `json:"version_antes,omitempty"`
+	VersionDespues string     `json:"version_despues,omitempty"`
+	Inicio         *time.Time `json:"inicio,omitempty"`
+	Fin            *time.Time `json:"fin,omitempty"`
+}
+
+// VersionesAgente es lo que GET /api/v1/agentes/versiones dice de un agente (internal/preparar).
+type VersionesAgente struct {
+	Agente string `json:"agente"`
+	// Instalada es la versión del CLI instalado (vacía si no está); Ultima, la última publicada (vacía si no se sabe).
+	Instalada string `json:"instalada,omitempty"`
+	Ultima    string `json:"ultima,omitempty"`
+	// Comprobadas dice, por cada acción posible ahora, si la versión que usaría está comprobada.
+	Comprobadas map[string]bool `json:"comprobadas"`
+	// Acciones son las habilitadas ahora. Instalar, actualizar o desinstalar una versión sin comprobar (Comprobadas en
+	// false) siguen habilitadas pero piden confirmar; iniciar sesión con una sin comprobar no está.
+	Acciones []string `json:"acciones"`
+	// MotivoCodigo y Motivo dicen por qué falta alguna o qué hay que avisar antes.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'sin_red'"`
+	Motivo       string `json:"motivo,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando iniciar sesión no está comprobado (como en
+	// EstadoPreparacion); vacía entonces, la cuenta del servicio no tiene consola.
+	OrdenConsola string `json:"orden_consola,omitempty"`
+}
