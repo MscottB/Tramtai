@@ -373,17 +373,17 @@ func TestComandosDelSitioExisten(t *testing.T) {
 			t.Errorf("%s: %q (inglés %v): %v", l.fuente, strings.TrimSpace(html.UnescapeString(l.texto)), l.ingles, err)
 		}
 	}
-	// Un mínimo por página, con lo que enseña hoy cada una: 11 en index.html (la pestaña CLI de Inicio; tramtai terminal,
-	// igual en los dos idiomas, cuenta una vez), 12 en servidor.html y 3 en desarrolladores.html. Las páginas que se
-	// rehacen en las Tareas 5 a 8 pueden ganar órdenes sin tocar esto; perder los bloques de una página lo hace saltar.
-	minimos := map[string]int{"index.html": 11, "servidor.html": 12, "desarrolladores.html": 3}
+	// Un mínimo por página, con margen sobre lo que enseña hoy cada una: 11 en index.html (la pestaña CLI de Inicio;
+	// tramtai terminal, igual en los dos idiomas, cuenta una vez), 12 en servidor.html y 3 en desarrolladores.html.
+	// Quitar o cambiar una orden no lo hace saltar; perder los bloques de una página (o que dejen de leerse), sí.
+	minimos := map[string]int{"index.html": 8, "servidor.html": 9, "desarrolladores.html": 2}
 	for archivo, minimo := range minimos {
 		if porPagina[archivo] < minimo {
 			t.Errorf("%s: solo se revisaron %d órdenes en <pre> (mínimo %d): ¿cambió el marcado de los <pre>?", archivo, porPagina[archivo], minimo)
 		}
 	}
 	t.Logf("órdenes revisadas: %d en <pre> (%v), %d en frases y %d en la Ayuda", revisadas, porPagina, enFrases, enAyuda)
-	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 38 entre los dos idiomas.
+	// Las de las frases (tramtai-servidor estado, registro, actualizar…), hoy 50 entre los dos idiomas.
 	if enFrases < 36 {
 		t.Errorf("solo se revisaron %d órdenes en frases (mínimo 36): ¿cambió el marcado de los <code>?", enFrases)
 	}
