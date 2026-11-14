@@ -117,17 +117,41 @@ function bastanteVisto(e, alto) {
   });
 })();
 
-// Índice de la ayuda: marca la sección que se está leyendo.
+// Documentación (la Ayuda, servidor.html y desarrolladores.html): «En esta página» y los enlaces del índice a la propia
+// página marcan al bajar el apartado que se está leyendo. En el móvil el índice se abre con su botón y se cierra con él,
+// con Escape o al elegir; sin JavaScript el botón sigue oculto y el índice se ve abierto.
 (function () {
-  var enlaces = document.querySelectorAll('.indice a');
-  if (!enlaces.length || !('IntersectionObserver' in window)) return;
-  var observador = new IntersectionObserver(function (entradas) {
-    entradas.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      enlaces.forEach(function (a) { a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)); });
-    });
-  }, { rootMargin: '-80px 0px -70% 0px' });
-  document.querySelectorAll('.doc section[id]').forEach(function (s) { observador.observe(s); });
+  var enlaces = document.querySelectorAll('.doc-pagina a, .doc-indice a[href^="#"]');
+  if (enlaces.length && 'IntersectionObserver' in window) {
+    var observador = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        enlaces.forEach(function (a) {
+          if (a.getAttribute('href') === '#' + e.target.id) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    document.querySelectorAll('#contenido section[id]').forEach(function (s) { observador.observe(s); });
+  }
+  var indice = document.querySelector('.doc-indice');
+  // El índice de la Ayuda es más alto que su columna: se desplaza solo él (no la página) hasta dejar a la vista el tema actual.
+  var actual = indice && indice.querySelector('[aria-current="page"]');
+  if (actual && indice.scrollHeight > indice.clientHeight) indice.scrollTop = actual.offsetTop - indice.clientHeight / 2;
+  var boton = indice && indice.querySelector('.doc-indice-boton');
+  if (!boton) return;
+  boton.hidden = false;
+  function abrir(si) {
+    indice.classList.toggle('abierto', si);
+    boton.setAttribute('aria-expanded', String(si));
+  }
+  boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true'); });
+  indice.addEventListener('click', function (e) { if (e.target.closest('a')) abrir(false); });
+  indice.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || boton.getAttribute('aria-expanded') !== 'true') return;
+    abrir(false);
+    boton.focus();
+  });
 })();
 
 // sistemaDe dice el sistema de escritorio del visitante por su navegador: 'windows', 'macos', 'linux' (x64) o null si no

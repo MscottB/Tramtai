@@ -66,45 +66,78 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </header>
 <!-- /comun:cabecera -->
 
-<main id="contenido" tabindex="-1" class="envoltura ayuda">
-  <!-- La cabecera presenta el modo servidor (spec §6, v0.59): titular, entrada, el mapa de la portada en grande, «¿Es para
-       ti?», tres pasos por sistema y dos capturas reales. Debajo sigue la guía, con el Aviso justo antes de Instalar. -->
-  <div class="servidor-cabecera">
-    <header>
-      <h1><span lang="es">Tramtai en tu servidor, en marcha aunque nadie inicie sesión.</span><span lang="en">Tramtai on your server, running even when nobody is signed in.</span></h1>
+<main class="envoltura doc-envoltura">
+  <!-- La plantilla de documentación (spec §6): a la izquierda, el índice de la página; en medio, el contenido; a la
+       derecha, «En esta página», que rellenar saca de cada <section id> con su <h2> (npm run sitio). El contenido abre
+       presentando el modo servidor (titular, entrada, el mapa, «¿Es para ti?», tres pasos por sistema y dos capturas
+       reales) y sigue la guía, con el Aviso justo antes de Instalar. -->
+  <div class="doc">
+    <nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+<!-- comun:indice-boton -->
+<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
+<!-- /comun:indice-boton -->
+      <div class="doc-indice-lista" id="doc-indice-lista">
+        <p class="fig doc-grupo" id="i-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+        <ul aria-labelledby="i-empezar">
+          <li><a href="#para-ti"><span lang="es">¿Es para ti?</span><span lang="en">Is it for you?</span></a></li>
+          <li><a href="#pasos"><span lang="es">En tres pasos</span><span lang="en">In three steps</span></a></li>
+          <li><a href="#pantallas"><span lang="es">Así se ve</span><span lang="en">What it looks like</span></a></li>
+        </ul>
+        <p class="fig doc-grupo" id="i-guia"><span lang="es">La guía</span><span lang="en">The guide</span></p>
+        <ul aria-labelledby="i-guia">
+          <li><a href="#que-es"><span lang="es">Qué es</span><span lang="en">What it is</span></a></li>
+          <li><a href="#entornos"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+          <li><a href="#aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
+          <li><a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a></li>
+          <li><a href="#red"><span lang="es">Abrir a la red</span><span lang="en">Open to the network</span></a></li>
+          <li><a href="#administrador"><span lang="es">Administrador</span><span lang="en">Administrator</span></a></li>
+          <li><a href="#claves"><span lang="es">Claves y suscripción</span><span lang="en">Keys and subscription</span></a></li>
+          <li><a href="#actualizar"><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></a></li>
+          <li><a href="#problemas"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
+        </ul>
+        <p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+        <ul aria-labelledby="i-mas">
+          <li><a href="desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
+          <li><a href="ayuda/servidor.html"><span lang="es">Ayuda: Modo servidor</span><span lang="en">Help: Server mode</span></a></li>
+          <li><a href="ayuda/entornos.html"><span lang="es">Ayuda: Dos entornos</span><span lang="en">Help: Two environments</span></a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <article id="contenido" tabindex="-1" class="prosa">
+    <header class="doc-cabeza">
+      <p class="fig doc-ruta"><span lang="es">Documentación · Servidor</span><span lang="en">Documentation · Server</span></p>
+      <h1 class="titular"><span lang="es">Tramtai en tu servidor, <em>en marcha aunque nadie inicie sesión.</em></span><span lang="en">Tramtai on your server, <em>running even when nobody is signed in.</em></span></h1>
       <p class="entrada"><span lang="es">Instálalo como servicio en Linux o Windows Server y úsalo desde tu portátil, tu móvil o tus scripts, solo por HTTPS y con tu contraseña. Es un servidor personal, con un solo administrador.</span><span lang="en">Install it as a service on Linux or Windows Server and use it from your laptop, your phone or your scripts, over HTTPS only and with your password. It’s a personal server with a single administrator.</span></p>
     </header>
-    <figure class="mapa-servidor">
+    <!-- FIG 1: el mapa, en líneas de un píxel en el acento que se dibujan al aparecer y por las que corre el flujo; el
+         color de cada agente, solo en su punto. Dos dibujos: el ancho y, en una tarjeta estrecha, el vertical. -->
+    <figure class="tarjeta fig-mapa vivo">
+      <figcaption class="fig"><span lang="es">FIG 1 · Tu servidor</span><span lang="en">FIG 1 · Your server</span></figcaption>
       <svg class="servidor-ancho" viewBox="0 0 760 236" role="img" aria-label="Tu portátil, tu móvil y tus scripts llegan por HTTPS a Tramtai en tu servidor, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your laptop, your phone and your scripts reach Tramtai on your server over HTTPS, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
-        <g fill="none" stroke-linecap="round">
-          <path d="M 170 70 L 182 70 C 216 70 216 125 250 125" stroke-width="3" stroke="var(--borde-control)"/>
-          <path d="M 170 125 L 250 125" stroke-width="3" stroke="var(--borde-control)"/>
-          <path d="M 170 180 L 182 180 C 216 180 216 125 250 125" stroke-width="3" stroke="var(--borde-control)"/>
-          <path class="tramo-https" d="M 250 125 L 372 125" stroke-width="4" stroke="var(--acento)"/>
-          <path data-agente="claude" d="M 542 110 L 552 110 C 587 110 587 50 622 50" stroke-width="4" stroke="var(--claude)"/>
-          <path data-agente="codex" d="M 542 120 L 552 120 C 587 120 587 100 622 100" stroke-width="4" stroke="var(--codex)"/>
-          <path data-agente="copilot" d="M 542 130 L 552 130 C 587 130 587 150 622 150" stroke-width="4" stroke="var(--copilot)"/>
-          <path data-agente="gemini" d="M 542 140 L 552 140 C 587 140 587 200 622 200" stroke-width="4" stroke="var(--gemini)"/>
+        <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+          <path class="base dibuja" pathLength="1" d="M176 70 L182 70 C216 70 216 125 250 125 M176 125 L250 125 M176 180 L182 180 C216 180 216 125 250 125 M250 125 L372 125 M542 110 L552 110 C587 110 587 50 616 50 M542 120 L552 120 C587 120 587 100 616 100 M542 130 L552 130 C587 130 587 150 616 150 M542 140 L552 140 C587 140 587 200 616 200"/>
+          <g class="aparece" style="--retraso: 1.2s"><path class="flujo" stroke-dasharray="4 6" d="M176 70 L182 70 C216 70 216 125 250 125 M176 125 L250 125 M176 180 L182 180 C216 180 216 125 250 125 M250 125 L372 125 M542 110 L552 110 C587 110 587 50 616 50 M542 120 L552 120 C587 120 587 100 616 100 M542 130 L552 130 C587 130 587 150 616 150 M542 140 L552 140 C587 140 587 200 616 200"/></g>
         </g>
-        <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
-          <circle cx="170" cy="70" r="7"/>
-          <circle cx="170" cy="125" r="7"/>
-          <circle cx="170" cy="180" r="7"/>
+        <g fill="var(--superficie)" stroke="var(--acento)" stroke-width="1.3">
+          <circle cx="170" cy="70" r="6"/>
+          <circle cx="170" cy="125" r="6"/>
+          <circle cx="170" cy="180" r="6"/>
         </g>
-        <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+        <g text-anchor="end" font-size="14" fill="var(--texto)">
           <text x="152" y="75"><tspan lang="es">Tu portátil</tspan><tspan lang="en">Your laptop</tspan></text>
           <text x="152" y="130"><tspan lang="es">Tu móvil</tspan><tspan lang="en">Your phone</tspan></text>
           <text x="152" y="185"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
         </g>
-        <text x="311" y="113" text-anchor="middle" font-size="14" font-weight="700" fill="var(--acento)">HTTPS</text>
-        <rect x="372" y="89" width="170" height="72" rx="36" stroke-width="5" fill="var(--superficie)" stroke="var(--texto)"/>
-        <text x="457" y="122" text-anchor="middle" font-size="18" font-weight="800" fill="var(--texto)" style="font-family: var(--fuente)">Tramtai</text>
+        <text x="311" y="114" text-anchor="middle" font-size="12" fill="var(--acento)" style="font-family: var(--mono)">HTTPS</text>
+        <rect x="372" y="89" width="170" height="72" rx="10" fill="var(--superficie-suave)" stroke="var(--acento)" stroke-width="1.3"/>
+        <text x="457" y="122" text-anchor="middle" font-size="18" font-weight="600" fill="var(--texto)">Tramtai</text>
         <text x="457" y="142" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu servidor</tspan><tspan lang="en">on your server</tspan></text>
-        <circle data-agente="claude" cx="622" cy="50" r="9" fill="var(--claude)"/>
-        <circle data-agente="codex" cx="622" cy="100" r="9" fill="var(--codex)"/>
-        <circle data-agente="copilot" cx="622" cy="150" r="9" fill="var(--copilot)"/>
-        <circle data-agente="gemini" cx="622" cy="200" r="9" fill="var(--gemini)"/>
-        <g font-size="15" font-weight="650" fill="var(--texto)">
+        <circle class="pulso" cx="622" cy="50" r="6" fill="var(--claude)"/>
+        <circle class="pulso" cx="622" cy="100" r="6" fill="var(--codex)" style="--retraso: .6s"/>
+        <circle class="pulso" cx="622" cy="150" r="6" fill="var(--copilot)" style="--retraso: 1.2s"/>
+        <circle class="pulso" cx="622" cy="200" r="6" fill="var(--gemini)" style="--retraso: 1.8s"/>
+        <g font-size="15" font-weight="600" fill="var(--texto)">
           <text x="640" y="48">Claude Code</text>
           <text x="640" y="98">Codex</text>
           <text x="640" y="148">GitHub Copilot</text>
@@ -118,32 +151,29 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         </g>
       </svg>
       <svg class="servidor-alto" viewBox="0 0 320 392" role="img" aria-label="Tu portátil, tu móvil y tus scripts llegan por HTTPS a Tramtai en tu servidor, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your laptop, your phone and your scripts reach Tramtai on your server over HTTPS, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
-        <line x1="18" y1="14" x2="18" y2="112" stroke-width="3" stroke="var(--borde-control)"/>
-        <line class="tramo-https" x1="18" y1="112" x2="18" y2="182" stroke-width="4" stroke="var(--acento)"/>
-        <line x1="18" y1="232" x2="18" y2="376" stroke-width="3" stroke="var(--borde-fuerte)"/>
-        <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+        <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+          <path class="base dibuja" pathLength="1" d="M18 20 L18 176 M18 234 L18 376 M18 262 L46 262 M18 300 L46 300 M18 338 L46 338 M18 376 L46 376"/>
+          <g class="aparece" style="--retraso: 1.2s"><path class="flujo" stroke-dasharray="4 6" d="M18 20 L18 176 M18 234 L18 376 M18 262 L46 262 M18 300 L46 300 M18 338 L46 338 M18 376 L46 376"/></g>
+        </g>
+        <g fill="var(--superficie)" stroke="var(--acento)" stroke-width="1.3">
           <circle cx="18" cy="14" r="6"/>
           <circle cx="18" cy="52" r="6"/>
           <circle cx="18" cy="90" r="6"/>
         </g>
-        <g font-size="14" font-weight="500" fill="var(--texto)">
+        <g font-size="14" fill="var(--texto)">
           <text x="36" y="19"><tspan lang="es">Tu portátil</tspan><tspan lang="en">Your laptop</tspan></text>
           <text x="36" y="57"><tspan lang="es">Tu móvil</tspan><tspan lang="en">Your phone</tspan></text>
           <text x="36" y="95"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
         </g>
-        <text x="36" y="152" font-size="14" font-weight="700" fill="var(--acento)">HTTPS</text>
-        <rect x="4" y="176" width="312" height="58" rx="29" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
-        <text x="160" y="202" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--fuente)">Tramtai</text>
+        <text x="36" y="152" font-size="12" fill="var(--acento)" style="font-family: var(--mono)">HTTPS</text>
+        <rect x="4" y="176" width="312" height="58" rx="10" fill="var(--superficie-suave)" stroke="var(--acento)" stroke-width="1.3"/>
+        <text x="160" y="202" text-anchor="middle" font-size="16" font-weight="600" fill="var(--texto)">Tramtai</text>
         <text x="160" y="220" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu servidor</tspan><tspan lang="en">on your server</tspan></text>
-        <line data-agente="claude" x1="18" y1="262" x2="44" y2="262" stroke-width="4" stroke-linecap="round" stroke="var(--claude)"/>
-        <circle data-agente="claude" cx="52" cy="262" r="7" fill="var(--claude)"/>
-        <line data-agente="codex" x1="18" y1="300" x2="44" y2="300" stroke-width="4" stroke-linecap="round" stroke="var(--codex)"/>
-        <circle data-agente="codex" cx="52" cy="300" r="7" fill="var(--codex)"/>
-        <line data-agente="copilot" x1="18" y1="338" x2="44" y2="338" stroke-width="4" stroke-linecap="round" stroke="var(--copilot)"/>
-        <circle data-agente="copilot" cx="52" cy="338" r="7" fill="var(--copilot)"/>
-        <line data-agente="gemini" x1="18" y1="376" x2="44" y2="376" stroke-width="4" stroke-linecap="round" stroke="var(--gemini)"/>
-        <circle data-agente="gemini" cx="52" cy="376" r="7" fill="var(--gemini)"/>
-        <g font-size="15" font-weight="650" fill="var(--texto)">
+        <circle class="pulso" cx="52" cy="262" r="6" fill="var(--claude)"/>
+        <circle class="pulso" cx="52" cy="300" r="6" fill="var(--codex)" style="--retraso: .6s"/>
+        <circle class="pulso" cx="52" cy="338" r="6" fill="var(--copilot)" style="--retraso: 1.2s"/>
+        <circle class="pulso" cx="52" cy="376" r="6" fill="var(--gemini)" style="--retraso: 1.8s"/>
+        <g font-size="15" font-weight="600" fill="var(--texto)">
           <text x="70" y="267">Claude Code</text>
           <text x="70" y="305">Codex</text>
           <text x="70" y="343">GitHub Copilot</text>
@@ -231,6 +261,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <h2><span lang="es">Así se ve</span><span lang="en">What it looks like</span></h2>
       <div class="servidor-capturas">
         <figure class="captura">
+          <span class="fig"><span lang="es">FIG 2 · Entrar</span><span lang="en">FIG 2 · Sign in</span></span>
           <img class="solo-claro" lang="es" src="capturas/servidor-entrar-claro-es-1440.webp" srcset="capturas/servidor-entrar-claro-es-960.webp 960w, capturas/servidor-entrar-claro-es-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Entrar en Tramtai desde otro equipo: la contraseña del administrador y el código de la app de autenticación">
           <img class="solo-claro" lang="en" src="capturas/servidor-entrar-claro-en-1440.webp" srcset="capturas/servidor-entrar-claro-en-960.webp 960w, capturas/servidor-entrar-claro-en-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Signing in to Tramtai from another computer: the administrator password and the authenticator app code">
           <img class="solo-oscuro" lang="es" src="capturas/servidor-entrar-oscuro-es-1440.webp" srcset="capturas/servidor-entrar-oscuro-es-960.webp 960w, capturas/servidor-entrar-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Entrar en Tramtai desde otro equipo: la contraseña del administrador y el código de la app de autenticación">
@@ -238,6 +269,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <figcaption><span lang="es">Desde otro equipo se entra con la contraseña del administrador y, si lo activaste, el código de tu app de autenticación.</span><span lang="en">From another computer you sign in with the administrator password and, if you turned it on, the code from your authenticator app.</span></figcaption>
         </figure>
         <figure class="captura">
+          <span class="fig"><span lang="es">FIG 3 · Inicio del servidor</span><span lang="en">FIG 3 · The server’s Home</span></span>
           <img class="solo-claro" lang="es" src="capturas/servidor-inicio-claro-es-1440.webp" srcset="capturas/servidor-inicio-claro-es-960.webp 960w, capturas/servidor-inicio-claro-es-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio en la Web UI del servidor, con la etiqueta Servidor en la cabecera y el mapa de la red">
           <img class="solo-claro" lang="en" src="capturas/servidor-inicio-claro-en-1440.webp" srcset="capturas/servidor-inicio-claro-en-960.webp 960w, capturas/servidor-inicio-claro-en-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Home in the server’s Web UI, with the Server label in the header and the network map">
           <img class="solo-oscuro" lang="es" src="capturas/servidor-inicio-oscuro-es-1440.webp" srcset="capturas/servidor-inicio-oscuro-es-960.webp 960w, capturas/servidor-inicio-oscuro-es-1440.webp 1440w" sizes="(max-width: 900px) calc(100vw - 32px), 524px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio en la Web UI del servidor, con la etiqueta Servidor en la cabecera y el mapa de la red">
@@ -246,23 +278,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         </figure>
       </div>
     </section>
-  </div>
 
-  <nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-    <ol>
-      <li><a href="#que-es"><span lang="es">Qué es</span><span lang="en">What it is</span></a></li>
-      <li><a href="#entornos"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
-      <li><a href="#aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
-      <li><a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a></li>
-      <li><a href="#red"><span lang="es">Abrir a la red</span><span lang="en">Open to the network</span></a></li>
-      <li><a href="#administrador"><span lang="es">Administrador</span><span lang="en">Administrator</span></a></li>
-      <li><a href="#claves"><span lang="es">Claves y suscripción</span><span lang="en">Keys and subscription</span></a></li>
-      <li><a href="#actualizar"><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></a></li>
-      <li><a href="#problemas"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
-    </ol>
-  </nav>
-
-  <article class="doc">
     <section id="que-es">
       <h2><span lang="es">Qué es</span><span lang="en">What it is</span></h2>
       <div lang="es">
@@ -449,7 +465,29 @@ tar xzf tramtai-*-linux-amd64.tar.gz &amp;&amp; cd tramtai
         <p><a href="https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md#server-guide">The full server guide</a>, with the settings for each case, and the Help: <a href="ayuda/servidor.html">Server mode</a> and <a href="ayuda/entornos.html">Two environments</a>.</p>
       </div>
     </section>
-  </article>
+    </article>
+<!-- comun:en-esta-pagina -->
+<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true"><span lang="es">En esta página</span><span lang="en">On this page</span></p>
+<ul>
+  <li><a href="#para-ti"><span lang="es">¿Es para ti?</span><span lang="en">Is it for you?</span></a></li>
+  <li><a href="#pasos"><span lang="es">En tres pasos</span><span lang="en">In three steps</span></a></li>
+  <li><a href="#pantallas"><span lang="es">Así se ve</span><span lang="en">What it looks like</span></a></li>
+  <li><a href="#que-es"><span lang="es">Qué es</span><span lang="en">What it is</span></a></li>
+  <li><a href="#entornos"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+  <li><a href="#aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
+  <li><a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a></li>
+  <li><a href="#red"><span lang="es">Abrir a la red</span><span lang="en">Open to the network</span></a></li>
+  <li><a href="#administrador"><span lang="es">Administrador</span><span lang="en">Administrator</span></a></li>
+  <li><a href="#claves"><span lang="es">Claves y suscripción</span><span lang="en">Keys and subscription</span></a></li>
+  <li><a href="#actualizar"><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></a></li>
+  <li><a href="#problemas"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
+</ul>
+</nav>
+</aside>
+<!-- /comun:en-esta-pagina -->
+  </div>
 </main>
 
 <!-- comun:pie -->

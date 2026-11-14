@@ -234,14 +234,14 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .cabeza.centrada { margin-left: auto; margin-right: auto; text-align: center; }
 .cabeza p { margin-top: 12px; font-size: 1.05rem; }
 
-/* Paradas numeradas unidas por la línea: los tres pasos de cada sistema en servidor.html. */
-.paradas { list-style: none; margin: 0; padding: 0; counter-reset: parada; position: relative; }
-.paradas::before { content: ''; position: absolute; left: 17px; top: 18px; bottom: 18px; width: 6px; border-radius: 3px; background: var(--acento); }
-.paradas li { counter-increment: parada; position: relative; padding: 0 0 30px 64px; }
+/* Paradas numeradas unidas por una línea de un píxel: los tres pasos de cada sistema en servidor.html. */
+.paradas { list-style: none; margin: 0; padding: 0 !important; counter-reset: parada; position: relative; }
+.paradas::before { content: ''; position: absolute; left: 15px; top: 16px; bottom: 16px; border-left: 1px solid var(--acento); }
+.paradas li { counter-increment: parada; position: relative; margin: 0; padding: 0 0 28px 52px; }
 .paradas li:last-child { padding-bottom: 0; }
-.paradas li::before { content: counter(parada); position: absolute; left: 0; top: -4px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--fondo); border: 6px solid var(--acento); font: 700 .95rem var(--fuente); color: var(--texto); box-sizing: border-box; }
-.paradas h3 { margin-bottom: 6px; }
+.paradas li::before { content: '0' counter(parada); content: '0' counter(parada) / ''; position: absolute; left: 0; top: -3px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fondo); border: 1px solid var(--acento); font: 500 .75rem var(--mono); color: var(--acento); }
+.paradas h3 { margin: 0 0 6px; font-size: 1.1rem; }
 .paradas p + p { margin-top: 8px; }
 
 /* «Por qué Tramtai» en Producto: la franja de cifras y, plegado en la comparativa, el antes y el después dibujados (SVG
@@ -293,56 +293,30 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .tablero li > span { color: var(--tablero-suave); }
 .tablero strong { color: var(--tablero-texto); font-weight: 600; }
 
-/* Tu servidor (portada y cabecera de servidor.html): el mapa de tus equipos → HTTPS → Tramtai en tu servidor → agentes,
-   con el vocabulario del de la cabecera (vías de 3 px; la de HTTPS, en el acento, y las de los agentes, de 4 px; el
-   color de línea solo en los agentes). Hasta 780 px va en vertical, como el de la cabecera. Debajo, las cuatro virtudes
-   con su estación, las dos tarjetas y las órdenes por sistema. */
-.mapa-servidor { margin: 40px 0 0; background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); padding: 24px; }
-.mapa-servidor svg { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
-.mapa-servidor text { font-family: var(--fuente); }
-.mapa-servidor .servidor-alto { display: none; max-width: 360px; }
-.virtudes { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
-.virtud h3 { position: relative; padding-left: 28px; font-size: 1.05rem; margin-bottom: 6px; }
-.virtud h3::before { content: ''; position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 50%; border: 4px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
-.virtud p { font-size: .95rem; }
-.para-ti { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 40px; }
+/* servidor.html: el mapa de tus equipos → HTTPS → Tramtai en tu servidor → agentes (FIG 1), en líneas de un píxel en el
+   acento que se dibujan al aparecer y por las que corre el flujo; el color de cada agente, solo en su punto. Se pasa al
+   dibujo vertical cuando su tarjeta no llega a 560 px. Debajo, «¿Es para ti?», los pasos por sistema y dos capturas. */
+.fig-mapa { container-type: inline-size; }
+.fig-mapa svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+.fig-mapa text { font-family: var(--fuente); }
+.fig-mapa .base { opacity: .35; }
+.fig-mapa .servidor-alto { display: none; max-width: 340px; }
+@container (max-width: 560px) {
+  .fig-mapa .servidor-ancho { display: none; }
+  .fig-mapa .servidor-alto { display: block; }
+}
+.para-ti { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
 .para-ti ul { margin: 0; padding-left: 20px; color: var(--texto-suave); }
 .para-ti li + li { margin-top: 6px; }
-.servidor-ordenes { margin-top: 40px; }
-.servidor-ordenes .codigo { margin: 0; position: relative; padding-top: 56px; }
-.servidor-ordenes .codigo + .codigo { margin-top: 12px; }
-.servidor-pie { margin-top: 20px; color: var(--texto-suave); }
-@media (max-width: 900px) {
-  .virtudes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .para-ti { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 780px) {
-  .mapa-servidor .servidor-ancho { display: none; }
-  .mapa-servidor .servidor-alto { display: block; }
-}
-@media (max-width: 640px) {
-  .mapa-servidor { padding: 12px; margin-top: 32px; }
-  .virtudes { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-}
-/* La cabecera de servidor.html ocupa las dos columnas de la guía: el mapa va en grande y los tres pasos de cada sistema
-   son paradas numeradas (.paradas). */
-.servidor-cabecera { grid-column: 1 / -1; min-width: 0; }
-.servidor-cabecera h1 { font-size: clamp(2rem, 4vw, 2.8rem); max-width: 18em; margin-bottom: 14px; }
-.servidor-cabecera .entrada { font-size: 1.15rem; color: var(--texto-suave); max-width: 40em; }
-.servidor-cabecera section { padding: 56px 0 0; }
-.servidor-cabecera section > p { margin: 8px 0 20px; max-width: 46em; }
-.servidor-cabecera .para-ti { margin-top: 20px; }
-/* El número de la parada sube 4 px sobre su fila: aire para que no toque las pestañas. */
 .pasos-panel .paradas { margin-top: 24px; }
-.pasos-panel .paradas p { margin-top: 4px; max-width: 46em; }
+.pasos-panel .paradas p { margin-top: 4px; }
 /* Una línea con Copiar a la derecha; en el móvil la orden no cabe al lado y Copiar va encima, como en el resto. */
-.pasos-panel .codigo { margin: 12px 0 0; padding: 14px 92px 14px 18px; }
-@media (max-width: 640px) { .pasos-panel .codigo { padding: 56px 16px 14px; } }
+.prosa .pasos-panel .codigo { margin: 12px 0 0; padding: 14px 92px 14px 18px; }
+@media (max-width: 640px) { .prosa .pasos-panel .codigo { padding: 56px 16px 14px; } }
 .servidor-capturas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 20px; }
 .servidor-capturas figcaption { margin-top: 10px; font-size: .92rem; color: var(--texto-suave); }
-@media (max-width: 900px) {
-  .servidor-cabecera { margin-bottom: 32px; }
-  .servidor-capturas { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1000px) {
+  .para-ti, .servidor-capturas { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Los cinco riesgos, bajo el tablero de Privacidad; «Tu servidor» enlaza aquí (#riesgos). */
@@ -444,24 +418,70 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .paquetes thead th { font-size: .8rem; }
 }
 
-/* Ayuda: índice lateral y contenido */
-.ayuda { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-top: 48px; padding-bottom: 72px; }
-.indice { position: sticky; top: 88px; align-self: start; font-size: .93rem; }
-.indice ol { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 4px solid var(--acento); }
-.indice li { position: relative; }
-.indice li::before { content: ''; position: absolute; left: -23px; top: 15px; width: 14px; height: 14px; border-radius: 50%; background: var(--fondo); border: 4px solid var(--acento); box-sizing: border-box; }
-.indice a { display: inline-block; min-height: 44px; padding: 10px 0; color: var(--texto-suave); text-decoration: none; }
-.indice a:hover, .indice a[aria-current="true"] { color: var(--texto); font-weight: 600; }
-.doc { max-width: 46em; }
-.doc > header { margin-bottom: 8px; }
-.doc > header h1 { font-size: clamp(2rem, 4vw, 2.8rem); margin: 6px 0 12px; }
-.doc section { padding: 40px 0 0; scroll-margin-top: 72px; }
-.doc h2 { margin-bottom: 14px; }
-.doc h3 { margin: 26px 0 8px; }
-.doc p, .doc ul, .doc ol, .doc .tabla, .doc .codigo, .doc .aviso, .doc details { margin: 0 0 14px; }
-.doc ul, .doc ol { padding-left: 22px; }
-.doc li { margin: 4px 0; }
-.doc .codigo { margin-top: 0; position: relative; padding-top: 56px; }
+/* Documentación (spec §6: Servidor, Desarrolladores y la Ayuda): el índice a la izquierda, el contenido en medio y «En
+   esta página» a la derecha, las dos columnas fijas al bajar. Por debajo de 1180 px «En esta página» se va; por debajo de
+   900, una sola columna y el índice, encima del contenido, se abre con su botón (sin JavaScript, abierto). Nada se pone
+   encima del texto. */
+/* Más ancha que las de presentación, y la barra y el pie con ella, alineados con el índice. */
+body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
+.doc { display: grid; grid-template-columns: 228px minmax(0, 1fr) 200px; gap: 48px; align-items: start; padding: 40px 0 80px; }
+.doc-indice, .doc-pagina { position: sticky; top: 88px; max-height: calc(100vh - 104px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; font-size: .9rem; }
+.doc-indice ul, .doc-pagina ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--borde); }
+.doc-indice a, .doc-pagina a { display: flex; align-items: center; min-height: 44px; margin-left: -1px; padding: 6px 0 6px 14px; border-left: 1px solid transparent; color: var(--texto-suave); text-decoration: none; line-height: 1.3; }
+.doc-indice a:hover, .doc-pagina a:hover { color: var(--texto); }
+.doc-indice a[aria-current="page"], .doc-indice a[aria-current="true"], .doc-pagina a[aria-current="true"] { color: var(--texto); font-weight: 600; border-left-color: var(--acento); }
+/* El rótulo de cada grupo lleva también .fig: mayúsculas pequeñas monoespaciadas. */
+.doc-grupo { margin: 22px 0 6px; }
+.doc-pagina .doc-grupo { margin-top: 0; }
+.doc-indice .buscar-campo { margin: 0 0 16px; font-size: .9rem; }
+.doc-indice-boton { display: none; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 14px; border: 1px solid var(--borde-control); border-radius: 8px; background: var(--superficie); color: var(--texto); font: 600 .95rem var(--fuente); cursor: pointer; }
+.doc-indice-boton svg { width: 18px; height: 18px; flex: none; }
+.doc-indice-boton::after { content: ''; width: 8px; height: 8px; margin: -4px 4px 0 auto; border: solid var(--texto-suave); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.doc-indice.abierto .doc-indice-boton::after { margin-top: 4px; transform: rotate(-135deg); }
+/* La cabecera de cada página: dónde está, el titular en dos partes (más pequeño que el de las de presentación) y la
+   entrada. */
+.doc-cabeza { margin-bottom: 8px; }
+.doc-ruta { margin: 0 0 12px; }
+.doc-cabeza .titular { font-size: clamp(2rem, 4vw, 2.75rem); margin: 0 0 14px; }
+.doc-cabeza .entrada, .entradilla { font-size: 1.1rem; color: var(--texto-suave); max-width: 40em; }
+/* El texto de la documentación. */
+.prosa section { padding: 48px 0 0; scroll-margin-top: 80px; }
+.prosa h2 { font-size: clamp(1.45rem, 2.4vw, 1.8rem); margin-bottom: 14px; }
+.prosa h3 { margin: 26px 0 8px; }
+.prosa p, .prosa ul, .prosa ol, .prosa .tabla, .prosa .codigo, .prosa .aviso, .prosa details { margin: 0 0 14px; }
+.prosa ul, .prosa ol { padding-left: 22px; }
+.prosa li { margin: 4px 0; }
+.prosa .codigo { margin-top: 0; position: relative; padding-top: 56px; }
+.prosa > .fig, .prosa section > .fig { margin: 24px 0 10px; }
+.prosa figure.tarjeta { margin: 24px 0; }
+/* En Desarrolladores, el camino de Inicio (FIG 2 allí) a un tamaño de lectura. */
+.prosa .fig-camino svg { max-width: 460px; margin: 0 auto; }
+.prosa .fig-pie { margin: 14px 0 0; }
+/* Una lista de enlaces sueltos (Más documentación, la 404): cada enlace es un objetivo de 44 px. */
+.lista-enlaces li { margin: 0; }
+.lista-enlaces a { display: inline-block; min-height: 44px; padding: 10px 0; }
+.pagina-sola { padding-top: 56px; padding-bottom: 80px; }
+.pagina-sola .prosa { max-width: 46em; }
+/* Por debajo de 1180 px, «En esta página» pasa encima del contenido, en fila. */
+@media (max-width: 1180px) {
+  .doc { grid-template-columns: 220px minmax(0, 1fr); gap: 16px 40px; }
+  .doc-indice { grid-row: 1 / span 2; }
+  .doc-pagina { position: static; max-height: none; overflow: visible; grid-column: 2; grid-row: 1; }
+  .doc #contenido { grid-column: 2; grid-row: 2; }
+  .doc-pagina ul { display: flex; flex-wrap: wrap; gap: 0 18px; border-left: 0; }
+  .doc-pagina a { margin-left: 0; padding: 6px 0; border-left: 0; }
+  .doc-pagina a[aria-current="true"] { color: var(--acento); }
+}
+/* Sin JavaScript (o si sitio.js falla) el botón sigue oculto y la lista, abierta. */
+@media (max-width: 900px) {
+  .doc { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 20px; }
+  .doc-indice, .doc-pagina, .doc #contenido { grid-column: auto; grid-row: auto; }
+  .doc-indice { order: -2; position: static; max-height: none; overflow: visible; margin-bottom: 8px; }
+  .doc-pagina { order: -1; margin-bottom: 8px; }
+  .doc-indice-boton:not([hidden]) { display: flex; }
+  .doc-indice:not(.abierto) .doc-indice-boton:not([hidden]) + .doc-indice-lista { display: none; }
+  .doc-indice-boton:not([hidden]) + .doc-indice-lista { margin-top: 8px; padding: 4px 16px 12px; border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); background: var(--superficie); }
+}
 .pestanas { margin: 0 0 18px; }
 .pestanas-lista { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 /* Sin JavaScript las pestañas de la portada esperan ocultas: display: flex no debe ganarle a [hidden]. */
@@ -471,46 +491,31 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .pestanas .codigo { margin-bottom: 0; }
 .pestanas .codigo a { color: var(--tablero-texto); }
 .ciclo { list-style: none; counter-reset: paso; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 !important; margin: 4px 0 22px !important; }
-.ciclo li { counter-increment: paso; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
-.ciclo li::before { content: counter(paso); display: block; font: 700 .8rem var(--fuente); color: var(--acento); margin-bottom: 4px; }
-@media (max-width: 900px) { .ciclo { grid-template-columns: 1fr; } }
-.doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
+.ciclo li { counter-increment: paso; background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
+.ciclo li::before { content: '0' counter(paso); content: '0' counter(paso) / ''; display: block; font: 500 .75rem var(--mono); color: var(--acento); margin-bottom: 4px; }
+@media (max-width: 1180px) { .ciclo { grid-template-columns: 1fr; } }
+.prosa :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
 .opcion-cli { white-space: nowrap; } /* una opción de la CLI (--comprobar) no se parte tras el guion */
 .tabla { overflow-x: auto; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; }
-.doc table { width: 100%; border-collapse: collapse; font-size: .93rem; }
-.doc th, .doc td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--borde); vertical-align: top; }
-.doc th { border-top: 0; background: var(--superficie-suave); font-weight: 600; }
+.prosa table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+.prosa th, .prosa td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--borde); vertical-align: top; }
+.prosa th { border-top: 0; background: var(--superficie-suave); font-weight: 600; }
 .aviso { background: var(--acento-suave); border: 1px solid color-mix(in srgb, var(--acento) 25%, transparent); border-radius: 10px; padding: 16px 20px; }
-.doc details { background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 0 16px; }
-.doc summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
-.doc details[open] summary { border-bottom: 1px solid var(--borde); margin-bottom: 12px; }
-.doc details > :last-child { margin-bottom: 14px; }
+.prosa details { background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: 10px; padding: 0 16px; }
+.prosa summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.prosa details[open] summary { border-bottom: 1px dashed var(--borde-discontinuo); margin-bottom: 12px; }
+.prosa details > :last-child { margin-bottom: 14px; }
 .copiar { position: absolute; top: 6px; right: 6px; min-height: 44px; min-width: 44px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06); color: var(--tablero-texto); border-radius: 8px; font: 600 .75rem var(--fuente); padding: 0 12px; cursor: pointer; }
 .copiar:hover { background: rgba(255, 255, 255, .14); }
 
-@media (max-width: 900px) {
-  .ayuda { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 28px; }
-  .indice { position: static; margin-bottom: 8px; }
-  .indice ol { display: flex; flex-wrap: wrap; gap: 0 16px; border-left: 0; padding: 0; }
-  .indice li::before { display: none; }
-}
-
 /* Ayuda por temas (site/ayuda/, generada desde web/src/ayuda): tarjetas, recorrido, pasos, errores y buscador. */
-.ayuda-temas { padding-top: 40px; padding-bottom: 72px; }
-.ayuda-temas .doc { max-width: 52em; }
-.tema-ayuda > *, .tema-ayuda section > * { margin-bottom: 18px; }
-.entradilla { font-size: 1.1rem; color: var(--texto-suave); }
-.migas { font-size: .9rem; color: var(--texto-suave); margin-bottom: 12px; }
-.migas a { display: inline-block; min-height: 44px; padding: 11px 0; color: var(--acento); }
-/* Una lista de enlaces sueltos (Más documentación, la 404): cada enlace es un objetivo de 44 px. */
-.tema-ayuda > ul > li { margin: 0; }
-.tema-ayuda > ul > li > a { display: inline-block; min-height: 44px; padding: 10px 0; }
-.tarjetas-temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 0 0 24px; }
-.tarjeta-tema { display: flex; flex-direction: column; gap: 6px; padding: 16px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); color: var(--texto); text-decoration: none; }
+.tema-ayuda .prosa > *, .tema-ayuda .prosa section > * { margin-bottom: 18px; }
+.tarjetas-temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 0 0 24px; }
+.tarjeta-tema { display: flex; flex-direction: column; gap: 6px; padding: 16px; background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); color: var(--texto); text-decoration: none; transition: border-color .15s ease; }
 .tarjeta-tema:hover, .tarjeta-tema:focus-visible { border-color: var(--acento); }
 .tarjeta-tema span { color: var(--texto-suave); font-size: .93rem; }
 .diagrama { list-style: none; display: grid; grid-template-columns: repeat(var(--paradas, 5), minmax(0, 1fr)); gap: 12px; padding: 0 !important; }
-.diagrama li { position: relative; display: flex; flex-direction: column; gap: 4px; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; }
+.diagrama li { position: relative; display: flex; flex-direction: column; gap: 4px; background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; }
 .diagrama li span { color: var(--texto-suave); }
 .diagrama li:not(:last-child)::after { content: '→'; position: absolute; right: -11px; top: 12px; color: var(--acento); font-weight: 700; }
 .diagrama-rama { color: var(--texto-suave); font-size: .92rem; }
@@ -540,8 +545,6 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .buscar-campo svg { width: 18px; height: 18px; flex: none; }
 .buscar-campo span { flex: 1; }
 .buscar-campo kbd, .buscador-pie kbd { font: 600 .75rem var(--fuente); padding: 2px 6px; border: 1px solid var(--borde-control); border-radius: 5px; color: var(--texto-suave); }
-.enlace-boton { display: inline; padding: 0; border: 0; background: none; font: inherit; color: var(--acento); text-decoration: underline; cursor: pointer; }
-.enlace-boton[hidden] { display: none; }
 dialog.buscador { width: min(640px, calc(100% - 32px)); margin: 10vh auto auto; padding: 0; border: 1px solid var(--borde-control); border-radius: var(--radio); background: var(--superficie); color: var(--texto); box-shadow: 0 24px 64px rgba(0, 0, 0, .35); }
 dialog.buscador::backdrop { background: rgba(0, 0, 0, .55); }
 body:has(dialog.buscador[open]) { overflow: hidden; }
