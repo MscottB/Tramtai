@@ -607,6 +607,104 @@ describe('producto', () => {
 })
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Agentes (v0.61, spec §5, Tarea 7): la tarjeta «router», que sustituye a la línea de metro (de Tramtai salen líneas de un
+// píxel a los cinco agentes, cada uno con su color, lo que hace, cómo se conecta y un pulso), y una tarjeta por agente con
+// cómo se instala e inicia sesión desde Tramtai, las versiones comprobadas y su enlace a «Preparar tus agentes».
+const agentesPagina = leer('agentes.html')
+const AGENTES = ['claude', 'codex', 'copilot', 'gemini', 'antigravity']
+// Cómo se conecta cada uno, copiado de la sección «agentes» de la portada de antes de la v0.61
+// (git show 2d00e09:site/index.html); se contrasta con Autenticaciones de internal/agentes/*/ficha.go.
+const CONEXION: Record<string, [string, string]> = {
+  claude: ['Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.', 'Your Claude subscription (personal use) or an Anthropic API key.'],
+  codex: ['Tu cuenta de ChatGPT (uso personal) o una clave de API de OpenAI.', 'Your ChatGPT account (personal use) or an OpenAI API key.'],
+  copilot: ['Tu cuenta de GitHub Copilot (Free, Pro o de empresa) con <code>copilot login</code>, o una clave de GitHub. Cada petición gasta créditos de tu plan.',
+    'Your GitHub Copilot account (Free, Pro or business) with <code>copilot login</code>, or a GitHub key. Every request uses credits from your plan.'],
+  gemini: ['Tu clave de la Gemini API, sin instalar ningún CLI.', 'Your Gemini API key, with no CLI to install.'],
+  antigravity: ['El CLI de Google con tu clave de la Gemini API, sin herramientas.', 'Google’s CLI with your Gemini API key, without tools.'],
+}
+const tarjetaAgente = (id: string) => agentesPagina.match(new RegExp(`<article class="tarjeta agente[^"]*" id="${id}">[\\s\\S]*?</article>`))?.[0] ?? ''
+
+describe('agentes', () => {
+  const router = seccion('router', agentesPagina)
+  const figura = router.match(/<figure class="tarjeta ancha router vivo">[\s\S]*?<\/figure>/)?.[0] ?? ''
+
+  test('la tarjeta router llega a los cinco agentes', () => {
+    assert.ok(figura, 'falta la tarjeta router')
+    assert.match(figura, /<figcaption class="fig"><span lang="es">FIG 1 · /)
+    // El SVG: cinco líneas de un píxel, que se dibujan, desde Tramtai; el flujo corre por las cuatro que llegan a tus apps.
+    // Solo dibuja: lo que dice cada destino es texto de la lista de al lado, que leen también los lectores de pantalla.
+    const svg = figura.match(/<svg [\s\S]*?<\/svg>/)?.[0] ?? ''
+    assert.match(svg, /<svg [^>]*aria-hidden="true">/)
+    assert.match(svg, /stroke-width="1"/)
+    assert.equal((svg.match(/<path class="dibuja" pathLength="1"/g) ?? []).length, 5, 'cinco destinos')
+    assert.equal((svg.match(/<path class="flujo" stroke-dasharray="4 6"/g) ?? []).length, 4, 'sin JavaScript el flujo se ve punteado y quieto')
+    assert.match(svg, />Tramtai</)
+    // Cada destino, con su nombre visible, su punto de color, lo que hace y cómo se conecta, y enlace a su tarjeta.
+    const destinos = figura.match(/<li[^>]*>[\s\S]*?<\/li>/g) ?? []
+    assert.deepEqual(destinos.map((d) => d.match(/href="#([a-z]+)"/)?.[1]), AGENTES)
+    assert.deepEqual(destinos.map((d) => d.match(/<span class="router-nombre">([^<]+)<\/span>/)?.[1]), ['Claude Code', 'Codex', 'GitHub Copilot', 'Gemini API', 'Antigravity'])
+    destinos.forEach((d, i) => {
+      assert.match(d, new RegExp(`<span class="punto[^"]*" style="--c: var\\(--${AGENTES[i]}\\)`), AGENTES[i])
+      assert.match(d, /<span class="router-hace"><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/span>/, AGENTES[i])
+    })
+    const conecta = destinos.map((d) => d.match(/<span class="router-conexion"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/span>/)?.slice(1))
+    assert.deepEqual(conecta, [...Array(3).fill(['suscripción o clave', 'subscription or key']), ['clave de API', 'API key'], ['solo clave de API', 'API key only']])
+    // Los cuatro que llegan a tus apps laten; Antigravity, no.
+    assert.equal((figura.match(/class="punto pulso"/g) ?? []).length, 4)
+    assert.match(destinos[4], /fuera de tus apps/)
+    assert.doesNotMatch(figura, /style="[^"]*(opacity|display)|\shidden[\s>]/)
+    // Las filas crecen con el texto (WCAG 1.4.4 y 1.4.10): cinco iguales y el SVG, de su alto; en un teléfono estrecho, fuera.
+    assert.match(css, /\.router-destinos \{[^}]*grid-auto-rows: minmax\(64px, 1fr\)/)
+    assert.doesNotMatch(css, /\.router-destinos li \{[^}]*[^-]height:/)
+    assert.match(css, /\.router-lineas \{[^}]*height: 100%/)
+    assert.match(css, /@media \(max-width: 420px\) \{[^@]*\.router-lineas \{ display: none; \}/)
+  })
+
+  test('cada agente dice cómo se conecta', () => {
+    for (const id of AGENTES) {
+      const t = tarjetaAgente(id)
+      assert.ok(t, `falta la tarjeta de ${id}`)
+      assert.ok(t.includes(`<span lang="es">${CONEXION[id][0]}`), `${id} (es)`)
+      assert.ok(t.includes(`<span lang="en">${CONEXION[id][1]}`), `${id} (en)`)
+    }
+    // Antigravity y la Gemini API van solo con clave: ni una palabra de suscripción.
+    for (const id of ['gemini', 'antigravity']) assert.doesNotMatch(tarjetaAgente(id), /suscripción|subscription/, id)
+    assert.match(tarjetaAgente('antigravity'), /Todavía no desde tus apps/)
+    // Cómo se instala y se inicia sesión desde Tramtai (v0.60, Ayuda «Preparar tus agentes»): los tres con suscripción
+    // inician sesión desde la app; Antigravity solo se instala; la Gemini API no se instala.
+    for (const [id, es, en] of [['claude', 'Con un enlace en tu navegador', 'With a link in your browser'], ['codex', 'Con un código de dispositivo', 'With a device code'],
+      ['copilot', 'Con un código de dispositivo de GitHub', 'With a GitHub device code'], ['antigravity', 'No inicia sesión: solo se instala', 'It doesn’t sign in: it is only installed'],
+      ['gemini', 'Nada que instalar', 'Nothing to install']])
+      assert.ok(tarjetaAgente(id).includes(es) && tarjetaAgente(id).includes(en), id)
+    for (const id of ['claude', 'codex', 'copilot', 'antigravity'])
+      assert.match(tarjetaAgente(id), /versiones comprobadas[\s\S]*checked versions/, id)
+    // En la app, con el texto de ayuda.preparar.paso1 y paso2, en los tres que inician sesión.
+    for (const id of ['claude', 'codex', 'copilot'])
+      assert.match(tarjetaAgente(id), /<dt><span lang="es">En la app<\/span>[\s\S]*En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar»\. Tramtai sigue con el inicio de sesión:/, id)
+    // Antigravity y la Gemini API: «La clave», con la variable de su ficha (VariablesClave).
+    for (const id of ['gemini', 'antigravity']) {
+      assert.match(tarjetaAgente(id), /<dt><span lang="es">La clave<\/span>[\s\S]*<code>tramtai claves guardar GEMINI_API_KEY<\/code>[\s\S]*<code>tramtai keys set GEMINI_API_KEY<\/code>/, id)
+      assert.doesNotMatch(tarjetaAgente(id), /Iniciar sesión<\/span>/, id)
+    }
+  })
+
+  test('cada agente enlaza a Preparar tus agentes', () => {
+    for (const id of AGENTES) assert.match(tarjetaAgente(id), /<p class="agente-pie"><a href="ayuda\/preparar\.html">/, id)
+    // Un enlace suelto mide 44 px de alto.
+    assert.match(css, /\.agente-pie a \{ display: inline-flex; align-items: center; min-height: 44px; \}/)
+  })
+
+  test('ya no hay línea de metro', () => {
+    // La sección «agentes» de antes era una parada por agente: el aro de su sigla y la ficha de «vía muerta».
+    assert.doesNotMatch(agentesPagina, /\bmetro\b|class="(sigla|fichas|conexiones|panel|agentes)"|sin-apps|línea de ese agente|that agent’s line/)
+    assert.doesNotMatch(css, /\.(sigla|fichas|conexiones|panel|panel-titulo|agentes)(?![\w-])|\.agente\.sin-apps/)
+    // El color de cada agente solo en sus puntos.
+    for (const [etiqueta] of agentesPagina.matchAll(/<[^>]*var\(--(?:claude|codex|copilot|gemini|antigravity)\)[^>]*>/g))
+      assert.match(etiqueta, /^<span class="punto[^"]*" style="--c: var\(--[a-z]+\)[^"]*">$/, etiqueta)
+  })
+})
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Lo que pasó de la portada a Producto, Agentes y Descargar (ruling 3), hasta que las Tareas 5 a 7 rehagan esas páginas.
 
 // v0.59 (spec §4): la franja de cuatro cifras del producto y la línea de siete paradas, en lugar de los seis motivos.
@@ -664,7 +762,7 @@ test('el paso 3 de «Cómo funciona» dice que Tramtai apunta tus herramientas y
 })
 
 test('Agentes, Privacidad y Descargar conservan lo que absorbieron', () => {
-  assert.match(seccion('agentes'), /Conecta estos agentes[\s\S]*Desde tus apps y SDK/)
+  assert.match(seccion('agentes'), /Desde tus apps y SDK[\s\S]*LangChain[\s\S]*n8n[\s\S]*API propia \(OpenAPI\)/)
   assert.match(seccion('privacidad'), /class="tablero"[\s\S]*<!-- comun:riesgos -->/)
   assert.match(leer('descargar.html'), /Gratis para uso personal y no comercial/)
   assert.doesNotMatch(html, /href="#(pagas|capturas|aviso)"/)
@@ -697,10 +795,10 @@ test('la suscripción, solo para tu uso personal, y sin promesas absolutas fuera
 const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
 test('el color de cada agente solo marca a su agente: figuras de Inicio, diagrama «Con Tramtai» y tarjetas de Agentes (52)', () => {
   assert.doesNotMatch(html, /class="linea"/)
-  const sinAgentes = html.replace(/<section id="fig"[\s\S]*?<\/section>/, '').replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
+  // En Agentes, el router y las tarjetas: sus puntos los vigila «ya no hay línea de metro».
+  const sinAgentes = html.replace(/<section id="fig"[\s\S]*?<\/section>/, '').replace(seccion('router'), '').replace(seccion('agentes'), '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
   assert.doesNotMatch(sinAgentes, COLORES_LINEA)
-  assert.match(seccion('agentes'), /Cinco agentes; cuatro desde tus apps\./)
-  assert.match(seccion('agentes'), /<article class="agente sin-apps">/)
+  assert.match(seccion('agentes'), /Cinco agentes; <em>cuatro desde tus apps\.<\/em>/)
 })
 
 test('las secciones no abren todas igual: sin etiqueta sobre el h2 y no todas centradas (35, 55)', () => {
