@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { pasosBienvenida } from '../src/recorrido.ts'
@@ -384,85 +384,211 @@ test('la portada de antes no deja restos: ni tranvía ni accesos; el recorrido g
   assert.doesNotMatch(inicio, /class="demo|id="demo"/)
 })
 
-// Ruling 7: «La app» (#app, «Tu red, a la vista») y el recorrido guiado de 14 pasos (#demo) pasaron tal cual a Producto,
-// con su JavaScript y su CSS, hasta que la Tarea 6 los meta en Funciones.
+// ---------------------------------------------------------------------------------------------------------------------
+// Producto (v0.61, spec §5, Tarea 6): el arranque corto; Cómo funciona en tres pasos con su diagrama; Funciones en
+// tarjetas con captura, con «La app» y el recorrido guiado de 14 pasos dentro; Por qué Tramtai con sus cifras, las siete
+// ventajas en un mosaico y la comparativa plegada; y Privacidad entera.
 const producto = leer('producto.html')
-const app = seccion('app', producto)
-const corte = app.indexOf('<div id="demo"')
-const asi = corte < 0 ? app : app.slice(0, corte)
-const demo = corte < 0 ? '' : app.slice(corte)
+const funcionesProducto = seccion('funciones', producto)
+const corte = funcionesProducto.indexOf('<div id="demo"')
+const asi = corte < 0 ? funcionesProducto : funcionesProducto.slice(0, corte)
+const demo = corte < 0 ? '' : funcionesProducto.slice(corte)
 const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
+// texto quita las etiquetas y junta los espacios: lo que lee quien visita la página.
+const texto = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
 
-test('Producto tiene «La app»: sus cinco pares de texto y captura, y el recorrido de 14 pasos', () => {
-  assert.match(app, /^<section id="app">/)
-  assert.match(asi, /Tu red, a la vista\./)
-  const etiquetas = [...asi.matchAll(/<span class="etiqueta"><span lang="es">([^<]+)<\/span>/g)].map((m) => m[1])
-  assert.deepEqual(etiquetas, ['Inicio', 'Espacios', 'Probar', 'Mis APIs', 'Agentes'])
-  assert.equal(figuras.length, 14)
-  assert.match(figuras[13], /Historial y Ajustes tienen su recorrido en su \?\. Ábrelo cuando llegues allí\./)
-  assert.match(figuras[13], /History and Settings have their own tour behind their \? button\. Open it when you get there\./)
-  // «Míralo paso a paso» lleva al recorrido entero, en Producto y en la guía del desarrollador.
-  assert.match(seccion('funciones', producto), /href="#demo">míralo paso a paso<\/a>/)
-  assert.equal((leer('desarrolladores.html').match(/href="producto\.html#demo"/g) ?? []).length, 2)
-})
+// Las siete ventajas, copiadas de la línea de ventajas de la portada de antes de la v0.61 (git show 2d00e09:site/index.html).
+const VENTAJAS = [
+  ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
+  // v0.60: la de preparar los agentes.
+  ['Tramtai instala y conecta tus agentes', 'instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.'],
+  ['Sin tocar tu código', 'con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.'],
+  ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
+  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.'],
+  ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
+  ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
+]
+// El texto de la sección «privacidad» de la portada de antes de la v0.61 (git show 2d00e09:site/index.html), entero; los
+// cinco riesgos los rellena comun:riesgos y los vigila su prueba.
+const PRIVACIDAD = [
+  'Privacidad', 'Privacy', 'Tramtai no tiene servidor propio.', 'Tramtai has no server of its own.',
+  'Funciona en tu equipo y no tiene cuentas. Tus peticiones van de tu equipo al proveedor del agente que elijas, no a Tramtai.',
+  'It runs on your computer and has no accounts. Your requests go from your computer to the provider of the agent you choose, not to Tramtai.',
+  'Red', 'Network',
+  'Por defecto escucha solo en 127.0.0.1; abrirlo a otros equipos es un ajuste aparte, apagado de serie, y solo arranca con HTTPS. Cada API exige su propia clave.',
+  'By default it listens only on 127.0.0.1; opening it to other computers is a separate setting, off out of the box, and it only starts with HTTPS. Every API requires its own key.',
+  'Claves', 'Keys',
+  'Tus claves de proveedor quedan cifradas en el almacén del sistema, no en los archivos de Tramtai. La clave de cada API y la de cada espacio solo se ven al crearlas o regenerarlas, Tramtai guarda solo su huella y no sirven para abrir la app.',
+  'Your provider keys are encrypted in the system store, not in Tramtai’s files. Each API’s key and each workspace’s key are shown only when they are created or regenerated, Tramtai stores only a hash of them and they can’t open the app.',
+  'Sesiones', 'Sessions',
+  'Tramtai no lee las credenciales de los CLI: les pregunta con qué cuenta iniciaste sesión. Con GitHub Copilot copia a su carpeta privada qué cuenta es, sin su clave.',
+  'Tramtai doesn’t read the CLIs’ credentials: it asks them which account you signed in with. With GitHub Copilot it copies which account it is to its private folder, without its key.',
+  'Datos', 'Data',
+  'Las respuestas se guardan 24 horas por defecto; lo cambias en Ajustes, donde también vacías el historial.',
+  'Responses are kept for 24 hours by default; you change that in Settings, where you can also clear the history.',
+  'Telemetría', 'Telemetry',
+  'Ninguna. Tramtai no envía estadísticas de uso. Solo consulta GitHub para buscar versiones nuevas, y eso se apaga en Ajustes.',
+  'None. Tramtai sends no usage statistics. It only checks GitHub for new versions, and you can turn that off in Settings.',
+  'Antes de usarlo, cinco riesgos.', 'Before you use it, five risks.',
+  'Los mismos que te enseña Tramtai antes de aceptar sus términos, en la app, la terminal y al instalar el servidor.',
+  'The same ones Tramtai shows you before you accept its terms, in the app, the terminal and when you install the server.',
+  'Los términos de uso completos', 'The full terms of use',
+]
 
-test('cada captura de «La app» tiene su pareja en el otro idioma, con lang, srcset y carga diferida', () => {
-  const imgs = asi.match(/<img [^>]*>/g) ?? []
-  assert.equal(imgs.length, 20, 'cinco pantallas, en claro y oscuro y en los dos idiomas')
-  for (const img of imgs) {
-    const m = img.match(/class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp"/)
-    assert.ok(m, img.slice(0, 120))
-    const [, tema, idioma, nombre] = m
-    const base = `capturas/${nombre}-${tema}-${idioma}`
-    assert.ok(img.includes(`srcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1440.webp 1440w"`), `${base}: srcset`)
-    assert.match(img, /width="1440" height="900"/)
-    assert.match(img, /loading="lazy"/)
-    const otro = idioma === 'es' ? 'en' : 'es'
-    assert.ok(imgs.some((i) => i.includes(`class="solo-${tema}" lang="${otro}" src="capturas/${nombre}-${tema}-${otro}-1440.webp"`)), `${base}: falta su pareja`)
-  }
-  const inicioPar = asi.match(/<article class="par">\s*<div>\s*<span class="etiqueta"><span lang="es">Inicio[\s\S]*?<\/article>/)?.[0] ?? ''
-  assert.match(inicioPar, /en vivo/)
-  const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
-  assert.match(nota, /datos de ejemplo[\s\S]*17388[\s\S]*17373/)
-})
-
-test('el recorrido es una figura por paso de la bienvenida, con su captura en claro y oscuro y en los dos idiomas', () => {
-  assert.equal(figuras.length, pasos.length, 'una figura por paso')
-  figuras.forEach((figura, i) => {
-    const n = i + 1
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en']) {
-        const base = `capturas/bienvenida-${n}-${tema}-${idioma}`
-        assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
-      }
-    const escapar = (s: string) => s.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(es[pasos[i].texto])}`))
-    assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(en[pasos[i].texto])}`))
+describe('producto', () => {
+  test('Producto tiene sus secciones', () => {
+    assert.deepEqual([...producto.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]), ['como', 'funciones', 'por-que', 'privacidad'])
+    assert.equal((producto.match(/<h1\b/g) ?? []).length, 1)
+    assert.match(producto, /<main id="contenido" tabindex="-1" class="producto">\s*(<!--[^>]*-->\s*)?<div class="arranque">/, 'el arranque corto, con la cuadrícula y el brillo')
+    assert.match(seccion('por-que', producto), /<details class="comparativa" id="comparativa">/)
+    assert.match(funcionesProducto, /<div id="demo">/, 'el recorrido guiado va dentro de Funciones')
+    for (const id of ['como', 'funciones', 'por-que', 'comparativa', 'privacidad', 'demo', 'riesgos'])
+      assert.equal((producto.match(new RegExp(`\\sid="${id}"`, 'g')) ?? []).length, 1, id)
   })
-  // La primera se ve; el resto espera su turno (sin JavaScript se ven las 14, una debajo de otra).
-  assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
-  for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
-  const botones = [...demo.matchAll(/<button type="button" class="demo-ir" data-paso="(\d+)"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/button>/g)]
-  assert.deepEqual(botones.map((m) => [m[2], m[3]]), pasos.map((p) => [es[p.titulo], en[p.titulo]]))
-})
 
-// Con el recorrido vuelve su JavaScript (ruling 7): sin él, con html.js, solo se vería el primer paso.
-const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'), js.indexOf('// Plano de metro de Funciones'))
-test('el recorrido funciona con su JavaScript y su CSS: flechas con el foco dentro, pausa y leyenda', () => {
-  assert.ok(demoJs.length > 1000, 'falta el bloque del recorrido en sitio.js')
-  assert.match(demoJs, /caja\.addEventListener\('keydown'/)
-  assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
-  assert.match(demoJs, /if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey\) return/)
-  assert.match(demoJs, /pausaManual = pausado/)
-  assert.match(demoJs, /escribirLeyenda\(leyenda, /)
-  assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/)
-  assert.match(demoJs, /siguiente\.loading = 'eager'/)
-  assert.match(demo, /<p class="demo-leyenda" aria-live="off">/)
-  assert.match(css, /html\.js \.demo \{[^}]*grid-template-columns: 220px minmax\(0, 1fr\)/)
-  assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
-  assert.match(css, /\.demo-flecha \{[^}]*width: 44px; height: 44px/)
-  assert.match(css, /\.demo-pausa \{[^}]*min-height: 44px/)
-  assert.match(css, /#demo \{[^}]*scroll-margin-top: 72px/)
+  test('las siete ventajas siguen', () => {
+    const porQueProducto = seccion('por-que', producto)
+    const lista = porQueProducto.match(/<ol class="mosaico ventajas"[^>]*>[\s\S]*?<\/ol>/)?.[0] ?? ''
+    const ventajas = lista.match(/<li class="tarjeta[^"]*">[\s\S]*?<\/li>/g) ?? []
+    assert.equal(ventajas.length, VENTAJAS.length)
+    ventajas.forEach((v, i) => {
+      assert.ok(v.includes(`<h3><span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
+      const frase = VENTAJAS[i][1][0].toUpperCase() + VENTAJAS[i][1].slice(1)
+      assert.ok(v.includes(`<p><span lang="es">${frase}</span>`), frase)
+      const ingles = v.match(/<p>[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
+      assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
+    })
+    // Un mosaico de distinto tamaño: la primera y la última, anchas.
+    assert.match(ventajas[0], /^<li class="tarjeta ancha">/)
+    assert.match(ventajas[6], /^<li class="tarjeta ancha">/)
+    assert.doesNotMatch(lista, COLORES_LINEA)
+  })
+
+  test('la comparativa va plegada', () => {
+    const comparativa = producto.match(/<details class="comparativa" id="comparativa">[\s\S]*?<\/details>/)?.[0] ?? ''
+    assert.ok(comparativa, 'falta el <details> de la comparativa')
+    assert.doesNotMatch(comparativa, /<details[^>]* open/)
+    assert.match(comparativa, /<summary>[\s\S]*lang="es"[\s\S]*lang="en"[\s\S]*<\/summary>/)
+    assert.equal((comparativa.match(/<figure class="pagas-diagrama[^"]*">/g) ?? []).length, 2, 'Sin Tramtai y Con Tramtai')
+    // Va debajo de las ventajas, y sitio.js la abre si se llega por su ancla.
+    assert.ok(producto.indexOf('class="mosaico ventajas"') < producto.indexOf('id="comparativa"'))
+    assert.match(js, /destino\.tagName === 'DETAILS'\) destino\.open = true/)
+  })
+
+  test('privacidad completa', () => {
+    const privacidad = texto(seccion('privacidad', producto))
+    for (const t of PRIVACIDAD) assert.ok(privacidad.includes(t), t)
+    assert.match(seccion('privacidad', producto), /class="tablero"[\s\S]*<div class="cabeza riesgos-cabeza" id="riesgos">[\s\S]*<!-- comun:riesgos -->/)
+  })
+
+  // Cómo funciona: instala Tramtai → prepara tus agentes → cambia la URL y la clave, en un diagrama en perspectiva que se
+  // dibuja con .vivo (como FIG 2 de Inicio); el texto de cada paso va en el HTML, debajo.
+  test('Cómo funciona dibuja los tres pasos en SVG con .vivo', () => {
+    const como = seccion('como', producto)
+    const diagrama = como.match(/<figure class="tarjeta fig-camino vivo">[\s\S]*?<\/figure>/)?.[0] ?? ''
+    assert.ok(diagrama, 'falta el diagrama')
+    assert.match(diagrama, /<figcaption class="fig"><span lang="es">FIG 1 · /)
+    assert.match(diagrama, /<svg [^>]*role="img" aria-label="[^"]+" data-aria-en="[^"]+">/)
+    assert.equal((diagrama.match(/class="dibuja" pathLength="1"/g) ?? []).length, 3, 'una pieza por paso')
+    assert.equal((diagrama.match(/class="flujo" stroke-dasharray="4 6"/g) ?? []).length, 2, 'sin JavaScript el flujo se ve punteado y quieto')
+    assert.doesNotMatch(diagrama, /style="[^"]*(opacity|display)|\shidden[\s>]/)
+    const pasosComo = [...como.matchAll(/<li>\s*<h3><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/h3>/g)].map((m) => [m[1], m[2]])
+    assert.deepEqual(pasosComo, [['Instala Tramtai', 'Install Tramtai'], ['Prepara tus agentes', 'Set up your agents'], ['Cambia la URL y la clave', 'Change the URL and the key']])
+    assert.doesNotMatch(como, COLORES_LINEA)
+  })
+
+  // Funciones: doce tarjetas en cuatro líneas (conecta, controla, protege y usa), cada una con un recorte real (los de la
+  // Tarea 9; de momento, las zonas del recorrido guiado), y las cinco pantallas de «La app» con su captura entera.
+  test('Funciones son tarjetas con captura: cuatro líneas de tres, sin perder ninguna función', () => {
+    const lineas = asi.match(/<div class="linea-funciones">[\s\S]*?<\/div>\s*<\/div>/g) ?? []
+    assert.deepEqual(lineas.map((l) => l.match(/<h3><span lang="es">([^<]+)<\/span>/)?.[1]), ['Conecta', 'Controla', 'Protege', 'Usa'])
+    const tarjetas = lineas.flatMap((l) => l.match(/<article class="tarjeta funcion">[\s\S]*?<\/article>/g) ?? [])
+    assert.equal(tarjetas.length, 12)
+    for (const t of tarjetas) {
+      assert.match(t, /<span class="fig"><span lang="es">FIG \d+ · [^<]+<\/span><span lang="en">FIG \d+ · [^<]+<\/span><\/span>/)
+      assert.match(t, /<h4><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/h4>\s*<p><span lang="es">[\s\S]*<\/span><span lang="en">/)
+      assert.equal((t.match(/<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/[a-z0-9-]+\.webp"[^>]* loading="lazy" decoding="async" alt="[^"]+">/g) ?? []).length, 4, t.slice(0, 160))
+    }
+    for (const t of ['Compatible con tus SDK', 'API propia con OpenAPI', 'Respuestas con forma', 'Espacios de trabajo', 'Una API por aplicación', 'Modelo y esfuerzo en cada petición',
+      'Respaldo entre agentes', 'Claves cifradas en el almacén del sistema', 'Sin terminal ni web', 'La terminal, a la par de la app', 'Adjunta PDF, Word y Excel', 'Recorrido y Ayuda'])
+      assert.ok(tarjetas.some((x) => x.includes(`<h4><span lang="es">${t}</span>`)), t)
+    // La de la terminal lleva a la ventana de Inicio; la del recorrido, al recorrido de esta página.
+    const terminal = tarjetas.find((x) => x.includes('La terminal, a la par de la app')) ?? ''
+    assert.match(terminal, /href="\.\/#formas"/)
+    assert.match(terminal, /SSH/)
+    assert.match(funcionesProducto, /href="#demo">míralo paso a paso<\/a>/)
+    assert.equal((leer('desarrolladores.html').match(/href="producto\.html#demo"/g) ?? []).length, 2)
+    assert.doesNotMatch(asi, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+    // El plano de metro se fue con su JavaScript y su CSS.
+    assert.doesNotMatch(producto + js + css, /metro|parada-(boton|titulo|texto)/)
+  })
+
+  test('Funciones guarda «La app»: sus cinco pantallas con su texto y su captura, en tarjetas de distinto tamaño', () => {
+    const pantallas = asi.match(/<div class="mosaico pantallas"[^>]*>[\s\S]*?<\/article>\s*<\/div>/)?.[0] ?? ''
+    const tarjetas = pantallas.match(/<article class="tarjeta funcion[^"]*">[\s\S]*?<\/article>/g) ?? []
+    assert.deepEqual(tarjetas.map((t) => t.match(/<span class="fig"><span lang="es">FIG \d+ · ([^<]+)<\/span>/)?.[1]), ['Inicio', 'Espacios', 'Probar', 'Mis APIs', 'Agentes'])
+    assert.ok(new Set(tarjetas.map((t) => t.match(/class="tarjeta funcion([^"]*)"/)?.[1])).size > 1, 'de distinto tamaño')
+    for (const t of ['El mapa en vivo de tu red', 'Un espacio por proyecto', 'De la prueba al código en un clic', 'Cada app con su clave y su presupuesto', 'Suscripción o clave de API, en cada agente'])
+      assert.ok(pantallas.includes(`<h3><span lang="es">${t}</span>`), t)
+    assert.match(tarjetas[0], /Cada petición viaja en vivo por la línea de su agente/)
+    const imgs = pantallas.match(/<img [^>]*>/g) ?? []
+    assert.equal(imgs.length, 20, 'cinco pantallas, en claro y oscuro y en los dos idiomas')
+    for (const img of imgs) {
+      const m = img.match(/class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp"/)
+      assert.ok(m, img.slice(0, 120))
+      const [, tema, idioma, nombre] = m
+      const base = `capturas/${nombre}-${tema}-${idioma}`
+      assert.ok(img.includes(`srcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1440.webp 1440w"`), `${base}: srcset`)
+      assert.match(img, /width="1440" height="900"/)
+      assert.match(img, /loading="lazy"/)
+      const otro = idioma === 'es' ? 'en' : 'es'
+      assert.ok(imgs.some((i) => i.includes(`class="solo-${tema}" lang="${otro}" src="capturas/${nombre}-${tema}-${otro}-1440.webp"`)), `${base}: falta su pareja`)
+    }
+    const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
+    assert.match(nota, /datos de ejemplo[\s\S]*17388[\s\S]*17373/)
+  })
+
+  test('el recorrido es una figura por paso de la bienvenida, con su captura en claro y oscuro y en los dos idiomas', () => {
+    assert.equal(figuras.length, 14)
+    assert.equal(figuras.length, pasos.length, 'una figura por paso')
+    assert.match(figuras[13], /Historial y Ajustes tienen su recorrido en su \?\. Ábrelo cuando llegues allí\./)
+    assert.match(figuras[13], /History and Settings have their own tour behind their \? button\. Open it when you get there\./)
+    figuras.forEach((figura, i) => {
+      const n = i + 1
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          const base = `capturas/bienvenida-${n}-${tema}-${idioma}`
+          assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
+        }
+      const escapar = (s: string) => s.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(es[pasos[i].texto])}`))
+      assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(en[pasos[i].texto])}`))
+    })
+    // La primera se ve; el resto espera su turno (sin JavaScript se ven las 14, una debajo de otra).
+    assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
+    for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
+    const botones = [...demo.matchAll(/<button type="button" class="demo-ir" data-paso="(\d+)"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/button>/g)]
+    assert.deepEqual(botones.map((m) => [m[2], m[3]]), pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+  })
+
+  // Con el recorrido va su JavaScript: sin él, con html.js, solo se vería el primer paso.
+  const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'))
+  test('el recorrido funciona con su JavaScript y su CSS: flechas con el foco dentro, pausa y leyenda', () => {
+    assert.ok(demoJs.length > 1000, 'falta el bloque del recorrido en sitio.js')
+    assert.match(demoJs, /caja\.addEventListener\('keydown'/)
+    assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
+    assert.match(demoJs, /if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey\) return/)
+    assert.match(demoJs, /pausaManual = pausado/)
+    assert.match(demoJs, /escribirLeyenda\(leyenda, /)
+    assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/)
+    assert.match(demoJs, /siguiente\.loading = 'eager'/)
+    assert.match(demo, /<p class="demo-leyenda" aria-live="off">/)
+    assert.match(css, /html\.js \.demo \{[^}]*grid-template-columns: 220px minmax\(0, 1fr\)/)
+    assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
+    assert.match(css, /\.demo-flecha \{[^}]*width: 44px; height: 44px/)
+    assert.match(css, /\.demo-pausa \{[^}]*min-height: 44px/)
+    assert.match(css, /#demo \{[^}]*scroll-margin-top: 72px/)
+  })
 })
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -480,36 +606,6 @@ test('«Por qué Tramtai» tiene cuatro cifras del producto, en Inter tabular', 
   const regla = css.match(/\.cifra-numero \{[^}]*\}/)?.[0] ?? ''
   assert.match(regla, /var\(--fuente\)/)
   assert.match(regla, /font-variant-numeric: tabular-nums/)
-})
-
-const VENTAJAS = [
-  ['Usa lo que ya pagas', 'tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.'],
-  // v0.60: la de preparar los agentes.
-  ['Tramtai instala y conecta tus agentes', 'instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.'],
-  ['Sin tocar tu código', 'con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.'],
-  ['Si un agente falla, sigue otro', 'llega a su límite y la petición continúa con el siguiente de tu lista.'],
-  ['Todo corre en tu equipo', 'sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.'],
-  ['Cada app, con su clave y su límite', 'presupuesto diario o mensual por app y cada petición a la vista.'],
-  ['Escritorio, terminal o servidor', 'la misma Tramtai en la app, por SSH o siempre encendida en tu servidor.'],
-]
-test('la línea de ventajas: siete paradas con el texto de la spec, en los dos idiomas y en el acento', () => {
-  const paradas = porQue.match(/<li class="parada parada-ventaja">[\s\S]*?<\/li>/g) ?? []
-  assert.equal(paradas.length, 7)
-  paradas.forEach((p, i) => {
-    assert.match(p, /lang="es"[\s\S]*lang="en"/)
-    assert.ok(p.includes(`<h3 class="parada-titulo"><span lang="es">${VENTAJAS[i][0]}</span>`), VENTAJAS[i][0])
-    const frase = VENTAJAS[i][1][0].toUpperCase() + VENTAJAS[i][1].slice(1)
-    assert.ok(p.includes(`<p class="parada-texto"><span lang="es">${frase}</span>`), frase)
-    assert.ok(frase.split(/\s+/).length <= 25, `25 palabras como mucho: ${frase}`)
-    const ingles = p.match(/<p class="parada-texto">[\s\S]*?<span lang="en">([^<]*)<\/span>/)?.[1] ?? ''
-    assert.ok(ingles && ingles.split(/\s+/).length <= 25, `25 palabras como mucho: ${ingles}`)
-  })
-  const listas = porQue.match(/<ol class="ventajas-linea"[^>]*>[\s\S]*?<\/ol>/g) ?? []
-  assert.deepEqual(listas.map((l) => (l.match(/class="parada parada-ventaja"/g) ?? []).length), [3, 3, 1])
-  assert.doesNotMatch(css, /\.parada-ventaja/)
-  assert.match(css, /\n\.parada::after \{[^}]*width: 3px; background: var\(--acento\)/)
-  const reglas = css.slice(css.indexOf('.ventajas'), css.indexOf('/* Código'))
-  assert.doesNotMatch(reglas, COLORES_LINEA)
 })
 
 test('los seis motivos ya no están, ni su CSS', () => {
@@ -576,7 +672,7 @@ test('«Por qué Tramtai» dibuja el antes y el después, con texto visible', ()
 test('la suscripción, solo para tu uso personal, y sin promesas absolutas fuera de la línea (I2, M7)', () => {
   assert.match(porQue, /<span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription\. No new accounts\.<\/span>/)
   assert.doesNotMatch(porQue, /la suscripción o la clave que ya tienes|the subscription or key you already have/)
-  const sinLinea = porQue.replace(/<div class="ventajas">[\s\S]*?<\/div>/, '')
+  const sinLinea = porQue.replace(/<ol class="mosaico ventajas"[\s\S]*?<\/ol>/, '')
   assert.ok(sinLinea.length < porQue.length, 'falta la línea de ventajas')
   assert.doesNotMatch(sinLinea, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
   assert.doesNotMatch(porQue, /Sin servidores intermedios|No middle servers/)
@@ -628,56 +724,6 @@ test('los cinco riesgos siguen en Privacidad y no se anuncia Docker', () => {
   // Desde Inicio, el servidor lleva a ellos antes de instalar.
   assert.ok(formas.includes('Es otro entorno: tus APIs y claves no pasan de uno a otro.'))
   assert.doesNotMatch(html, /docker/i)
-})
-
-test('Funciones tiene la parada de la terminal, que lleva a la ventana de Inicio', () => {
-  const parada = seccion('funciones').match(/<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
-  assert.ok(parada, 'falta la parada')
-  assert.match(parada, /<span lang="en">The terminal, on par with the app<\/span>/)
-  assert.match(parada, /href="\.\/#formas"/)
-  assert.match(parada, /SSH/)
-})
-
-// v0.56: las funciones son un plano de metro, una línea por grupo con sus tres paradas. Sin JavaScript, o en el móvil,
-// cada línea es vertical con el texto de cada parada a la vista.
-test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin JavaScript se lee todo)', () => {
-  const funciones = seccion('funciones')
-  assert.equal((funciones.match(/<section class="metro-linea" data-linea="(conecta|controla|protege|usa)"/g) ?? []).length, 4)
-  const paradas = funciones.match(/<li class="parada">[\s\S]*?<\/li>/g) ?? []
-  assert.equal(paradas.length, 12)
-  for (const p of paradas) { assert.match(p, /<h4 class="parada-titulo">/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
-  for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
-    assert.match(funciones, new RegExp(t))
-  // El recorrido guiado de la app, paso a paso, está en esta misma página (ruling 7).
-  assert.match(funciones, /href="#demo"/)
-  for (const linea of funciones.match(/<section class="metro-linea"[\s\S]*?<\/section>/g) ?? [])
-    assert.equal((linea.match(/<li class="parada">/g) ?? []).length, 3)
-  assert.match(funciones, /<div class="metro-panel" aria-live="polite" hidden><\/div>/, 'el panel solo lo usa el JavaScript')
-  assert.doesNotMatch(funciones, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
-  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
-})
-
-const metroJs = js.slice(js.indexOf('// Plano de metro de Funciones'))
-test('con JavaScript y pantalla ancha el plano es horizontal y cada parada enseña su texto en el panel', () => {
-  assert.ok(js.includes('// Plano de metro de Funciones'), 'falta el bloque del plano en sitio.js')
-  assert.match(metroJs, /classList\.toggle\('metro--plano'/)
-  assert.match(metroJs, /matchMedia\('\(min-width: 900px\)'\)/)
-  assert.match(metroJs, /setAttribute\('aria-current', 'true'\)/)
-  assert.doesNotMatch(metroJs, /aria-pressed/)
-  assert.match(metroJs, /ArrowRight/)
-  assert.match(metroJs, /tabIndex = i === n \? 0 : -1/)
-  assert.doesNotMatch(seccion('funciones'), /parada-boton/)
-  assert.match(metroJs, /createElement\('button'\)[\s\S]*?className = 'parada-boton'/)
-  assert.match(metroJs, /replaceWith/)
-  assert.doesNotMatch(metroJs, /'<h4>'/)
-  assert.match(metroJs, /metro-panel-titulo/)
-  assert.match(css, /\.metro--plano \.parada-texto \{ display: none; \}/)
-})
-test('la entradilla de Funciones explica las cuatro líneas del plano', () => {
-  const cabeza = seccion('funciones').match(/<div class="cabeza">[\s\S]*?<\/div>/)?.[0] ?? ''
-  assert.match(cabeza, /Una red con una línea por agente\./)
-  assert.match(cabeza, /cada línea es lo que hace Tramtai/)
-  assert.match(cabeza, /each line is what Tramtai does/)
 })
 
 test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {
