@@ -331,10 +331,6 @@
     campo.setAttribute('aria-activedescendant', opciones[activo].id);
     opciones[activo].scrollIntoView({ block: 'nearest' });
   }
-  function ir(u) {
-    dialogo.close();
-    location.href = base + u;
-  }
   function buscar() {
     var palabras = normalizar(campo.value).split(' ').filter(Boolean).map(raiz);
     lista.textContent = '';
@@ -354,7 +350,10 @@
       return pa - pb;
     }).slice(0, 30);
     hallados.forEach(function (e, i) {
-      var li = document.createElement('li');
+      // Un enlace real: Ctrl+clic, clic central y lectores de pantalla lo tratan como tal.
+      var li = document.createElement('a');
+      li.href = base + e.u;
+      li.tabIndex = -1;
       li.id = 'buscador-' + i;
       li.setAttribute('role', 'option');
       li.setAttribute('aria-selected', 'false');
@@ -364,7 +363,9 @@
       d.className = 'b-d';
       d.textContent = e.d;
       li.append(ti, d);
-      li.addEventListener('click', function () { ir(e.u); });
+      li.addEventListener('mousedown', function (ev) { ev.preventDefault(); }); // el foco se queda en el campo
+      // Con un clic normal el diálogo se cierra y el navegador sigue el enlace; con Ctrl, ⌘ o Mayús se abre aparte y queda.
+      li.addEventListener('click', function (ev) { if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)) dialogo.close(); });
       lista.appendChild(li);
       opciones.push(li);
     });
@@ -382,11 +383,11 @@
       '<h2 id="buscador-titulo" class="solo-lectores"><span lang="es">Buscar en el sitio</span><span lang="en">Search the site</span></h2>' +
       '<input type="text" role="combobox" aria-controls="buscador-lista" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false" enterkeyhint="search">' +
       '<p id="buscador-cuenta" class="buscador-cuenta" aria-live="polite"></p>' +
-      '<ul id="buscador-lista" role="listbox"></ul>' +
+      '<div id="buscador-lista" role="listbox"></div>' +
       '<p class="buscador-pie" aria-hidden="true"><span lang="es"><kbd>↑</kbd> <kbd>↓</kbd> para moverte, <kbd>Enter</kbd> para abrir, <kbd>Esc</kbd> para cerrar</span><span lang="en"><kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Enter</kbd> to open, <kbd>Esc</kbd> to close</span></p></div>';
     document.body.appendChild(dialogo);
     campo = dialogo.querySelector('input');
-    lista = dialogo.querySelector('ul');
+    lista = dialogo.querySelector('[role="listbox"]');
     cuenta = dialogo.querySelector('.buscador-cuenta');
     campo.addEventListener('input', buscar);
     campo.addEventListener('keydown', function (e) {
@@ -397,9 +398,10 @@
     dialogo.addEventListener('click', function (e) { if (e.target === dialogo) dialogo.close(); });
     // El foco vuelve a quien lo abrió; si era el botón del menú de la barra, ya cerrado, vuelve al botón del menú.
     dialogo.addEventListener('close', function () {
-      var f = quien && quien.offsetParent ? quien : document.querySelector('.menu-boton:not([hidden])');
+      var menu = document.querySelector('.menu-boton:not([hidden])');
+      var f = quien && quien.offsetParent ? quien : menu && menu.offsetParent ? menu : document.body;
       quien = null;
-      if (f) f.focus();
+      f.focus();
     });
   }
   function abrir() {

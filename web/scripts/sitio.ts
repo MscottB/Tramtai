@@ -475,6 +475,9 @@ ${urls.map((u) => `  <url><loc>${URL_SITIO}${u}</loc></url>`).join('\n')}
 
 // Entrada es una fila del buscador del sitio (buscar.json): u es la dirección desde la raíz con su ancla, ti el título, d
 // dónde está («Ayuda › Agentes», «Servidor») y x el texto normalizado donde se busca.
+// compactar deja el texto de una entrada en sus palabras distintas de más de 2 letras y 160 caracteres: la búsqueda es por palabras sueltas, y así buscar.json sigue pequeño.
+const compactar = (x: string) => [...new Set(x.split(' '))].filter((w) => w.length > 2).join(' ').slice(0, 160)
+
 interface Entrada { u: string; ti: string; d: string; x: string }
 
 // soloIdioma deja de un HTML solo lo que se ve en un idioma: quita los elementos con lang del otro (un span, un div
@@ -522,16 +525,20 @@ function indiceBusqueda(f: Fuente): string {
     const ayuda = idioma === 'es' ? 'Ayuda' : 'Help'
     indice[idioma] = f.temas.flatMap((tema) => {
       const nombre = textos[tema.titulo] ?? tema.id
-      const porAncla = new Map<string, { ti: string; x: string[] }>()
+      const porAncla = new Map<string, { ti: string; n: number; x: string[] }>()
       for (const c of campos(tema, textos, titulo)) {
-        const e = porAncla.get(c.ancla) ?? { ti: c.donde, x: [] }
-        e.x.push(normalizar(c.texto))
+        const e = porAncla.get(c.ancla) ?? { ti: c.donde, n: 0, x: [] }
+        const x = normalizar(c.texto)
+        // El título ya se busca en ti + d. El tema entero (sin ancla) guarda solo su introducción, la segunda: el resto del
+        // texto está en las entradas de sus apartados.
+        if (c.ancla ? x !== normalizar(e.ti) : e.n === 1) e.x.push(x)
+        e.n++
         porAncla.set(c.ancla, e)
       }
-      return [...porAncla].map(([a, e]) => ({ u: `ayuda/${tema.id}.html${a ? '#' + a : ''}`, ti: e.ti, d: a ? `${ayuda} › ${nombre}` : ayuda, x: e.x.join(' ') }))
+      return [...porAncla].map(([a, e]) => ({ u: `ayuda/${tema.id}.html${a ? '#' + a : ''}`, ti: e.ti, d: a ? `${ayuda} › ${nombre}` : ayuda, x: compactar(e.x.join(' ')) }))
     })
     for (const [archivo, html] of Object.entries(f.paginas ?? {}))
-      for (const a of apartados(html, idioma)) indice[idioma].push({ u: `${archivo}#${a.id}`, ti: a.titulo, d: DONDE[archivo][i], x: normalizar(`${a.titulo} ${a.texto}`) })
+      for (const a of apartados(html, idioma)) indice[idioma].push({ u: `${archivo}#${a.id}`, ti: a.titulo, d: DONDE[archivo][i], x: compactar(normalizar(a.texto)) })
   }
   return JSON.stringify(indice)
 }

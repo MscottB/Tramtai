@@ -78,8 +78,12 @@ test('buscar.json tiene una entrada por tema y apartado', () => {
   }
   const [s] = indice.es.filter((e: { u: string }) => e.u === 'servidor.html#red')
   assert.equal(s.ti, 'Abrir a la red')
-  assert.match(s.x, /abrir a la red \w/, 'lleva también el párrafo')
+  assert.match(s.x, /servidor solo atiende/, 'lleva el párrafo, no el título')
   assert.equal(indice.en.find((e: { u: string }) => e.u === 'servidor.html#red').ti, 'Open to the network')
+})
+
+test('buscar.json no pasa de 100 KB', () => {
+  assert.ok(Buffer.byteLength(paginas.get('buscar.json')!) <= 100 * 1024)
 })
 
 test('cada u de buscar.json lleva a un ancla que existe', () => {
