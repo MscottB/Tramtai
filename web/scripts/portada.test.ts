@@ -653,6 +653,11 @@ describe('agentes', () => {
     assert.equal((figura.match(/class="punto pulso"/g) ?? []).length, 4)
     assert.match(destinos[4], /fuera de tus apps/)
     assert.doesNotMatch(figura, /style="[^"]*(opacity|display)|\shidden[\s>]/)
+    // Las filas crecen con el texto (WCAG 1.4.4 y 1.4.10): cinco iguales y el SVG, de su alto; en un teléfono estrecho, fuera.
+    assert.match(css, /\.router-destinos \{[^}]*grid-auto-rows: minmax\(64px, 1fr\)/)
+    assert.doesNotMatch(css, /\.router-destinos li \{[^}]*[^-]height:/)
+    assert.match(css, /\.router-lineas \{[^}]*height: 100%/)
+    assert.match(css, /@media \(max-width: 420px\) \{[^@]*\.router-lineas \{ display: none; \}/)
   })
 
   test('cada agente dice cómo se conecta', () => {
@@ -673,10 +678,20 @@ describe('agentes', () => {
       assert.ok(tarjetaAgente(id).includes(es) && tarjetaAgente(id).includes(en), id)
     for (const id of ['claude', 'codex', 'copilot', 'antigravity'])
       assert.match(tarjetaAgente(id), /versiones comprobadas[\s\S]*checked versions/, id)
+    // En la app, con el texto de ayuda.preparar.paso1 y paso2, en los tres que inician sesión.
+    for (const id of ['claude', 'codex', 'copilot'])
+      assert.match(tarjetaAgente(id), /<dt><span lang="es">En la app<\/span>[\s\S]*En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar»\. Tramtai sigue con el inicio de sesión:/, id)
+    // Antigravity y la Gemini API: «La clave», con la variable de su ficha (VariablesClave).
+    for (const id of ['gemini', 'antigravity']) {
+      assert.match(tarjetaAgente(id), /<dt><span lang="es">La clave<\/span>[\s\S]*<code>tramtai claves guardar GEMINI_API_KEY<\/code>[\s\S]*<code>tramtai keys set GEMINI_API_KEY<\/code>/, id)
+      assert.doesNotMatch(tarjetaAgente(id), /Iniciar sesión<\/span>/, id)
+    }
   })
 
   test('cada agente enlaza a Preparar tus agentes', () => {
-    for (const id of AGENTES) assert.match(tarjetaAgente(id), /<a href="ayuda\/preparar\.html">/, id)
+    for (const id of AGENTES) assert.match(tarjetaAgente(id), /<p class="agente-pie"><a href="ayuda\/preparar\.html">/, id)
+    // Un enlace suelto mide 44 px de alto.
+    assert.match(css, /\.agente-pie a \{ display: inline-flex; align-items: center; min-height: 44px; \}/)
   })
 
   test('ya no hay línea de metro', () => {

@@ -83,14 +83,16 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <!-- La tarjeta «router» (spec §5; la idea es de OpenRouter) sustituye al diagrama de antes: de Tramtai salen líneas de un
        píxel en el acento, y el color de cada agente va solo en su punto. El SVG solo dibuja las líneas (se dibujan al
        entrar en pantalla y el flujo corre por las cuatro que llegan a tus apps); cada destino es texto de la lista de al
-       lado, a 64 px por fila, así que se lee igual en el móvil. Cada línea es curva hasta x = 128 y recta después: en el
-       móvil el SVG se recorta a 132 px (slice) y la línea sigue llegando a su punto. Sin JavaScript o con «reducir
+       lado, en cinco filas iguales de 64 px o más, así que se lee igual en el móvil y con la letra más grande. El SVG
+       mide lo que la lista y crece con ella (slice): cada línea es curva hasta x = 92 y recta después, así que al
+       recortarse por la derecha (132 px en el móvil) sigue llegando a su punto aunque las filas crezcan hasta un 40 %.
+       En un teléfono estrecho se oculta: es decoración y los puntos llevan el color. Sin JavaScript o con «reducir
        movimiento», todo queda dibujado y quieto. -->
   <section id="router">
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Tu app elige el agente <em>en el campo model.</em></span><span lang="en">Your app picks the agent <em>in the model field.</em></span></h2>
-        <p class="suave"><span lang="es">Pide <code>agente/modelo</code> y Tramtai lleva la petición a ese agente, con tu suscripción o tu clave. Lo demás de tu código no cambia.</span><span lang="en">Ask for <code>agent/model</code> and Tramtai takes the request to that agent, with your subscription or your key. The rest of your code stays the same.</span></p>
+        <p class="suave"><span lang="es">Pide <code>agente/modelo</code> y Tramtai lleva la petición a ese agente. Lo demás de tu código no cambia.</span><span lang="en">Ask for <code>agent/model</code> and Tramtai takes the request to that agent. The rest of your code stays the same.</span></p>
       </div>
       <div class="mosaico">
         <figure class="tarjeta ancha router vivo">
@@ -102,18 +104,18 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
               <text class="nombre" x="0" y="144">Tramtai</text>
               <g fill="none" stroke-width="1" stroke-linecap="round">
                 <g stroke="var(--acento)" stroke-opacity=".45">
-                  <path class="dibuja" pathLength="1" d="M12 160 C 72 160, 68 32, 128 32 H 280"/>
-                  <path class="dibuja" pathLength="1" style="--retraso: .15s" d="M12 160 C 72 160, 68 96, 128 96 H 280"/>
+                  <path class="dibuja" pathLength="1" d="M12 160 C 56 160, 52 32, 92 32 H 280"/>
+                  <path class="dibuja" pathLength="1" style="--retraso: .15s" d="M12 160 C 56 160, 52 96, 92 96 H 280"/>
                   <path class="dibuja" pathLength="1" style="--retraso: .3s" d="M12 160 H 280"/>
-                  <path class="dibuja" pathLength="1" style="--retraso: .45s" d="M12 160 C 72 160, 68 224, 128 224 H 280"/>
+                  <path class="dibuja" pathLength="1" style="--retraso: .45s" d="M12 160 C 56 160, 52 224, 92 224 H 280"/>
                 </g>
                 <!-- Antigravity aún no llega a tus apps: su línea va en el borde de controles, sin flujo. -->
-                <path class="dibuja" pathLength="1" style="--retraso: .6s" stroke="var(--borde-control)" d="M12 160 C 72 160, 68 288, 128 288 H 280"/>
+                <path class="dibuja" pathLength="1" style="--retraso: .6s" stroke="var(--borde-control)" d="M12 160 C 56 160, 52 288, 92 288 H 280"/>
                 <g stroke="var(--acento)">
-                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 72 160, 68 32, 128 32 H 280"/>
-                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 72 160, 68 96, 128 96 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 32, 92 32 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 96, 92 96 H 280"/>
                   <path class="flujo" stroke-dasharray="4 6" d="M12 160 H 280"/>
-                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 72 160, 68 224, 128 224 H 280"/>
+                  <path class="flujo" stroke-dasharray="4 6" d="M12 160 C 56 160, 52 224, 92 224 H 280"/>
                 </g>
               </g>
             </svg>
@@ -122,7 +124,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
               <li><span class="punto pulso" style="--c: var(--codex); --retraso: .6s"></span><a href="#codex"><span class="router-nombre">Codex</span> <span class="router-conexion"><span lang="es">suscripción o clave</span><span lang="en">subscription or key</span></span></a> <span class="router-hace"><span lang="es">con esquema JSON</span><span lang="en">JSON schema responses</span></span></li>
               <li><span class="punto pulso" style="--c: var(--copilot); --retraso: 1.2s"></span><a href="#copilot"><span class="router-nombre">GitHub Copilot</span> <span class="router-conexion"><span lang="es">suscripción o clave</span><span lang="en">subscription or key</span></span></a> <span class="router-hace"><span lang="es">dice qué modelo eligió</span><span lang="en">shows the model it picked</span></span></li>
               <li><span class="punto pulso" style="--c: var(--gemini); --retraso: 1.8s"></span><a href="#gemini"><span class="router-nombre">Gemini API</span> <span class="router-conexion"><span lang="es">clave de API</span><span lang="en">API key</span></span></a> <span class="router-hace"><span lang="es">por HTTP, sin CLI</span><span lang="en">over HTTP, no CLI</span></span></li>
-              <li class="fuera"><span class="punto hueco" style="--c: var(--antigravity)"></span><a href="#antigravity"><span class="router-nombre">Antigravity</span> <span class="router-conexion"><span lang="es">solo clave de API</span><span lang="en">API key only</span></span></a> <span class="router-hace"><span lang="es">fuera de tus apps</span><span lang="en">not for your apps</span></span></li>
+              <li><span class="punto hueco" style="--c: var(--antigravity)"></span><a href="#antigravity"><span class="router-nombre">Antigravity</span> <span class="router-conexion"><span lang="es">solo clave de API</span><span lang="en">API key only</span></span></a> <span class="router-hace"><span lang="es">fuera de tus apps</span><span lang="en">not for your apps</span></span></li>
             </ol>
           </div>
         </figure>
@@ -153,6 +155,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
             <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
             <dd><span lang="es">Con un enlace en tu navegador; si te da un código, lo pegas en Tramtai.</span><span lang="en">With a link in your browser; if it gives you a code, you paste it into Tramtai.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
             <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
             <dd><span lang="es"><code>tramtai agentes instalar claude</code></span><span lang="en"><code>tramtai agents install claude</code></span></dd>
           </dl>
@@ -167,6 +171,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
             <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
             <dd><span lang="es">Con un código de dispositivo, que activas una vez en ChatGPT › Seguridad.</span><span lang="en">With a device code, which you turn on once in ChatGPT › Security.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
             <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
             <dd><span lang="es"><code>tramtai agentes instalar codex</code></span><span lang="en"><code>tramtai agents install codex</code></span></dd>
           </dl>
@@ -181,6 +187,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; en Windows, Tramtai lo descarga de GitHub y comprueba su suma antes de instalarlo.</span><span lang="en">With its official installer, only with checked versions; on Windows, Tramtai downloads it from GitHub and checks its checksum before installing it.</span></dd>
             <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
             <dd><span lang="es">Con un código de dispositivo de GitHub, que escribes en github.com/login/device.</span><span lang="en">With a GitHub device code, which you enter at github.com/login/device.</span></dd>
+            <dt><span lang="es">En la app</span><span lang="en">In the app</span></dt>
+            <dd><span lang="es">En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve.</span><span lang="en">In Agents, open “Other agents you can install” and click “Install”. Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back.</span></dd>
             <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
             <dd><span lang="es"><code>tramtai agentes instalar copilot</code></span><span lang="en"><code>tramtai agents install copilot</code></span></dd>
           </dl>
@@ -198,7 +206,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           </dl>
           <p class="agente-pie"><a href="ayuda/preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></p>
         </article>
-        <article class="tarjeta agente fuera" id="antigravity">
+        <article class="tarjeta agente" id="antigravity">
           <header class="agente-cabeza"><span class="punto hueco" style="--c: var(--antigravity)"></span><h3>Antigravity</h3><span class="agente-de">Google</span></header>
           <p class="agente-aviso"><span lang="es">Todavía no desde tus apps</span><span lang="en">Not from your apps yet</span></p>
           <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas. Por ahora se usa desde Probar, la terminal y la CLI; llegará a tus apps cuando pase la prueba de abajo.</span><span lang="en">Google’s CLI with your Gemini API key, without tools. For now you use it from the Playground, the terminal and the CLI; it will reach your apps once it passes the test below.</span></p>
@@ -206,8 +214,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <dl class="agente-datos">
             <dt><span lang="es">Instalar</span><span lang="en">Install</span></dt>
             <dd><span lang="es">Con su instalador oficial, solo con versiones comprobadas; Tramtai avisa de cada versión nueva.</span><span lang="en">With its official installer, only with checked versions; Tramtai tells you about each new version.</span></dd>
-            <dt><span lang="es">Iniciar sesión</span><span lang="en">Sign in</span></dt>
-            <dd><span lang="es">No inicia sesión: solo se instala, y después le pones la clave de la Gemini API.</span><span lang="en">It doesn’t sign in: it is only installed, and then you add its Gemini API key.</span></dd>
+            <dt><span lang="es">La clave</span><span lang="en">The key</span></dt>
+            <dd><span lang="es">No inicia sesión: solo se instala, y después le pones la clave de la Gemini API con <code>tramtai claves guardar GEMINI_API_KEY</code>.</span><span lang="en">It doesn’t sign in: it is only installed, and then you add its Gemini API key with <code>tramtai keys set GEMINI_API_KEY</code>.</span></dd>
             <dt><span lang="es">En la CLI</span><span lang="en">In the CLI</span></dt>
             <dd><span lang="es"><code>tramtai agentes instalar antigravity</code></span><span lang="en"><code>tramtai agents install antigravity</code></span></dd>
           </dl>
