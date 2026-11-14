@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
-import { ANCLAS_VIEJAS, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
+import { bloquesVisibles } from '../src/ayuda/vista.ts'
+import { ANCLAS_VIEJAS, GRUPOS_AYUDA, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
 
 const SITIO = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
 const fuente: Fuente = {
@@ -138,16 +139,16 @@ test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en l
   }
 })
 
-// v0.59 (spec §6): servidor.html abre con una cabecera que presenta el modo servidor (titular, entrada, el mapa de la
-// portada en grande, «¿Es para ti?», tres pasos por sistema y dos capturas reales), y debajo sigue la documentación.
+// v0.59 (spec §6): servidor.html abre presentando el modo servidor (titular, entrada, el mapa, «¿Es para ti?», tres pasos
+// por sistema y dos capturas reales), y debajo sigue la documentación; desde la v0.61, todo en la columna del contenido.
 const servidor = fijas.get('servidor.html')!
-const cabeceraServidor = servidor.slice(servidor.indexOf('<main'), servidor.indexOf('<nav class="indice"'))
+const cabeceraServidor = servidor.slice(servidor.indexOf('<article id="contenido"'), servidor.indexOf('<section id="que-es">'))
 test('servidor.html: la cabecera nueva tiene titular, entrada, mapa, «¿Es para ti?» y las capturas en es/en', () => {
-  assert.match(cabeceraServidor, /<div class="servidor-cabecera">\s*<header>\s*<h1>/)
+  assert.match(cabeceraServidor, /^<article id="contenido"[^>]*>\s*<header class="doc-cabeza">[\s\S]*?<h1 class="titular">/)
   const entrada = cabeceraServidor.match(/<p class="entrada"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/p>/)
   assert.ok(entrada, 'falta la entrada')
   for (const t of entrada.slice(1)) assert.ok(Math.abs(t.split(/\s+/).length - 30) <= 8, `unas 30 palabras: ${t}`)
-  const mapa = cabeceraServidor.match(/<figure class="mapa-servidor">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  const mapa = cabeceraServidor.match(/<figure class="tarjeta fig-mapa vivo">[\s\S]*?<\/figure>/)?.[0] ?? ''
   assert.equal((mapa.match(/<svg [^>]*role="img" aria-label="[^"]+" data-aria-en="[^"]+"/g) ?? []).length, 2)
   assert.match(cabeceraServidor, /<section id="para-ti">[\s\S]*<article class="tarjeta">[\s\S]*El escritorio, si…[\s\S]*<article class="tarjeta">[\s\S]*El servidor, si…/)
   // Dos pantallas reales, en claro y oscuro y en los dos idiomas, cada una con su alt en su idioma.
@@ -186,7 +187,7 @@ test('servidor.html: tres pasos por sistema (instalar, contraseña, HTTPS o prox
 test('servidor.html: el aviso de los cinco riesgos va justo antes de Instalar, también en «En esta página»', () => {
   const ids = [...servidor.matchAll(/<section id="([^"]+)"/g)].map((m) => m[1])
   assert.equal(ids[ids.indexOf('instalar') - 1], 'aviso')
-  const indice = [...(servidor.match(/<nav class="indice"[\s\S]*?<\/nav>/)?.[0] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
+  const indice = [...(servidor.match(/<aside class="doc-pagina">[\s\S]*?<\/aside>/)?.[0] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
   assert.deepEqual(indice, ids.filter((id) => indice.includes(id)), 'el índice sigue el orden de la página')
   assert.equal(indice[indice.indexOf('instalar') - 1], 'aviso')
   const aviso = servidor.match(/<section id="aviso">[\s\S]*?<\/section>/)?.[0] ?? ''
@@ -247,7 +248,7 @@ test('cada página tiene «Saltar al contenido», canonical y Open Graph absolut
   for (const [ruta, html] of todas) {
     if (ruta === '404.html') continue
     assert.match(html, /<a class="saltar" href="#contenido">/, ruta)
-    assert.match(html, /<main id="contenido"/, ruta)
+    assert.match(html, /<(main|article) id="contenido"/, ruta)
     const url = URL_SITIO + (ruta === 'index.html' ? '' : ruta.replace(/index\.html$/, ''))
     assert.ok(html.includes(`<link rel="canonical" href="${url}">`), `${ruta}: canonical ${url}`)
     assert.ok(html.includes(`<meta property="og:url" content="${url}">`), `${ruta}: og:url`)
@@ -372,7 +373,7 @@ test('cada tema de página enseña «Qué verás en pantalla»: un paso por cada
   const lista = seccion.match(/<ol class="pasos recorrido-pasos">([\s\S]*?)<\/ol>/)?.[1] ?? ''
   assert.equal((lista.match(/<li>/g) ?? []).length, pasos.length)
   for (const p of pasos) assert.ok(lista.includes(`<strong><span lang="es">${escapar(es[p.titulo])}</span>`), p.titulo)
-  assert.match(html, /<nav class="indice"[\s\S]*?href="#s-recorrido"[\s\S]*?<\/nav>/)
+  assert.match(html, /<aside class="doc-pagina">[\s\S]*?href="#s-recorrido"[\s\S]*?<\/aside>/)
   for (const t of temas.filter((x) => x.paginaApp)) assert.match(paginas.get(`ayuda/${t.id}.html`)!, /<section id="s-recorrido">/, t.id)
 })
 
@@ -403,11 +404,71 @@ test('en el sitio no hay botón «Muéstrame en pantalla»: no hay app', () => {
 
 test('los temas largos tienen «En esta página» con un h2 por sección y el buscador a mano', () => {
   const html = paginas.get('ayuda/agentes.html')!
-  const nav = html.match(/<nav class="indice"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? ''
+  const nav = html.match(/<aside class="doc-pagina">([\s\S]*?)<\/aside>/)?.[1] ?? ''
   const anclas = [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
   assert.ok(anclas.length >= 3, 'faltan secciones en el índice')
   for (const a of anclas) assert.match(html, new RegExp(`<section id="${a}"><h2>`), a)
-  assert.match(html, /<button type="button" class="enlace-boton" data-buscar hidden>/)
+  assert.match(html, /<nav class="doc-indice"[\s\S]*?<button type="button" class="buscar-campo" data-buscar hidden>[\s\S]*?<\/nav>/)
+})
+
+// v0.61 (spec §6): la Ayuda, Servidor y Desarrolladores comparten la plantilla de tres columnas: el índice (con un botón
+// para el móvil), el contenido y «En esta página», que sale de los <section id> con su <h2>.
+const tresColumnas = /<div class="doc">\s*<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">\s*(?:<!-- comun:indice-boton -->\s*)?<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden>[\s\S]*?<div class="doc-indice-lista" id="doc-indice-lista">[\s\S]*?<\/nav>\s*<article id="contenido" tabindex="-1" class="prosa">[\s\S]*<\/article>\s*(?:<!-- comun:en-esta-pagina -->\s*)?<aside class="doc-pagina">/
+const enLaPagina = (html: string) => {
+  const articulo = html.slice(html.indexOf('<article id="contenido"'), html.indexOf('<aside class="doc-pagina">'))
+  const secciones = [...articulo.matchAll(/<section id="([^"]+)">\s*<h2\b|<h2 id="([^"]+)"/g)].map((m) => m[1] ?? m[2])
+  const aside = html.match(/<aside class="doc-pagina">[\s\S]*?<\/aside>/)?.[0] ?? ''
+  return { secciones, enlaces: [...aside.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]) }
+}
+
+test('cada tema de la Ayuda va en tres columnas', () => {
+  assert.deepEqual(GRUPOS_AYUDA.flatMap((g) => g.temas), temas.map((t) => t.id), 'cada tema en un grupo, en el orden de temas')
+  for (const [ruta, actual] of [['ayuda/index.html', 'index.html'], ...temas.map((t) => [`ayuda/${t.id}.html`, `${t.id}.html`])]) {
+    const html = paginas.get(ruta)!
+    assert.match(html, tresColumnas, ruta)
+    const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
+    for (const t of temas) assert.ok(indice.includes(`<a href="${t.id}.html"`), `${ruta}: el índice no lleva a ${t.id}`)
+    for (const g of GRUPOS_AYUDA) assert.ok(indice.includes(`<p class="fig doc-grupo"><span lang="es">${g.es}</span><span lang="en">${g.en}</span></p>`), `${ruta}: ${g.es}`)
+    assert.deepEqual([...indice.matchAll(/<a href="([^"]+)" aria-current="page"/g)].map((m) => m[1]), [actual], ruta)
+    const { secciones, enlaces } = enLaPagina(html)
+    assert.deepEqual(enlaces, secciones, `${ruta}: «En esta página» no sigue sus apartados`)
+  }
+  assert.ok(enLaPagina(paginas.get('ayuda/agentes.html')!).enlaces.length >= 3)
+})
+
+test('Servidor y Desarrolladores, en tres columnas', () => {
+  for (const archivo of ['servidor.html', 'desarrolladores.html']) {
+    const html = fijas.get(archivo)!
+    assert.match(html, tresColumnas, archivo)
+    assert.match(html, /<main class="envoltura doc-envoltura">/, archivo)
+    // El titular en dos partes, con la cursiva en <em>.
+    assert.match(html, /<h1 class="titular"><span lang="es">[^<]+<em>[^<]+<\/em><\/span><span lang="en">[^<]+<em>[^<]+<\/em><\/span><\/h1>/, archivo)
+    const { secciones, enlaces } = enLaPagina(html)
+    assert.ok(secciones.length >= 8, `${archivo}: ${secciones}`)
+    assert.deepEqual(enlaces, secciones, `${archivo}: cada <h2 id> del contenido, en «En esta página»`)
+    // El índice de la izquierda lleva a cada apartado de la página.
+    const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
+    for (const id of secciones) assert.ok(indice.includes(`href="#${id}"`), `${archivo}: el índice no lleva a #${id}`)
+  }
+  // Los diagramas: el mapa del servidor y, en Desarrolladores, tu app → Tramtai → agente; con su FIG y vivos.
+  assert.match(servidor, /<figure class="tarjeta fig-mapa vivo">\s*<figcaption class="fig">/)
+  assert.match(fijas.get('desarrolladores.html')!, /<figure class="tarjeta fig-camino vivo">\s*<figcaption class="fig">/)
+})
+
+// La Ayuda del sitio y la de la app salen de los mismos textos (spec, Riesgos): cada tema generado lleva los suyos.
+test('los textos de la Ayuda no cambian', () => {
+  const claves = (x: unknown): string[] => typeof x === 'string' ? (Object.hasOwn(es, x) ? [x] : [])
+    : Array.isArray(x) ? x.flatMap(claves)
+    // alt solo sale con su captura y ancla es un data-recorrido de la app, no un texto.
+    : x && typeof x === 'object' ? Object.entries(x).flatMap(([k, v]) => (k === 'alt' || k === 'ancla' ? [] : claves(v))) : []
+  const plano = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ')
+  for (const t of temas) {
+    const html = plano(paginas.get(`ayuda/${t.id}.html`)!)
+    const lista = [t.titulo, t.resumen, t.terminal, ...claves(bloquesVisibles(t, 'sitio'))]
+    assert.ok(lista.length > 5, t.id)
+    for (const k of lista)
+      for (const textos of [es, en]) assert.ok(html.includes(textos[k as keyof typeof es].replace(/\s+/g, ' ')), `${t.id}: ${k}`)
+  }
 })
 
 test('iconos, imagen para compartir, manifest y datos estructurados', () => {

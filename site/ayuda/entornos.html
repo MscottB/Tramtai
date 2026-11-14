@@ -62,18 +62,61 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   </div>
 </header>
 
-<main id="contenido" tabindex="-1" class="envoltura ayuda">
-<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-  <ol>
-    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
-    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
-    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
-  </ol>
+<main class="envoltura doc-envoltura tema-ayuda">
+<div class="doc">
+<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
+<div class="doc-indice-lista" id="doc-indice-lista">
+<button type="button" class="buscar-campo" data-buscar hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span><span lang="es">Buscar</span><span lang="en">Search</span></span><kbd>Ctrl K</kbd></button>
+<ul>
+  <li><a href="index.html"><span lang="es">Inicio de la Ayuda</span><span lang="en">Help home</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+<ul>
+  <li><a href="empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
+  <li><a href="agentes.html"><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></a></li>
+  <li><a href="preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></li>
+  <li><a href="probar.html"><span lang="es">Probar</span><span lang="en">Playground</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Desde tus apps</span><span lang="en">From your apps</span></p>
+<ul>
+  <li><a href="conectar.html"><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></a></li>
+  <li><a href="conectar-herramientas.html"><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></a></li>
+  <li><a href="archivos.html"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
+  <li><a href="json.html"><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></a></li>
+  <li><a href="recetas.html"><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></a></li>
+  <li><a href="herramientas.html"><span lang="es">Herramientas</span><span lang="en">Tools</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Día a día</span><span lang="en">Day to day</span></p>
+<ul>
+  <li><a href="presupuestos.html"><span lang="es">Presupuestos</span><span lang="en">Budgets</span></a></li>
+  <li><a href="historial.html"><span lang="es">Historial</span><span lang="en">History</span></a></li>
+  <li><a href="espacios.html"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></a></li>
+  <li><a href="claves.html"><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></a></li>
+  <li><a href="ajustes.html"><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Servidor</span><span lang="en">Server</span></p>
+<ul>
+  <li><a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a></li>
+  <li><a href="entornos.html" aria-current="page"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Dudas y errores</span><span lang="en">Questions and errors</span></p>
+<ul>
+  <li><a href="problemas.html"><span lang="es">Algo falló</span><span lang="en">Something failed</span></a></li>
+  <li><a href="conceptos.html"><span lang="es">Conceptos</span><span lang="en">Concepts</span></a></li>
+  <li><a href="preguntas.html"><span lang="es">Preguntas frecuentes</span><span lang="en">Frequently asked questions</span></a></li>
+</ul>
+<p class="fig doc-grupo"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+<ul>
+  <li><a href="../servidor.html"><span lang="es">Guía del servidor</span><span lang="en">Server guide</span></a></li>
+  <li><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
+</ul>
+</div>
 </nav>
-<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Dos entornos</span><span lang="en">Two environments</span> · <button type="button" class="enlace-boton" data-buscar hidden><span lang="es">Buscar</span><span lang="en">Search</span></button></nav>
-<header>
-  <h1><span lang="es">Dos entornos</span><span lang="en">Two environments</span></h1>
+<article id="contenido" tabindex="-1" class="prosa">
+<header class="doc-cabeza">
+  <p class="fig doc-ruta"><span lang="es">Ayuda</span><span lang="en">Help</span> · <span lang="es">Servidor</span><span lang="en">Server</span></p>
+  <h1 class="titular"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></h1>
   <p class="entradilla"><span lang="es">Tu Tramtai y el del servidor no comparten nada: cada uno tiene sus APIs, claves, sesiones de los CLI, historial y ajustes.</span><span lang="en">Your Tramtai and the server’s share nothing: each has its own APIs, keys, CLI sessions, history and settings.</span></p>
 </header>
 
@@ -113,6 +156,17 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </div>
 </section>
 </article>
+<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true"><span lang="es">En esta página</span><span lang="en">On this page</span></p>
+<ul>
+  <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+  <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+  <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+</ul>
+</nav>
+</aside>
+</div>
 </main>
 
 <footer>
