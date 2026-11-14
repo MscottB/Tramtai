@@ -374,7 +374,7 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
       return `<p class="aviso">${tx(b.texto)}</p>`
     case 'descargas':
       // Lo que frena el primer arranque va junto al botón, no solo en las preguntas de más abajo.
-      return `<p><a class="boton principal" href="../index.html#descargar">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>
+      return `<p><a class="boton principal" href="../descargar.html">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>
 <p class="aviso">${bilingue(AVISO_DESCARGA.es, AVISO_DESCARGA.en)} <a href="#windows">${bilingue('Qué hacer con el aviso de Windows', 'What to do about the Windows warning')}</a></p>`
     default:
       return ''

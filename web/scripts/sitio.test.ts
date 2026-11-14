@@ -129,7 +129,7 @@ test('riesgos da los cinco riesgos de los catálogos, con la variante del escrit
 })
 
 test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en los dos idiomas', () => {
-  for (const [archivo, servidor] of [['index.html', false], ['servidor.html', true]] as const) {
+  for (const [archivo, servidor] of [['producto.html', false], ['servidor.html', true]] as const) {
     const html = fijas.get(archivo)!
     const zona = html.match(new RegExp(`<!-- comun:${servidor ? 'riesgos-servidor' : 'riesgos'} -->([\\s\\S]*?)<!-- /comun:`))?.[1] ?? ''
     for (const [i, r] of riesgos(es, servidor).entries()) assert.ok(zona.includes(`<span lang="es">${escapar(r)}</span>`), `${archivo}: riesgo ${i + 1} en español`)

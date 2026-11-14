@@ -7,7 +7,9 @@ import en from '../src/idiomas/en.ts'
 import { PORTADA, TOKENS_TERMINAL } from './capturas-lista.ts'
 import { AVISO_DESCARGA } from './sitio.ts'
 
-const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
+// v0.61 (ruling 3): «por-que», «como», «funciones» y «privacidad» pasaron tal cual a Producto, «agentes» a Agentes y
+// «descargar» a Descargar; las pruebas de su contenido las leen de ahí.
+const html = ['index.html', 'producto.html', 'agentes.html', 'descargar.html'].map((p) => readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8')).join('\n')
 // seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
 const seccion = (id: string) => {
   const inicio = html.search(new RegExp(`<section[^>]*id="${id}"`))
@@ -28,10 +30,13 @@ const asi = corte < 0 ? app : app.slice(0, corte)
 const demo = corte < 0 ? '' : app.slice(corte)
 const pasos = pasosBienvenida()
 
-// v0.59 (spec §1): la portada pasa de 14 secciones a diez, en este orden.
-test('la portada tiene diez secciones, en su orden', () => {
-  const ids = [...html.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['portada', 'por-que', 'como', 'app', 'terminal', 'servidor', 'agentes', 'funciones', 'privacidad', 'descargar'])
+// v0.61 (ruling 3): la portada se queda con cuatro secciones; las otras seis están en su página.
+test('la portada tiene cuatro secciones y las otras están en su página', () => {
+  const ids = (p: string) => [...readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8').matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids('index.html'), ['portada', 'app', 'terminal', 'servidor'])
+  assert.deepEqual(ids('producto.html'), ['como', 'funciones', 'por-que', 'comparativa', 'privacidad'])
+  assert.deepEqual(ids('agentes.html').slice(0, 2), ['agentes', 'router'])
+  assert.deepEqual(ids('descargar.html'), ['descargar'])
 })
 
 test('la barra lleva a Producto, Agentes, Servidor, Desarrolladores, Ayuda y Descargar', () => {
@@ -622,7 +627,7 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   const funciones = seccion('funciones')
   assert.match(funciones, /Recorrido y Ayuda/)
   assert.match(funciones, /Tour and Help/)
-  assert.match(funciones, /href="#demo"/, 'Funciones lleva a la demo')
+  assert.match(funciones, /href="index\.html#demo"/, 'Funciones lleva a la demo')
   assert.match(asi, /href="#demo"/, '«Así se ve» enlaza la demo')
   assert.match(asi, /Un espacio por proyecto/)
   assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
@@ -774,7 +779,7 @@ test('«Tu servidor» tiene pestañas Linux y Windows Server con la orden de ins
 test('la línea del entorno lleva a la guía y a los cinco riesgos de Privacidad; no se anuncia Docker', () => {
   const pie = servidor.match(/<p class="servidor-pie">[\s\S]*?<\/p>/)?.[0] ?? ''
   assert.match(pie, /href="servidor\.html"/)
-  assert.ok(pie.includes('Es otro entorno: tus APIs y claves no pasan de uno a otro. Antes de instalar, <a href="#riesgos">lee los cinco riesgos</a>.'))
+  assert.ok(pie.includes('Es otro entorno: tus APIs y claves no pasan de uno a otro. Antes de instalar, <a href="producto.html#riesgos">lee los cinco riesgos</a>.'))
   assert.match(seccion('privacidad'), /<div class="cabeza riesgos-cabeza" id="riesgos">[\s\S]*<!-- comun:riesgos -->/)
   const aviso = seccion('privacidad').match(/<ol class="riesgos">[\s\S]*?<\/ol>/)?.[0] ?? ''
   assert.equal((aviso.match(/<li>/g) ?? []).length, 5, 'los cinco riesgos')
@@ -786,7 +791,7 @@ test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {
   const parada = seccion('funciones').match(/<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
   assert.ok(parada, 'falta la parada')
   assert.match(parada, /<span lang="en">The terminal, on par with the app<\/span>/)
-  assert.match(parada, /href="#terminal"/)
+  assert.match(parada, /href="index\.html#terminal"/)
   assert.match(parada, /SSH/)
 })
 
@@ -800,7 +805,7 @@ test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin 
   for (const p of paradas) { assert.match(p, /<h4 class="parada-titulo">/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
   for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
     assert.match(funciones, new RegExp(t))
-  assert.match(funciones, /href="#demo"/)
+  assert.match(funciones, /href="index\.html#demo"/)
   for (const linea of funciones.match(/<section class="metro-linea"[\s\S]*?<\/section>/g) ?? [])
     assert.equal((linea.match(/<li class="parada">/g) ?? []).length, 3)
   assert.match(funciones, /<div class="metro-panel" aria-live="polite" hidden><\/div>/, 'el panel solo lo usa el JavaScript')
