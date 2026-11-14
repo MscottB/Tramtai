@@ -94,7 +94,17 @@ desde los mismos datos.
   más anchas que su columna del sitio salen reducidas a `ANCHO_AYUDA` (736 px), y las de la portada a 640, 960 y 1440 px.
   Si una captura muestra una ruta del equipo (la carpeta personal, la temporal o la del repositorio), el script se para
   (`rutaPrivada` en `capturas-lista.ts`). Una pantalla de la portada sale sola con `-- --solo portada-<nombre>`
-  (`portada-agentes`).
+  (`portada-agentes`). Cada petición real a un agente sale en la consola («petición real a …»), para contarlas.
+- **Recortes del sitio:** FIG 4 y 5 de Inicio (`portada-fig-apis`, `portada-fig-servidor`) y las tarjetas de funciones
+  de Producto (`funcion-*`) son entradas de `CAPTURAS` con `sitio`: `zona` (el selector de lo que se recorta; con varios
+  elementos, el recorte los abarca a todos), `preparar` (JavaScript que la deja a la vista: abre un diálogo, el panel de
+  la Ayuda o las opciones de la receta), `alto` y `margen`. Salen en una ventana de 420 px, para que se lean también en
+  el móvil, a 2× en `site/capturas/<id>-<es|en>-<claro|oscuro>.webp`, y la página los usa con `width` y `height` de la
+  mitad de sus píxeles. No enseñan el Historial: `npm run capturas -- --solo funcion-sdk` no hace ninguna petición real
+  (`portada-fig-servidor` sale del Tramtai en modo servidor, con Docker y su `claude` simulado). Se paran si el recorte
+  enseña una ruta, un correo o el nombre del equipo. FIG 17, la terminal, no es una imagen: es la pantalla de Inicio de
+  `terminal.json` (`comun:terminal-recorte`, que pinta `sitio.ts`). `site/og.png` sale de `web/scripts/og.html` con
+  `-- --sitio`.
 - **Los agentes en la demo:** las capturas no instalan ni quitan ningún CLI. `SIMULAR` (`capturas-lista.ts`) corre en
   cada página antes que la app y cambia lo que el servicio responde de los agentes: en Agentes, Antigravity sale sin
   instalar (así se ve «Instalar», el ancla `agentes.instalar`, en cualquier equipo), y con

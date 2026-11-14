@@ -14,7 +14,7 @@ const archivos = readdirSync(carpeta).filter((a) => a.endsWith('.webp'))
 const variantes = (id: string) => ['claro', 'oscuro'].flatMap((tema) => ['es', 'en'].map((idioma) => `${id}.${tema}.${idioma}.webp`))
 
 test('el script saca justo las capturas que citan los temas', () => {
-  assert.deepEqual(CAPTURAS.map((c) => c.id).sort(), [...citadas].sort())
+  assert.deepEqual(CAPTURAS.filter((c) => !c.sitio).map((c) => c.id).sort(), [...citadas].sort())
   assert.deepEqual(PORTADA.map((p) => p.nombre).sort(), ['agentes', 'espacios', 'inicio', 'mis-apis', 'probar'])
 })
 
@@ -86,7 +86,9 @@ test('no hay capturas que nadie cite y entre todas no pasan de 5 MB', () => {
 
 // v0.58: las capturas del modo servidor salen de un Tramtai en modo servidor detrás de Caddy, en contenedores.
 test('las capturas del servidor son las de Ajustes → Servidor y Seguridad, la entrada y la marca', () => {
-  assert.deepEqual(CAPTURAS.filter((c) => c.servidor).map((c) => c.id).sort(), ['entrar', 'marca', 'seguridad', 'servidor'])
+  assert.deepEqual(CAPTURAS.filter((c) => c.servidor && !c.sitio).map((c) => c.id).sort(), ['entrar', 'marca', 'seguridad', 'servidor'])
+  // v0.61: y FIG 5 de Inicio, el mapa del servidor.
+  assert.deepEqual(CAPTURAS.filter((c) => c.servidor && c.sitio).map((c) => c.id), ['portada-fig-servidor'])
   assert.ok(CAPTURAS.some((c) => c.id === 'arranque' && !c.servidor), 'Ajustes → Arranque sale del Tramtai de escritorio')
 })
 
@@ -192,6 +194,38 @@ test('terminal.json trae las seis pantallas completas, con clases de token, sin 
   }
   assert.ok(statSync(new URL('../../site/cascadia.woff2', import.meta.url)).size <= 60 * 1024, 'cascadia.woff2 pasa de 60 KB')
   assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)
+})
+
+// v0.61 (spec §8): los recortes del sitio, FIG 4 y 5 de Inicio y las tarjetas de funciones de Producto, salen del mismo
+// proceso (CAPTURAS con sitio) a 2×: cada <img> lleva la mitad de sus píxeles en width y height.
+const carpetaSitio = new URL('../../site/capturas/', import.meta.url)
+const enSitio = readdirSync(carpetaSitio)
+const sabores = (archivo: string) => ['claro', 'oscuro'].flatMap((tema) => ['es', 'en'].map((idioma) =>
+  archivo.replace(/-(claro|oscuro)(?=[-.])/, `-${tema}`).replace(/-(es|en)(?=[-.])/, `-${idioma}`)))
+test('los recortes nuevos están en la lista y en el sitio', () => {
+  const recortes = CAPTURAS.filter((c) => c.sitio)
+  for (const id of ['portada-fig-apis', 'portada-fig-servidor']) assert.ok(recortes.some((c) => c.id === id), id)
+  assert.equal(recortes.filter((c) => c.id.startsWith('funcion-')).length, 11, 'once tarjetas de Producto (la de la terminal es texto)')
+  for (const c of recortes) assert.ok(c.zona, `${c.id}: falta la zona`)
+  const paginas = ['index.html', 'producto.html'].map((p) => readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8')).join('\n')
+  const imgs = paginas.match(/<img [^>]*src="capturas\/[^>]*>/g) ?? []
+  for (const img of imgs) {
+    const archivo = img.match(/src="capturas\/([^"]+)"/)![1]
+    for (const s of sabores(archivo)) assert.ok(enSitio.includes(s), `${archivo}: falta ${s}`)
+  }
+  for (const c of recortes)
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en']) {
+        const archivo = `${c.id}-${idioma}-${tema}.webp`
+        assert.ok(enSitio.includes(archivo), `falta ${archivo}`)
+        const { ancho, alto } = medidas(readFileSync(new URL(archivo, carpetaSitio)))
+        const img = imgs.find((i) => i.includes(`src="capturas/${archivo}"`))
+        assert.ok(img, `${archivo}: ninguna página lo usa`)
+        assert.match(img!, new RegExp(` width="${ancho / 2}" height="${alto / 2}" `), `${archivo}: mide ${ancho}×${alto}`)
+      }
+  // Ningún recorte de antes queda suelto en la carpeta.
+  for (const a of enSitio.filter((x) => /^(portada-fig|funcion)-/.test(x)))
+    assert.ok(recortes.some((c) => a.startsWith(c.id + '-')), `sobra ${a}`)
 })
 
 test('cada pantalla de la portada existe en WebP, en claro y oscuro, en los dos idiomas, a 640, 960 y 1440 px', () => {
