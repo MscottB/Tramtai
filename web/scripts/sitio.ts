@@ -263,12 +263,17 @@ export function destinoPortada(hash: string): string | null {
 // saltoPortada es el salto de Inicio (comun:anclas, en su <head>): un anclaje viejo va a su sitio nuevo antes de pintar,
 // y también si cambia con la página abierta. Sin JavaScript, cada anclaje viejo es el id de la tarjeta de «Sigue por
 // aquí» (o de la ventana) que lleva a ese sitio.
+// Es JavaScript escrito tal cual (no el texto de destinoPortada, que cambia con cómo se compile): las pruebas lo ejecutan.
 function saltoPortada(): string {
-  return `<script>var ANCLAS_PORTADA = ${JSON.stringify(ANCLAS_PORTADA)};
-${destinoPortada.toString().replace(/[ \t]+/g, ' ')}
-function saltar() { var d = destinoPortada(location.hash); if (d) location.replace(d); }
-saltar();
-addEventListener('hashchange', saltar);</script>`
+  return `<script>(function () {
+  var anclas = ${JSON.stringify(ANCLAS_PORTADA)};
+  function saltar() {
+    var ancla = location.hash.slice(1);
+    if (Object.prototype.hasOwnProperty.call(anclas, ancla)) location.replace(anclas[ancla]);
+  }
+  saltar();
+  addEventListener('hashchange', saltar);
+})();</script>`
 }
 
 export function escapar(s: string): string {

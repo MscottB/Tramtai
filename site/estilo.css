@@ -123,9 +123,9 @@ section[id] { scroll-margin-top: 72px; }
   html.js .vivo.visto .flujo { stroke-dasharray: 4 6; animation: corre 1.2s linear infinite; }
   html.js .vivo.visto .pulso { animation: late 2.4s ease-in-out var(--retraso, 0s) infinite; }
   html.js .vivo.visto .cursor { animation: parpadeo 1s steps(1) infinite; }
-  /* .escribe: una orden que se teclea sola, letra a letra (se destapa, no se mueve). */
+  /* .escribe: una orden que se teclea sola, letra a letra (se destapa, no se mueve): --pasos es su número de letras. */
   html.js .vivo:not(.visto) .escribe { clip-path: inset(0 100% 0 0); }
-  html.js .vivo.visto .escribe { animation: escribe .9s steps(24, end) var(--retraso, 0s) both; }
+  html.js .vivo.visto .escribe { animation: escribe .9s steps(var(--pasos, 24), end) var(--retraso, 0s) both; }
 }
 @keyframes escribe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes aparece { from { opacity: 0; } }

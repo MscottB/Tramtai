@@ -8,14 +8,15 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Tramtai", "applicationCategory": "DeveloperApplication", "operatingSystem": "Windows 10, Windows 11, macOS 11+, Linux", "description": "Claude Code, Codex, GitHub Copilot CLI y la Gemini API como una API local compatible con OpenAI y Anthropic.", "url": "https://mscottb.github.io/Tramtai/", "downloadUrl": "https://github.com/MscottB/Tramtai/releases/latest", "license": "https://polyformproject.org/licenses/noncommercial/1.0.0/", "inLanguage": ["es", "en"], "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
 <!-- Un enlace guardado a una sección de la portada de antes (#descargar, #como…) salta a su página nueva (spec §7). -->
 <!-- comun:anclas -->
-<script>var ANCLAS_PORTADA = {"descargar":"descargar.html","como":"producto.html#como","funciones":"producto.html#funciones","por-que":"producto.html#por-que","privacidad":"producto.html#privacidad","agentes":"agentes.html","app":"#formas","terminal":"#formas","servidor":"servidor.html","pagas":"producto.html#por-que","capturas":"#formas","aviso":"producto.html#privacidad"};
-function destinoPortada(hash ) {
- const ancla = hash.replace(/^#/, '')
- return Object.hasOwn(ANCLAS_PORTADA, ancla) ? ANCLAS_PORTADA[ancla] : null
-}
-function saltar() { var d = destinoPortada(location.hash); if (d) location.replace(d); }
-saltar();
-addEventListener('hashchange', saltar);</script>
+<script>(function () {
+  var anclas = {"descargar":"descargar.html","como":"producto.html#como","funciones":"producto.html#funciones","por-que":"producto.html#por-que","privacidad":"producto.html#privacidad","agentes":"agentes.html","app":"#formas","terminal":"#formas","servidor":"servidor.html","pagas":"producto.html#por-que","capturas":"#formas","aviso":"producto.html#privacidad"};
+  function saltar() {
+    var ancla = location.hash.slice(1);
+    if (Object.prototype.hasOwnProperty.call(anclas, ancla)) location.replace(anclas[ancla]);
+  }
+  saltar();
+  addEventListener('hashchange', saltar);
+})();</script>
 <!-- /comun:anclas -->
 <!-- comun:cabeza -->
 <link rel="canonical" href="https://mscottb.github.io/Tramtai/">
@@ -134,7 +135,7 @@ brew install --cask tramtai</code></pre>
 <span class="aparece menos" style="--retraso: .3s">- base_url="https://api.openai.com/v1"</span>
 <span class="aparece mas" style="--retraso: .9s">+ base_url="http://127.0.0.1:17373/openai/v1"</span>
 
-<span class="aparece" style="--retraso: 1.7s"><span class="t-suave">$</span> <span class="escribe" style="--retraso: 1.7s"><span lang="es">tramtai servicio iniciar</span><span lang="en">tramtai service start</span></span></span>
+<span class="aparece" style="--retraso: 1.7s"><span class="t-suave">$</span> <span class="escribe" lang="es" style="--retraso: 1.7s; --pasos: 24">tramtai servicio iniciar</span><span class="escribe" lang="en" style="--retraso: 1.7s; --pasos: 21">tramtai service start</span></span>
 <span class="aparece t-suave" style="--retraso: 2.8s">  ✓ <span lang="es">en marcha en</span><span lang="en">running on</span> 127.0.0.1:17373</span>
 <span class="aparece" style="--retraso: 3.4s">  <span class="t-ok">200</span>  <span class="t-claude">●</span> claude/sonnet    <span lang="es">1,8 s</span><span lang="en">1.8 s</span></span>
 <span class="aparece" style="--retraso: 4.1s">  <span class="t-ok">200</span>  <span class="t-codex">●</span> codex/gpt-5.5    <span lang="es">2,4 s</span><span lang="en">2.4 s</span></span>

@@ -5,7 +5,7 @@ import { pasosBienvenida } from '../src/recorrido.ts'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { PORTADA, TOKENS_TERMINAL } from './capturas-lista.ts'
-import { ANCLAS_PORTADA, AVISO_DESCARGA } from './sitio.ts'
+import { ANCLAS_PORTADA, AVISO_DESCARGA, destinoPortada } from './sitio.ts'
 import { conDescargas } from './descargas.mjs'
 
 const leer = (p: string) => readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8')
@@ -131,7 +131,11 @@ test('FIG 1 enseña el cambio de dos líneas', () => {
   const lineas = fig1.replace(/<[^>]+>/g, '').split('\n')
   assert.ok(lineas.some((l) => l.startsWith('- base_url=') && !l.includes('127.0.0.1')), 'la línea que se quita')
   assert.ok(lineas.some((l) => l.startsWith('+ base_url=') && l.includes('127.0.0.1:17373')), 'la de Tramtai')
-  assert.match(fig1, /<span class="escribe"[^>]*><span lang="es">tramtai servicio iniciar<\/span><span lang="en">tramtai service start<\/span><\/span>/)
+  // Se teclea a una letra por paso: --pasos es la longitud de la orden en cada idioma.
+  const ordenes = [...fig1.matchAll(/<span class="escribe" lang="(es|en)" style="--retraso: [\d.]+s; --pasos: (\d+)">([^<]+)<\/span>/g)]
+  assert.deepEqual(ordenes.map((m) => [m[1], m[3]]), [['es', 'tramtai servicio iniciar'], ['en', 'tramtai service start']])
+  for (const m of ordenes) assert.equal(Number(m[2]), m[3].length, m[3])
+  assert.match(css, /steps\(var\(--pasos, 24\), end\)/)
   // Cada petición con su agente y modelo (del catálogo: docs/api.md) y su tiempo en cada idioma.
   const modelos = [...fig1.replace(/<[^>]+>/g, '').matchAll(/● ([a-z]+\/[a-z0-9.-]+)/g)].map((m) => m[1])
   assert.deepEqual(modelos, ['claude/sonnet', 'codex/gpt-5.5', 'claude/haiku', 'copilot/auto'])
@@ -225,6 +229,10 @@ test('la ventana tiene cuatro pestañas', () => {
   // Las pestañas son las de su lista: la terminal de dentro lleva las suyas. La ventana abre siempre en Web UI.
   assert.match(js, /function pestanasDe\(g\) \{ return g\.querySelector\('\[role="tablist"\]'\)\.querySelectorAll\('\[role="tab"\]'\); \}/)
   assert.match(js, /if \(guardar && nombre !== 'formas'\)/)
+  assert.match(js, /if \(nombre !== 'formas'\) try \{ elegido = localStorage\.getItem\('tramtai\.' \+ nombre\); \}/, 'tampoco lee lo que guardaba antes')
+  // La clave del lenguaje no depende de una página: Producto, la guía y quien venga la comparten; la Ayuda, la suya.
+  assert.match(js, /var clave = document\.querySelector\('\.tema-ayuda'\) \? 'tramtai\.lenguaje-ayuda' : 'tramtai\.lenguaje';/)
+  assert.doesNotMatch(js, /lenguaje-portada/)
 })
 
 // v0.59 (spec §5): la terminal es texto real (site/capturas/terminal.json, de capturas --terminal) en una ventana con
@@ -308,6 +316,18 @@ test('los anclajes viejos saltan a su sitio nuevo, y sin JavaScript caen en lo q
     let a = ''
     new Function('location', 'addEventListener', script)({ hash, replace: (u: string) => { a = u } }, () => {})
     assert.equal(a, destino, hash)
+  }
+  // El salto es JavaScript escrito tal cual, y lleva cada anclaje a lo mismo que destinoPortada; también si el ancla
+  // cambia con la página abierta.
+  assert.doesNotMatch(script, /function destinoPortada/)
+  for (const ancla of Object.keys(ANCLAS_PORTADA)) {
+    let a = ''
+    let alCambiar: (() => void) | null = null
+    const location = { hash: '', replace: (u: string) => { a = u } }
+    new Function('location', 'addEventListener', script)(location, (evento: string, f: () => void) => { if (evento === 'hashchange') alCambiar = f })
+    location.hash = '#' + ancla
+    alCambiar!()
+    assert.equal(a, destinoPortada('#' + ancla), ancla)
   }
   for (const ancla of Object.keys(ANCLAS_PORTADA)) assert.match(inicio, new RegExp(`\\sid="${ancla}"`), ancla)
   assert.doesNotMatch(js, /pagas: 'por-que'/, 'el salto de antes de la v0.59 va ahora en ANCLAS_PORTADA')

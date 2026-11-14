@@ -210,8 +210,9 @@ function destinoDescarga(sistema, archivo, archivos) {
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
-  // La Ayuda y la portada tienen otras pestañas que la guía: cada una recuerda la suya.
-  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : document.querySelector('#como [data-pestanas]') ? 'tramtai.lenguaje-portada' : 'tramtai.lenguaje';
+  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía, «Cómo funciona» en Producto) comparte uno. Si el
+  // guardado no está en la página, sale la primera pestaña.
+  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
   // Cada data-pestanas="nombre" es un juego aparte (el de lenguajes no tiene nombre; Linux · Windows Server es
   // «sistema»): sus pestañas cambian a la vez y recuerdan su elección sin tocar las del otro juego.
   function juego(lenguaje) {
@@ -257,14 +258,14 @@ function destinoDescarga(sistema, archivo, archivos) {
   });
   var guardado = null;
   try { guardado = localStorage.getItem(clave); } catch (e) {}
-  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en la portada). Sin JavaScript se ven
+  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en «Cómo funciona»). Sin JavaScript se ven
   // todos los paneles de la guía, cada uno con su enlace a GitHub.
   elegir(guardado || 'python');
   // Cada juego con nombre (Linux · Windows Server es «sistema»; las cuatro formas de Inicio, «formas», que no se
   // recuerda): el guardado, si sigue siendo de ese juego, o su primera pestaña. Sin JavaScript se ven todos sus paneles.
   document.querySelectorAll('[data-pestanas]:not([data-pestanas=""])').forEach(function (g) {
     var nombre = g.dataset.pestanas, elegido = null;
-    try { elegido = localStorage.getItem('tramtai.' + nombre); } catch (e) {}
+    if (nombre !== 'formas') try { elegido = localStorage.getItem('tramtai.' + nombre); } catch (e) {}
     elegir(elegido && juego(elegido) === nombre ? elegido : pestanasDe(g)[0].dataset.lenguaje);
   });
   // Cada panel lleva un <code lang="es"> y uno lang="en" (los de docs/ejemplos/*/en): el CSS enseña el del idioma
