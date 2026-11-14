@@ -28,7 +28,8 @@
 <link rel="stylesheet" href="estilo.css">
 <script src="sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 <!-- /comun:cabeza -->
 </head>
 <body>
@@ -190,7 +191,7 @@ brew install tramtai</code></pre>
         </a>
         <a class="tarjeta" href="desarrolladores.html">
           <h3><span lang="es">Para desarrolladores</span><span lang="en">For developers</span></h3>
-          <p><span lang="es">Las rutas, los ejemplos en curl, Python y Node, y la especificación OpenAPI.</span><span lang="en">The routes, examples in curl, Python and Node, and the OpenAPI spec.</span></p>
+          <p><span lang="es">Las rutas, los ejemplos en Python, JavaScript, Go y curl, y la especificación OpenAPI.</span><span lang="en">The routes, examples in Python, JavaScript, Go and curl, and the OpenAPI spec.</span></p>
         </a>
       </div>
       <p class="suave licencia">

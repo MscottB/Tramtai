@@ -98,6 +98,9 @@ test('sistemaDe', () => {
     ['Mozilla/5.0 (X11; Linux aarch64; rv:132.0) Gecko/20100101 Firefox/132.0', 'Linux aarch64', null],
     // Chromium en ARM dice x86_64 en su texto, pero no en la plataforma.
     ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 'Linux aarch64', null],
+    // FreeBSD u OpenBSD con X11: sin paquete para ellos.
+    ['Mozilla/5.0 (X11; FreeBSD amd64; rv:132.0) Gecko/20100101 Firefox/132.0', 'FreeBSD amd64', null],
+    ['Mozilla/5.0 (X11; OpenBSD amd64; rv:132.0) Gecko/20100101 Firefox/132.0', undefined, null],
     ['Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 'Linux x86_64', null],
   ]
   for (const [ua, plataforma, quiere] of casos) assert.equal(sistemaDe(ua, plataforma), quiere, `${ua} | ${plataforma}`)
@@ -321,7 +324,7 @@ test('los anclajes viejos saltan a su sitio nuevo, y sin JavaScript caen en lo q
   const script = inicio.match(/<!-- comun:anclas -->\s*<script>([\s\S]*?)<\/script>/)?.[1] ?? ''
   assert.ok(script, 'falta comun:anclas (cd web; npm run sitio)')
   assert.ok(inicio.indexOf('<!-- comun:anclas -->') < inicio.indexOf('</head>'), 'en el <head>, antes de pintar')
-  for (const [hash, destino] of [['#descargar', 'descargar.html'], ['#como', 'producto.html#como'], ['#terminal', '#formas'], ['#pagas', 'producto.html#por-que'], ['#formas', ''], ['', ''], ['#__proto__', '']]) {
+  for (const [hash, destino] of [['#descargar', 'descargar.html'], ['#como', 'producto.html#como'], ['#terminal', '#formas'], ['#pagas', 'producto.html#por-que'], ['#demo', 'producto.html#demo'], ['#riesgos', 'producto.html#riesgos'], ['#formas', ''], ['', ''], ['#__proto__', '']]) {
     let a = ''
     new Function('location', 'addEventListener', script)({ hash, replace: (u: string) => { a = u } }, () => {})
     assert.equal(a, destino, hash)
@@ -402,7 +405,8 @@ test('la portada de antes no deja restos: ni tranvía ni accesos; el recorrido g
   assert.doesNotMatch(js, /Recorrido de la portada/)
   assert.doesNotMatch(css, /\.(portada|accesos|escenas|mapa-pestana|tranvia|terminal-figura|teclas)\b/)
   assert.doesNotMatch(html, /class="(portada|accesos|escenas|mapa)[ "]/)
-  assert.doesNotMatch(inicio, /class="demo|id="demo"/)
+  // Solo queda #demo como anclaje viejo, que lleva a producto.html#demo.
+  assert.doesNotMatch(inicio, /class="demo|id="demo"(?! class="ancla-vieja")/)
 })
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -6,8 +6,10 @@ function bastanteVisto(e, alto) {
 
 // Lo vivo (estilo.css) arranca su animación cuando entra en pantalla: .visto, una sola vez. Sin observador, ya. Va lo
 // primero para que un fallo más abajo no deje nada esperando oculto. Este bloque solo ve los .vivo que ya están en la
-// página: un .vivo creado después tiene que ponerse .visto él mismo.
+// página: un .vivo creado después tiene que ponerse .visto él mismo. vivo-listo le dice al script de la cabeza que
+// sitio.js llegó: sin ella, a los 3 s, lo vivo pasa a su estado final.
 (function () {
+  document.documentElement.classList.add('vivo-listo');
   var vivos = document.querySelectorAll('.vivo');
   if (!('IntersectionObserver' in window)) return vivos.forEach(function (v) { v.classList.add('visto'); });
   var vigia = new IntersectionObserver(function (entradas) {
@@ -162,7 +164,8 @@ function sistemaDe(ua, plataforma) {
   if (/android|iphone|ipad|ipod|mobile|cros/i.test(p)) return null;
   if (/\bwin(dows|32|64)\b/i.test(p)) return 'windows';
   if (/mac/i.test(p)) return 'macos';
-  if (/linux|x11/i.test(p) && /x86_64|amd64/i.test(p) && !/aarch64|arm/i.test(p)) return 'linux';
+  // Solo Linux: FreeBSD u OpenBSD también dicen X11 y amd64, y los paquetes .deb y .rpm no son para ellos.
+  if (/linux/i.test(p) && /x86_64|amd64/i.test(p) && !/aarch64|arm/i.test(p)) return 'linux';
   return null;
 }
 

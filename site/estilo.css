@@ -628,7 +628,7 @@ figure.tarjeta { margin: 0; min-width: 0; display: flex; flex-direction: column;
 .fig-camino .base { opacity: .3; }
 /* FIG 3: un punto por agente, que late si está listo. */
 .estado-agentes { margin: 0; padding: 0; list-style: none; }
-.estado-agentes li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 36px; border-bottom: 1px dashed var(--borde); font-size: .93rem; }
+.estado-agentes li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 36px; padding: 6px 0; border-bottom: 1px dashed var(--borde); font-size: .93rem; }
 .estado-agentes li:last-child { border-bottom: 0; }
 .punto { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
 .estado { margin-left: auto; font: .78rem var(--mono); color: var(--acento); }
@@ -699,9 +699,9 @@ figure.fig-codigo { margin-top: 12px; }
 .funcion { display: flex; flex-direction: column; min-width: 0; }
 .funcion .captura { margin: auto 0 0; padding-top: 16px; }
 .funcion .captura img { box-shadow: none; }
-/* FIG 17: la pantalla de Inicio de la terminal, en su letra de 12 px y recortada a su esquina de arriba a la izquierda
+/* FIG 17: la pantalla de Inicio de la terminal, en su letra de .75rem (12 px, y más si el navegador la agranda) y recortada a su esquina de arriba a la izquierda
    (el menú y el principio de Inicio): 16 filas, lo que no cabe a lo ancho queda fuera. */
-.recorte-terminal { height: calc(16 * 1.2em + 12px); overflow: hidden; padding: 12px 14px 0; font-size: 12px; background: light-dark(#ffffff, #0b0d10); color: var(--texto); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
+.recorte-terminal { height: calc(16 * 1.2em + 12px); overflow: hidden; padding: 12px 14px 0; font-size: .75rem; background: light-dark(#ffffff, #0b0d10); color: var(--texto); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
 .recorte-terminal .pantalla { font-size: 1em; }
 .pantallas + .nota-capturas { margin-top: 14px; }
 .linea-funciones { margin-top: 56px; }
@@ -742,9 +742,10 @@ html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
 .demo-lista, .demo-grupo ol { list-style: none; margin: 0; padding: 0; }
 .demo-grupo + .demo-grupo { margin-top: 12px; }
 .demo-pagina { display: block; font: 600 .875rem var(--fuente); color: var(--texto-suave); padding: 4px 12px; }
-.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
+.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
 .demo-ir:hover { background: var(--superficie-suave); }
-.demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
+/* El paso actual: el fondo del acento suave, en negrita y con el texto del acento (sin borde de color a un lado). */
+.demo-ir[aria-current="step"] { font-weight: 600; color: var(--acento); background: var(--acento-suave); }
 /* La imagen y su texto usan todo el ancho del escenario. Las flechas van encima de los bordes de la imagen, a media
    altura (cqw es el ancho del escenario, y la imagen, 16:10 de él), con su fondo de superficie y su borde para que se
    lean sobre la captura; la desactivada, sin transparencia. */

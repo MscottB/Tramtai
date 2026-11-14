@@ -571,6 +571,31 @@ test('lo vivo arranca con un cuarto a la vista, también al final de la página 
   assert.doesNotMatch(leer('sitio.js'), /rootMargin: '0px 0px -20% 0px'/)
 })
 
+// Si sitio.js no llega (no carga o falla), la clase js de la cabeza dejaría lo vivo oculto para siempre: a los 3 s, el
+// script de la cabeza lo pasa a su estado final, salvo que sitio.js haya puesto vivo-listo.
+test('sin sitio.js, lo vivo pasa a su estado final a los 3 s', () => {
+  for (const [ruta, html] of todas) assert.ok(html.includes("classList.contains('vivo-listo')"), ruta)
+  const script = leer('index.html').match(/<script>(document\.documentElement\.classList\.add\('js'\);[\s\S]*?)<\/script>/)?.[1] ?? ''
+  assert.ok(script, 'falta el script de la cabeza en Inicio (cd web; npm run sitio)')
+  const correr = (listo: boolean) => {
+    const clases = new Set<string>(listo ? ['vivo-listo'] : [])
+    const vivos = [new Set<string>(), new Set<string>()]
+    let espera = 0
+    let alFinal = () => {}
+    const document = {
+      documentElement: { classList: { add: (c: string) => clases.add(c), contains: (c: string) => clases.has(c) }, dataset: {}, lang: '' },
+      querySelectorAll: (s: string) => (s === '.vivo' ? vivos.map((v) => ({ classList: { add: (c: string) => v.add(c) } })) : []),
+    }
+    new Function('document', 'localStorage', 'navigator', 'setTimeout', script)(document, { getItem: () => null }, { language: 'es' }, (f: () => void, ms: number) => { alFinal = f; espera = ms })
+    alFinal()
+    return { espera, vistos: vivos.filter((v) => v.has('visto')).length }
+  }
+  assert.deepEqual(correr(false), { espera: 3000, vistos: 2 }, 'sin sitio.js')
+  assert.deepEqual(correr(true), { espera: 3000, vistos: 0 }, 'con sitio.js, lo vivo espera a entrar en pantalla')
+  // sitio.js lo marca lo primero, antes de cualquier cosa que pueda fallar.
+  assert.match(leer('sitio.js'), /^[\s\S]{0,1200}?\(function \(\) \{\n {2}document\.documentElement\.classList\.add\('vivo-listo'\);\n {2}var vivos = document\.querySelectorAll\('\.vivo'\);/)
+})
+
 // Pendientes de la Tarea 3.
 test('en el buscador, Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña', () => {
   assert.match(leer('sitio.js'), /e\.key === 'Enter' && activo >= 0\) \{[\s\S]{0,80}opciones\[activo\]\.dispatchEvent\(new MouseEvent\('click', \{[^}]*ctrlKey: e\.ctrlKey, metaKey: e\.metaKey/)
