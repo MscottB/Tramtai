@@ -53,12 +53,16 @@ export const CAPTURAS: Captura[] = [
   { id: 'funcion-sdk', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' },
     zona: `[data-captura="mis-apis"] .text-weight-medium:has(+ .row .guia-url), ${GUIA}:not(:has(a.enlace))` },
   { id: 'funcion-api-propia', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' }, zona: `${GUIA}:has(a.enlace)` },
-  { id: 'funcion-forma', pagina: 'ejecutar', sitio: true, alto: 420, zona: `${SALIDA}, ${SALIDA} ~ *`,
+  // del interruptor a «Añadir campo»: sin el ejemplo de respuesta ni los reintentos, que van debajo
+  { id: 'funcion-forma', pagina: 'ejecutar', sitio: true, zona: `${SALIDA}, ${SALIDA} ~ :not(.q-expansion-item, .q-select)`,
     preparar: `(() => { if (!${ABRIR_OPCIONES}) return false
       if (document.querySelector('${EN_OPCIONES} .q-btn-toggle')) return true
       document.querySelector('${SALIDA} .q-toggle')?.click(); return false })()` },
   { id: 'funcion-espacios', pagina: 'espacios', sitio: true, zona: '[data-captura="espacios"]' },
-  { id: 'funcion-una-api', pagina: 'conectar', sitio: true, alto: 418, zona: '.q-dialog .q-card',
+  // el diálogo entero no cabe en una tarjeta: su cabecera y sus cuatro primeros campos (nombre, grupo, instrucciones y
+  // agente y modelo), cerrado justo bajo el último
+  { id: 'funcion-una-api', pagina: 'conectar', sitio: true,
+    zona: '.q-dialog .q-card > .q-card__section:first-child, .q-dialog form > .q-card__section > .q-field, .q-dialog form > .q-card__section > div > .q-field:nth-child(-n+2)',
     preparar: `(() => { if (document.querySelector('.q-dialog .q-card')) return true; document.querySelector('[data-recorrido="conectar.nueva"]')?.click(); return false })()` },
   // el modelo (el primero que ofrece) y, debajo, el esfuerzo: los dos selectores sueltos de la receta (el de respaldo va
   // en las opciones). Elegido el modelo, la lista se cierra con Esc y el campo pierde el foco; si no ofrece ninguno (sin
