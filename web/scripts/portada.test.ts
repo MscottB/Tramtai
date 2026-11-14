@@ -6,6 +6,7 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { PORTADA, TOKENS_TERMINAL } from './capturas-lista.ts'
 import { ANCLAS_PORTADA, AVISO_DESCARGA } from './sitio.ts'
+import { conDescargas } from './descargas.mjs'
 
 const leer = (p: string) => readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8')
 // v0.61 (spec §4): Inicio tiene cuatro bloques. Lo que antes estaba en la portada pasó tal cual (ruling 3) a Producto
@@ -104,6 +105,24 @@ test('sistemaDe', () => {
   assert.match(js, /if \(sistema === 'macos' && navigator\.maxTouchPoints > 1\) sistema = null;/)
   // En Linux ARM (Chromium) el botón vuelve a «Descargar».
   assert.match(js, /if \(v\.architecture !== 'arm'\) return;\s*sistema = null;/)
+})
+
+// Con un release publicado, el botón lleva al archivo de Windows o de macOS; en Linux, a Descargar: .deb o .rpm depende
+// de la distribución (revisión de la Tarea 4).
+test('con el release relleno, el botón de Linux no apunta a ningún paquete', () => {
+  const tag = 'v0.61.0+14112026'
+  const assets = ['instalador-windows-x64.exe', 'macos.dmg', 'linux-amd64.deb', 'linux-amd64.rpm', 'linux-arm64.deb'].map((a) => ({ name: `Tramtai-${tag}-${a}`, url: `https://ejemplo.test/${a}` }))
+  const relleno = conDescargas(inicio, { tagName: tag, assets })
+  const archivos = JSON.parse(relleno.match(/<script type="application\/json" id="descargas">([^<]*)<\/script>/)![1]).archivos
+  assert.equal(archivos['linux-amd64.deb'], 'https://ejemplo.test/linux-amd64.deb', 'el release sí trae el .deb')
+  const destinoDescarga = funcionDe('destinoDescarga')
+  const principal = (s: string) => relleno.match(new RegExp(`data-sistema="${s}">[\\s\\S]*?data-archivo="([^"]+)"`))?.[1]
+  assert.equal(destinoDescarga('windows', principal('windows'), archivos), 'https://ejemplo.test/instalador-windows-x64.exe')
+  assert.equal(destinoDescarga('macos', principal('macos'), archivos), 'https://ejemplo.test/macos.dmg')
+  assert.equal(destinoDescarga('linux', principal('linux'), archivos), null)
+  assert.equal(destinoDescarga(null, principal('windows'), archivos), null)
+  assert.equal(destinoDescarga('windows', principal('windows'), {}), null, 'sin release, a Descargar')
+  assert.match(js, /var destino = destinoDescarga\(sistema, principal && principal\.dataset\.archivo, archivos\);/)
 })
 
 // FIG 1: la terminal que se escribe sola, con datos de ejemplo fijos y agentes y modelos del catálogo.

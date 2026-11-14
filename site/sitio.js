@@ -142,11 +142,19 @@ function sistemaDe(ua, plataforma) {
   return null;
 }
 
+// destinoDescarga dice adónde lleva el botón [data-descarga]: al archivo del release (archivos, de #descargas) del
+// primer [data-archivo] del bloque del sistema. En Linux no: .deb o .rpm depende de la distribución y se elige en
+// Descargar. null deja el botón en descargar.html.
+function destinoDescarga(sistema, archivo, archivos) {
+  if (!sistema || sistema === 'linux' || !archivo) return null;
+  return archivos[archivo] || null;
+}
+
 // Descargas: enlaza cada botón con su archivo del último release (los nombres llevan la versión) y marca el sistema
 // del visitante. Los archivos y la versión los escribe la publicación del sitio en #descargas (web/scripts/descargas.mjs):
 // ninguna visita consulta la API de GitHub. Sin JavaScript o sin esos datos, los enlaces llevan a la página del release.
 // El botón [data-descarga] dice «Descargar para <sistema>» y lleva al archivo del primer [data-archivo] de su bloque
-// [data-sistema]; sin sistema se queda en «Descargar», que lleva a Descargar.
+// [data-sistema] (destinoDescarga); sin sistema se queda en «Descargar», que lleva a Descargar.
 (function () {
   if (!document.querySelector('[data-archivo]')) return;
   var nombres = {
@@ -176,8 +184,8 @@ function sistemaDe(ua, plataforma) {
       t.insertAdjacentHTML('afterbegin', '<span class="chapa"><span lang="es">Tu sistema</span><span lang="en">Your system</span></span>');
     });
     var principal = bloque.querySelector('[data-archivo]');
-    if (principal && archivos[principal.dataset.archivo])
-      document.querySelectorAll('[data-descarga]').forEach(function (a) { a.href = principal.href; });
+    var destino = destinoDescarga(sistema, principal && principal.dataset.archivo, archivos);
+    if (destino) document.querySelectorAll('[data-descarga]').forEach(function (a) { a.href = destino; });
   }
 
   // Linux con ARM (solo lo dicen los navegadores Chromium, aunque su texto diga x86_64): Descargar ofrece los paquetes
