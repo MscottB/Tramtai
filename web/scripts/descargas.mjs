@@ -1,8 +1,8 @@
 // descargas escribe en la portada publicada la versión y el enlace de cada archivo del último release, para que ninguna
 // visita tenga que preguntar a la API de GitHub. Lo corre .github/workflows/paginas.yml al publicar el sitio:
 //   gh release view --json tagName,assets > release.json
-//   node web/scripts/descargas.mjs release.json [site/index.html]
-// En el repositorio la portada lleva <span data-version></span> y #descargas vacío; sin release se queda así.
+//   node web/scripts/descargas.mjs release.json [site/index.html site/descargar.html ...]
+// En el repositorio Inicio y Descargar llevan <span data-version></span> y #descargas vacío; sin release se quedan así.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
@@ -28,6 +28,9 @@ export function conDescargas(html, release) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const [release, portada = new URL('../../site/index.html', import.meta.url)] = process.argv.slice(2)
-  writeFileSync(portada, conDescargas(readFileSync(portada, 'utf8'), JSON.parse(readFileSync(release, 'utf8'))))
+  const [release, ...paginas] = process.argv.slice(2)
+  const datos = JSON.parse(readFileSync(release, 'utf8'))
+  // Sin páginas, las dos que llevan descargas: Inicio (el botón del arranque) y Descargar.
+  for (const pagina of paginas.length ? paginas : ['index.html', 'descargar.html'].map((p) => new URL(`../../site/${p}`, import.meta.url)))
+    writeFileSync(pagina, conDescargas(readFileSync(pagina, 'utf8'), datos))
 }

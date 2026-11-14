@@ -484,18 +484,43 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .marca-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
-/* Descargas: una tarjeta por sistema */
-.descargas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.descargas .tarjeta { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.descargas .tarjeta p { flex: 1; }
-.descargas :not(pre) > code { font: .82rem var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
-.descargas .boton { align-self: flex-start; padding: 9px 16px; font-size: .92rem; }
-.descargas .tarjeta p.otras, .descargas .tarjeta p.antes { flex: none; font-size: .88rem; }
-.descargas .tu-sistema { border-color: var(--acento); box-shadow: var(--sombra); }
+/* Descargar (spec §5): el arranque corto, las pestañas por sistema (sin JavaScript, las tres una debajo de otra), la tabla
+   de todos los paquetes y los requisitos. */
+#descargar .arranque { padding: 72px 0 36px; text-align: center; }
+#descargar .arranque .entrada { max-width: 37em; margin: 20px auto 0; font-size: 1.1rem; color: var(--texto-suave); }
+#descargar .arranque code, .descargas :not(pre) > code, .paquetes code, #requisitos code { font: .85em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
+#descargar, #todas, #requisitos, #empezar { padding: 36px 0; }
+.pestanas.descargas { max-width: 820px; margin: 0 auto; }
+.descargas .tarjeta { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 26px; }
+.descargas .tarjeta[hidden] { display: none; }
+.descargas .tarjeta + .tarjeta { margin-top: 16px; }
+.descargas .tarjeta p { color: var(--texto-suave); font-size: .95rem; }
+.descargas .tarjeta p:has(> .boton) { color: inherit; }
+.descargas .botones { display: flex; flex-wrap: wrap; gap: 12px; }
+.descargas .boton { align-self: flex-start; }
+.descargas .otras, .descargas .antes { font-size: .88rem !important; }
+.descargas .bloque-codigo { padding: 52px 14px 12px; font-size: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.descargas .tu-sistema { border-color: var(--acento); border-style: solid; }
 .descargas .tu-sistema .chapa { align-self: flex-start; }
-.descargas .codigo { margin: 0; position: relative; padding: 56px 14px 12px; font-size: .8rem; }
-.antes-de-descargar { max-width: 46em; margin: 0 0 20px; }
+.descargas .otras a { display: inline-block; padding: 11px 2px; }
+.antes-de-descargar { max-width: 820px; margin: 0 auto 24px; }
 .todas { margin-top: 18px; text-align: center; font-size: .92rem; }
+.todas a { display: inline-block; padding: 11px 2px; }
+.paquetes { max-width: 820px; margin: 0 auto; }
+.paquetes table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.paquetes th, .paquetes td { text-align: left; padding: 0 14px; border-top: 1px solid var(--borde); vertical-align: middle; }
+.paquetes thead th { border-top: 0; background: var(--superficie-suave); font: 600 .85rem/1.4 var(--fuente); color: var(--texto-suave); padding-top: 10px; padding-bottom: 10px; }
+.paquetes tbody th { font-weight: 500; padding-top: 10px; padding-bottom: 10px; }
+.paquetes td a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-weight: 600; }
+#todas .cabeza, #requisitos .cabeza { max-width: 820px; margin-left: auto; margin-right: auto; }
+#requisitos .mosaico { max-width: 820px; margin: 0 auto; }
+#todas h2 em, #requisitos h2 em { font-family: var(--serifa); font-style: italic; font-weight: 400; letter-spacing: -0.01em; color: var(--acento); }
+@media (max-width: 640px) {
+  #descargar .arranque { padding: 48px 0 24px; }
+  .descargas .tarjeta { padding: 18px 16px; }
+  .paquetes th, .paquetes td { padding: 0 10px; }
+  .paquetes thead th { font-size: .8rem; }
+}
 
 /* Ayuda: índice lateral y contenido */
 .ayuda { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-top: 48px; padding-bottom: 72px; }
@@ -542,7 +567,6 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .copiar:hover { background: rgba(255, 255, 255, .14); }
 
 @media (max-width: 900px) {
-  .descargas { grid-template-columns: 1fr; }
   .ayuda { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 28px; }
   .indice { position: static; margin-bottom: 8px; }
   .indice ol { display: flex; flex-wrap: wrap; gap: 0 16px; border-left: 0; padding: 0; }
