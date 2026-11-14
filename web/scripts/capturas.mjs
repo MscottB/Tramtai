@@ -14,7 +14,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { homedir, tmpdir } from 'node:os'
+import { homedir, hostname, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import en from '../src/idiomas/en.ts'
@@ -170,6 +170,47 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
   console.log(`${c.id}.${tema}.${idioma}.webp`)
 }
 
+// recorteSitio saca un recorte del sitio (CAPTURAS con sitio: FIG 4 y 5 de Inicio y las tarjetas de funciones de
+// Producto): abre la página en una ventana estrecha (c.ancho), deja la zona a la vista (c.preparar), recorta todo lo que
+// casa con c.zona con su margen y hasta c.alto px de alto, y lo guarda a 2× como
+// site/capturas/<id>-<idioma>-<tema>.webp. Se para si el texto recortado enseña una ruta, un correo o el nombre del equipo.
+async function recorteSitio({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma) {
+  const zona = JSON.stringify(c.zona)
+  await abrir(c.pagina, tema, idioma, '.pagina', c.ancho ?? 420, 900, c.guardado)
+  await sinBarra()
+  // Sin ventana, la página no tiene el foco y un selector no abriría su lista con el teclado.
+  await enviar('Emulation.setFocusEmulationEnabled', { enabled: true })
+  if (c.preparar) await hasta(() => evaluar(c.preparar), 15, `preparar ${c.id}`)
+  await hasta(() => evaluar(`[...document.querySelectorAll(${zona})].some((e) => e.getBoundingClientRect().height > 0)`), 15, `${c.zona} en #${c.pagina}`)
+  await esperar(600) // lo que se abre llega con su animación
+  await ocultarRuta()
+  const r = await evaluar(`(() => {
+    const es = [...document.querySelectorAll(${zona})].filter((e) => e.getBoundingClientRect().height > 0)
+    es[0].scrollIntoView({ block: 'start', behavior: 'instant' })
+    // Un diálogo o un panel va fijo en la ventana: se recorta sin desplazar la página.
+    const fijo = !!es[0].closest('.q-dialog, .q-drawer')
+    if (fijo) scrollTo(0, 0)
+    // Alrededor de un diálogo, sin margen: se vería el velo de detrás.
+    const cajas = es.map((e) => e.getBoundingClientRect()), m = es[0].closest('.q-dialog') ? 0 : ${c.margen ?? 12}
+    const x = Math.round(Math.max(0, Math.min(...cajas.map((b) => b.left)) + scrollX - m))
+    const y = Math.round(Math.max(0, Math.min(...cajas.map((b) => b.top)) + scrollY - m))
+    const w = Math.round(Math.min(document.documentElement.scrollWidth, Math.max(...cajas.map((b) => b.right)) + scrollX + m) - x)
+    const h = Math.round(Math.min(${c.alto ?? 520}, Math.max(...cajas.map((b) => b.bottom)) + scrollY + m - y))
+    // El texto de toda la zona recortada (también lo de detrás y los campos), no solo el de los elementos.
+    const dentro = (t) => t.width > 0 && t.right + scrollX > x && t.left + scrollX < x + w && t.bottom + scrollY > y && t.top + scrollY < y + h
+    const textos = [], rango = document.createRange(), recorre = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    while (recorre.nextNode()) { rango.selectNodeContents(recorre.currentNode); if (dentro(rango.getBoundingClientRect())) textos.push(recorre.currentNode.nodeValue) }
+    for (const campo of document.querySelectorAll('input, textarea')) if (dentro(campo.getBoundingClientRect())) textos.push(campo.value)
+    return { x, y, w, h, fijo, texto: textos.join(' ') }
+  })()`)
+  if (privada.test(r.texto) || /[\w.+-]+@[\w-]+\.\w/.test(r.texto) || r.texto.toLowerCase().includes(hostname().toLowerCase()))
+    throw new Error(`${c.id}: el recorte muestra una ruta, un correo o el nombre del equipo: ${r.texto.slice(0, 200)}`)
+  const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: !r.fijo,
+    clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 2 } })
+  writeFileSync(join(destinoPortada, `${c.id}-${idioma}-${tema}.webp`), Buffer.from(data, 'base64'))
+  console.log(`site/capturas/${c.id}-${idioma}-${tema}.webp (${r.w}×${r.h})`)
+}
+
 // portada guarda la pantalla de 1440×900 que está abierta como site/capturas/<nombre>-<tema>-<idioma>-<ancho>.webp, a cada
 // ancho (reducida desde la de 1440), tras comprobar que no enseña una ruta real.
 async function portada({ enviar, evaluar }, nombre, tema, idioma, anchos) {
@@ -296,7 +337,7 @@ async function capturasServidor() {
     const pasoEntrada = Math.floor(Date.now() / 30000)
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
-        for (const c of deServidor.filter((x) => x.id !== 'entrar')) await capturarZona(nav, c, tema, idioma)
+        for (const c of deServidor.filter((x) => x.id !== 'entrar')) await (c.sitio ? recorteSitio : capturarZona)(nav, c, tema, idioma)
     // Para el sitio: Inicio ya dentro, con la cabecera «Servidor», a 1440 y 960 px.
     if (completa || soloServidor)
       for (const tema of ['claro', 'oscuro'])
@@ -434,6 +475,7 @@ try {
       if (estado !== 200) throw new Error(`no pude vaciar el Historial (HTTP ${estado})`)
     }
     for (const texto of PETICIONES[idioma]) {
+      console.log(`petición real a ${modelo}: ${texto}`)
       try { cli('ejecutar', '-a', agente, '-m', modelo.split('/')[1] ?? '', texto) } catch { console.warn(`aviso: ${modelo} no respondió; el Historial mostrará el error`) }
     }
     historialDe = idioma
@@ -450,9 +492,10 @@ try {
   const terminal = {}
   mkdirSync(destinoAyuda, { recursive: true })
   for (const idioma of ['es', 'en']) {
-    if (completa || solo || soloRecorridos || soloTerminal) await historialEn(idioma)
+    // Los recortes del sitio no enseñan el Historial: con --solo solo de ellos no se hace ninguna petición real.
+    if (completa || soloRecorridos || soloTerminal || solos.some((s) => !CAPTURAS.find((c) => c.id === s)?.sitio)) await historialEn(idioma)
     for (const c of CAPTURAS.filter((x) => !x.servidor && (completa || solos.includes(x.id))))
-      for (const tema of ['claro', 'oscuro']) await capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma)
+      for (const tema of ['claro', 'oscuro']) await (c.sitio ? recorteSitio : capturarZona)({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma)
 
     // La terminal de la portada: cada página que pinta internal/tui/captura (compilado junto a la copia portable, así
     // habla con su servicio), convertida a HTML con ansiAHtml; al final se guarda en site/capturas/terminal.json.

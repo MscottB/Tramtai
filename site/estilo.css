@@ -627,9 +627,10 @@ figure.tarjeta { margin: 0; min-width: 0; display: flex; flex-direction: column;
 .sin-instalar { color: var(--texto-suave); }
 .sin-instalar .punto { background: none; border: 1.5px solid var(--borde-control); }
 .sin-instalar .estado { color: var(--texto-suave); }
-/* FIG 4 y 5: un recorte de la captura (--x e --y, en % de la imagen; --ancho, su ancho dentro del marco). */
-.recorte { position: relative; flex: 1 0 auto; overflow: hidden; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie-suave); }
-.recorte img { position: absolute; top: 0; left: 0; width: var(--ancho); max-width: none; height: auto; transform: translate(var(--x), var(--y)); border: 0; border-radius: 0; box-shadow: none; }
+/* FIG 4 y 5: un recorte de la app sacado en una ventana estrecha, a su tamaño (srcset 2x: la mitad de sus píxeles), o
+   menos si no cabe, y centrado. */
+.fig-recorte .captura { margin: auto 0; text-align: center; }
+.fig-recorte .captura img { width: auto; max-width: 100%; margin: 0 auto; box-shadow: none; }
 
 /* Una ventana, cuatro formas: la barra con el semáforo y las pestañas; sin JavaScript, las cuatro una debajo de otra. */
 .ventana { overflow: hidden; background: var(--superficie); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); box-shadow: var(--sombra); }
@@ -685,6 +686,10 @@ figure.fig-codigo { margin-top: 12px; }
 .funcion { display: flex; flex-direction: column; min-width: 0; }
 .funcion .captura { margin: auto 0 0; padding-top: 16px; }
 .funcion .captura img { box-shadow: none; }
+/* FIG 17: la pantalla de Inicio de la terminal, en su letra de 12 px y recortada a su esquina de arriba a la izquierda
+   (el menú y el principio de Inicio): 16 filas, lo que no cabe a lo ancho queda fuera. */
+.recorte-terminal { height: calc(16 * 1.2em + 12px); overflow: hidden; padding: 12px 14px 0; font-size: 12px; background: light-dark(#ffffff, #0b0d10); color: var(--texto); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
+.recorte-terminal .pantalla { font-size: 1em; }
 .pantallas + .nota-capturas { margin-top: 14px; }
 .linea-funciones { margin-top: 56px; }
 .linea-funciones > h3 { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; font-size: 1.05rem; color: var(--texto-suave); }

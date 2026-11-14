@@ -1,27 +1,42 @@
 <!doctype html>
-<!-- og es la imagen para compartir (site/og.png, 1200×630): la saca capturas.mjs. -->
+<!-- og es la imagen para compartir (site/og.png, 1200×630): la saca capturas.mjs (--sitio). Con el estilo del sitio
+     (site/estilo.css): el fondo oscuro con la cuadrícula de plano, el rótulo «FIG», el titular en dos partes con la clave
+     en serifa cursiva y en el acento, y los colores de los agentes solo en sus puntos. -->
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <style>
   @font-face { font-family: 'Inter'; src: url('../../site/inter.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Instrument Serif'; src: url('../../site/instrument-italica.woff2') format('woff2'); font-style: italic; }
+  @font-face { font-family: 'Tramtai Mono'; src: url('../../site/cascadia.woff2') format('woff2'); font-weight: 200 700; }
   html, body { margin: 0; width: 1200px; height: 630px; }
-  body { display: flex; flex-direction: column; justify-content: center; gap: 28px; padding: 0 96px; box-sizing: border-box;
-    background: radial-gradient(70% 90% at 85% 10%, rgba(45, 212, 191, .28), transparent 70%), #0a1116; color: #e5edf0;
-    font-family: 'Segoe UI', system-ui, sans-serif; }
-  .marca { display: flex; align-items: center; gap: 22px; font: 800 64px 'Inter', sans-serif; letter-spacing: -.02em; }
-  .marca img { width: 96px; height: 96px; }
-  h1 { margin: 0; font: 750 70px/1.08 'Inter', sans-serif; letter-spacing: -.025em; max-width: 15em; }
-  h1 em { font-style: normal; color: #2dd4bf; }
-  p { margin: 0; font-size: 30px; color: #93a5ac; }
-  .lineas { display: flex; gap: 14px; }
-  .lineas span { width: 64px; height: 10px; border-radius: 5px; }
+  /* La cuadrícula de 56 px del arranque, que se apaga hacia abajo. */
+  body { position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 30px;
+    padding: 0 96px; background: #0b0d10; color: #eef1f4; font-family: 'Inter', sans-serif; }
+  body::before { content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px) 0 0 / 56px 56px,
+      linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px) 0 0 / 56px 56px;
+    mask-image: linear-gradient(#000 30%, transparent 95%); }
+  body > * { position: relative; }
+  .marca { display: flex; align-items: center; gap: 18px; font: 600 40px 'Inter', sans-serif; letter-spacing: -.02em; }
+  .marca img { width: 64px; height: 64px; }
+  .fig { font: 500 18px 'Tramtai Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: #9aa3ad; }
+  h1 { margin: 0; font: 600 84px/1.04 'Inter', sans-serif; letter-spacing: -.035em; }
+  h1 em { font: italic 400 96px/1 'Instrument Serif', serif; letter-spacing: -.01em; color: #2dd4bf; }
+  .agentes { display: flex; gap: 28px; padding-top: 22px; border-top: 1px dashed #353f4b; font-size: 26px; color: #9aa3ad; }
+  .agentes span { display: flex; align-items: center; gap: 10px; }
+  .agentes i { width: 12px; height: 12px; border-radius: 50%; }
 </style>
 </head>
 <body>
   <div class="marca"><img src="../../site/favicon.svg" alt="">Tramtai</div>
-  <h1>Tus agentes de IA, <em>como una API local</em>.</h1>
-  <p>Claude Code · Codex · GitHub Copilot · Gemini API</p>
-  <div class="lineas"><span style="background:#f28a4f"></span><span style="background:#5b8def"></span><span style="background:#3fb950"></span><span style="background:#a78bfa"></span></div>
+  <div class="fig">FIG 0 · Tu app, Tramtai y tus agentes</div>
+  <h1>Tus agentes de IA,<br><em>como una API local.</em></h1>
+  <div class="agentes">
+    <span><i style="background:#f28a4f"></i>Claude Code</span>
+    <span><i style="background:#5b8def"></i>Codex</span>
+    <span><i style="background:#3fb950"></i>GitHub Copilot</span>
+    <span><i style="background:#a78bfa"></i>Gemini API</span>
+  </div>
 </body>
 </html>

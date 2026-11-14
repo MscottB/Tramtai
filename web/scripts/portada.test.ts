@@ -187,14 +187,20 @@ test('las capturas de Inicio son WebP con tamaño, pareja en el otro idioma y ca
   const imgs = inicio.match(/<img [^>]*src="capturas\/[^>]*>/g) ?? []
   assert.equal(imgs.length, 16, 'FIG 4, FIG 5, Web UI y Servidor, cada una en claro y oscuro y en los dos idiomas')
   imgs.forEach((img, i) => {
-    const m = img.match(/^<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp" srcset="[^"]+" sizes="[^"]+" width="1440" height="900"( loading="lazy")? decoding="async" alt="[^"]+">$/)
+    // FIG 4 y 5 son recortes a su tamaño (portada-fig-*, <nombre>-<idioma>-<tema>.webp, de capturas-lista.ts, a 2×); los
+    // de la ventana, pantallas enteras con srcset por ancho.
+    const recorte = img.match(/^<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/(portada-fig-[a-z]+)-\2-\1\.webp" srcset="capturas\/\3-\2-\1\.webp 2x" width="\d+" height="\d+"( loading="lazy")? decoding="async" alt="[^"]+">$/)
+    const m = recorte ?? img.match(/^<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp" srcset="[^"]+" sizes="[^"]+" width="1440" height="900"( loading="lazy")? decoding="async" alt="[^"]+">$/)
     assert.ok(m, img.slice(0, 160))
     assert.equal(Boolean(m[4]), i >= 4, `${m[3]}: ${i < 4 ? 'la primera, sin' : 'con'} carga diferida`)
     const otro = m[2] === 'es' ? 'en' : 'es'
-    assert.ok(imgs.some((x) => x.includes(`class="solo-${m[1]}" lang="${otro}" src="capturas/${m[3]}-${m[1]}-${otro}-1440.webp"`)), `${m[3]}: falta su pareja`)
+    const pareja = recorte ? `capturas/${m[3]}-${otro}-${m[1]}.webp` : `capturas/${m[3]}-${m[1]}-${otro}-1440.webp`
+    assert.ok(imgs.some((x) => x.includes(`class="solo-${m[1]}" lang="${otro}" src="${pareja}"`)), `${m[3]}: falta su pareja`)
     for (const [, archivo] of img.matchAll(/capturas\/([a-z0-9-]+\.webp)/g)) statSync(new URL(`../../site/capturas/${archivo}`, import.meta.url))
   })
-  assert.deepEqual([...new Set(imgs.map((i) => i.match(/capturas\/([a-z-]+?)-(claro|oscuro)/)?.[1]))], ['mis-apis', 'servidor-inicio'])
+  assert.deepEqual([...new Set(imgs.map((i) => i.match(/capturas\/([a-z-]+?)-(claro|oscuro|es|en)-/)?.[1]))], ['portada-fig-apis', 'portada-fig-servidor', 'mis-apis', 'servidor-inicio'])
+  // Sin el recorte de antes, con coordenadas fijas sobre la pantalla entera.
+  assert.doesNotMatch(inicio + css, /--x: |class="captura recorte"|\.recorte img/)
 })
 
 // Una ventana, cuatro formas (spec §4): pestañas con el patrón de las demás; sin JavaScript se ven las cuatro.
@@ -503,18 +509,32 @@ describe('producto', () => {
     assert.doesNotMatch(como, COLORES_LINEA)
   })
 
-  // Funciones: doce tarjetas en cuatro líneas (conecta, controla, protege y usa), cada una con un recorte real (los de la
-  // Tarea 9; de momento, las zonas del recorrido guiado), y las cinco pantallas de «La app» con su captura entera.
+  // Funciones: doce tarjetas en cuatro líneas (conecta, controla, protege y usa), cada una con su recorte de la app
+  // (funcion-*, de capturas-lista.ts) en los cuatro sabores; la de la terminal, con la terminal en texto. Y las cinco
+  // pantallas de «La app» con su captura entera.
   test('Funciones son tarjetas con captura: cuatro líneas de tres, sin perder ninguna función', () => {
     const lineas = asi.match(/<div class="linea-funciones">[\s\S]*?<\/div>\s*<\/div>/g) ?? []
     assert.deepEqual(lineas.map((l) => l.match(/<h3><span lang="es">([^<]+)<\/span>/)?.[1]), ['Conecta', 'Controla', 'Protege', 'Usa'])
     const tarjetas = lineas.flatMap((l) => l.match(/<article class="tarjeta funcion">[\s\S]*?<\/article>/g) ?? [])
     assert.equal(tarjetas.length, 12)
+    const recortes: string[] = []
     for (const t of tarjetas) {
       assert.match(t, /<span class="fig"><span lang="es">FIG \d+ · [^<]+<\/span><span lang="en">FIG \d+ · [^<]+<\/span><\/span>/)
       assert.match(t, /<h4><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/h4>\s*<p><span lang="es">[\s\S]*<\/span><span lang="en">/)
-      assert.equal((t.match(/<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/[a-z0-9-]+\.webp"[^>]* loading="lazy" decoding="async" alt="[^"]+">/g) ?? []).length, 4, t.slice(0, 160))
+      if (t.includes('FIG 17 · La terminal')) {
+        // La terminal enseña la terminal: la pantalla de Inicio de terminal.json, en los dos idiomas.
+        assert.match(t, /<div class="recorte-terminal">\n<!-- comun:terminal-recorte -->\n<pre class="pantalla" lang="es" role="img" aria-label="[^"]+">[\s\S]+<\/pre>\n<pre class="pantalla" lang="en" role="img" aria-label="[^"]+">[\s\S]+<\/pre>\n<!-- \/comun:terminal-recorte -->/)
+        assert.doesNotMatch(t, /<img /)
+        continue
+      }
+      const imgs = [...t.matchAll(/<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/(funcion-[a-z-]+)-\2-\1\.webp" width="\d+" height="\d+" loading="lazy" decoding="async" alt="[^"]+">/g)]
+      assert.equal(imgs.length, 4, t.slice(0, 160))
+      assert.equal(new Set(imgs.map((m) => m[3])).size, 1, 'un solo recorte por tarjeta')
+      recortes.push(imgs[0][3])
     }
+    assert.equal(new Set(recortes).size, 11, 'cada tarjeta, su recorte')
+    assert.doesNotMatch(lineas.join(''), /bienvenida-/, 'ya no repiten las del recorrido')
+    assert.match(css, /\.recorte-terminal \{[^}]*overflow: hidden/)
     // Las doce funciones de antes, en su orden y en los dos idiomas.
     assert.deepEqual(tarjetas.map((x) => x.match(/<h4><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/h4>/)?.slice(1)), [
       ['Compatible con tus SDK', 'Works with your SDKs'], ['API propia con OpenAPI', 'Native API with OpenAPI'], ['Respuestas con forma', 'Shaped responses'],
