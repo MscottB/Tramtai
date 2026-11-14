@@ -90,6 +90,7 @@ func comandoAgentes() *cobra.Command {
 		&cobra.Command{Use: "conectar <agente>", Short: idioma.T("Vuelve a conectar un agente desconectado"), Args: cobra.ExactArgs(1), RunE: conexion(true)},
 		comandoEntrar(), comandoSuscripcion(),
 	)
+	grupo.AddCommand(comandosPreparar()...)
 	return grupo
 }
 
@@ -229,7 +230,7 @@ func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.Solic
 	if err := conversionLocalPermitida(archivos); err != nil {
 		return err
 	}
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}

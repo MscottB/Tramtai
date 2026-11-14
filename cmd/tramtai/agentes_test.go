@@ -1,13 +1,30 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"maps"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
+	"tramtai/internal/planificador"
+	"tramtai/internal/preparar"
+	"tramtai/internal/servicio"
 	"tramtai/internal/terminos"
 )
 
@@ -102,19 +119,727 @@ func TestSuscripcionServidorExpuesto(t *testing.T) {
 	}
 }
 
-// TestEntrarSoloServidor: «agentes entrar» (agents login) es del modo servidor; fuera de él lo dice, sin lanzar nada. En
-// el servidor, un agente sin inicio de sesión propio (gemini) tampoco lanza nada.
-func TestEntrarSoloServidor(t *testing.T) {
+// TestEntrarPorElServicio: «agentes entrar» (agents login) ya no es solo del modo servidor: va por el servicio y, sin él,
+// lo dice. Un agente sin inicio de sesión propio (gemini, antigravity) no lanza nada.
+func TestEntrarPorElServicio(t *testing.T) {
 	simularServidor(t, true)
 	t.Setenv("TRAMTAI_SERVIDOR", "")
 	for _, orden := range [][]string{{"agentes", "entrar", "claude"}, {"agents", "login", "claude"}} {
-		if _, err := ejecutarAdmin(t, "", orden...); err == nil || !strings.Contains(err.Error(), "tramtai --servidor agentes entrar") {
-			t.Fatalf("%v fuera del servidor: %v", orden, err)
+		if _, err := ejecutarAdmin(t, "", orden...); !errors.Is(err, cliente.ErrServicioInactivo) {
+			t.Fatalf("%v sin servicio: %v", orden, err)
+		}
+	}
+	for _, id := range []string{"gemini", "antigravity"} {
+		if _, err := ejecutarAdmin(t, "", "agentes", "entrar", id); err == nil || !strings.Contains(err.Error(), "clave de API") {
+			t.Fatalf("%s: %v", id, err)
 		}
 	}
 	t.Setenv("TRAMTAI_SERVIDOR", "1")
 	simularTOTP(t)
 	if _, err := ejecutarAdmin(t, "", "agentes", "entrar", "gemini"); err == nil || !strings.Contains(err.Error(), "clave de API") {
-		t.Fatalf("gemini: %v", err)
+		t.Fatalf("gemini en el servidor: %v", err)
+	}
+}
+
+// preparacionCLI hace de preparar.Preparador en el servicio de prueba: no instala nada; cada acción sigue el guion que
+// da la prueba (los estados que irá viendo la orden, el último se repite).
+type preparacionCLI struct {
+	mu          sync.Mutex
+	guion       func(agente string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error)
+	alPegar     []contrato.EstadoPreparacion // lo que ve la orden cuando se le pasa el código
+	cola        map[string][]contrato.EstadoPreparacion
+	pedidos     []string // «agente:accion» (con «+confirmar» y «+borrar» si van)
+	pegados     []string
+	cancelados  []string
+	versiones   []contrato.VersionesAgente
+	falloCodigo int                              // los primeros envíos del código que fallan
+	forzados    []bool                           // el forzar de cada consulta de versiones
+	alConsultar func()                           // se llama en cada consulta del estado
+	registro    map[string]adaptadores.Adaptador // agentes del servicio de prueba, además del simulado
+}
+
+func (f *preparacionCLI) siguiente(agente string) (contrato.EstadoPreparacion, bool) {
+	c := f.cola[agente]
+	if len(c) == 0 {
+		return contrato.EstadoPreparacion{}, false
+	}
+	if len(c) > 1 {
+		f.cola[agente] = c[1:]
+	}
+	return c[0], true
+}
+
+func (f *preparacionCLI) Estado(agente string) (contrato.EstadoPreparacion, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.alConsultar != nil {
+		f.alConsultar()
+	}
+	return f.siguiente(agente)
+}
+
+func (f *preparacionCLI) Iniciar(agente string, p contrato.PedidoPreparacion) (contrato.EstadoPreparacion, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pedido := agente + ":" + p.Accion
+	if p.Confirmar {
+		pedido += "+confirmar"
+	}
+	if p.BorrarDatos {
+		pedido += "+borrar"
+	}
+	f.pedidos = append(f.pedidos, pedido)
+	cola, err := f.guion(agente, p)
+	if err != nil {
+		return contrato.EstadoPreparacion{}, err
+	}
+	f.cola[agente] = cola
+	e, _ := f.siguiente(agente)
+	return e, nil
+}
+
+func (f *preparacionCLI) Cancelar(agente string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cancelados = append(f.cancelados, agente)
+	return nil
+}
+
+func (f *preparacionCLI) Codigo(agente, codigo string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.falloCodigo > 0 {
+		f.falloCodigo--
+		return errors.New("código no válido")
+	}
+	f.pegados = append(f.pegados, codigo)
+	if f.alPegar != nil {
+		f.cola[agente] = f.alPegar
+	}
+	return nil
+}
+
+func (f *preparacionCLI) Versiones(_ context.Context, forzar bool) []contrato.VersionesAgente {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.forzados = append(f.forzados, forzar)
+	return f.versiones
+}
+func (f *preparacionCLI) Cerrar() {}
+
+func (f *preparacionCLI) vistos() (pedidos, pegados, cancelados []string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.pedidos), slices.Clone(f.pegados), slices.Clone(f.cancelados)
+}
+
+// servicioConPreparacion arranca un servicio de prueba con esa preparación falsa y apunta dirDatos a él; las consultas de
+// la orden, cada pocos milisegundos.
+func servicioConPreparacion(t *testing.T, f *preparacionCLI) *httptest.Server {
+	t.Helper()
+	if f.cola == nil {
+		f.cola = map[string][]contrato.EstadoPreparacion{}
+	}
+	datos := t.TempDir()
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewUnstartedServer(nil)
+	registro := map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}
+	maps.Copy(registro, f.registro)
+	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro,
+		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
+		Preparacion: f})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Config.Handler = s
+	ts.Start()
+	t.Cleanup(ts.Close)
+	t.Cleanup(s.Cerrar)
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.EscribirDescriptor(); err != nil {
+		t.Fatal(err)
+	}
+	anteriorDatos, anteriorConsulta := dirDatos, cadaConsulta
+	dirDatos, cadaConsulta = func() (string, error) { return datos, nil }, 2*time.Millisecond
+	t.Cleanup(func() { dirDatos, cadaConsulta = anteriorDatos, anteriorConsulta })
+	return ts
+}
+
+// siempre es un guion que no depende de la acción.
+func siempre(estados ...contrato.EstadoPreparacion) func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+	return func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) { return estados, nil }
+}
+
+func est(agente, accion, estado string) contrato.EstadoPreparacion {
+	return contrato.EstadoPreparacion{Agente: agente, Accion: accion, Estado: estado}
+}
+
+func salida(err error) int {
+	if err == nil {
+		return 0
+	}
+	return codigoSalida(err)
+}
+
+// TestAgentesInstalar: imprime el progreso por fases y sale con 0 en «listo»; con 1 en «error», con el motivo y las
+// últimas líneas; un id desconocido falla sin tocar nada, aunque haya otros buenos; varios ids se instalan en orden.
+func TestAgentesInstalar(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(agente string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		if agente == "codex" {
+			e := est(agente, p.Accion, "error")
+			e.MotivoCodigo, e.Mensaje, e.Lineas = "instalador_fallo", "el instalador dijo: boom", []string{"descargando", "\x1b[31mfallo feo\x1b[0m"}
+			return []contrato.EstadoPreparacion{est(agente, p.Accion, "instalando"), e}, nil
+		}
+		ocupado := est(agente, p.Accion, "instalando")
+		ocupado.Etapa = "orden"
+		listo := est(agente, p.Accion, "listo")
+		listo.VersionDespues = "2.1.288"
+		return []contrato.EstadoPreparacion{ocupado, listo}, nil
+	}
+	servicioConPreparacion(t, f)
+
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude")
+	if err != nil || !strings.Contains(salidaTexto, "Instalando Claude") || !strings.Contains(salidaTexto, "con su instalador oficial") ||
+		!strings.Contains(salidaTexto, "Claude está instalado (2.1.288)") {
+		t.Fatalf("listo: %v\n%s", err, salidaTexto)
+	}
+	salidaTexto, err = ejecutarAdmin(t, "", "agentes", "install", "codex")
+	if salida(err) != 1 || !strings.Contains(salidaTexto, "boom") || !strings.Contains(salidaTexto, "fallo feo") || strings.Contains(salidaTexto, "\x1b") ||
+		!strings.Contains(salidaTexto, "El instalador terminó con un error") || !strings.Contains(err.Error(), "No se pudo instalar Codex") {
+		t.Fatalf("error: %v\n%s", err, salidaTexto)
+	}
+	antes, _, _ := f.vistos()
+	if _, err = ejecutarAdmin(t, "", "agentes", "instalar", "claude", "gemini"); err == nil || !strings.Contains(err.Error(), "gemini") {
+		t.Fatalf("id desconocido: %v", err)
+	}
+	if despues, _, _ := f.vistos(); len(despues) != len(antes) {
+		t.Fatalf("con un id desconocido no se toca nada: %v", despues)
+	}
+	f.guion = siempre(est("x", "instalar", "listo"))
+	if _, err = ejecutarAdmin(t, "", "agentes", "instalar", "claude", "copilot"); err != nil {
+		t.Fatal(err)
+	}
+	if pedidos, _, _ := f.vistos(); !slices.Equal(pedidos[len(antes):], []string{"claude:instalar", "copilot:instalar"}) {
+		t.Fatalf("varios ids, en orden: %v", pedidos)
+	}
+}
+
+// TestAgentesVersionNoComprobada: con una versión sin comprobar, instalar, actualizar y desinstalar preguntan (o
+// --confirmar/--yes no preguntan) y repiten con confirmar; sin «s», sale con 2 sin tocar nada.
+func TestAgentesVersionNoComprobada(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(agente string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		if p.Confirmar {
+			return []contrato.EstadoPreparacion{est(agente, p.Accion, "listo")}, nil
+		}
+		e := est(agente, p.Accion, "error")
+		e.MotivoCodigo = "version_no_comprobada"
+		return []contrato.EstadoPreparacion{e}, nil
+	}
+	servicioConPreparacion(t, f)
+
+	salidaTexto, err := ejecutarAdmin(t, "n\n", "agentes", "instalar", "claude")
+	if salida(err) != 2 || !strings.Contains(salidaTexto, "aún no está comprobada") {
+		t.Fatalf("sin confirmar: %v\n%s", err, salidaTexto)
+	}
+	if pedidos, _, _ := f.vistos(); !slices.Equal(pedidos, []string{"claude:instalar"}) {
+		t.Fatalf("sin confirmar no se repite: %v", pedidos)
+	}
+	if _, err = ejecutarAdmin(t, "s\n", "agentes", "instalar", "claude"); err != nil {
+		t.Fatalf("confirmando: %v", err)
+	}
+	for _, orden := range [][]string{{"agentes", "actualizar", "codex", "--confirmar"}, {"agents", "update", "codex", "--yes"}, {"agents", "update", "codex", "--confirm"}} {
+		if _, err = ejecutarAdmin(t, "", orden...); err != nil {
+			t.Fatalf("%v: %v", orden, err)
+		}
+	}
+	pedidos, _, _ := f.vistos()
+	if !slices.Equal(pedidos[1:], []string{"claude:instalar", "claude:instalar+confirmar", "codex:actualizar", "codex:actualizar+confirmar", "codex:actualizar", "codex:actualizar+confirmar", "codex:actualizar", "codex:actualizar+confirmar"}) {
+		t.Fatalf("se repite con confirmar: %v", pedidos)
+	}
+}
+
+// TestAgentesDesinstalar: pregunta antes (--confirmar no) y --borrar-datos (--delete-data) lo pide al servicio.
+func TestAgentesDesinstalar(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("claude", "desinstalar", "listo"))}
+	servicioConPreparacion(t, f)
+	if _, err := ejecutarAdmin(t, "n\n", "agentes", "desinstalar", "claude"); salida(err) != 2 {
+		t.Fatalf("sin confirmar: %v", err)
+	}
+	if pedidos, _, _ := f.vistos(); len(pedidos) != 0 {
+		t.Fatalf("sin confirmar no se pide nada: %v", pedidos)
+	}
+	salidaTexto, err := ejecutarAdmin(t, "s\n", "agents", "uninstall", "claude", "--delete-data")
+	if err != nil || !strings.Contains(salidaTexto, "Claude está desinstalado") {
+		t.Fatalf("confirmado: %v\n%s", err, salidaTexto)
+	}
+	if _, err = ejecutarAdmin(t, "", "agentes", "desinstalar", "claude", "--borrar-datos", "--confirmar"); err != nil {
+		t.Fatal(err)
+	}
+	if pedidos, _, _ := f.vistos(); !slices.Equal(pedidos, []string{"claude:desinstalar+borrar", "claude:desinstalar+borrar"}) {
+		t.Fatalf("pedidos: %v", pedidos)
+	}
+}
+
+// TestAgentesEntrarPegaCodigo: con «pide_pegar» lee el código de la entrada y lo envía; nunca lo imprime; imprime el
+// enlace (solo https) y el aviso de Codex.
+func TestAgentesEntrarPegaCodigo(t *testing.T) {
+	f := &preparacionCLI{}
+	espera := est("claude", "iniciar_sesion", "esperando_usuario")
+	espera.Enlace, espera.PidePegar = "https://claude.example/oauth?x=1", true
+	f.guion = siempre(est("claude", "iniciar_sesion", "comprobando"), espera)
+	f.alPegar = []contrato.EstadoPreparacion{est("claude", "iniciar_sesion", "listo")}
+	servicioConPreparacion(t, f)
+
+	salidaTexto, err := ejecutarAdmin(t, "SECRETO-123\n", "agentes", "entrar", "claude")
+	if err != nil || strings.Contains(salidaTexto, "SECRETO-123") || !strings.Contains(salidaTexto, "https://claude.example/oauth?x=1") ||
+		!strings.Contains(salidaTexto, "Sesión iniciada en Claude") {
+		t.Fatalf("entrar: %v\n%s", err, salidaTexto)
+	}
+	if _, pegados, _ := f.vistos(); !slices.Equal(pegados, []string{"SECRETO-123"}) {
+		t.Fatalf("lo pegado va al servicio: %v", pegados)
+	}
+
+	// Codex: código de dispositivo, con su aviso; un enlace que no es https no se enseña.
+	codex := est("codex", "iniciar_sesion", "esperando_usuario")
+	codex.Enlace, codex.Codigo = "http://malo.example/", "ABCD-1234"
+	f.guion = siempre(codex, est("codex", "iniciar_sesion", "listo"))
+	salidaTexto, err = ejecutarAdmin(t, "", "agents", "login", "codex")
+	if err != nil || !strings.Contains(salidaTexto, "https://chatgpt.com/#settings/Security") || !strings.Contains(salidaTexto, "ABCD-1234") || strings.Contains(salidaTexto, "malo.example") {
+		t.Fatalf("codex: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesEntrarSinSesion: un «listo» con motivo no es listo para usar: lo dice y sale con 1; una versión sin comprobar
+// nunca se confirma: avisa, da la orden de la consola y sale con 2.
+func TestAgentesEntrarSinSesion(t *testing.T) {
+	f := &preparacionCLI{}
+	sin := est("claude", "iniciar_sesion", "listo")
+	sin.MotivoCodigo, sin.Mensaje = "sin_sesion", "la sesión no responde"
+	f.guion = siempre(sin)
+	servicioConPreparacion(t, f)
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 1 || !strings.Contains(salidaTexto, "no quedó listo para usar") || !strings.Contains(salidaTexto, "la sesión no responde") {
+		t.Fatalf("listo con motivo: %v\n%s", err, salidaTexto)
+	}
+	f.guion = func(_ string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		e := est("claude", p.Accion, "error")
+		e.MotivoCodigo, e.Mensaje = "version_no_comprobada", "claude auth login"
+		return []contrato.EstadoPreparacion{e}, nil
+	}
+	salidaTexto, err = ejecutarAdmin(t, "s\n", "agentes", "entrar", "claude")
+	if err == nil || salida(err) != 2 || !strings.Contains(salidaTexto, "claude auth login") || !strings.Contains(salidaTexto, "aún no está comprobada") {
+		t.Fatalf("versión sin comprobar: %v\n%s", err, salidaTexto)
+	}
+	if pedidos, _, _ := f.vistos(); len(pedidos) != 2 {
+		t.Fatalf("no se repite con confirmar: %v", pedidos)
+	}
+}
+
+// TestOrdenClaves (M4): la orden que guarda la clave es «tramtai claves guardar» en el escritorio y «tramtai-servidor
+// claves guardar» solo en el modo servidor.
+func TestOrdenClaves(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if _, err := ejecutarAdmin(t, "", "agentes", "entrar", "antigravity"); err == nil || !strings.Contains(err.Error(), "(tramtai claves guardar)") {
+		t.Fatalf("en el escritorio: %v", err)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if orden := ordenClaves(); orden != "tramtai-servidor claves guardar" {
+		t.Fatalf("en el servidor: %q", orden)
+	}
+}
+
+// TestAgentesCancelar: Ctrl+C (el contexto de la orden) cancela la preparación en el servicio y sale con 130; una que ya
+// estaba en marcha (ya_en_curso) se sigue.
+func TestAgentesCancelar(t *testing.T) {
+	// Ctrl+C cuando la orden ya sigue la preparación (su primera consulta del estado), no tras un plazo que con -race y la
+	// máquina cargada podía llegar antes de lanzarla.
+	ctx, parar := context.WithCancel(context.Background())
+	defer parar()
+	f := &preparacionCLI{guion: siempre(est("claude", "instalar", "instalando")), alConsultar: parar}
+	servicioConPreparacion(t, f)
+	raiz := nuevaRaiz()
+	var o bytes.Buffer
+	raiz.SetOut(&o)
+	raiz.SetErr(&o)
+	raiz.SetIn(strings.NewReader(""))
+	raiz.SetArgs([]string{"agentes", "instalar", "claude"})
+	err := raiz.ExecuteContext(ctx)
+	if salida(err) != 130 {
+		t.Fatalf("cancelada: %v\n%s", err, o.String())
+	}
+	if _, _, cancelados := f.vistos(); !slices.Equal(cancelados, []string{"claude"}) {
+		t.Fatalf("se cancela en el servicio: %v", cancelados)
+	}
+
+	g := &preparacionCLI{}
+	g.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya en curso"}
+	}
+	g.cola = map[string][]contrato.EstadoPreparacion{"claude": {est("claude", "instalar", "instalando"), est("claude", "instalar", "listo")}}
+	servicioConPreparacion(t, g)
+	if salidaTexto, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); err != nil || !strings.Contains(salidaTexto, "ya hay una") {
+		t.Fatalf("ya en curso: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesActualizarTodos: --todos (--all) actualiza solo los instalados con versión nueva; sin nada que actualizar, lo
+// dice; con ids y --todos a la vez, o sin ninguno, no se admite.
+func TestAgentesActualizarTodos(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("x", "actualizar", "listo"))}
+	f.versiones = []contrato.VersionesAgente{
+		{Agente: "claude", Instalada: "2.9.0", Ultima: "2.10.0", Acciones: []string{"actualizar", "desinstalar"}, Comprobadas: map[string]bool{"actualizar": true}},
+		{Agente: "codex", Instalada: "1.0.0", Ultima: "1.0.0", Acciones: []string{"actualizar", "desinstalar"}, Comprobadas: map[string]bool{"actualizar": true}},
+		{Agente: "copilot", Ultima: "3.0.0", Acciones: []string{"instalar"}, Comprobadas: map[string]bool{"instalar": true}},
+	}
+	servicioConPreparacion(t, f)
+	for _, orden := range [][]string{{"agentes", "actualizar", "--todos"}, {"agents", "update", "--all"}} {
+		if _, err := ejecutarAdmin(t, "", orden...); err != nil {
+			t.Fatalf("%v: %v", orden, err)
+		}
+	}
+	if pedidos, _, _ := f.vistos(); !slices.Equal(pedidos, []string{"claude:actualizar", "claude:actualizar"}) {
+		t.Fatalf("solo el que tiene versión nueva: %v", pedidos)
+	}
+	g := &preparacionCLI{guion: f.guion, versiones: f.versiones[1:2]}
+	servicioConPreparacion(t, g)
+	if salidaTexto, err := ejecutarAdmin(t, "", "agentes", "actualizar", "--todos"); err != nil || !strings.Contains(salidaTexto, "no hay nada que actualizar") {
+		t.Fatalf("nada que actualizar: %v\n%s", err, salidaTexto)
+	}
+	for _, args := range [][]string{{"agentes", "actualizar"}, {"agentes", "actualizar", "claude", "--todos"}} {
+		if _, err := ejecutarAdmin(t, "", args...); err == nil {
+			t.Fatalf("%v: no se admite", args)
+		}
+	}
+}
+
+// TestAgentesAlias: los alias en inglés de las órdenes y de sus opciones.
+func TestAgentesAlias(t *testing.T) {
+	raiz := nuevaRaiz()
+	for ingles, espanol := range map[string]string{"install": "instalar", "login": "entrar", "update": "actualizar", "uninstall": "desinstalar", "versions": "versiones"} {
+		c, _, err := raiz.Find([]string{"agents", ingles})
+		if err != nil || c.Name() != espanol {
+			t.Errorf("agents %s: %v %v", ingles, c, err)
+		}
+	}
+	for orden, banderas := range map[string][]string{"actualizar": {"todos", "all", "confirmar", "confirm", "yes"}, "desinstalar": {"borrar-datos", "delete-data", "confirmar", "confirm", "yes"},
+		"instalar": {"confirmar", "confirm", "yes"}, "versiones": {"comprobar", "check"}} {
+		c, _, _ := raiz.Find([]string{"agentes", orden})
+		for _, b := range banderas {
+			if c.Flags().Lookup(b) == nil {
+				t.Errorf("%s --%s", orden, b)
+			}
+		}
+	}
+}
+
+// TestAgentesVersiones: tabla con la instalada, la última y si está comprobada.
+func TestAgentesVersiones(t *testing.T) {
+	f := &preparacionCLI{versiones: []contrato.VersionesAgente{
+		{Agente: "claude", Instalada: "2.1.0", Ultima: "2.2.0", Comprobadas: map[string]bool{"actualizar": false}, Acciones: []string{"actualizar"}},
+		{Agente: "codex", Instalada: "1.0.0", Ultima: "1.0.0", Comprobadas: map[string]bool{"actualizar": true}},
+		{Agente: "copilot", Ultima: "3.0.0", Comprobadas: map[string]bool{"instalar": true}},
+		{Agente: "antigravity", MotivoCodigo: "sin_red", Motivo: "sin conexión con el sitio del CLI"},
+	}}
+	servicioConPreparacion(t, f)
+	for _, orden := range [][]string{{"agentes", "versiones"}, {"agents", "versions"}} {
+		salidaTexto, err := ejecutarAdmin(t, "", orden...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lineas := strings.Split(strings.TrimSpace(salidaTexto[strings.Index(salidaTexto, "AGENTE"):]), "\n")
+		campos := func(i int) []string { return strings.Fields(lineas[i]) }
+		if len(lineas) < 5 || !slices.Equal(campos(0), []string{"AGENTE", "INSTALADA", "ÚLTIMA", "COMPROBADA"}) ||
+			!slices.Equal(campos(1), []string{"claude", "2.1.0", "2.2.0", "no"}) || !slices.Equal(campos(2), []string{"codex", "1.0.0", "1.0.0", "sí"}) ||
+			!slices.Equal(campos(3), []string{"copilot", "-", "3.0.0", "sí"}) || !strings.Contains(salidaTexto, "sin conexión con el sitio del CLI") {
+			t.Fatalf("%v:\n%s", orden, salidaTexto)
+		}
+	}
+}
+
+// ejecutarCtx corre una orden con un contexto y una entrada que el test controla (el contexto hace de Ctrl+C).
+func ejecutarCtx(t *testing.T, ctx context.Context, entrada io.Reader, args ...string) (string, error) {
+	t.Helper()
+	raiz := nuevaRaiz()
+	var o bytes.Buffer
+	raiz.SetOut(&o)
+	raiz.SetErr(&o)
+	raiz.SetIn(entrada)
+	raiz.SetArgs(args)
+	err := raiz.ExecuteContext(ctx)
+	return o.String(), err
+}
+
+// ctrlCAlLeer da un contexto y una entrada que nunca responde: al ponerse a leer (una pregunta, o el código), el contexto
+// se cancela, como un Ctrl+C del usuario ahí mismo.
+func ctrlCAlLeer(t *testing.T) (context.Context, io.Reader) {
+	ctx, cancelar := context.WithCancel(context.Background())
+	t.Cleanup(cancelar)
+	return ctx, lectorCtrlC{entradaSinFin(t), cancelar}
+}
+
+type lectorCtrlC struct {
+	r        io.Reader
+	cancelar context.CancelFunc
+}
+
+func (l lectorCtrlC) Read(p []byte) (int, error) {
+	l.cancelar()
+	return l.r.Read(p)
+}
+
+// entradaSinFin es una entrada que nunca responde (el usuario no escribe nada).
+func entradaSinFin(t *testing.T) io.Reader {
+	r, w := io.Pipe()
+	t.Cleanup(func() { w.Close() })
+	return r
+}
+
+// TestAgentesInstalarSinSesion: instalado, pero falta un paso (sin sesión o sin clave): sale con 3 y lo dice; no es 0.
+func TestAgentesInstalarSinSesion(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(agente string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		e := est(agente, p.Accion, "listo")
+		e.VersionDespues, e.MotivoCodigo, e.Mensaje = "1.0.0", "sin_sesion", "falta iniciar sesión"
+		return []contrato.EstadoPreparacion{e}, nil
+	}
+	servicioConPreparacion(t, f)
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude")
+	if salida(err) != 3 || !strings.Contains(salidaTexto, "tramtai agentes entrar claude") || !strings.Contains(salidaTexto, "falta iniciar sesión") {
+		t.Fatalf("claude: %v\n%s", err, salidaTexto)
+	}
+	if salidaTexto, err = ejecutarAdmin(t, "", "agentes", "instalar", "antigravity"); salida(err) != 3 || !strings.Contains(salidaTexto, "clave de API") {
+		t.Fatalf("antigravity: %v\n%s", err, salidaTexto)
+	}
+	if _, err = ejecutarAdmin(t, "", "agentes", "actualizar", "claude"); salida(err) != 3 {
+		t.Fatalf("actualizar sin sesión: %v", err)
+	}
+}
+
+// conModo es un agente simulado que se detecta según su modo de autenticación, que el servicio cambia en marcha: con
+// clave de API y sin clave, falta_clave; con la suscripción, listo (su CLI ya tiene la sesión).
+type conModo struct {
+	adaptadores.Simulado
+	modo *adaptadores.Modo
+}
+
+func (c conModo) ModoAutenticacion() *adaptadores.Modo { return c.modo }
+func (c conModo) Detectar(context.Context) adaptadores.Estado {
+	if c.modo.Valor() == adaptadores.AutenticacionSuscripcion {
+		return adaptadores.Estado{Autenticacion: adaptadores.AutenticacionSuscripcion}
+	}
+	return adaptadores.Estado{Autenticacion: adaptadores.AutenticacionClaveAPI, Problema: "falta ANTHROPIC_API_KEY", ProblemaCodigo: adaptadores.ProblemaFaltaClave}
+}
+
+// TestAgentesFaltaSuscripcion (Ruling 34): tras entrar (o instalar e iniciar sesión), un agente que Tramtai aún usa con
+// clave de API y sin clave no está listo: lo dice con la orden que falta y sale con 3, no con 0. Ofrece activarla ahí mismo
+// con la misma aceptación del riesgo que «agentes suscripcion», que --confirmar no se salta; con «acepto» queda listo (0).
+func TestAgentesFaltaSuscripcion(t *testing.T) {
+	modo := adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo")), registro: map[string]adaptadores.Adaptador{"claude": conModo{modo: modo}}}
+	servicioConPreparacion(t, f)
+
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 3 || !strings.Contains(salidaTexto, "falta un paso: usar tu suscripción") || !strings.Contains(salidaTexto, "lee los riesgos") ||
+		!strings.Contains(salidaTexto+err.Error(), "tramtai agentes suscripcion claude") || strings.Contains(salidaTexto, "ya puedes usarlo") {
+		t.Fatalf("entrar: %v\n%s", err, salidaTexto)
+	}
+	f.guion = siempre(est("claude", "instalar", "listo"))
+	if salidaTexto, err = ejecutarAdmin(t, "s\n", "agentes", "instalar", "claude", "--confirmar"); salida(err) != 3 || modo.Valor() != adaptadores.AutenticacionClaveAPI {
+		t.Fatalf("--confirmar no acepta el riesgo: %v %s\n%s", err, modo.Valor(), salidaTexto)
+	}
+	salidaTexto, err = ejecutarAdmin(t, "acepto\n", "agentes", "instalar", "claude", "--confirmar")
+	if err != nil || modo.Valor() != adaptadores.AutenticacionSuscripcion || !strings.Contains(salidaTexto, "Claude usa tu suscripción") {
+		t.Fatalf("con «acepto»: %v %s\n%s", err, modo.Valor(), salidaTexto)
+	}
+	// Ya en la suscripción, entrar queda listo sin preguntar nada.
+	f.guion = siempre(est("claude", "iniciar_sesion", "listo"))
+	if salidaTexto, err = ejecutarAdmin(t, "", "agentes", "entrar", "claude"); err != nil || !strings.Contains(salidaTexto, "ya puedes usarlo") || strings.Contains(salidaTexto, "riesgos") {
+		t.Fatalf("ya en la suscripción: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesFaltaSuscripcionSinComprobar: si no se puede comprobar el agente tras iniciar sesión, no se da por listo: lo
+// dice, con cómo mirarlo, y sale con 3.
+func TestAgentesFaltaSuscripcionSinComprobar(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo"))}
+	ts := servicioConPreparacion(t, f)
+	siguiente := ts.Config.Handler
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/capacidades") {
+			http.Error(w, "fallo", http.StatusInternalServerError)
+			return
+		}
+		siguiente.ServeHTTP(w, r)
+	})
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "entrar", "claude")
+	if salida(err) != 3 || strings.Contains(salidaTexto, "ya puedes usarlo") || !strings.Contains(err.Error(), "no se pudo comprobar si falta usar tu suscripción") ||
+		!strings.Contains(err.Error(), "tramtai agentes") {
+		t.Fatalf("sin comprobar: %v\n%s", err, salidaTexto)
+	}
+}
+
+// TestAgentesFaltaSuscripcionServidor: en el servidor no se pregunta (la suscripción del servidor tiene sus condiciones):
+// sale con 3 y da la orden de tramtai-servidor; abierto a la red, la personal.
+func TestAgentesFaltaSuscripcionServidor(t *testing.T) {
+	modo := adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)
+	f := &preparacionCLI{guion: siempre(est("claude", "iniciar_sesion", "listo")), registro: map[string]adaptadores.Adaptador{"claude": conModo{modo: modo}}}
+	servicioConPreparacion(t, f)
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	for config, orden := range map[string]string{"": "tramtai-servidor agentes suscripcion claude", "servicio:\n  proxy:\n    confiables: [10.0.0.0/8]\n": "tramtai-servidor agentes suscripcion claude --personal"} {
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		salidaTexto, err := ejecutarAdmin(t, "acepto\n", "agentes", "entrar", "claude")
+		if salida(err) != 3 || strings.Contains(salidaTexto, "acepto") || !strings.HasSuffix(err.Error(), orden) || modo.Valor() != adaptadores.AutenticacionClaveAPI {
+			t.Fatalf("%q: %v\n%s", orden, err, salidaTexto)
+		}
+	}
+}
+
+// TestAgentesCodigoFallido: si el envío del código falla, la orden lo dice y vuelve a pedirlo.
+func TestAgentesCodigoFallido(t *testing.T) {
+	f := &preparacionCLI{falloCodigo: 1}
+	espera := est("claude", "iniciar_sesion", "esperando_usuario")
+	espera.PidePegar = true
+	f.guion = siempre(espera)
+	f.alPegar = []contrato.EstadoPreparacion{est("claude", "iniciar_sesion", "listo")}
+	servicioConPreparacion(t, f)
+	salidaTexto, err := ejecutarAdmin(t, "uno\ndos\n", "agentes", "entrar", "claude")
+	if err != nil || strings.Count(salidaTexto, "Pega aquí el código") != 2 {
+		t.Fatalf("segundo intento: %v\n%s", err, salidaTexto)
+	}
+	if _, pegados, _ := f.vistos(); !slices.Equal(pegados, []string{"dos"}) {
+		t.Fatalf("solo llegó el segundo: %v", pegados)
+	}
+}
+
+// TestAgentesCtrlCEnPreguntas: Ctrl+C en una pregunta sale con 130 sin pedir ni cancelar nada en el servicio; Ctrl+C
+// esperando el código sí cancela la preparación que esta orden lanzó.
+func TestAgentesCtrlCEnPreguntas(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(agente string, p contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		if p.Accion == "iniciar_sesion" {
+			e := est(agente, p.Accion, "esperando_usuario")
+			e.PidePegar = true
+			return []contrato.EstadoPreparacion{e}, nil
+		}
+		e := est(agente, p.Accion, "error")
+		e.MotivoCodigo = "version_no_comprobada"
+		return []contrato.EstadoPreparacion{e}, nil
+	}
+	servicioConPreparacion(t, f)
+
+	// Ctrl+C justo cuando la orden se pone a leer (está en la pregunta), no tras un plazo: con -race y la máquina
+	// cargada, 150 ms no siempre llegaban a lanzar el pedido antes de la pregunta.
+	ctx, entrada := ctrlCAlLeer(t)
+	_, err := ejecutarCtx(t, ctx, entrada, "agentes", "desinstalar", "claude")
+	if pedidos, _, cancelados := f.vistos(); salida(err) != 130 || len(pedidos) != 0 || len(cancelados) != 0 {
+		t.Fatalf("¿Desinstalar?: %v %v %v", err, pedidos, cancelados)
+	}
+	ctx, entrada = ctrlCAlLeer(t)
+	_, err = ejecutarCtx(t, ctx, entrada, "agentes", "instalar", "claude")
+	if pedidos, _, cancelados := f.vistos(); salida(err) != 130 || len(pedidos) != 1 || len(cancelados) != 0 {
+		t.Fatalf("¿Seguir igualmente?: %v %v %v", err, pedidos, cancelados)
+	}
+	ctx, entrada = ctrlCAlLeer(t)
+	_, err = ejecutarCtx(t, ctx, entrada, "agentes", "entrar", "claude")
+	if _, _, cancelados := f.vistos(); salida(err) != 130 || !slices.Equal(cancelados, []string{"claude"}) {
+		t.Fatalf("esperando el código: %v %v", err, cancelados)
+	}
+}
+
+// TestAgentesNoPosible: peticiones en curso sale con 2; una acción ajena en marcha no se
+// adopta (2, sin cancelar); un estado «cancelado» sale con 130.
+func TestAgentesNoPosible(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		return nil, &preparar.Error{Codigo: "peticiones_en_curso", Mensaje: "hay peticiones"}
+	}
+	servicioConPreparacion(t, f)
+	if _, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 2 {
+		t.Fatalf("peticiones_en_curso: %v", err)
+	}
+
+	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya"}
+	}
+	f.cola["claude"] = []contrato.EstadoPreparacion{est("claude", "actualizar", "actualizando")}
+	salidaTexto, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude")
+	if _, _, cancelados := f.vistos(); salida(err) != 2 || len(cancelados) != 0 || !strings.Contains(salidaTexto, "otra preparación") {
+		t.Fatalf("acción ajena: %v %v\n%s", err, cancelados, salidaTexto)
+	}
+	f.guion = siempre(est("claude", "instalar", "cancelado"))
+	if _, err = ejecutarAdmin(t, "", "agentes", "instalar", "claude"); salida(err) != 130 {
+		t.Fatalf("cancelado: %v", err)
+	}
+}
+
+// TestAgentesSondeoFalla: tres consultas seguidas que fallan (el servicio se fue) acaban la orden con error, sin cancelar.
+func TestAgentesSondeoFalla(t *testing.T) {
+	f := &preparacionCLI{guion: siempre(est("claude", "instalar", "instalando"))}
+	ts := servicioConPreparacion(t, f)
+	var una sync.Once
+	f.alConsultar = func() { una.Do(func() { go ts.Close() }) }
+	_, err := ejecutarAdmin(t, "", "agentes", "instalar", "claude")
+	if err == nil || salida(err) != 1 {
+		t.Fatalf("sondeo: %v", err)
+	}
+	if _, _, cancelados := f.vistos(); len(cancelados) != 0 {
+		t.Fatalf("no se cancela: %v", cancelados)
+	}
+}
+
+// TestAgentesVersionesComprobar: --comprobar (--check) pide forzar la consulta (?forzar=1); sin ella no.
+func TestAgentesVersionesComprobar(t *testing.T) {
+	f := &preparacionCLI{versiones: []contrato.VersionesAgente{{Agente: "claude", Instalada: "1.0.0"}}}
+	ts := servicioConPreparacion(t, f)
+	var mu sync.Mutex
+	var pedidas []string
+	siguiente := ts.Config.Handler
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/agentes/versiones") {
+			mu.Lock()
+			pedidas = append(pedidas, r.URL.RawQuery)
+			mu.Unlock()
+		}
+		siguiente.ServeHTTP(w, r)
+	})
+	if _, err := ejecutarAdmin(t, "", "agentes", "versiones"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ejecutarAdmin(t, "", "agents", "versions", "--check"); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !slices.Equal(pedidas, []string{"", "forzar=1"}) {
+		t.Fatalf("consultas: %q", pedidas)
+	}
+}
+
+// TestAgentesCtrlCAdoptada: Ctrl+C siguiendo una preparación que lanzó otra pantalla sale con 130, no la cancela y dice
+// que sigue en marcha.
+func TestAgentesCtrlCAdoptada(t *testing.T) {
+	f := &preparacionCLI{}
+	f.guion = func(string, contrato.PedidoPreparacion) ([]contrato.EstadoPreparacion, error) {
+		return nil, &preparar.Error{Codigo: preparar.CodigoYaEnCurso, Mensaje: "ya"}
+	}
+	f.cola = map[string][]contrato.EstadoPreparacion{"claude": {est("claude", "instalar", "instalando")}}
+	servicioConPreparacion(t, f)
+	ctx, parar := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer parar()
+	salidaTexto, err := ejecutarCtx(t, ctx, entradaSinFin(t), "agentes", "instalar", "claude")
+	if _, _, cancelados := f.vistos(); salida(err) != 130 || len(cancelados) != 0 || !strings.Contains(salidaTexto, "sigue en marcha: la lanzó otra pantalla") {
+		t.Fatalf("adoptada: %v %v\n%s", err, cancelados, salidaTexto)
 	}
 }

@@ -73,6 +73,16 @@ const (
 	// CodigoEntradaOcupada: hay demasiados intentos de entrada esperando su cálculo de argon2id; la respuesta lleva
 	// Retry-After.
 	CodigoEntradaOcupada CodigoError = "entrada_ocupada"
+	// CodigoNoDisponibleEnServidor: en el modo servidor no se apuntan herramientas (la cuenta del servicio no es la del
+	// usuario).
+	CodigoNoDisponibleEnServidor CodigoError = "no_disponible_en_servidor"
+	// CodigoHerramientaEnConflicto: la herramienta ya está activada en otro archivo, o su archivo cambió mientras Tramtai lo
+	// escribía.
+	CodigoHerramientaEnConflicto CodigoError = "herramienta_en_conflicto"
+	// CodigoYaEnCurso: ya hay una preparación en marcha para ese agente (409 de /api/v1/agentes/{id}/preparacion).
+	CodigoYaEnCurso CodigoError = "ya_en_curso"
+	// CodigoPeticionesEnCurso: el agente tiene peticiones sin terminar y no se puede instalar, actualizar ni desinstalar.
+	CodigoPeticionesEnCurso CodigoError = "peticiones_en_curso"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

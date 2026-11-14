@@ -39,7 +39,7 @@
       </div>
       <div class="q-px-md q-pb-lg q-pt-sm">
         <MapaRed v-if="adaptadores && instancia" :adaptadores="ordenarAgentes(adaptadores)" :apis="puntos" :base="instancia.base"
-          :tranvias="vivos.lista" :resto="vivos.resto" @ir="(p) => $emit('ir', p)" @seguir="seguir" />
+          :tranvias="vivos.lista" :resto="vivos.resto" :en-curso="vivos.enCurso" @ir="(p) => $emit('ir', p)" @seguir="seguir" />
         <q-skeleton v-else type="rect" height="200px" />
         <SiguiendoTrabajo v-if="seguido" :tranvia="seguido" class="q-mt-md" @dejar="seguido = undefined" @ir="(p) => $emit('ir', p)" />
         <div v-else-if="vivos.lista.length" class="text-caption texto-suave q-mt-sm">{{ t('vivo.pista') }}</div>
@@ -136,7 +136,7 @@ import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/c
 import type { Adaptador, EspacioUI, ResumenInstancia, EstadoPunto, Paso, Trabajo } from '../api/tipos'
 import { periodoHistorial, guiaOculta, ocultarGuia, sesion, sistema } from '../estado'
 import type { Destino } from '../navegacion'
-import { asegurarFichas, ordenarAgentes } from '../agentes'
+import { asegurarFichas, fijarDisponibilidad, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, textoDe } from '../formato'
 import { conTexto, guiaVisible as mostrarGuia } from '../pasos'
 import { t } from '../i18n'
@@ -239,6 +239,7 @@ function comprobar() {
   comprobandoPasos.value = true
   api.pasos().then((r) => {
     adaptadores.value = r.adaptadores
+    fijarDisponibilidad(r.adaptadores)
     pasosServicio.value = r.pasos
     errorPasos.value = ''
   }).catch((e) => {

@@ -181,6 +181,13 @@ func TestEncabezadoDelCliente(t *testing.T) {
 	}
 }
 
+// almacenMemoria sustituye al almacén de credenciales del equipo en las pruebas.
+type almacenMemoria map[string]string
+
+func (a almacenMemoria) Guardar(nombre, valor string) error { a[nombre] = valor; return nil }
+func (a almacenMemoria) Leer(nombre string) (string, error) { return a[nombre], nil }
+func (a almacenMemoria) Borrar(nombre string) error         { delete(a, nombre); return nil }
+
 // servicioDePrueba levanta un servicio real con el agente simulado y devuelve un cliente conectado a él.
 func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
 	t.Helper()
@@ -198,7 +205,7 @@ func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
 	ts := httptest.NewUnstartedServer(nil)
 	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
 		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
-		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv")})
+		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv"), Almacen: almacenMemoria{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,6 +232,75 @@ func terminado(t *testing.T, cli *Cliente, inst, id string) {
 	t.Helper()
 	if err := cli.Eventos(context.Background(), inst, id, 0, func(int, string, string) error { return nil }); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// FichasAgentes trae, en el orden del servicio, si cada agente está desconectado y si vale en APIs.
+func TestClienteFichasAgentes(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	fichas, err := cli.FichasAgentes(ctx, "global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.IndexFunc(fichas, func(f FichaAgente) bool { return f.Agente == "simulado" })
+	if i < 0 || fichas[i].Desconectado || !fichas[i].PermitidoApps {
+		t.Fatalf("el agente simulado, conectado y permitido en APIs: %+v", fichas)
+	}
+	if err := cli.ConectarAgente(ctx, "simulado", false); err != nil {
+		t.Fatal(err)
+	}
+	if fichas, err = cli.FichasAgentes(ctx, "global"); err != nil || !fichas[i].Desconectado {
+		t.Fatalf("desconectado: %+v %v", fichas, err)
+	}
+}
+
+// Las herramientas por el cliente, con Continue, sus carpetas en temporales y un almacén de claves en memoria.
+func TestClienteHerramientas(t *testing.T) {
+	casa := t.TempDir()
+	for _, v := range []string{"HOME", "USERPROFILE", "APPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME"} {
+		t.Setenv(v, casa)
+	}
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("CONTINUE_GLOBAL_DIR", filepath.Join(casa, "continue"))
+	os.MkdirAll(filepath.Join(casa, "continue"), 0o700)
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	estado := func(lista []contrato.EstadoHerramienta, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range lista {
+			if e.ID == "continue" {
+				return e.Estado
+			}
+		}
+		return ""
+	}
+	if e := estado(cli.Herramientas(ctx, "global")); e != "detectada" {
+		t.Fatalf("antes: %s", e)
+	}
+	if e := estado(cli.ActivarHerramientas(ctx, "global", contrato.ActivarHerramientas{IDs: []string{"continue"}, Modelo: "simulado"})); e != "activa" {
+		t.Fatalf("activar: %s", e)
+	}
+	if _, err := cli.RestaurarHerramienta(ctx, "global", "continue"); err == nil || !strings.Contains(err.Error(), "no hay copia") {
+		t.Fatalf("restaurar sin copia: %v", err)
+	}
+	if e := estado(cli.DesactivarHerramientas(ctx, "global", []string{"continue"}, false)); e != "desactivada" {
+		t.Fatalf("desactivar: %s", e)
+	}
+	if err := cli.OlvidarHerramienta(ctx, "global", "continue"); err != nil {
+		t.Fatal(err)
+	}
+	if e := estado(cli.Herramientas(ctx, "global")); e != "desactivada" {
+		t.Fatalf("olvidada, su API queda detenida: %s", e)
 	}
 }
 
@@ -726,12 +802,14 @@ func TestEventosInstanciaSinActividad(t *testing.T) {
 		for r.Context().Err() == nil {
 			_, _ = w.Write([]byte(": latido\n\n"))
 			f.Flush()
-			time.Sleep(40 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	})
-	ctx, cancelar := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	// Con latidos el plazo es holgado (1 s frente a un latido cada 50 ms): con -race y la máquina cargada, 150 ms se
+	// pasaban entre dos latidos y la prueba fallaba sin motivo.
+	ctx, cancelar := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelar()
-	if err := latidos.EventosInstanciaVigilado(ctx, "global", 150*time.Millisecond, func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
+	if err := latidos.EventosInstanciaVigilado(ctx, "global", time.Second, func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("con latidos solo termina el contexto: %v", err)
 	}
 

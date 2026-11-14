@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { readFileSync } from 'node:fs'
-import { ANCHO_AYUDA, ANCLAS, CAPTURAS, ansiAHtml, medidas, PORTADA, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, CAPTURAS, POR_SACAR, ansiAHtml, medidas, PETICIONES, PORTADA, redEnMovimiento, revisarAnclas, rutaPrivada, SIN_CAPTURA, TERMINAL, TOKENS_TERMINAL } from './capturas-lista.ts'
 
 const carpeta = new URL('../src/ayuda/capturas/', import.meta.url)
 const citadas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'captura' ? [b.id] : []))))
@@ -14,7 +14,7 @@ const archivos = readdirSync(carpeta).filter((a) => a.endsWith('.webp'))
 const variantes = (id: string) => ['claro', 'oscuro'].flatMap((tema) => ['es', 'en'].map((idioma) => `${id}.${tema}.${idioma}.webp`))
 
 test('el script saca justo las capturas que citan los temas', () => {
-  assert.deepEqual(CAPTURAS.map((c) => c.id).sort(), [...citadas].sort())
+  assert.deepEqual(CAPTURAS.filter((c) => !c.sitio).map((c) => c.id).sort(), [...citadas].sort())
   assert.deepEqual(PORTADA.map((p) => p.nombre).sort(), ['agentes', 'espacios', 'inicio', 'mis-apis', 'probar'])
 })
 
@@ -28,7 +28,15 @@ test('el script saca una captura por cada ancla de los recorridos, en la página
 })
 
 test('cada captura citada existe en claro y oscuro y en los dos idiomas', () => {
-  for (const id of citadas) for (const v of variantes(id)) assert.ok(archivos.includes(v), v)
+  for (const id of citadas) for (const v of variantes(id)) if (!(id in POR_SACAR)) assert.ok(archivos.includes(v), v)
+})
+
+test('POR_SACAR solo lista capturas citadas que aún no existen, y dice por qué', () => {
+  for (const [id, motivo] of Object.entries(POR_SACAR)) {
+    assert.ok(citadas.has(id), `${id} no la cita ningún tema`)
+    assert.ok(motivo.length >= 20, `${id}: falta el motivo`)
+    for (const v of variantes(id)) assert.ok(!archivos.includes(v), `sobra ${v}: ${id} ya está sacada, quítala de POR_SACAR`)
+  }
 })
 
 test('cada ancla de cada recorrido tiene sus 4 capturas, salvo las excepciones explicadas', () => {
@@ -78,40 +86,156 @@ test('no hay capturas que nadie cite y entre todas no pasan de 5 MB', () => {
 
 // v0.58: las capturas del modo servidor salen de un Tramtai en modo servidor detrás de Caddy, en contenedores.
 test('las capturas del servidor son las de Ajustes → Servidor y Seguridad, la entrada y la marca', () => {
-  assert.deepEqual(CAPTURAS.filter((c) => c.servidor).map((c) => c.id).sort(), ['entrar', 'marca', 'seguridad', 'servidor'])
+  assert.deepEqual(CAPTURAS.filter((c) => c.servidor && !c.sitio).map((c) => c.id).sort(), ['entrar', 'marca', 'seguridad', 'servidor'])
+  // v0.61: y FIG 5 de Inicio, el mapa del servidor.
+  assert.deepEqual(CAPTURAS.filter((c) => c.servidor && c.sitio).map((c) => c.id), ['portada-fig-servidor'])
   assert.ok(CAPTURAS.some((c) => c.id === 'arranque' && !c.servidor), 'Ajustes → Arranque sale del Tramtai de escritorio')
 })
 
-// Tarea 14 de la v0.56, hecha en la v0.58: la terminal se pinta en ANSI y se convierte a HTML para la captura.
-test('ansiAHtml: un color, negrita, restablecer, 256 colores, inverso y lo que no es color', () => {
-  const tema = { fondo: '#ffffff', texto: '#0f1b1e' }
-  assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb<\x1b[0mc', tema), 'a<span style="color:#0b6e64;font-weight:bold">b&lt;</span>c')
-  assert.equal(ansiAHtml('\x1b[38;5;196mx\x1b[m', tema), '<span style="color:#ff0000">x</span>')
-  assert.equal(ansiAHtml('\x1b[7my\x1b[27mz', tema), '<span style="color:#ffffff;background:#0f1b1e">y</span>z')
-  assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\', tema), 'uv', 'sin borrados de línea ni enlaces OSC 8')
+// v0.59: la terminal de la portada es texto real. ansiAHtml no escribe colores: escribe la clase del token de DESIGN.md
+// (t-<token> para la tinta, tf-<token> para el fondo), y la hoja del sitio le da el valor del tema.
+test('ansiAHtml: el mismo token en el tema claro y en el oscuro, negrita, fondo y restablecer', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;45;212;191mX'), '<span class="t-acento">X</span>')
+  assert.equal(ansiAHtml('\x1b[38;2;11;110;100mX'), '<span class="t-acento">X</span>')
+  assert.equal(ansiAHtml('a\x1b[1;38;2;11;110;100mb\x1b[0mc'), 'a<span class="t-acento t-b">b</span>c')
+  assert.equal(ansiAHtml('\x1b[1;38;2;147;165;172mx\x1b[22m y'), '<span class="t-suave t-b">x</span><span class="t-suave"> y</span>')
+  assert.throws(() => ansiAHtml('\x1b[2mx'), /SGR 2/, 'la TUI no pinta tenue: la hoja no tiene con qué')
+  assert.equal(ansiAHtml('\x1b[48;2;17;56;56m\x1b[38;2;229;237;240mx\x1b[49m\x1b[39my'), '<span class="t-texto tf-velo">x</span>y')
+  assert.equal(ansiAHtml('\x1b[1mn\x1b[m'), '<span class="t-b">n</span>')
 })
 
-test('las 16 capturas de la terminal existen y pesan poco', () => {
-  const portada = new URL('../../site/capturas/', import.meta.url)
-  let total = 0
-  for (const p of TERMINAL)
+test('ansiAHtml junta lo contiguo con las mismas clases y quita lo que no es estilo', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;74;222;128ma\x1b[38;2;74;222;128mb'), '<span class="t-ok">ab</span>')
+  assert.equal(ansiAHtml('\x1b[2Ku\x1b]8;;https://x\x1b\\v\x1b]8;;\x1b\\'), 'uv', 'sin borrados de línea ni enlaces OSC 8')
+})
+
+test('ansiAHtml envuelve cada glifo que Cascadia no trae (✗, flechas, formas) en su span g y deja │ y ░', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;248;113;113m✗ x'), '<span class="t-error g">✗</span><span class="t-error"> x</span>')
+  assert.equal(ansiAHtml('a ✓ b'), 'a <span class="g">✓</span> b')
+  assert.equal(ansiAHtml('↑↓'), '<span class="g">↑</span><span class="g">↓</span>', 'cada glifo en el suyo: ocupa una celda')
+  assert.equal(ansiAHtml('\x1b[1;38;2;11;110;100m▸ 1\x1b[m'), '<span class="t-acento t-b g">▸</span><span class="t-acento t-b"> 1</span>')
+  assert.equal(ansiAHtml('│░·'), '│░·')
+  for (const g of ['←', '⇿', '■', '▸', '▾', '○', '●', '✓', '✗', '➿']) assert.equal(ansiAHtml(g), `<span class="g">${g}</span>`, g)
+})
+
+test('ansiAHtml escapa <, & y >', () => {
+  assert.equal(ansiAHtml('\x1b[38;2;248;113;113m<a & b>'), '<span class="t-error">&lt;a &amp; b&gt;</span>')
+  assert.equal(ansiAHtml('<b>&amp;'), '&lt;b&gt;&amp;amp;')
+})
+
+test('ansiAHtml falla con un color sin token y con un estilo que no sabe pintar', () => {
+  assert.throws(() => ansiAHtml('\x1b[38;2;18;52;86mX'), /#123456/)
+  assert.throws(() => ansiAHtml('\x1b[48;2;18;52;86mX'), /#123456/)
+  assert.throws(() => ansiAHtml('\x1b[31mX'), /31/, 'los 16 colores no tienen token')
+  assert.throws(() => ansiAHtml('\x1b[38;5;196mX'), /38/, 'ni los 256')
+  assert.throws(() => ansiAHtml('\x1b[7mX'), /7/, 'ni el inverso')
+})
+
+test('TOKENS_TERMINAL: los 24 colores de la TUI, dos por token (día y noche), todos en minúsculas', () => {
+  const colores = Object.keys(TOKENS_TERMINAL)
+  assert.equal(colores.length, 24)
+  assert.ok(colores.every((c) => /^#[0-9a-f]{6}$/.test(c)), 'hex en minúsculas')
+  const porToken = Object.groupBy(colores, (c) => TOKENS_TERMINAL[c])
+  assert.deepEqual(Object.keys(porToken).sort(), ['acento', 'aviso', 'antigravity', 'claude', 'codex', 'copilot', 'error', 'gemini', 'ok', 'suave', 'texto', 'velo'].sort())
+  for (const [token, hexes] of Object.entries(porToken)) assert.equal(hexes?.length, 2, `${token}: un color de día y uno de noche`)
+})
+
+test('TERMINAL: Inicio, Mis APIs e Historial, con las teclas de la TUI', () => {
+  assert.deepEqual(TERMINAL, [{ nombre: 'inicio', teclas: [] }, { nombre: 'apis', teclas: ['4'] }, { nombre: 'historial', teclas: ['5'] }])
+})
+
+test('redEnMovimiento: peticiones en curso y filas ya terminadas, en los dos idiomas; no el contador, el Historial ni lo en ejecución', () => {
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  const casos: Record<string, { si: string[]; no: string[] }> = {
+    es: { si: ['Tu red · 2 peticiones en curso.', 'Tu red · 1 petición en curso.', '✓ Clave del espacio  Claude         terminada     9 s', '✗ api  Claude  falló  3 s', '○ api  Claude  cancelada  1 s'],
+      no: ['Tu red', '● e En curso     en cola o ejecutándose ahora   0', '● api  Claude  en ejecución  0 s', '▸ ✓ Completado   Di «hola»   hace 25 s'] },
+    en: { si: ['Your network · 2 requests in progress.', 'Your network · 1 request in progress.', '✓ Workspace key  Claude  finished  9 s', '✗ api  Claude  failed  3 s', '○ api  Claude  canceled  1 s'],
+      no: ['Your network', '● e In progress   queued or running now   0', '● api  Claude  running  0 s', '▸ ✓ Completed    Di «hola»   34 s ago'] },
+  }
+  for (const [idioma, { si, no }] of Object.entries(casos)) {
+    const re = redEnMovimiento(textos[idioma])
+    for (const s of si) assert.match(s, re, `${idioma}: ${s}`)
+    for (const s of no) assert.doesNotMatch(s, re, `${idioma}: ${s}`)
+  }
+})
+
+test('terminal.json trae las seis pantallas completas, con clases de token, sin rutas del equipo y la fuente pesa poco', () => {
+  const t = JSON.parse(readFileSync(new URL('../../site/capturas/terminal.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  assert.deepEqual(Object.keys(t), ['es', 'en'])
+  const textos = JSON.parse(readFileSync(new URL('../../internal/tui/datos/textos.json', import.meta.url), 'utf8')) as Record<string, Record<string, string>>
+  const clases = new Set([...Object.values(TOKENS_TERMINAL).flatMap((x) => [`t-${x}`, `tf-${x}`]), 't-b', 'g'])
+  const privada = rutaPrivada(['C:\\Users\\Administrator', 'C:\\Users\\Administrator\\AppData', '/home/runner', '/tmp/x'])
+  for (const idioma of ['es', 'en']) {
+    assert.deepEqual(Object.keys(t[idioma]), TERMINAL.map((p) => p.nombre))
+    for (const [pagina, html] of Object.entries(t[idioma])) {
+      const donde = `${idioma}/${pagina}`
+      assert.equal(html.replace(/<[^>]+>/g, '').split('\n').length, 28, `${donde}: 28 filas`)
+      assert.ok(html.length < 12 * 1024, `${donde} pesa ${html.length} bytes`)
+      assert.ok(!/style=|color:/.test(html), `${donde}: ni estilos en línea ni colores fijos`)
+      assert.ok(!/Comprobando…|Checking…/.test(html), `${donde}: quedó comprobando`)
+      assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), redEnMovimiento(textos[idioma]), `${donde}: la red sigue en movimiento`)
+      assert.ok(!/[←-⇿■-➿]/u.test(html.replace(/<span class="[^"]*\bg\b[^"]*">.<\/span>/gu, '')), `${donde}: un glifo fuera de su span g`)
+      assert.ok(!privada.test(html), `${donde}: una ruta del equipo`)
+      for (const [, lista] of html.matchAll(/class="([^"]+)"/g)) for (const c of lista.split(' ')) assert.ok(clases.has(c), `${donde}: clase ${c}`)
+      // Sobre el velo (la fila elegida) solo va la tinta del texto: los colores de agente no llegan a 4,5:1 encima.
+      for (const [, lista] of html.matchAll(/class="([^"]*\btf-velo\b[^"]*)"/g)) assert.match(lista, /\bt-texto\b/, `${donde}: ${lista}`)
+      // Solo <span class="…">: va tal cual a la portada, así que ninguna otra etiqueta se cuela.
+      assert.ok(!html.replace(/<span class="[^"<>]*">|<\/span>/g, '').includes('<'), `${donde}: una etiqueta que no es <span class>`)
+    }
+    assert.doesNotMatch(t[idioma].historial, /Aún no hay peticiones|No requests yet/, `${idioma}: el Historial tiene peticiones`)
+    // Las peticiones del Historial están en el idioma de la captura (PETICIONES), nunca en el otro.
+    const historial = t[idioma].historial.replace(/<[^>]+>/g, '')
+    const otro = idioma === 'es' ? 'en' : 'es'
+    for (const p of PETICIONES[idioma]) assert.ok(historial.includes(p.slice(0, 12)), `${idioma}/historial: falta «${p}»`)
+    for (const p of PETICIONES[otro]) assert.ok(!historial.includes(p.slice(0, 12)), `${idioma}/historial: sale «${p}»`)
+    // Inicio sale igual en los dos idiomas: la red quieta, con su texto y ninguna fila de petición.
+    const red = textos[idioma]['inicio.redTexto'].slice(0, 20)
+    assert.ok(t[idioma].inicio.replace(/<[^>]+>/g, '').includes(red), `${idioma}/inicio: la red no está vacía (falta «${red}»)`)
+  }
+  assert.ok(statSync(new URL('../../site/cascadia.woff2', import.meta.url)).size <= 60 * 1024, 'cascadia.woff2 pasa de 60 KB')
+  assert.match(readFileSync(new URL('../../site/CASCADIA-OFL.txt', import.meta.url), 'utf8'), /SIL OPEN FONT LICENSE Version 1\.1/)
+})
+
+// v0.61 (spec §8): los recortes del sitio, FIG 4 y 5 de Inicio y las tarjetas de funciones de Producto, salen del mismo
+// proceso (CAPTURAS con sitio) a 2×: cada <img> lleva la mitad de sus píxeles en width y height.
+const carpetaSitio = new URL('../../site/capturas/', import.meta.url)
+const enSitio = readdirSync(carpetaSitio)
+const sabores = (archivo: string) => ['claro', 'oscuro'].flatMap((tema) => ['es', 'en'].map((idioma) =>
+  archivo.replace(/-(claro|oscuro)(?=[-.])/, `-${tema}`).replace(/-(es|en)(?=[-.])/, `-${idioma}`)))
+test('los recortes nuevos están en la lista y en el sitio', () => {
+  const recortes = CAPTURAS.filter((c) => c.sitio)
+  for (const id of ['portada-fig-apis', 'portada-fig-servidor']) assert.ok(recortes.some((c) => c.id === id), id)
+  assert.equal(recortes.filter((c) => c.id.startsWith('funcion-')).length, 11, 'once tarjetas de Producto (la de la terminal es texto)')
+  for (const c of recortes) assert.ok(c.zona, `${c.id}: falta la zona`)
+  const paginas = ['index.html', 'producto.html'].map((p) => readFileSync(new URL(`../../site/${p}`, import.meta.url), 'utf8')).join('\n')
+  const imgs = paginas.match(/<img [^>]*src="capturas\/[^>]*>/g) ?? []
+  for (const img of imgs) {
+    const archivo = img.match(/src="capturas\/([^"]+)"/)![1]
+    for (const s of sabores(archivo)) assert.ok(enSitio.includes(s), `${archivo}: falta ${s}`)
+  }
+  for (const c of recortes)
     for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en'])
-        for (const ancho of [960, 1440]) {
-          const archivo = `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`
-          const tamano = statSync(new URL(archivo, portada), { throwIfNoEntry: false })?.size
-          assert.ok(tamano, `falta ${archivo}`)
-          assert.ok(tamano <= 150 * 1024, `${archivo} pesa ${tamano} bytes`)
-          total += tamano
-        }
-  assert.deepEqual(TERMINAL.map((p) => p.nombre), ['inicio', 'apis'])
-  assert.ok(total <= 2 * 1024 * 1024, `las de la terminal pesan ${total} bytes`)
+      for (const idioma of ['es', 'en']) {
+        const archivo = `${c.id}-${idioma}-${tema}.webp`
+        assert.ok(enSitio.includes(archivo), `falta ${archivo}`)
+        const { ancho, alto } = medidas(readFileSync(new URL(archivo, carpetaSitio)))
+        const img = imgs.find((i) => i.includes(`src="capturas/${archivo}"`))
+        assert.ok(img, `${archivo}: ninguna página lo usa`)
+        assert.match(img!, new RegExp(` width="${ancho / 2}" height="${alto / 2}" `), `${archivo}: mide ${ancho}×${alto}`)
+      }
+  // Ningún recorte de antes queda suelto en la carpeta.
+  for (const a of enSitio.filter((x) => /^(portada-fig|funcion)-/.test(x)))
+    assert.ok(recortes.some((c) => a.startsWith(c.id + '-')), `sobra ${a}`)
 })
 
-test('cada pantalla de la portada existe en WebP, en claro y oscuro, a 640, 960 y 1440 px', () => {
+test('cada pantalla de la portada existe en WebP, en claro y oscuro, en los dos idiomas, a 640, 960 y 1440 px', () => {
   const portada = readdirSync(new URL('../../site/capturas/', import.meta.url))
   assert.ok(!portada.some((a) => a.endsWith('.png')), 'quedan capturas en PNG')
   for (const p of PORTADA)
     for (const tema of ['claro', 'oscuro'])
-      for (const ancho of [640, 960, 1440]) assert.ok(portada.includes(`${p.nombre}-${tema}-${ancho}.webp`), `${p.nombre}-${tema}-${ancho}.webp`)
+      for (const ancho of [640, 960, 1440]) {
+        for (const idioma of ['es', 'en']) assert.ok(portada.includes(`${p.nombre}-${tema}-${idioma}-${ancho}.webp`), `${p.nombre}-${tema}-${idioma}-${ancho}.webp`)
+        // v0.59: las de antes, sin idioma, ya no las usa la portada.
+        assert.ok(!portada.includes(`${p.nombre}-${tema}-${ancho}.webp`), `sobra ${p.nombre}-${tema}-${ancho}.webp`)
+      }
 })

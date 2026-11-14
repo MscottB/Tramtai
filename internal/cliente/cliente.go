@@ -561,6 +561,83 @@ func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (cont
 	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
 }
 
+// rutaPreparacion es la de la preparación del CLI de un agente.
+func rutaPreparacion(id string) string {
+	return "/api/v1/agentes/" + url.PathEscape(id) + "/preparacion"
+}
+
+// Preparacion devuelve la preparación en marcha o la última del CLI de un agente (Estado vacío si no hubo ninguna).
+func (c *Cliente) Preparacion(ctx context.Context, instancia, id string) (contrato.EstadoPreparacion, error) {
+	var e contrato.EstadoPreparacion
+	return e, c.pedir(ctx, "GET", rutaPreparacion(id), instancia, nil, "", &e)
+}
+
+// Preparar instala, actualiza o desinstala el CLI de un agente, o inicia su sesión, en segundo plano: devuelve el estado
+// con que empieza. Con otra en marcha, el error tiene el código ya_en_curso (Preparacion da la que está en marcha).
+func (c *Cliente) Preparar(ctx context.Context, instancia, id string, p contrato.PedidoPreparacion) (contrato.EstadoPreparacion, error) {
+	var e contrato.EstadoPreparacion
+	return e, c.pedir(ctx, "POST", rutaPreparacion(id), instancia, cuerpoJSON(p), "application/json", &e)
+}
+
+// CodigoPreparacion pasa al inicio de sesión en marcha el código que pegó el usuario.
+func (c *Cliente) CodigoPreparacion(ctx context.Context, instancia, id, codigo string) error {
+	return c.pedir(ctx, "POST", rutaPreparacion(id)+"/codigo", instancia, cuerpoJSON(map[string]string{"codigo": codigo}), "application/json", nil)
+}
+
+// CancelarPreparacion corta la preparación en marcha del CLI de un agente.
+func (c *Cliente) CancelarPreparacion(ctx context.Context, instancia, id string) error {
+	return c.pedir(ctx, "DELETE", rutaPreparacion(id), instancia, nil, "", nil)
+}
+
+// VersionesAgentes devuelve las versiones de los CLI: la última comprobación del servicio o, con forzar, una nueva
+// (lanza --version de cada CLI y consulta la última publicada: puede tardar unos segundos).
+func (c *Cliente) VersionesAgentes(ctx context.Context, instancia string, forzar bool) ([]contrato.VersionesAgente, error) {
+	ruta := "/api/v1/agentes/versiones"
+	if forzar {
+		ruta += "?forzar=1"
+	}
+	var v []contrato.VersionesAgente
+	return v, c.pedir(ctx, "GET", ruta, instancia, nil, "", &v)
+}
+
+// Herramientas devuelve las herramientas de terceros (Claude Code, Codex…) vistas desde el espacio.
+func (c *Cliente) Herramientas(ctx context.Context, inst string) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "GET", "/api/v1/herramientas", inst, nil)
+}
+
+// ActivarHerramientas apunta a Tramtai las herramientas indicadas (o todas las detectadas) y devuelve la lista.
+func (c *Cliente) ActivarHerramientas(ctx context.Context, inst string, p contrato.ActivarHerramientas) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "POST", "/api/v1/herramientas/activar", inst, cuerpoJSON(p))
+}
+
+// DesactivarHerramientas quita Tramtai de las herramientas indicadas (o de todas) y detiene sus APIs.
+func (c *Cliente) DesactivarHerramientas(ctx context.Context, inst string, ids []string, todas bool) ([]contrato.EstadoHerramienta, error) {
+	return c.herramientas(ctx, "POST", "/api/v1/herramientas/desactivar", inst, cuerpoJSON(map[string]any{"ids": ids, "todas": todas}))
+}
+
+func (c *Cliente) herramientas(ctx context.Context, metodo, ruta, inst string, cuerpo io.Reader) ([]contrato.EstadoHerramienta, error) {
+	var r struct {
+		Herramientas []contrato.EstadoHerramienta `json:"herramientas"`
+	}
+	err := c.pedir(ctx, metodo, ruta, inst, cuerpo, "application/json", &r)
+	return r.Herramientas, err
+}
+
+// OlvidarHerramienta desactiva la herramienta y borra su clave del almacén y lo que Tramtai sabía de ella; su API queda
+// detenida en Mis APIs.
+func (c *Cliente) OlvidarHerramienta(ctx context.Context, inst, id string) error {
+	return c.pedir(ctx, "POST", "/api/v1/herramientas/"+url.PathEscape(id)+"/olvidar", inst, nil, "", nil)
+}
+
+// RestaurarHerramienta devuelve el archivo de la herramienta a como estaba antes de activarla; copia es la copia usada.
+func (c *Cliente) RestaurarHerramienta(ctx context.Context, inst, id string) (copia string, err error) {
+	var r struct {
+		Copia string `json:"copia"`
+	}
+	err = c.pedir(ctx, "POST", "/api/v1/herramientas/"+url.PathEscape(id)+"/restaurar", inst, nil, "", &r)
+	return r.Copia, err
+}
+
 func (c *Cliente) Trabajo(ctx context.Context, instancia, id string) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
 	return t, c.pedir(ctx, "GET", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", &t)
@@ -595,6 +672,22 @@ func (c *Cliente) Catalogo(ctx context.Context, instancia string) ([]contrato.Mo
 		Modelos []contrato.Modelo `json:"modelos"`
 	}
 	return r.Modelos, c.pedir(ctx, "GET", "/api/v1/modelos", instancia, nil, "", &r)
+}
+
+// FichaAgente es lo que la terminal necesita de la ficha de un agente (GET /api/v1/agentes, sin comprobar los CLI):
+// si el usuario lo desconectó y si se puede usar desde APIs.
+type FichaAgente struct {
+	Agente        string `json:"agente"`
+	Desconectado  bool   `json:"desconectado"`
+	PermitidoApps bool   `json:"permitido_apps"`
+}
+
+// FichasAgentes devuelve las fichas de los agentes registrados, en el orden del servicio.
+func (c *Cliente) FichasAgentes(ctx context.Context, instancia string) ([]FichaAgente, error) {
+	var r struct {
+		Agentes []FichaAgente `json:"agentes"`
+	}
+	return r.Agentes, c.pedir(ctx, "GET", "/api/v1/agentes", instancia, nil, "", &r)
 }
 
 // Modelos devuelve los identificadores del catálogo de la instancia.

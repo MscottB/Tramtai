@@ -48,6 +48,7 @@ func TestPrecedenciaUnica(t *testing.T) {
 		{"predeterminados.agente", "claude", OrigenProyecto},
 		{"compatibilidad.modo_tolerante", false, OrigenLocal},
 		{"servicio.puerto", 17373, OrigenInterno},
+		{"servicio.buscar_versiones_agentes", true, OrigenInterno},
 	}
 	for _, caso := range casos {
 		if got := c.e().valores[caso.clave]; got != caso.valor || c.Origen(caso.clave) != caso.origen {

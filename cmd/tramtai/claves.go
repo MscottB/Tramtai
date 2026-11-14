@@ -18,7 +18,8 @@ import (
 	"tramtai/internal/servidor"
 )
 
-// Lo que toca los almacenes en «tramtai claves»; las pruebas lo sustituyen.
+// Lo que toca los almacenes en «tramtai claves»; las pruebas lo sustituyen. leerClave también lo usan «agentes» (el TOTP
+// del servidor) y «herramientas clave»; en las pruebas, TestMain lo deja en un doble que no lee el almacén real.
 var (
 	leerClave            = credenciales.Leer
 	guardarClaveServidor = servidor.GuardarClave

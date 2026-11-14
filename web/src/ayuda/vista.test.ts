@@ -1,7 +1,19 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { altDiagrama, bloquesVisibles, capturaDeAncla, varianteCaptura } from './vista.ts'
+import { altDiagrama, bloquesVisibles, capturaDeAncla, partesOpciones, varianteCaptura } from './vista.ts'
 import type { Tema } from './tipos.ts'
+
+test('las opciones de la CLI se apartan del texto para no partirlas', () => {
+  assert.deepEqual(partesOpciones('Con --borrar-datos (--delete-data) borra.'), [
+    { texto: 'Con ', opcion: false },
+    { texto: '--borrar-datos', opcion: true },
+    { texto: ' (', opcion: false },
+    { texto: '--delete-data', opcion: true },
+    { texto: ') borra.', opcion: false },
+  ])
+  assert.deepEqual(partesOpciones('--todos'), [{ texto: '--todos', opcion: true }])
+  assert.deepEqual(partesOpciones('sin opciones — ni un guion'), [{ texto: 'sin opciones — ni un guion', opcion: false }])
+})
 
 test('la captura sigue el tema y el idioma', () => {
   assert.equal(varianteCaptura('inicio', true, 'en'), 'inicio.oscuro.en.webp')

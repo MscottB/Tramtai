@@ -42,6 +42,20 @@ export const CLAVES_AGENTES: string[] = [
   'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
   'agentes.servidorEntrar', 'agentes.servidorPersonal', 'agentes.servidorClave',
   'comun.si', 'comun.no', 'comun.cargando',
+  // Preparar los CLI desde la página (instalar, iniciar sesión, actualizar, desinstalar): los mismos textos que el panel de la Web UI.
+  'preparar.instalar', 'preparar.iniciarSesion', 'preparar.volverAIniciar', 'preparar.actualizar', 'preparar.desinstalar', 'preparar.verRegistro',
+  'preparar.hayNueva', 'preparar.instalarTexto', 'preparar.instalarTextoClave', 'preparar.cuentaServicio', 'preparar.empezando',
+  'preparar.esperaCodigo', 'preparar.esperaPegar', 'preparar.avisoCodex', 'preparar.abrirAjustesSeguridad', 'preparar.pegar',
+  'preparar.enviar', 'preparar.seguir', 'preparar.listoSinSesion', 'preparar.faltaSuscripcion', 'preparar.faltaSuscripcionTexto',
+  'preparar.suscripcionConOrden', 'preparar.cancelado', 'preparar.noComprobadaTitulo',
+  'preparar.registroTitulo', 'preparar.sinRegistro', 'preparar.desinstalarTitulo', 'preparar.borrarDatos',
+  ...['instalando', 'actualizando', 'desinstalando', 'comprobando'].map((e) => 'preparar.estado.' + e),
+  ...['descarga', 'orden', 'borrado'].map((e) => 'preparar.etapa.' + e),
+  ...['instalar', 'actualizar', 'iniciar_sesion', 'desinstalar'].map((a) => 'preparar.listo.' + a),
+  ...['instalar', 'actualizar', 'iniciar_sesion', 'desinstalar'].map((a) => 'preparar.fallo.' + a),
+  ...['instalar', 'actualizar', 'desinstalar', 'iniciar_sesion'].map((a) => 'preparar.noComprobada.' + a),
+  ...['instalador_fallo', 'no_encontrado_tras_instalar', 'plazo_agotado', 'salida_no_reconocida', 'inicio_sesion_fallo', 'sin_red',
+    'interrumpida'].map((c) => 'preparar.error.' + c),
 ]
 
 // CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los
@@ -136,6 +150,22 @@ export const CLAVES_APIS: string[] = [
   'presupuesto.reiniciarEspacio', 'presupuesto.reiniciarEspacioTexto', 'presupuesto.reiniciado', 'presupuesto.espacio',
   'presupuesto.espacioTexto', 'presupuesto.editorTexto',
   'cierre.titulo', 'cierre.texto', 'cierre.claveTitulo', 'cierre.clave',
+  // La pestaña Herramientas: los estados, los avisos y los diálogos. Las etiquetas de lectura de pantalla de la Web UI
+  // (interruptorDe, acciones) no pasan.
+  'herramientas.titulo', 'herramientas.texto', 'herramientas.activar', 'herramientas.activarTodas', 'herramientas.desactivarTodas',
+  'herramientas.refrescar', 'herramientas.estado.no_detectada', 'herramientas.estado.detectada', 'herramientas.estado.activa',
+  'herramientas.estado.desactivada', 'herramientas.estado.desactualizada', 'herramientas.estado.solo_global', 'herramientas.interruptor',
+  'herramientas.modelo', 'herramientas.soloGlobal', 'herramientas.noDetectadaFila', 'herramientas.claveEnArchivo', 'herramientas.volverAActivar',
+  'herramientas.cambiarModelo', 'herramientas.olvidar', 'herramientas.restaurar', 'herramientas.activarTitulo', 'herramientas.activarTodasTitulo',
+  'herramientas.cambiarTitulo', 'herramientas.modeloTexto', 'herramientas.modeloEtiqueta', 'herramientas.sinAgentes', 'herramientas.olvidarTitulo',
+  'herramientas.olvidarTexto', 'herramientas.restaurarTitulo', 'herramientas.restaurarTexto', 'herramientas.restaurarTextoSinFecha', 'herramientas.avisoActivada',
+  'herramientas.avisoDesactivada', 'herramientas.avisoOlvidada', 'herramientas.avisoRestaurada', 'herramientas.vacio', 'herramientas.vacioTexto',
+  'herramientas.servidor', 'herramientas.servidorTexto',
+  // Por qué una herramienta no va, con el código del servicio (la terminal traduce igual que la Web UI).
+  'herramientas.motivo.gestionado', 'herramientas.motivo.sin_https_propio', 'herramientas.motivo.api_no_existe', 'herramientas.motivo.api_detenida',
+  'herramientas.motivo.modelo_no_permitido',
+  'herramientas.motivo.puerto', 'herramientas.motivo.orden_no_existe', 'herramientas.motivo.clave_no_almacen', 'herramientas.motivo.editada_a_mano',
+  'herramientas.motivo.otro_archivo', 'herramientas.motivo.anotacion_ilegible', 'herramientas.motivo.continue_json',
 ]
 
 // CLAVES_ESPACIOS son los textos de Espacios que la terminal repite tal cual: estados, etiquetas, acciones y sus
@@ -169,6 +199,7 @@ export const CLAVES_AJUSTES: string[] = [
   'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
   ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),
   'origen.internoDetalle', 'origen.proyectoDetalle', 'origen.localDetalle', 'origen.entornoDetalle',
+  'versionesAgentes.titulo', 'versionesAgentes.texto',
   ...['servicio', 'predeterminados', 'modelos', 'agentes', 'concurrencia', 'retencion', 'archivos', 'compatibilidad', 'otros'].map((s) => 'seccion.' + s),
   'predeterminado.titulo', 'predeterminado.texto', 'predeterminado.proyecto', 'predeterminado.guardado', 'predeterminado.esfuerzoGuardado',
   'historialAjustes.titulo', 'historialAjustes.texto', 'historialAjustes.respuestas', 'historialAjustes.respuestasHint',

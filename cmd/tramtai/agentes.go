@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -30,32 +31,26 @@ func adminAgentesServidor() error {
 	return nil
 }
 
-// comandoEntrar lanza el inicio de sesión del CLI del agente con la cuenta del servicio, con la terminal conectada: el
-// CLI hace su propio flujo y guarda su sesión (spec §5). Solo en modo servidor.
+// ordenClaves es la orden que guarda una clave de API: la del servidor solo en el modo servidor.
+func ordenClaves() string {
+	if carpetas.Servidor() {
+		return idioma.T("tramtai-servidor claves guardar")
+	}
+	return idioma.T("tramtai claves guardar")
+}
+
+// comandoEntrar inicia sesión en el CLI del agente a través del servicio, también fuera del modo servidor: enseña el
+// enlace y el código (o pide el código que te den, sin mostrarlo) y deja que el CLI haga su propio flujo y guarde su
+// sesión (spec §5).
 func comandoEntrar() *cobra.Command {
 	return &cobra.Command{Use: "entrar <agente>", Aliases: []string{"login"}, Args: cobra.ExactArgs(1),
-		Short: idioma.T("Inicia sesión en el CLI del agente con la cuenta del servicio (modo servidor)"),
+		Short: idioma.T("Inicia sesión en el CLI del agente: enseña el enlace y el código, o pide el que te den"),
+		Long:  conSalidas(idioma.T("Inicia sesión en el CLI del agente a través del servicio, con la cuenta del servicio en el modo servidor. Enseña el enlace y el código (no abre ningún navegador) y, si el CLI espera un código, lo pide sin mostrarlo. Con una versión del CLI sin comprobar, no inicia sesión: dice cómo seguir.")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !carpetas.Servidor() {
-				return errors.New(idioma.T("el inicio de sesión de los agentes es del servidor: usa «tramtai --servidor agentes entrar <agente>» (o tramtai-servidor agentes entrar <agente>)"))
+			if f, ok := agentes.Buscar(args[0]); !ok || len(f.InicioSesion) == 0 {
+				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (%s)"), args[0], ordenClaves())
 			}
-			if err := adminAgentesServidor(); err != nil {
-				return err
-			}
-			f, ok := agentes.Buscar(args[0])
-			if !ok || len(f.InicioSesion) == 0 {
-				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)"), args[0])
-			}
-			c, err := configuracion.CargarConfiguracion("", agentes.Internos()) // la global, como el servicio
-			if err != nil {
-				return err
-			}
-			orden, err := servidor.OrdenEntrar(f.Nombre, c.Texto("comandos_agentes."+f.Nombre), f.InicioSesion)
-			if err != nil {
-				return err
-			}
-			orden.Stdin, orden.Stdout, orden.Stderr = cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr()
-			return orden.Run()
+			return prepararAgentes(cmd, args, accionIniciar, false, false)
 		}}
 }
 
@@ -88,10 +83,7 @@ func comandoSuscripcion() *cobra.Command {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintln(out, idioma.Tf("Antes de usar tu suscripción de %s, lee los riesgos:", agentes.NombreVisible(agente)))
-			for i, riesgo := range terminos.Riesgos(true)[0:2] {
-				fmt.Fprintf(out, "  %d. %s\n", i+1, riesgo)
-			}
+			riesgosSuscripcion(out, agente)
 			if personal {
 				f, _ := agentes.Buscar(agente)
 				fmt.Fprintf(out, idioma.T("Condiciones de la suscripción personal en el servidor:\n  - solo la usas tú, el titular de la cuenta del proveedor;\n  - no repartes las claves de las APIs que usan este agente;\n  - uso ordinario, como el tuyo en tu propio equipo.\nTérminos del proveedor: %s\nTérminos de Tramtai: %s\n"), f.URLTerminos, terminos.URL)
@@ -127,6 +119,30 @@ func comandoSuscripcion() *cobra.Command {
 	cmd.Flags().BoolVar(&personal, "personal", false, idioma.T("tu suscripción personal en el servidor abierto a la red (exige TOTP del administrador)"))
 	cmd.Flags().IntVar(&simultaneas, "simultaneas", 1, idioma.T("peticiones a la vez con la suscripción personal, de 1 a 3"))
 	return cmd
+}
+
+// riesgosSuscripcion enseña los riesgos 1 y 2 de usar la suscripción de un agente, antes de pedir «acepto» (aquí y al
+// terminar de iniciar sesión con «agentes entrar|instalar»).
+func riesgosSuscripcion(out io.Writer, agente string) {
+	fmt.Fprintln(out, idioma.Tf("Antes de usar tu suscripción de %s, lee los riesgos:", agentes.NombreVisible(agente)))
+	for i, riesgo := range terminos.Riesgos(true)[0:2] {
+		fmt.Fprintf(out, "  %d. %s\n", i+1, riesgo)
+	}
+}
+
+// ordenSuscripcionCLI es la orden que activa la suscripción de un agente: en el servidor, con tramtai-servidor y, si
+// está abierto a la red, la personal (sin --personal la rechazaría).
+func ordenSuscripcionCLI(agente string) string {
+	if !carpetas.Servidor() {
+		return "tramtai agentes suscripcion " + agente
+	}
+	orden := "tramtai-servidor agentes suscripcion " + agente
+	if c, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
+		if red, err := entradaServidor(c); err == nil && servidor.Expuesto(red) {
+			orden += " --personal"
+		}
+	}
+	return orden
 }
 
 // comprobarSuscripcionServidor, en el servidor y antes de preguntar nada, mira la configuración que quedaría: sin

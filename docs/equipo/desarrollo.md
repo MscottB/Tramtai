@@ -8,7 +8,7 @@ Documentación interna para desarrollar Tramtai. La de usuario está en el [READ
 | [pendientes.md](pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
 | [versionado.md](versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits, y etiquetas con notas |
 | [M0B.md](M0B.md) | Validación de los modos con clave de API (pendiente con claves reales) |
-| [Diseño](../diseno/DESIGN.md) | Sistema visual «Red de tranvía» de la Web UI y la página, y [contexto de producto](../diseno/PRODUCT.md) |
+| [Diseño](../diseno/DESIGN.md) | Sistema visual del sitio (plano técnico, v0.61) y de la Web UI («Red de tranvía»), y [contexto de producto](../diseno/PRODUCT.md) |
 
 El documento de diseño original del proyecto no forma parte del repositorio.
 
@@ -85,21 +85,125 @@ desde los mismos datos.
 - **La regla del estilo es una prueba** (`estilo.test.ts`): resumen de una línea (140 caracteres), pasos, notas y
   respuestas de 200 como máximo, diagrama donde hay un recorrido, un tema por página de la app, anclas únicas y ningún
   texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 5 MB en total (las de los pasos de los recorridos, `recorrido-<ancla>`, incluidas).
-- **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/` y la página de paso `site/ayuda.html`; el CI lo regenera y
-  falla si lo guardado no coincide.
-- **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`) compila Tramtai en `bin/`, la arranca
+- **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/`, la página de paso `site/ayuda.html`, `404.html`,
+  `sitemap.xml`, `buscar.json` y las zonas comunes de las páginas escritas a mano (abajo, en **El sitio**); el CI lo
+  regenera y falla si lo guardado no coincide.
+- **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`, varios separados por comas) compila Tramtai en `bin/`, la arranca
   portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
   inglés, el elemento de cada paso de los recorridos con su anillo (`-- --recorridos` saca solo esas; una ancla que la demo no muestra va en `SIN_CAPTURA`, con su motivo) y las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
   `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda. Las de la Ayuda
   más anchas que su columna del sitio salen reducidas a `ANCHO_AYUDA` (736 px), y las de la portada a 640, 960 y 1440 px.
   Si una captura muestra una ruta del equipo (la carpeta personal, la temporal o la del repositorio), el script se para
-  (`rutaPrivada` en `capturas-lista.ts`).
+  (`rutaPrivada` en `capturas-lista.ts`). Una pantalla de la portada sale sola con `-- --solo portada-<nombre>`
+  (`portada-agentes`). Cada petición real a un agente sale en la consola («petición real a …»), para contarlas.
+- **Recortes del sitio:** FIG 4 y 5 de Inicio (`portada-fig-apis`, `portada-fig-servidor`) y las tarjetas de funciones
+  de Producto (`funcion-*`) son entradas de `CAPTURAS` con `sitio`: `zona` (el selector de lo que se recorta; con varios
+  elementos, el recorte los abarca a todos), `preparar` (JavaScript que la deja a la vista: abre un diálogo, el panel de
+  la Ayuda o las opciones de la receta), `alto` y `margen`. Salen en una ventana de 420 px, para que se lean también en
+  el móvil, a 2× en `site/capturas/<id>-<es|en>-<claro|oscuro>.webp`, y la página los usa con `width` y `height` de la
+  mitad de sus píxeles. No enseñan el Historial: `npm run capturas -- --solo funcion-sdk` no hace ninguna petición real
+  (`portada-fig-servidor` sale del Tramtai en modo servidor, con Docker y su `claude` simulado). Se paran si el recorte
+  enseña una ruta, un correo o el nombre del equipo. FIG 17, la terminal, no es una imagen: es la pantalla de Inicio de
+  `terminal.json` (`comun:terminal-recorte`, que pinta `sitio.ts`). `site/og.png` sale de `web/scripts/og.html` con
+  `-- --sitio`.
+- **Los agentes en la demo:** las capturas no instalan ni quitan ningún CLI. `SIMULAR` (`capturas-lista.ts`) corre en
+  cada página antes que la app y cambia lo que el servicio responde de los agentes: en Agentes, Antigravity sale sin
+  instalar (así se ve «Instalar», el ancla `agentes.instalar`, en cualquier equipo), y con
+  `tramtai.capturas.sinListos` en `localStorage` ningún agente está listo, para la oferta «Prepara tus agentes» de la
+  bienvenida (la captura `preparar`).
 - **Demo de la portada:** sale en la corrida completa y sola con `npm run capturas -- --bienvenida`; lanza la bienvenida de verdad (acepta la oferta de la primera
   vez y pulsa «Siguiente») y saca una pantalla completa de 1440×900 por paso, con la ventana del recorrido encima, en
   claro y oscuro y en español e inglés: `site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp` (`BIENVENIDA` en `capturas-lista.ts`, uno
   por paso de `pasosBienvenida()`). Solo usa los datos de demostración y no pide nada a ningún agente; si cambia la
   bienvenida o una pantalla que sale en ella, se rehace. `portada.test.ts` exige una figura por paso en `site/index.html`,
   150 KB como máximo por imagen de 1440 y 6 MB en total; el carrusel es `.demo` en `sitio.js`.
+- **La terminal de la portada es texto:** `npm run capturas -- --terminal` (también sale en la corrida completa) pinta
+  Inicio, Mis APIs e Historial (`TERMINAL` en `capturas-lista.ts`) a 100×28, en español y en inglés, y guarda su HTML en
+  `site/capturas/terminal.json` (`{"es":{"inicio":"…","apis":"…","historial":"…"},"en":{…}}`). Hace dos peticiones reales
+  por idioma a `claude/haiku` con la suscripción de quien la corre (para que el Historial tenga entradas en el idioma de
+  la captura: `PETICIONES` en `capturas-lista.ts`; antes de las del inglés vacía el Historial) y se para si una pantalla
+  muestra una ruta del equipo, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento («N peticiones en
+  curso» o filas ya terminadas como «terminada 9 s», que Inicio deja a la vista unos segundos antes de quitarlas) o si
+  el Historial está vacío. `tui.Captura` no da por asentada una vista así: espera a que la red quede vacía.
+  `ansiAHtml` escribe clases, no colores: `t-<token>` (tinta), `tf-<token>` (fondo) y `t-b` (negrita), con
+  los tokens de `DESIGN.md` (`TOKENS_TERMINAL`); la TUI usa exactamente la paleta de cada tema, así que un solo HTML por
+  página e idioma sirve en los dos. Un color sin token hace fallar la captura.
+  Cada flecha, forma o símbolo que Cascadia Mono no trae entero (`← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗`, los rangos `U+2190–21FF` y
+  `U+25A0–27BF`) va en su propio `<span class="g">`. La regla `.g { display: inline-block; width: 1ch; text-align: center }`
+  la define la hoja del sitio (tarea 15), para que las columnas no se descuadren.
+  `terminal.json` no lo regenera el CI (necesita peticiones reales): se guarda en el repositorio, como las capturas.
+- **Fuente de la terminal:** `site/cascadia.woff2` es un subconjunto de Cascadia Mono (OFL-1.1, licencia en
+  `site/CASCADIA-OFL.txt`) con las letras que salen en `terminal.json` y el ASCII imprimible, de 60 KB como máximo. Se
+  rehace cuando `terminal.json` trae letras nuevas. `CascadiaMono.ttf` sale de `ttf/` en el
+  [lanzamiento oficial](https://github.com/microsoft/cascadia-code/releases) (`CascadiaCode-<versión>.zip`, la 2407.24
+  al hacerlo), en una carpeta aparte y sin guardarla en el repositorio. `caracteres.txt` es cada carácter distinto del
+  texto de `terminal.json` (sin las etiquetas ni `&lt;`, `&gt;` y `&amp;`) más los 95 de `0x20` a `0x7e`:
+
+  ```
+  uv tool run --from "fonttools[woff]" pyftsubset CascadiaMono.ttf --flavor=woff2 --text-file=caracteres.txt --output-file=site/cascadia.woff2
+  ```
+
+  Cascadia Mono no tiene `✗` (U+2717): sale en la lista de caracteres pero el subconjunto no puede llevarlo; por eso
+  los glifos van en `span.g` (arriba).
+- **Fuentes del texto (v0.61):** `site/inter.woff2` es Inter variable entera (ejes `wght` 100–900 y `opsz` 14–32) e
+  `site/instrument-italica.woff2`, Instrument Serif cursiva, las dos OFL-1.1 con su licencia al lado
+  (`site/INTER-OFL.txt`, `site/INSTRUMENT-OFL.txt`). `InterVariable.ttf` sale del
+  [lanzamiento oficial](https://github.com/rsms/inter/releases) (`Inter-<versión>.zip`, la 4.1 al hacerlo) e
+  `InstrumentSerif-Italic.ttf` y su `OFL.txt`, de `ofl/instrumentserif/` en el
+  [repositorio de Google Fonts](https://github.com/google/fonts), en una carpeta aparte y sin guardarlos en el
+  repositorio. La lista de caracteres se guarda en `web/scripts/letras-caracteres.txt`: cada carácter distinto del
+  texto de `site/*.html`, `site/ayuda/*.html` y `site/sitio.js` (sin las etiquetas y con las entidades resueltas) más
+  los 95 de `0x20` a `0x7e`, `«»’“”…·→—–` y las mayúsculas y minúsculas acentuadas del español (`ÁÉÍÓÚÜÑáéíóúüñ¡¿`).
+  `tnum` se añade a las funciones que se guardan porque las cifras usan `font-variant-numeric: tabular-nums`:
+
+  ```
+  uv tool run --from "fonttools[woff]" pyftsubset InterVariable.ttf --flavor=woff2 --text-file=web/scripts/letras-caracteres.txt --layout-features+=tnum --output-file=site/inter.woff2
+  uv tool run --from "fonttools[woff]" pyftsubset InstrumentSerif-Italic.ttf --flavor=woff2 --text-file=web/scripts/letras-caracteres.txt --output-file=site/instrument-italica.woff2
+  ```
+
+  Las dos juntas pesan unos 64 KB (48 y 16); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
+  `sitio.test.ts`. La misma prueba lee la tabla `cmap` real de cada letra (descomprime el WOFF2 con `node:zlib`) y
+  comprueba que Inter dibuja cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni scripts, que pinta
+  Tramtai Mono) y que Instrument Serif dibuja la parte clave (`<em>`) de los `h1` y `h2`. `FUERA_DE_INTER` lista lo que
+  llega a propósito de la letra del sistema («⋯», citado en la Ayuda). Si falta alguno, se añade a la lista y se rehacen
+  las dos.
+- **El sitio (v0.61):** siete páginas con la misma barra: Inicio (`index.html`), Producto, Agentes, Servidor,
+  Desarrolladores, Ayuda (`ayuda/`) y Descargar. El sistema visual está en [DESIGN.md](../diseno/DESIGN.md) (Parte 1).
+  - **Escritas a mano:** `index.html`, `producto.html`, `agentes.html`, `servidor.html`, `desarrolladores.html` y
+    `descargar.html`. `npm run sitio` solo pone al día sus zonas comunes (`<!-- comun:x --> … <!-- /comun:x -->`, en
+    `rellenar` de `web/scripts/sitio.ts`): `cabeza`, `cabecera` y `pie` en todas; `anclas` (el salto de los anclajes
+    viejos) en Inicio; `riesgos` y `riesgos-servidor`; `terminal` y `terminal-recorte`; `camino`, y `indice-boton` y
+    `en-esta-pagina` en las de documentación. Las opcionales solo se rellenan donde la página las trae.
+  - **Generadas:** `ayuda/*.html` y `ayuda.html` salen de `web/src/ayuda`, y `404.html`, `sitemap.xml` y `buscar.json`,
+    de `sitio.ts`.
+  - **Documentación en tres columnas:** `columnasDoc` (índice, contenido y «En esta página») es la plantilla de la Ayuda;
+    `servidor.html` y `desarrolladores.html` la escriben a mano con el mismo marcado y `rellenar` les pone el botón del
+    índice y «En esta página» desde sus `<section id>`.
+  - **Buscador:** Ctrl K, ⌘K o `/` abren un diálogo que busca en `site/buscar.json` (una entrada por tema y apartado de
+    Ayuda, Desarrolladores y Servidor, en los dos idiomas; 100 KB como máximo). Se genera con `npm run sitio`; no hay
+    servicio externo.
+  - **Anclajes viejos:** `#descargar`, `#como`, `#funciones`, `#por-que`, `#privacidad`, `#agentes`, `#servidor`, `#app`,
+    `#terminal` (y los de antes de la v0.59) llevan a su página con `ANCLAS_PORTADA` y `destinoPortada`, que Inicio
+    incrusta como salto en el `<head>`. `servidor.html`, `desarrolladores.html`, `ayuda/<tema>.html` y `descargar.html`
+    son direcciones que enlazan las apps y el README: no se cambian de nombre. `enlaces.test.ts` comprueba cada enlace
+    interno y cada anclaje.
+  - **Versión y descargas:** `web/scripts/descargas.mjs` escribe el número de versión (`[data-version]`) y el JSON
+    `#descargas` con la URL de cada archivo del último release en las páginas que se le pasan. El workflow «Página» le
+    pasa `site/index.html` (el botón del arranque) y `site/descargar.html`; sin páginas, las mismas dos. Una página nueva
+    con descargas se añade a esa lista y a la del workflow, y su prueba es `descargas.test.ts`.
+  - **`sitio.js`, sin librerías:** el tema (`tramtai.tema`) y el idioma (`tramtai.idioma`), el menú, el buscador, las
+    pestañas, Copiar, «En esta página» y el índice, lo vivo (`.vivo` pasa a `.visto` al entrar en pantalla) y la
+    demo. `sistemaDe`, `pestanaDe` y `destinoDescarga` eligen el sistema, la pestaña de Descargar y el archivo del
+    botón; sin un sistema seguro (móvil, tableta, ChromeOS, Linux ARM o sin datos) el botón dice «Descargar» y lleva a
+    `descargar.html`, nunca a un archivo equivocado.
+  - **Pruebas:** `sitio.test.ts` (páginas, `buscar.json`, `sitemap.xml`, letras), `portada.test.ts` (Inicio,
+    Producto y Agentes), `enlaces.test.ts`, `descargas.test.ts` y `estilo-textos.test.ts`; en Go,
+    `TestComandosDelSitioExisten` (`cmd/tramtai/sitio_test.go`): cada orden de `tramtai` que enseña un `<pre>` existe.
+- **La ventana en `site/index.html`:** no se escribe a mano. `npm run sitio` rellena la zona `<!-- comun:terminal -->`
+  (`ventanaTerminal` en `web/scripts/sitio.ts`) con el semáforo, las pestañas «1 Inicio · 4 Mis APIs · 5 Historial», el
+  rótulo y un panel por página e idioma tomado de `terminal.json`; el CI falla si lo guardado no coincide. Los colores
+  `.t-*`, `.tf-velo`, `.g` y la fuente `Tramtai Mono` están en `site/estilo.css`, y el tema de la ventana sigue el del
+  sitio (`light-dark()`). Si `terminal.json` cambia, se regenera el HTML (`npm run sitio`) y, si trae letras nuevas, la fuente.
 
 ### Recorridos: cómo añadir un paso o un ancla
 
@@ -111,6 +215,8 @@ página (`web/src/ayuda/temas/<id>.ts`). No hay otra lista de pasos que tocar.
   el texto a 200). Cada página tiene de 3 a 5 pasos. Con `bienvenida: true` el paso entra también en la bienvenida, que
   los toma en el orden del menú (Inicio, Agentes, Probar, Mis APIs, Espacios) más un cierre; hoy son 14 pasos y
   `anclas.test.ts` fija su orden.
+- **Dos temas en una página:** Agentes tiene «Agentes y modelos» y «Preparar tus agentes». Su **?** abre el primero de
+  `indice.ts` y su recorrido junta los pasos de los dos, en ese orden.
 - **Un ancla:** el atributo `data-recorrido="<pagina>.<nombre>"` en el elemento del `.vue` que señala el paso (minúsculas
   y guiones; `app.<nombre>` para lo que está en todas las páginas, como el selector de espacio o el «?», que viven en
   `App.vue` o `componentes/CabeceraPagina.vue`).
@@ -191,11 +297,167 @@ Codex, GitHub Copilot `auto` y Gemini si hay `GEMINI_API_KEY`); salta los que fa
 (Copilot Free gasta un crédito por petición). Su resultado es la tabla «Qué agentes las atienden» de
 [la guía del desarrollador](../desarrolladores.md).
 
+### Herramientas de terceros: `internal/apuntar`
+
+`tramtai herramientas` (CLI), la pestaña Herramientas de Mis APIs y la de la terminal apuntan Claude Code, Codex,
+Continue, opencode y Kilo Code a Tramtai. Las tres interfaces usan las mismas rutas del servicio
+(`internal/servicio/herramientas.go`), y estas llaman a `internal/apuntar`, que es el único código que toca los archivos
+de esas herramientas.
+
+**Rutas** (`/api/v1/herramientas`, las que lee la Web UI y la terminal; en el modo servidor responden
+`409 no_disponible_en_servidor`):
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/v1/herramientas` | Lista de `contrato.EstadoHerramienta`: estado, modelo, archivo, motivo (`motivo_codigo` + `motivo_datos`, y `motivo` de respaldo), `clave_en_archivo`, `gestionado`, `hay_copia` |
+| `POST /api/v1/herramientas/activar` | `{ids|todas, modelo}`: crea o reanuda la API de cada herramienta y escribe su archivo |
+| `POST /api/v1/herramientas/desactivar` | `{ids|todas}`: quita lo de Tramtai y detiene su API |
+| `POST /api/v1/herramientas/<id>/olvidar` | Desactiva y borra la clave del almacén y la anotación (204) |
+| `POST /api/v1/herramientas/<id>/restaurar` | Repone la copia entera del archivo; responde `{copia}` |
+
+Activar y desactivar devuelven la lista al día como `{"herramientas":[…]}`, igual que el `GET`. `tramtai herramientas clave <id>` no pasa por el servicio: lee el
+almacén (`servicio.NombreClaveHerramienta`) y escribe solo la clave. Los tipos de la API salen de `internal/contrato`
+(`go generate ./internal/contrato`).
+
+**Qué hace el núcleo** (`apuntar.go`, `anotacion.go`): para activar relee el archivo, guarda la copia entera
+(`datos/herramientas/copias/<id>-<AAAAMMDD-HHMMSS>.<ext>`, 0600, las 3 más recientes por herramienta; la hora del nombre
+va en UTC para que el orden por nombre sea estable y sin saltos de horario, y la Web UI y la terminal enseñan la fecha de
+la copia en hora local), pide al `Formato`
+el archivo nuevo, comprueba que su huella no cambió desde que lo leyó (si cambió, reintenta una vez y, si no, devuelve
+`ErrCambioMientras`), lo escribe con `configuracion.EscribirAtomico` y por último anota en
+`datos/herramientas/<id>.json` lo escrito y lo que había (`Escrito`, `Previos`). La anotación nunca lleva secretos: para
+una clave en un archivo guarda `sha256:<hex>`. Si la herramienta ya está activa en otra ruta devuelve
+`ErrOtraActivacion`: quien llama la quita antes. `Quitar` deshace solo lo que sigue siendo de Tramtai; `Restaurar` repone
+la copia.
+
+**El contrato `Formato`** (una implementación por tipo de archivo: `json.go` para JSON/JSONC con `hujson`, `toml.go`,
+`yaml.go`; no leen ni escriben en disco):
+
+- `Aplicar(actual, Valores)` devuelve el archivo con Tramtai puesto, lo escrito y lo que había en esas claves (las claves
+  de `previos` son un subconjunto de las de `escrito`);
+- `Quitar(actual, Anotacion)` lo devuelve sin lo de Tramtai y dice si ya no queda nada más;
+- `Contiene(actual, Anotacion)` dice si sigue lo que se escribió (compara huellas en las claves).
+
+Conservan lo que no es suyo: comentarios y orden en JSON/JSONC; en TOML y YAML, un bloque entre `# >>> tramtai` y
+`# <<< tramtai` (o el modelo `name: Tramtai` de Continue) sin reescribir el resto. Rechazan un archivo roto con
+`ErrArchivoIlegible` sin tocarlo.
+
+**Añadir una herramienta:**
+
+1. Una entrada en `apuntar.Lista()` con su `ID` (también el nombre de su API: `^[a-z0-9][a-z0-9_-]{0,39}$`), el nombre de
+   la UI, `Programa` (para detectarla en el PATH), `Ruta(alcance, proyecto)`, `EnProyecto` si admite un archivo de
+   proyecto, `ClaveEnArchivo` y, si hace falta, `Gestionado` o `Previa` (algo que impida activar, antes de escribir nada).
+2. Su `Formato`, o uno de los existentes si el archivo es del mismo tipo (opencode y Kilo comparten `OpenCode()`), con
+   archivos de ejemplo en `testdata/<formato>/`: las pruebas comprueban que se conservan los comentarios, que se deshace
+   con los valores previos, que se respeta lo que el usuario cambió después y que un archivo roto no se toca.
+3. Si la clave no va en el archivo, la herramienta tiene que poder pedirla a una orden (`tramtai herramientas clave <id>`):
+   añade `TRAMTAI_HERRAMIENTA_<ID>` a `credenciales.Internos` y la orden a `Valores.Orden`. Rutas con `%` se rechazan
+   porque `cmd.exe` las expandiría.
+4. Los textos van por `idioma.T` con su inglés en `internal/idioma/en_apuntar.go`, y los de la Web UI en `es.ts` y
+   `en.ts` (`herramientas.*`); la terminal los recibe con `npm run ayuda-terminal`.
+5. El tema de Ayuda `conectar-herramientas` y la prueba con el programa real (la comprobación al estilo M0 de
+   `docs/equipo/releases/v0.59-herramientas-y-sitio/m0.md`, con `HOME`, `CLAUDE_CONFIG_DIR` y `CODEX_HOME` temporales y
+   nunca el Tramtai instalado ni el puerto 17373).
+
+### Preparar los CLI de los agentes: `internal/preparar`
+
+Desde la v0.60, Tramtai instala, conecta, actualiza y desinstala los CLI de Claude Code, Codex, GitHub Copilot y
+Antigravity. La Web UI (Agentes y la bienvenida), la terminal y la CLI (`tramtai agentes instalar|entrar|actualizar|
+desinstalar|versiones`, alias `install|login|update|uninstall|versions`) usan las mismas rutas del servicio
+(`internal/servicio/preparacion.go`), y estas llaman a `internal/preparar`, el único código que lanza instaladores. La
+spec y las decisiones están en `docs/equipo/releases/v0.60-preparar-agentes/` (`spec.md`, `m0.md`).
+
+**Rutas** (con la sesión de la Web UI o la clave del servicio; la clave del espacio no basta: 403 `no_autorizado`):
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/v1/agentes/{id}/preparacion` | Estado de la última preparación del agente, o `null` |
+| `POST /api/v1/agentes/{id}/preparacion` | `{"accion": "instalar"\|"actualizar"\|"iniciar_sesion"\|"desinstalar", "borrar_datos": false, "confirmar": false}` (202) |
+| `POST /api/v1/agentes/{id}/preparacion/codigo` | `{"codigo": "…"}`: lo pegado, al CLI por su entrada; nunca se registra |
+| `DELETE /api/v1/agentes/{id}/preparacion` | Cancela y cierra el árbol de procesos |
+| `GET /api/v1/agentes/versiones` | Por agente: instalada, última, comprobadas por acción y acciones habilitadas; `?forzar=1` repite la consulta |
+
+Los tipos salen de `internal/contrato` (`go generate ./internal/contrato`). Las pantallas siguen el estado con un sondeo
+corto (`seguirPreparacion` en `web/src/preparacion.ts`), como el conversor.
+
+**La receta** (`adaptadores.Receta`, en la ficha de cada agente, `internal/agentes/<nombre>/ficha.go`) es fija en el
+código, por sistema (`windows`, `darwin`, `linux`): nada de lo que escribe el usuario entra en una orden.
+
+- `Instalar` y `Actualizar`: la orden oficial (sin entrada en `Actualizar`, se reinstala); `Descarga`, si Tramtai baja el
+  binario él mismo y comprueba su suma (Copilot en Windows, con `{version}` y `{arq}`); `FijaVersion` si admiten
+  `{version}`. La descarga no pisa el ejecutable: lo aparta a `.viejo` y pone el nuevo (`colocar`), porque Windows
+  deja renombrar un `copilot.exe` en marcha pero no reemplazarlo; el `.viejo` se borra entonces o en la próxima.
+- `Rutas`: dónde deja el ejecutable (`~` es la casa de la cuenta que corre el servicio). Si queda fuera del PATH del
+  servicio, se guarda en `comandos_agentes.<agente>` y se quita al desinstalar.
+- `Borrar` (lo que se quita al desinstalar: ningún CLI tiene orden propia) y `DatosCLI` (sesión y ajustes, solo con
+  «Borrar también su sesión y ajustes»). Desinstalar se niega si la ruta pasa por un enlace o una junction.
+- `Ultima`: de dónde sale la última versión publicada (`url` con un manifiesto, `github` con `Prefijo`, o `npm`).
+- `Sesion` (`LectorSesion`, `nil` en Antigravity): argumentos, `Entorno` (por ejemplo `BROWSER` o
+  `COPILOT_DEBUG_BROWSER` para que no abra el navegador del sistema), y las expresiones del enlace, el código y la
+  petición de pegar. El lector trabaja sobre el texto acumulado y sin ANSI; sin enlace ni código en 30 s desde que el
+  proceso arrancó, `salida_no_reconocida`.
+- **La orden a mano** (lector sin reconocer, inicio de sesión fallido o versión sin comprobar) sale de
+  `Preparador.ordenConsola`: en el escritorio, el CLI por su nombre si el PATH lo encuentra y, si no, su ruta completa
+  (entre comillas si hace falta; en Windows con `& ` delante, para PowerShell); en el servidor, `servidor.OrdenConsola`.
+  Va también aparte, en `orden_consola`, para que la Web UI arme la frase en su idioma (Ruling 37).
+- `Comprobadas`: las versiones probadas por acción, exactas o con comodín de parche (`2.1.*`).
+
+**La preparación** es una tarea por agente con estados (`instalando`, `actualizando`, `desinstalando`, `comprobando`,
+`esperando_usuario`, `listo`, `error`, `cancelado`), una a la vez por agente (`ya_en_curso`), plazo de 15 minutos y el
+árbol de procesos atado como el de las peticiones. Sobrevive a cerrar la pantalla; si el servicio se reinicia a mitad,
+queda en `error` con `interrumpida`. Guarda su estado en `datos/agentes/preparaciones/<id>.json` y las últimas líneas
+(redactadas) en `<id>.log`. No actualiza ni desinstala un agente con peticiones en curso (`peticiones_en_curso`) y,
+mientras lo instala, actualiza o desinstala, el planificador lo trata como no disponible. La invariante es que un
+instalador nunca corre a la vez que una petición (Ruling 39), y por eso `Iniciar` cuenta dos veces: la primera con la
+reserva invisible, para no frenar peticiones si al final no se lanza; la segunda con la reserva ya visible, porque una
+petición que entre entre medias ya no se lanza (el planificador mira `preparando` al aceptar y al lanzar) y una que
+entrara antes sale en esta cuenta. No juntes las dos: con una sola, una petición puede colarse con el instalador. El coste
+es un `agente_no_disponible` de unos milisegundos si la reserva se deshace en la segunda cuenta.
+
+**Versiones comprobadas y la lista firmada.** `Preparador.Comprobada(agente, accion, version)` mira la receta y la lista
+firmada (`URLLista`: `compatibilidad.json` y `compatibilidad.json.sig` del release fijo `compatibilidad`, firmados con la
+clave de `internal/actualizacion`), salvo que la versión esté marcada como no compatible en este equipo (`Marcar`, cuando
+el lector falla en una versión comprobada). Lo bajado y las marcas quedan en `datos/agentes/compatibilidad.json`. La lista
+se lee con la consulta diaria de versiones (`servicio.buscar_versiones_agentes`, `true` por defecto); una lista cuya firma
+no vale se rechaza.
+
+**El job semanal** (`.github/workflows/agentes-compatibilidad.yml`, los lunes y a mano con `workflow_dispatch`) corre
+`go run ./cmd/compatibilidad comprobar <resultado.json>` en Linux, macOS y Windows: con las fichas reales y el mismo
+`Preparador` que el servicio, instala la última versión de cada CLI, lanza su inicio de sesión hasta el enlace y el código
+(sin cuenta) y lo cancela, actualiza y desinstala. `cmd/compatibilidad juntar` añade a la lista publicada las versiones
+que pasaron en los tres sistemas, sube `version` y solo escribe si cambia algo; el job la firma con
+`FIRMA_ACTUALIZACIONES`, comprueba la firma y la sube al release. Si algo falla, abre o comenta un issue con lo que hay
+que ajustar en la receta. Publicar y avisar solo pasan desde `main` (la ejecución semanal y la manual sobre `main`): en
+otra rama el job prueba, pero no publica la lista ni abre issues. Un límite de la API de GitHub cuenta como «sin concluir»: la versión no entra ni sale.
+
+**Añadir una versión comprobada a mano** (si el job no puede, o para una versión de Tramtai):
+1. Lo normal es lanzar el job a mano (Actions › «Compatibilidad de los agentes» › Run workflow): prueba y publica.
+2. Para que viaje con Tramtai, añádela a `Comprobadas` de la receta, en las acciones que probaste, y publica la versión.
+3. Solo si hace falta corregir la lista publicada sin el job: baja `compatibilidad.json` del release, añade la versión
+   en `agentes.<id>.<accion>`, sube `version` en 1, fírmala (`go run ./scripts/firmar compatibilidad.json` con
+   `FIRMA_ACTUALIZACIONES` en el entorno), comprueba la firma (`go run ./scripts/firmar -comprobar compatibilidad.json`)
+   y sube los dos archivos con `gh release upload compatibilidad compatibilidad.json compatibilidad.json.sig --clobber`.
+
+**Pruebas:** CLI falsos que imitan el instalador y el inicio de sesión (con las salidas reales del M0 en
+`internal/agentes/<nombre>/testdata/sesion-*.txt`), sin red ni CLI reales. Una prueba con un CLI real se hace como en el
+M0: copia de Tramtai en `bin/`, puerto 17388, `HOME`, `USERPROFILE`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME` y `COPILOT_HOME`
+temporales, y nunca con el Tramtai instalado ni el puerto 17373. Los textos de la CLI y del servicio van con `idioma.T`
+(`internal/idioma/en_preparar.go`), los de la Web UI en `preparar.*` y `bienvenida.*`, y la Ayuda es el tema `preparar`.
+
 ### Ejemplos de la guía
 
 `go test -tags ejemplos -run TestEjemplos -v ./internal/api/` ejecuta `docs/ejemplos` contra un agente simulado (el
 job «Ejemplos» del CI). En local necesita Python con `openai` y `requests` (`TRAMTAI_PYTHON` apunta a su intérprete),
 `npm install` en `docs/ejemplos/javascript` y, para curl, `sh`, `curl` y `jq`; lo que falte se salta fuera del CI.
+
+Cada ejemplo tiene su versión inglesa en la carpeta `en/` de su lenguaje (`python/en/tools.py`, `go/en/tools/main.go`…),
+con nombres, comentarios, mensajes y variables en inglés (`TRAMTAI_KEY`, `TRAMTAI_MODEL`); los campos y las rutas de la
+API propia (`mensajes`, `rol`, `/api/v1/trabajos`…) no se traducen, porque son lo que la API acepta. Van dentro de la
+carpeta de su lenguaje para compartir el módulo de Go, `node_modules` y `requirements.txt`, y `en/file` lee
+`docs/ejemplos/sample.txt`. El agente simulado contesta en inglés cuando la conversación no lleva ¿ ni tildes, y la prueba
+exige los 21 de cada idioma. Al añadir un ejemplo, escribe los dos, ponlos en `esperado` y en las dos mitades de
+`site/desarrolladores.html` (`<code lang="es" data-ejemplo>` y `<code lang="en" data-ejemplo>`): la página en inglés carga
+y copia los de `en/`, y `portada.test.ts` falla si uno trae español.
 
 ## Estructura
 
@@ -211,6 +473,9 @@ internal/credenciales/ claves de proveedor en el almacén del sistema (Windows, 
 internal/documentos/   cargas, formatos admitidos, conversión con markitdown y preparación del conversor
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
+internal/apuntar/      apunta Claude Code, Codex, Continue y opencode/Kilo a Tramtai: copias, anotación y un Formato por tipo de archivo
+internal/preparar/     instala, conecta, actualiza y desinstala los CLI de los agentes con su receta; versiones comprobadas
+cmd/compatibilidad/    el job semanal que prueba los CLI y arma la lista firmada de versiones comprobadas
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
 internal/configuracion/ configuración por capas y perfiles; edición de config.yaml y local.yaml y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)

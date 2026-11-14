@@ -1,31 +1,33 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
-// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas, la terminal y la demo de
-// la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio puerto (PUERTO_CAPTURAS; la
-// nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia): no toca la instalación de
-// quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y
-// Seguridad, la entrada y la marca) salen de un Tramtai en modo servidor detrás de Caddy, en contenedores (Docker), con
-// su propio puerto; sin Docker se avisa y se saltan. Se corre en el equipo de desarrollo, con un agente ya conectado
-// (para el Historial):
+// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas en español e inglés, la terminal en HTML
+// (terminal.json) y la demo de la bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en su propio
+// puerto (PUERTO_CAPTURAS; la nota-capturas de site/index.html dice el puerto que se ve en ellas: cámbiala si cambia):
+// no toca la instalación de quien lo corre ni su puerto 17373. Las del modo servidor (Ajustes → Servidor y Seguridad, la
+// entrada y la marca) salen de un Tramtai en modo servidor detrás de Caddy, en contenedores (Docker), con su propio
+// puerto; sin Docker se avisa y se saltan. Se corre en el equipo de desarrollo, con un agente ya conectado
+// (para el Historial, que enseña peticiones en el idioma de cada captura: PETICIONES):
 //   cd web; npm run build; npm run capturas
-//   (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida, -- --terminal, -- --servidor o -- --sitio)
+//   (o: npm run capturas -- --solo receta (o portada-agentes), -- --recorridos, -- --bienvenida, -- --terminal, -- --servidor o -- --sitio)
 // Usa Edge o Chrome sin ventana por su protocolo de depuración; TRAMTAI_NAVEGADOR elige otro ejecutable y
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { homedir, tmpdir } from 'node:os'
+import { homedir, hostname, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import en from '../src/idiomas/en.ts'
 import es from '../src/idiomas/es.ts'
-import { ANCHO_AYUDA, ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA, TERMINAL, ansiAHtml, rutaPrivada } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, BIENVENIDA, CAPTURAS, PETICIONES, PORTADA, SIMULAR, SIN_CAPTURA, TERMINAL, ansiAHtml, redEnMovimiento, rutaPrivada } from './capturas-lista.ts'
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url))
 const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta.url))
 const destinoPortada = fileURLToPath(new URL('../../site/capturas/', import.meta.url))
 const args = process.argv.slice(2)
+// --solo saca solo esas capturas (sus id, separados por comas: --solo historial,recorrido-historial-lista).
 const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
+const solos = solo ? solo.split(',') : []
 // --sitio saca solo los iconos y la imagen para compartir del sitio (favicon.svg y og.html), sin capturas de la app.
 const soloSitio = args.includes('--sitio')
 // --recorridos saca solo las capturas de los pasos de los recorridos.
@@ -44,8 +46,9 @@ const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
 // Nada del equipo de quien saca las capturas se publica: rutas de su carpeta personal, la temporal o la del repositorio.
 const privada = rutaPrivada([homedir(), tmpdir(), raiz])
-if (solo && ![...CAPTURAS, ...ANCLAS].some((c) => c.id === solo)) {
-  console.error(`no hay una captura «${solo}»: usa uno de ${[...CAPTURAS, ...ANCLAS].map((c) => c.id).join(', ')}`)
+const ids = [...CAPTURAS, ...ANCLAS].map((c) => c.id).concat(PORTADA.map((p) => 'portada-' + p.nombre))
+for (const s of solos.filter((s) => !ids.includes(s))) {
+  console.error(`no hay una captura «${s}»: usa uno de ${ids.join(', ')}`)
   process.exit(1)
 }
 
@@ -137,7 +140,7 @@ function crearAbrir(enviar, evaluar, base) {
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
     // La pestaña de Ajustes que dejó una captura no debe pasar a la siguiente: cada una trae la suya en `guardado`.
-    await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes')`)
+    await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes'); localStorage.removeItem('tramtai.pestanaApis'); localStorage.removeItem('tramtai.capturas.sinListos')`)
     // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
     await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}'); localStorage.setItem('tramtai.bienvenida', 'descartada')`)
     for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
@@ -167,51 +170,94 @@ async function capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c
   console.log(`${c.id}.${tema}.${idioma}.webp`)
 }
 
-// reducir pasa una captura WebP (en base64) a otro ancho en un lienzo de la página: un segundo recorte con scale < 1
-// salía a veces en mosaico.
-const reducir = (evaluar, webp, ancho, alto) => evaluar(`(async () => {
-  const img = new Image(); img.src = 'data:image/webp;base64,${webp}'; await img.decode()
-  const lienzo = Object.assign(document.createElement('canvas'), { width: ${ancho}, height: ${alto} }), g = lienzo.getContext('2d')
-  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, ${ancho}, ${alto})
-  return lienzo.toDataURL('image/webp', 0.8).split(',')[1]
-})()`)
+// recorteSitio saca un recorte del sitio (CAPTURAS con sitio: FIG 4 y 5 de Inicio y las tarjetas de funciones de
+// Producto): abre la página en una ventana estrecha (c.ancho), deja la zona a la vista (c.preparar), recorta todo lo que
+// casa con c.zona con su margen y hasta c.alto px de alto, y lo guarda a 2× como
+// site/capturas/<id>-<idioma>-<tema>.webp. Se para si el texto recortado enseña una ruta, un correo o el nombre del equipo.
+async function recorteSitio({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma) {
+  const zona = JSON.stringify(c.zona)
+  await abrir(c.pagina, tema, idioma, '.pagina', c.ancho ?? 420, 900, c.guardado)
+  await sinBarra()
+  // Sin ventana, la página no tiene el foco y un selector no abriría su lista con el teclado.
+  await enviar('Emulation.setFocusEmulationEnabled', { enabled: true })
+  if (c.preparar) await hasta(() => evaluar(c.preparar), 15, `preparar ${c.id}`)
+  await hasta(() => evaluar(`[...document.querySelectorAll(${zona})].some((e) => e.getBoundingClientRect().height > 0)`), 15, `${c.zona} en #${c.pagina}`)
+  await esperar(600) // lo que se abre llega con su animación
+  await ocultarRuta()
+  const r = await evaluar(`(() => {
+    const es = [...document.querySelectorAll(${zona})].filter((e) => e.getBoundingClientRect().height > 0)
+    es[0].scrollIntoView({ block: 'start', behavior: 'instant' })
+    // Un diálogo o un panel va fijo en la ventana: se recorta sin desplazar la página.
+    const fijo = !!es[0].closest('.q-dialog, .q-drawer')
+    if (fijo) scrollTo(0, 0)
+    // Alrededor de un diálogo, sin margen: se vería el velo de detrás.
+    const cajas = es.map((e) => e.getBoundingClientRect()), m = es[0].closest('.q-dialog') ? 0 : ${c.margen ?? 12}
+    const x = Math.round(Math.max(0, Math.min(...cajas.map((b) => b.left)) + scrollX - m))
+    const y = Math.round(Math.max(0, Math.min(...cajas.map((b) => b.top)) + scrollY - m))
+    const w = Math.round(Math.min(document.documentElement.scrollWidth, Math.max(...cajas.map((b) => b.right)) + scrollX + m) - x)
+    const h = Math.round(Math.min(${c.alto ?? 520}, Math.max(...cajas.map((b) => b.bottom)) + scrollY + m - y))
+    // El texto de toda la zona recortada (también lo de detrás y los campos), no solo el de los elementos.
+    const dentro = (t) => t.width > 0 && t.right + scrollX > x && t.left + scrollX < x + w && t.bottom + scrollY > y && t.top + scrollY < y + h
+    const textos = [], rango = document.createRange(), recorre = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    while (recorre.nextNode()) { rango.selectNodeContents(recorre.currentNode); if (dentro(rango.getBoundingClientRect())) textos.push(recorre.currentNode.nodeValue) }
+    for (const campo of document.querySelectorAll('input, textarea')) if (dentro(campo.getBoundingClientRect())) textos.push(campo.value)
+    return { x, y, w, h, fijo, texto: textos.join(' ') }
+  })()`)
+  if (privada.test(r.texto) || /[\w.+-]+@[\w-]+\.\w/.test(r.texto) || r.texto.toLowerCase().includes(hostname().toLowerCase()))
+    throw new Error(`${c.id}: el recorte muestra una ruta, un correo o el nombre del equipo: ${r.texto.slice(0, 200)}`)
+  const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: !r.fijo,
+    clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 2 } })
+  writeFileSync(join(destinoPortada, `${c.id}-${idioma}-${tema}.webp`), Buffer.from(data, 'base64'))
+  console.log(`site/capturas/${c.id}-${idioma}-${tema}.webp (${r.w}×${r.h})`)
+}
 
-// COLORES_TERMINAL son el fondo y la tinta de la terminal en cada tema (los de docs/diseno/DESIGN.md).
-const COLORES_TERMINAL = { claro: { fondo: '#ffffff', texto: '#0f1b1e' }, oscuro: { fondo: '#0a1116', texto: '#e5edf0' } }
+// portada guarda la pantalla de 1440×900 que está abierta como site/capturas/<nombre>-<tema>-<idioma>-<ancho>.webp, a cada
+// ancho (reducida desde la de 1440), tras comprobar que no enseña una ruta real.
+async function portada({ enviar, evaluar }, nombre, tema, idioma, anchos) {
+  const vista = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
+  if (privada.test(vista)) throw new Error(`${nombre}: la captura muestra una ruta real: ${vista.slice(0, 200)}`)
+  for (const ancho of anchos) {
+    const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
+      clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
+    writeFileSync(join(destinoPortada, `${nombre}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(data, 'base64'))
+    console.log(`site/capturas/${nombre}-${tema}-${idioma}-${ancho}.webp`)
+  }
+}
 
-// capturasTerminal saca site/capturas/terminal-*: compila internal/tui/captura junto a la copia portable (portable.txt,
-// así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a 112×32, la convierte a HTML con
-// ansiAHtml y la saca a 1440 y a 960 px. La ruta del proyecto de ejemplo se cambia por la de siempre.
-async function capturasTerminal({ enviar, evaluar }, ejemplo) {
+// capturasTerminal da lo que va en site/capturas/terminal.json para un idioma: compila internal/tui/captura junto a la
+// copia portable (portable.txt, así habla con su servicio y sus datos de ejemplo), pinta cada página de TERMINAL a
+// 100×28, solo en el tema oscuro (las clases t-<token> valen para los dos temas, ver ansiAHtml) y da su HTML:
+// {"inicio":"…","apis":"…","historial":"…"}. La ruta del proyecto de ejemplo se cambia por la de siempre.
+// Falla si una pantalla enseña una ruta real, si quedó en «Comprobando…», si la red de Inicio sigue en movimiento
+// (peticiones en curso o filas ya terminadas que se van) o si el Historial no tiene peticiones.
+function capturasTerminal(ejemplo, idioma) {
   const programa = join(temporal, process.platform === 'win32' ? 'captura.exe' : 'captura')
-  execFileSync('go', ['build', '-o', programa, './internal/tui/captura'], { cwd: raiz, stdio: 'inherit' })
-  for (const p of TERMINAL)
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en']) {
-        // Sin NO_COLOR ni ASCII; TERM_PROGRAM dice que la salida acaba en un HTML con UTF-8, no en una consola antigua.
-        const entorno = { ...process.env, TRAMTAI_IDIOMA: idioma, TERM_PROGRAM: 'tramtai-capturas' }
-        delete entorno.NO_COLOR
-        delete entorno.TRAMTAI_ASCII
-        const ansi = execFileSync(programa, [tema, idioma, '112', '32', ...p.teclas], { cwd: temporal, env: entorno, encoding: 'utf8', maxBuffer: 16 << 20 })
-          .replaceAll(ejemplo, 'C:\\Proyectos\\mi-app')
-        if (privada.test(ansi)) throw new Error(`terminal ${p.nombre}: la captura muestra una ruta real`)
-        const { fondo, texto } = COLORES_TERMINAL[tema]
-        const html = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:${fondo}}
-pre{display:inline-block;margin:0;padding:20px 24px;font:22px/1.25 'Cascadia Mono',Consolas,'DejaVu Sans Mono',monospace;color:${texto};background:${fondo}}</style>
-<pre>${ansiAHtml(ansi, COLORES_TERMINAL[tema])}</pre>`
-        await enviar('Emulation.setDeviceMetricsOverride', { width: 1600, height: 1200, deviceScaleFactor: 1, mobile: false })
-        await enviar('Page.navigate', { url: 'data:text/html;charset=utf-8,' + encodeURIComponent(html) })
-        await hasta(() => evaluar('document.readyState === "complete" && document.fonts.status === "loaded"'), 20, `la terminal ${p.nombre}`)
-        await esperar(200)
-        const b = await evaluar(`(() => { const r = document.querySelector('pre').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
-        const alto = Math.round((b.h * 1440) / b.w)
-        const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, clip: { x: b.x, y: b.y, width: b.w, height: b.h, scale: 1440 / b.w } })
-        const reducida = await reducir(evaluar, data, 960, Math.round((alto * 960) / 1440))
-        for (const [ancho, webp] of [[1440, data], [960, reducida]]) {
-          writeFileSync(join(destinoPortada, `terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(webp, 'base64'))
-          console.log(`site/capturas/terminal-${p.nombre}-${tema}-${idioma}-${ancho}.webp (${ancho}×${Math.round((alto * ancho) / 1440)})`)
-        }
-      }
+  if (!existsSync(programa)) execFileSync('go', ['build', '-o', programa, './internal/tui/captura'], { cwd: raiz, stdio: 'inherit' })
+  const textos = JSON.parse(readFileSync(join(raiz, 'internal', 'tui', 'datos', 'textos.json'), 'utf8'))
+  const terminal = {}
+  for (const p of TERMINAL) {
+    // Sin NO_COLOR ni ASCII; TERM_PROGRAM dice que la salida acaba en un HTML con UTF-8, no en una consola antigua.
+    const entorno = { ...process.env, TRAMTAI_IDIOMA: idioma, TERM_PROGRAM: 'tramtai-capturas' }
+    delete entorno.NO_COLOR
+    delete entorno.TRAMTAI_ASCII
+    const inicio = Date.now()
+    const ansi = execFileSync(programa, ['oscuro', idioma, '100', '28', ...p.teclas], { cwd: temporal, env: entorno, encoding: 'utf8', maxBuffer: 16 << 20 })
+      .replaceAll(ejemplo, 'C:\\Proyectos\\mi-app')
+    const segundos = ((Date.now() - inicio) / 1000).toFixed(1)
+    if (privada.test(ansi)) throw new Error(`terminal ${p.nombre} (${idioma}): la captura muestra una ruta real`)
+    const html = ansiAHtml(ansi)
+    const plano = html.replace(/<[^>]+>/g, '')
+    const comprobando = textos[idioma]['inicio.comprobando']
+    if (plano.includes(comprobando)) throw new Error(`terminal ${p.nombre} (${idioma}): quedó en «${comprobando}»`)
+    // La red de Inicio con peticiones en curso o con filas que se van («terminada 9 s») cambiaría a los pocos segundos.
+    const movimiento = plano.match(redEnMovimiento(textos[idioma]))
+    if (movimiento) throw new Error(`terminal ${p.nombre} (${idioma}): la red sigue en movimiento («${movimiento[0]}»)`)
+    if (p.nombre === 'historial' && plano.includes(textos[idioma]['historial.vacio']))
+      throw new Error(`terminal historial (${idioma}): sin peticiones; ¿respondió ${modelo}?`)
+    terminal[p.nombre] = html
+    console.log(`terminal ${idioma} ${p.nombre}: ${html.length} bytes, ${segundos} s hasta asentarse`)
+  }
+  return terminal
 }
 
 // totp da el código de 6 dígitos de un secreto en un instante (RFC 6238: SHA-1, pasos de 30 s), como la app de
@@ -259,7 +305,7 @@ async function capturasServidor() {
     // la contraseña. El servicio corre con su cuenta (como root no arranca) y el secreto TOTP le llega como se lo daría
     // systemd: en $CREDENTIALS_DIRECTORY/tramtai.TRAMTAI_TOTP (el contenedor no tiene systemd).
     enTramtai('useradd', '--system', '--home', '/var/lib/tramtai', '--shell', '/usr/sbin/nologin', 'tramtai')
-    enTramtai('sh', '-c', `mkdir -p /var/lib/tramtai && printf 'servicio:\\n  host: 127.0.0.1\\n  dominios: [tramtai.example.com]\\n  proxy:\\n    confiables: [127.0.0.1/32]\\n' >/var/lib/tramtai/config.yaml`)
+    enTramtai('sh', '-c', `mkdir -p /var/lib/tramtai && printf 'servicio:\\n  host: 127.0.0.1\\n  dominios: [tramtai.example.com]\\n  proxy:\\n    confiables: [127.0.0.1/32]\\nconversion:\\n  preparar_al_iniciar: false\\n' >/var/lib/tramtai/config.yaml`)
     enTramtai('sh', '-c', `mkdir -p /run/credenciales && printf %s ${base32(secreto)} >/run/credenciales/tramtai.TRAMTAI_TOTP && chown -R tramtai /run/credenciales && chmod -R go= /run/credenciales`)
     enTramtai('/opt/tramtai/tramtai', 'terminos', 'aceptar')
     compose(['exec', '-T', 'tramtai', '/opt/tramtai/tramtai', 'administrador', 'contraseña'], { input: `${contrasena}\n${contrasena}\n` })
@@ -272,11 +318,18 @@ async function capturasServidor() {
       sinBarra: (oculta = true) => s.evaluar(`(() => { let e = document.getElementById('sin-barra'); if (!e) { e = document.createElement('style'); e.id = 'sin-barra'; document.head.append(e) }
         e.textContent = ${oculta ? "'.q-header{display:none!important}'" : "''"} })()`),
       ocultarRuta: async () => {} }
-    const deServidor = CAPTURAS.filter((c) => c.servidor && (completa || soloServidor || c.id === solo))
+    const deServidor = CAPTURAS.filter((c) => c.servidor && (completa || soloServidor || solos.includes(c.id)))
     // La página de entrada, antes de entrar; después, con la contraseña y el código, lo demás.
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
         for (const c of deServidor.filter((x) => x.id === 'entrar')) await capturarZona(nav, c, tema, idioma)
+    // Para el sitio: la página de entrada (contraseña y código) entera, a 1440 y 960 px.
+    if (completa || soloServidor)
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await nav.abrir('inicio', tema, idioma, '[data-captura="entrar"]', 1440, 900)
+          await portada(s, 'servidor-entrar', tema, idioma, [1440, 960])
+        }
     await nav.abrir('inicio', 'claro', 'es', '[data-captura="entrar"]', 1280, 900)
     const estado = await s.evaluar(`fetch('/ui/acceder', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contrasena: ${JSON.stringify(contrasena)}, codigo: ${JSON.stringify(totp(secreto))} }) }).then((r) => r.status)`)
@@ -284,7 +337,16 @@ async function capturasServidor() {
     const pasoEntrada = Math.floor(Date.now() / 30000)
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
-        for (const c of deServidor.filter((x) => x.id !== 'entrar')) await capturarZona(nav, c, tema, idioma)
+        for (const c of deServidor.filter((x) => x.id !== 'entrar')) await (c.sitio ? recorteSitio : capturarZona)(nav, c, tema, idioma)
+    // Para el sitio: Inicio ya dentro, con la cabecera «Servidor», a 1440 y 960 px.
+    if (completa || soloServidor)
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await nav.abrir('inicio', tema, idioma, '.pagina', 1440, 900)
+          // El contenedor de prueba no trae el conversor de archivos (un servidor instalado sí): su aviso no sale.
+          await s.evaluar(`(() => { const e = document.createElement('style'); e.textContent = '.aviso-conversor{display:none!important}'; document.head.append(e) })()`)
+          await portada(s, 'servidor-inicio', tema, idioma, [1440, 960])
+        }
 
     // El diálogo de Seguridad: «Crear códigos nuevos» pide la contraseña y, con TOTP, un código (de otro paso: uno ya
     // usado no vale), y da los códigos nuevos.
@@ -350,11 +412,12 @@ try {
   cli('acceso', 'crear', 'resumen-notas', '--grupo', 'Notas')
   // conApp: lo que abre la Web UI de escritorio (todas las capturas menos las de la terminal, el servidor y los iconos).
   const conApp = completa || !!solo || soloRecorridos || soloBienvenida
-  for (const texto of completa || solo || soloRecorridos || soloTerminal ? ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.'] : []) {
-    try { cli('ejecutar', '-a', agente, '-m', modelo.split('/')[1] ?? '', texto) } catch { console.warn(`aviso: ${modelo} no respondió; el Historial mostrará el error`) }
-  }
 
   const { enviar, evaluar, cerrar } = await lanzar()
+  // Lo que la demo enseña de los agentes sin tocar ningún CLI (SIMULAR, en capturas-lista.ts), en cada carga.
+  // (sin Page.enable, Edge no lo aplica)
+  await enviar('Page.enable')
+  await enviar('Page.addScriptToEvaluateOnNewDocument', { source: SIMULAR })
   const abrir = crearAbrir(enviar, evaluar, base)
   // sinBarra oculta la barra superior fija, que taparía el recorte de un elemento.
   const sinBarra = (oculta = true) => evaluar(`(() => { let s = document.getElementById('sin-barra'); if (!s) { s = document.createElement('style'); s.id = 'sin-barra'; document.head.append(s) }
@@ -390,18 +453,34 @@ try {
     await pedir('/ui/sesion', { instancia: 'global' }, p.csrf)
   })()`)
 
-  // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica.
+  // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica, ni su carpeta
+  // personal (Ajustes de las herramientas enseña dónde está el archivo de cada una: C:\Users\<usuario>\.claude\…), ni la de
+  // datos de la copia (Agentes enseña su config.yaml): sale como la de una instalación normal.
   const ocultarRuta = () => evaluar(`(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
-    while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
+    while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app')
+      .replaceAll(${JSON.stringify(join(temporal, 'datos-tramtai'))}, 'C:\\\\Users\\\\ana\\\\AppData\\\\Roaming\\\\tramtai')
+      .replaceAll(${JSON.stringify(homedir())}, 'C:\\\\Users\\\\ana').replaceAll(${JSON.stringify(homedir().replaceAll('\\', '/'))}, 'C:/Users/ana') })()`)
 
-  mkdirSync(destinoAyuda, { recursive: true })
-  for (const c of CAPTURAS.filter((x) => !x.servidor && (completa || x.id === solo)))
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en']) await capturarZona({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma)
-
-  // La terminal de la portada: cada página que pinta internal/tui/captura (compilado junto a la copia portable, así
-  // habla con su servicio), convertida a HTML con ansiAHtml y sacada como una captura más.
-  if (completa || soloTerminal) await capturasTerminal({ enviar, evaluar }, ejemplo)
+  // El Historial enseña las peticiones de ejemplo en el idioma de la captura (PETICIONES): historialEn lo vacía, si tenía
+  // las del otro idioma, y las hace en este. Por eso lo que enseña el Historial va por idioma: primero todo el español,
+  // luego todo el inglés.
+  let historialDe = ''
+  async function historialEn(idioma) {
+    if (historialDe === idioma) return
+    if (historialDe) {
+      await enviar('Page.navigate', { url: base + '/' })
+      await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
+      const estado = await evaluar(`(async () => { const s = await (await fetch('/ui/sesion')).json()
+        return (await fetch('/api/v1/trabajos', { method: 'DELETE', headers: { 'X-CSRF-Token': s.csrf } })).status })()`)
+      if (estado !== 200) throw new Error(`no pude vaciar el Historial (HTTP ${estado})`)
+    }
+    for (const texto of PETICIONES[idioma]) {
+      console.log(`petición real a ${modelo}: ${texto}`)
+      try { cli('ejecutar', '-a', agente, '-m', modelo.split('/')[1] ?? '', texto) } catch { console.warn(`aviso: ${modelo} no respondió; el Historial mostrará el error`) }
+    }
+    historialDe = idioma
+    await esperar(5000) // Inicio deja a la vista unos segundos las peticiones que acaban de llegar
+  }
 
   // Un recorrido señala un elemento con el anillo de driver.js (.driver-active-element, ver estilos.css): se carga cada
   // página una vez por tema e idioma y se recorta cada ancla con 16 px de margen. Las de app.* (el selector de espacio
@@ -409,10 +488,21 @@ try {
   // Una ancla que la demo no muestra no se inventa: se avisa y se apunta en SIN_CAPTURA, con el motivo.
   const visible = (ancla) => `[...document.querySelectorAll('[data-recorrido="${ancla}"]')].find((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 })`
   const ausentes = new Set()
-  const aSacar = ANCLAS.filter((a) => (completa || soloRecorridos || a.id === solo) && !(a.ancla in SIN_CAPTURA))
-  if (aSacar.length)
-    for (const tema of ['claro', 'oscuro'])
-      for (const idioma of ['es', 'en'])
+  const aSacar = ANCLAS.filter((a) => (completa || soloRecorridos || solos.includes(a.id)) && !(a.ancla in SIN_CAPTURA))
+  const terminal = {}
+  mkdirSync(destinoAyuda, { recursive: true })
+  for (const idioma of ['es', 'en']) {
+    // Los recortes del sitio no enseñan el Historial: con --solo solo de ellos no se hace ninguna petición real.
+    if (completa || soloRecorridos || soloTerminal || solos.some((s) => !CAPTURAS.find((c) => c.id === s)?.sitio)) await historialEn(idioma)
+    for (const c of CAPTURAS.filter((x) => !x.servidor && (completa || solos.includes(x.id))))
+      for (const tema of ['claro', 'oscuro']) await (c.sitio ? recorteSitio : capturarZona)({ enviar, evaluar, abrir, sinBarra, ocultarRuta }, c, tema, idioma)
+
+    // La terminal de la portada: cada página que pinta internal/tui/captura (compilado junto a la copia portable, así
+    // habla con su servicio), convertida a HTML con ansiAHtml; al final se guarda en site/capturas/terminal.json.
+    if (completa || soloTerminal) terminal[idioma] = capturasTerminal(ejemplo, idioma)
+
+    if (aSacar.length)
+      for (const tema of ['claro', 'oscuro'])
         for (const pagina of [...new Set(aSacar.map((a) => a.pagina))]) {
           if (!aSacar.some((a) => a.pagina === pagina && !ausentes.has(a.ancla))) continue
           await abrir(pagina, tema, idioma, '.pagina', 1280, 900)
@@ -440,7 +530,8 @@ try {
               // para no meter en el recorte trozos de la página de detrás.
               const m = ${cabecera} ? 0 : fijo ? 6 : 16
               const b = c.getBoundingClientRect()
-              const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, b.top + scrollY - m)
+              const arriba = ${JSON.stringify(a.arriba ?? '')} ? e.closest(${JSON.stringify(a.arriba ?? '')}) : null
+              const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, (arriba ?? c).getBoundingClientRect().top + scrollY - m)
               const w = Math.min(document.documentElement.scrollWidth, b.right + scrollX + m) - x
               const h = Math.min(document.documentElement.scrollHeight, b.bottom + scrollY + m) - y
               // El texto de toda la zona recortada (también lo de detrás y los campos), no solo el del elemento.
@@ -458,23 +549,22 @@ try {
             await evaluar(`document.body.classList.remove('driver-active'); document.querySelectorAll('.driver-active-element').forEach((e) => e.classList.remove('driver-active-element'))`)
           }
         }
+  }
   if (ausentes.size) console.warn(`SIN CAPTURA: ${[...ausentes].join(', ')}`)
+  if (completa || soloTerminal) {
+    writeFileSync(join(destinoPortada, 'terminal.json'), JSON.stringify(terminal, null, 1) + '\n')
+    console.log('site/capturas/terminal.json')
+  }
 
-  if (completa)
-    for (const p of PORTADA)
-      for (const tema of ['claro', 'oscuro']) {
-        await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
-        await ocultarRuta()
-        const vista = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
-        if (privada.test(vista)) throw new Error(`${p.nombre}: la captura muestra una ruta real: ${vista.slice(0, 200)}`)
-        // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
-        for (const ancho of [1440, 960, 640]) {
-          const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
-            clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
-          writeFileSync(join(destinoPortada, `${p.nombre}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
-          console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
+  // Con --solo, una pantalla de la portada es portada-<nombre> (portada-agentes).
+  for (const p of PORTADA.filter((x) => completa || solos.includes('portada-' + x.nombre)))
+      for (const tema of ['claro', 'oscuro'])
+        for (const idioma of ['es', 'en']) {
+          await abrir(p.pagina, tema, idioma, '.pagina', 1440, 900)
+          await ocultarRuta()
+          // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
+          await portada({ enviar, evaluar }, p.nombre, tema, idioma, [1440, 960, 640])
         }
-      }
   // zonaDelPaso es lo que señala el paso (.driver-active-element) con 32 px por lado, agrandado a 16:10 alrededor de su
   // centro (de 720 px de ancho a `maximo`) y encajado en la pantalla de 1440×900. El tope de 820 es lo que mide la imagen
   // en la portada: cada paso se ve a 1× o más. Un ancla más ancha (el mapa) se recorta desde su borde izquierdo, donde van
@@ -550,7 +640,7 @@ try {
   await enviar('Browser.close').catch(() => {})
   cerrar()
 
-  if (completa || soloServidor || CAPTURAS.some((c) => c.servidor && c.id === solo)) await capturasServidor()
+  if (completa || soloServidor || CAPTURAS.some((c) => c.servidor && solos.includes(c.id))) await capturasServidor()
 } finally {
   try { execFileSync(exe, ['servicio', 'detener'], { cwd: temporal, stdio: 'ignore' }) } catch { /* ya estaba detenido */ }
   for (const p of procesos) p.kill()

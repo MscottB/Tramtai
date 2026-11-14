@@ -23,6 +23,14 @@ import (
 // puntos de acceso. Devuelve false si la ruta no es suya.
 func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *Instancia, privilegiada bool) bool {
 	ruta := r.URL.Path
+	// Preparar agentes instala programas en el equipo (en el servidor, en la cuenta del servicio): solo con la sesión de la
+	// Web UI (en el servidor, la del administrador, con TOTP si lo tiene) o la clave del servicio, nunca con la clave del
+	// espacio que usan las apps (Ruling 23). 403: la clave vale, pero no para esto.
+	if strings.HasPrefix(ruta, "/api/v1/agentes/") && !privilegiada {
+		api.EscribirJSON(w, http.StatusForbidden, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoNoAutorizado,
+			"mensaje": idioma.T("preparar los agentes requiere la sesión de la Web UI o la clave del servicio: la clave del espacio no basta")}})
+		return true
+	}
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
 		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
 		e := inst.estado(r.Context())
@@ -30,7 +38,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n), Contadores: contadores(e.Trabajos)})
 		return true
 	}
-	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {
+	herramientas := ruta == "/api/v1/herramientas" || strings.HasPrefix(ruta, "/api/v1/herramientas/")
+	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") && !herramientas {
 		return false
 	}
 	if !privilegiada {
@@ -38,6 +47,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return true
 	}
 	switch {
+	case herramientas:
+		s.rutaHerramientas(w, r, inst)
 	case ruta == "/api/v1/instancia/pasos" && r.Method == http.MethodGet:
 		api.EscribirJSON(w, http.StatusOK, s.primerosPasos(r.Context(), inst, mismoUsuarioLocal(r)))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:

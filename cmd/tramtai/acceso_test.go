@@ -21,6 +21,14 @@ import (
 	"tramtai/internal/servicio"
 )
 
+func TestImprimirPuntoDesactivado(t *testing.T) {
+	var b strings.Builder
+	imprimirPuntos(&b, []servicio.EstadoPunto{{Nombre: "codex", Contratos: []string{"openai"}, Error: "desactivado"}})
+	if campos := strings.Fields(b.String()); len(campos) != 4 || campos[1] != "-" || campos[3] != "desactivado" {
+		t.Fatalf("una API sin URL lleva «-» (como herramientas listar) y su motivo:\n%s", b.String())
+	}
+}
+
 func TestAplicarPresupuesto(t *testing.T) {
 	var p nucleo.Presupuesto
 	if err := aplicarPresupuesto(&p, []string{"diario.peticiones=500", "mensual.usd=12.5", "mensual.tokens=9000"}); err != nil {

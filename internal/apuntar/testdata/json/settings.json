@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": ["Bash(go test:*)"],
+    "deny": ["Read(./.env)"]
+  },
+  "env": {
+    "OTRA": "1"
+  },
+  "includeCoAuthoredBy": false
+}

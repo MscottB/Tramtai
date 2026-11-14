@@ -76,7 +76,7 @@ import { nombreAgente, colorLinea, agenteListo } from '../agentes'
 import { t } from '../i18n'
 import { claveEtapa, type Tranvia } from '../vivo'
 
-const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string; tranvias?: Tranvia[]; resto?: number }>()
+const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string; tranvias?: Tranvia[]; resto?: number; enCurso?: number }>()
 const emit = defineEmits<{ ir: [destino: Destino]; seguir: [id: string] }>()
 
 const ANCHO = 980
@@ -128,10 +128,9 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   y: y(i, props.adaptadores.length),
 })))
 
-const enCurso = computed(() => (props.tranvias?.length ?? 0) + (props.resto ?? 0))
 const descripcion = computed(() => t(origenes.value.length === 1 ? 'mapa.descripcionUno' : 'mapa.descripcion', {
   apis: origenes.value.length, listos: lineas.value.filter((l) => l.listo).length, total: lineas.value.length,
-}) + (enCurso.value === 1 ? ' ' + t('vivo.enCursoUno') : enCurso.value ? ' ' + t('vivo.enCurso', { n: enCurso.value }) : ''))
+}) + (props.enCurso === 1 ? ' ' + t('vivo.enCursoUno') : props.enCurso ? ' ' + t('vivo.enCurso', { n: props.enCurso }) : ''))
 
 // estacionDe es la estación de donde salió una petición: la de su API o su grupo; sin API (la principal, Probar, la
 // terminal o la CLI), la clave del espacio.

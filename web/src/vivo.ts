@@ -95,10 +95,11 @@ export function posicion(tr: Tranvia): { tramo: Tramo; avance: number } {
   return { tramo: tr.tramo, avance: tr.avance }
 }
 
-// visibles son los que caben en el mapa (los más recientes) y cuántos quedan fuera.
-export function visibles(t: Tranvias, max = 12): { lista: Tranvia[]; resto: number } {
+// visibles son los que caben en el mapa (los más recientes), cuántos quedan fuera y cuántos siguen en curso (los que ya
+// llegaron siguen a la vista unos segundos, ver limpiar, pero no están en curso).
+export function visibles(t: Tranvias, max = 12): { lista: Tranvia[]; resto: number; enCurso: number } {
   const todos = [...t.values()].sort((a, b) => b.desde - a.desde)
-  return { lista: todos.slice(0, max), resto: Math.max(0, todos.length - max) }
+  return { lista: todos.slice(0, max), resto: Math.max(0, todos.length - max), enCurso: todos.filter((x) => x.terminadoEn === undefined).length }
 }
 
 // esperaReconexion es la espera antes del intento n de reconectar el flujo: 1, 2, 4, 8, 16 s y después 30 s.

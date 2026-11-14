@@ -18,16 +18,17 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../manifest.webmanifest">
-<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
 <script src="../sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 </head>
 <body>
 <a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
@@ -37,12 +38,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
-        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
-        <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
-        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+        <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
         <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../descargar.html" class="solo-menu"><span lang="es">Descargar</span><span lang="en">Download</span></a>
       </nav>
+      <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span lang="es" class="solo-lectores">Buscar</span><span lang="en" class="solo-lectores">Search</span></button>
       <div class="preferencias">
         <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
           <button type="button" data-idioma="es" aria-pressed="true">ES</button>
@@ -56,25 +59,65 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       </div>
     </div>
     <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
-    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+    <a class="boton principal" href="../descargar.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main id="contenido" tabindex="-1" class="envoltura ayuda">
-<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-  <ol>
-    <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
-    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
-    <li><a href="#s-soloterminal"><span lang="es">Solo con la terminal</span><span lang="en">Terminal only</span></a></li>
-    <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
-    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
-    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
-  </ol>
+<main class="envoltura doc-envoltura tema-ayuda">
+<div class="doc">
+<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
+<div class="doc-indice-lista" id="doc-indice-lista">
+<button type="button" class="buscar-campo" data-buscar hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span><span lang="es">Buscar</span><span lang="en">Search</span></span><kbd>Ctrl K</kbd></button>
+<ul>
+  <li><a href="index.html"><span lang="es">Inicio de la Ayuda</span><span lang="en">Help home</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+<ul aria-labelledby="i-g-empezar">
+  <li><a href="empezar.html" aria-current="page"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
+  <li><a href="agentes.html"><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></a></li>
+  <li><a href="preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></li>
+  <li><a href="probar.html"><span lang="es">Probar</span><span lang="en">Playground</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-apps"><span lang="es">Desde tus apps</span><span lang="en">From your apps</span></p>
+<ul aria-labelledby="i-g-apps">
+  <li><a href="conectar.html"><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></a></li>
+  <li><a href="conectar-herramientas.html"><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></a></li>
+  <li><a href="archivos.html"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
+  <li><a href="json.html"><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></a></li>
+  <li><a href="recetas.html"><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></a></li>
+  <li><a href="herramientas.html"><span lang="es">Herramientas</span><span lang="en">Tools</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dia"><span lang="es">Día a día</span><span lang="en">Day to day</span></p>
+<ul aria-labelledby="i-g-dia">
+  <li><a href="presupuestos.html"><span lang="es">Presupuestos</span><span lang="en">Budgets</span></a></li>
+  <li><a href="historial.html"><span lang="es">Historial</span><span lang="en">History</span></a></li>
+  <li><a href="espacios.html"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></a></li>
+  <li><a href="claves.html"><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></a></li>
+  <li><a href="ajustes.html"><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-servidor"><span lang="es">Servidor</span><span lang="en">Server</span></p>
+<ul aria-labelledby="i-g-servidor">
+  <li><a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a></li>
+  <li><a href="entornos.html"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dudas"><span lang="es">Dudas y errores</span><span lang="en">Questions and errors</span></p>
+<ul aria-labelledby="i-g-dudas">
+  <li><a href="problemas.html"><span lang="es">Algo falló</span><span lang="en">Something failed</span></a></li>
+  <li><a href="conceptos.html"><span lang="es">Conceptos</span><span lang="en">Concepts</span></a></li>
+  <li><a href="preguntas.html"><span lang="es">Preguntas frecuentes</span><span lang="en">Frequently asked questions</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+<ul aria-labelledby="i-mas">
+  <li><a href="../servidor.html"><span lang="es">Guía del servidor</span><span lang="en">Server guide</span></a></li>
+  <li><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
+</ul>
+</div>
 </nav>
-<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Empezar</span><span lang="en">Get started</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
-<header>
-  <h1><span lang="es">Empezar</span><span lang="en">Get started</span></h1>
+<article id="contenido" tabindex="-1" class="prosa">
+<header class="doc-cabeza">
+  <p class="fig doc-ruta"><span lang="es">Ayuda</span><span lang="en">Help</span> · <span lang="es">Empezar</span><span lang="en">Get started</span></p>
+  <h1 class="titular"><span lang="es">Empezar</span><span lang="en">Get started</span></h1>
   <p class="entradilla"><span lang="es">Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.</span><span lang="en">Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.</span></p>
 </header>
 
@@ -87,14 +130,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <li><strong>5. <span lang="es">La respuesta</span><span lang="en">The response</span></strong><span><span lang="es">Llega en vivo, se valida si hay esquema y queda en el Historial.</span><span lang="en">Arrives live, is validated if there is a schema and stays in History.</span></span></li>
 </ol>
 
-<p><a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar Tramtai</span><span lang="en">Download Tramtai</span></a></p>
-<p class="aviso"><span lang="es">Antes necesitas el CLI de al menos un agente (Claude Code, Codex o GitHub Copilot CLI) o una clave de la Gemini API. En Windows puede salir «Windows protegió su PC», porque el instalador aún no está firmado.</span><span lang="en">You first need the CLI of at least one agent (Claude Code, Codex or GitHub Copilot CLI) or a Gemini API key. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.</span> <a href="#windows"><span lang="es">Qué hacer con el aviso de Windows</span><span lang="en">What to do about the Windows warning</span></a></p>
+<p><a class="boton principal" href="../descargar.html"><span lang="es">Descargar Tramtai</span><span lang="en">Download Tramtai</span></a></p>
+<p class="aviso"><span lang="es">Necesitas al menos un agente: Tramtai instala el CLI de Claude Code, Codex, GitHub Copilot o Antigravity y te ayuda a iniciar sesión; para Gemini basta una clave de la Gemini API. En Windows puede salir «Windows protegió su PC», porque el instalador aún no está firmado.</span><span lang="en">You need at least one agent: Tramtai installs the CLI of Claude Code, Codex, GitHub Copilot or Antigravity and helps you sign in; for Gemini, a Gemini API key is enough. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.</span> <a href="#windows"><span lang="es">Qué hacer con el aviso de Windows</span><span lang="en">What to do about the Windows warning</span></a></p>
 </section>
 
 <section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
 <ol class="pasos">
   <li><span lang="es">Instala Tramtai: instalador o portable en Windows, Homebrew o .dmg en macOS, .deb o .rpm en Linux.</span><span lang="en">Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.</span></li>
-  <li><span lang="es">En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.</span><span lang="en">In Agents, connect an agent with your subscription (personal use) or with an API key.</span></li>
+  <li><span lang="es">En Agentes, prepara un agente: Tramtai instala su CLI y te ayuda a iniciar sesión (tu suscripción, uso personal), o le pones una clave de API.</span><span lang="en">In Agents, set up an agent: Tramtai installs its CLI and helps you sign in (your subscription, personal use), or you give it an API key.</span></li>
   <li><span lang="es">En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.</span><span lang="en">In the Playground, type a message, pick agent and model and watch the response live.</span></li>
   <li><span lang="es">En Mis APIs copia la URL y crea la clave del espacio (se ve una vez), y ponlas en tu app (tema «Conectar mi app»).</span><span lang="en">In My APIs copy the URL and create the workspace key (shown only once), and put them in your app (topic “Connect my app”).</span></li>
 </ol>
@@ -102,7 +145,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 
 <section id="s-soloterminal"><h2><span lang="es">Solo con la terminal</span><span lang="en">Terminal only</span></h2>
 <ol class="pasos">
-  <li><span lang="es">Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.</span><span lang="en">Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.</span></li>
+  <li><span lang="es">Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.</span><span lang="en">Start the service in the background with “tramtai service start -d”: it serves your apps without opening the app, even after you close the terminal.</span></li>
   <li><span lang="es">Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.</span><span lang="en">Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.</span></li>
   <li><span lang="es">Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve, W abre la Web UI en el navegador y q sale. En Probar, c cancela la petición en curso.</span><span lang="en">Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back, W opens the Web UI in the browser and q quits. In the Playground, c cancels the running request.</span></li>
   <li><span lang="es">Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo.</span><span lang="en">Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters.</span></li>
@@ -125,8 +168,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
 <details id="repetir-recorrido"><summary><span lang="es">¿Cómo repito el recorrido guiado?</span><span lang="en">How do I repeat the guided tour?</span></summary><p><span lang="es">En Inicio, pulsa «Haz el recorrido de Tramtai» en Primeros pasos. Esc lo cierra y las flechas pasan de paso. Solo enseña: no pulsa nada ni cambia tus datos.</span><span lang="en">On Home, click “Take the guided tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data.</span></p></details>
 <details id="tranvias"><summary><span lang="es">¿Qué son los tranvías del mapa de Inicio?</span><span lang="en">What are the trams on the Home map?</span></summary><p><span lang="es">Cada petición en curso: sale de su API, pasa por Tramtai y recorre la línea de su agente. Se pone roja si falla y cambia de línea si salta al respaldo.</span><span lang="en">Each request in progress: it leaves its API, goes through Tramtai and runs along its agent’s line. It turns red if it fails and changes line if it falls back.</span></p></details>
-<details id="entrar"><summary><span lang="es">¿Necesito una clave para entrar?</span><span lang="en">Do I need a key to get in?</span></summary><p><span lang="es">No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps.</span><span lang="en">No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps.</span></p></details>
-<details id="en-marcha"><summary><span lang="es">¿Cómo sé si sigue en marcha y cómo lo detengo?</span><span lang="en">How do I know it is running, and how do I stop it?</span></summary><p><span lang="es">Arriba a la derecha dice «En marcha» o «Sin conexión». Sigue en segundo plano aunque cierres la ventana; «tramtai servicio detener» lo detiene.</span><span lang="en">The top right says “Running” or “Offline”. It keeps running in the background even if you close the window; “tramtai servicio detener” stops it.</span></p></details>
+<details id="instalar-agentes"><summary><span lang="es">¿Tengo que instalar los agentes aparte?</span><span lang="en">Do I have to install the agents separately?</span></summary><p><span lang="es">No: la primera vez, si no tienes ningún agente listo, Tramtai ofrece «Prepara tus agentes», los instala uno tras otro y, tras iniciar sesión, te ofrece usar tu suscripción. Después, desde Agentes.</span><span lang="en">No: the first time, if no agent is ready, Tramtai offers “Set up your agents”, installs them one after another and, after you sign in, offers to use your subscription. Later, from Agents.</span> <a href="preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span> →</a></p></details>
+<details id="entrar"><summary><span lang="es">¿Necesito una clave para entrar?</span><span lang="en">Do I need a key to get in?</span></summary><p><span lang="es">No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps.</span><span lang="en">No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai open” opens it already signed in. My APIs keys are only for your apps.</span></p></details>
+<details id="en-marcha"><summary><span lang="es">¿Cómo sé si sigue en marcha y cómo lo detengo?</span><span lang="en">How do I know it is running, and how do I stop it?</span></summary><p><span lang="es">Arriba a la derecha dice «En marcha» o «Sin conexión». Sigue en segundo plano aunque cierres la ventana; «tramtai servicio detener» lo detiene.</span><span lang="en">The top right says “Running” or “Offline”. It keeps running in the background even if you close the window; “tramtai service stop” stops it.</span></p></details>
 <details id="windows"><summary><span lang="es">Windows dice «Windows protegió su PC»</span><span lang="en">Windows says “Windows protected your PC”</span></summary><p><span lang="es">Pulsa Más información → Ejecutar de todas formas. Aparece porque el instalador todavía no está firmado con un certificado de pago.</span><span lang="en">Click More info → Run anyway. It appears because the installer is not signed with a paid certificate yet.</span></p></details>
 <details id="macos"><summary><span lang="es">macOS no deja abrir la app</span><span lang="en">macOS won’t open the app</span></summary><p><span lang="es">Con Homebrew no pasa. Con el .dmg: Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente, o «xattr -dr com.apple.quarantine /Applications/Tramtai.app».</span><span lang="en">Not with Homebrew. With the .dmg: System Settings → Privacy &amp; Security → Open Anyway, or “xattr -dr com.apple.quarantine /Applications/Tramtai.app”.</span></p></details>
 <details id="linux"><summary><span lang="es">¿Qué necesito en Linux?</span><span lang="en">What do I need on Linux?</span></summary><p><span lang="es">El .deb o el .rpm (x64 y ARM) instalan solos GTK 4 y WebKitGTK 6.0. En GNOME, el icono de la bandeja necesita la extensión AppIndicator.</span><span lang="en">The .deb or .rpm (x64 and ARM) install GTK 4 and WebKitGTK 6.0 on their own. On GNOME, the tray icon needs the AppIndicator extension.</span></p></details>
@@ -141,21 +185,39 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
 <div class="tarjetas-temas">
   <a class="tarjeta-tema" href="agentes.html"><strong><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></strong><span><span lang="es">Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.</span><span lang="en">Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.</span></span></a>
+  <a class="tarjeta-tema" href="preparar.html"><strong><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></strong><span><span lang="es">Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.</span><span lang="en">Tramtai installs each agent’s CLI, helps you sign in and keeps it up to date, only with checked versions.</span></span></a>
   <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Playground</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the response before taking it to your app.</span></span></a>
   <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
 </div>
 </section>
 </article>
+<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true"><span lang="es">En esta página</span><span lang="en">On this page</span></p>
+<ul>
+  <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
+  <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+  <li><a href="#s-soloterminal"><span lang="es">Solo con la terminal</span><span lang="en">Terminal only</span></a></li>
+  <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
+  <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+  <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+</ul>
+</nav>
+</aside>
+</div>
 </main>
 
 <footer>
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
-      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
-      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
-      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../"><span lang="es">Inicio</span><span lang="en">Home</span></a>
+      <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+      <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
-      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../descargar.html"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>
       <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
       <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>

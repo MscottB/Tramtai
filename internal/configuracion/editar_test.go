@@ -75,6 +75,19 @@ func TestFijarValor(t *testing.T) {
 	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
 		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
 	}
+	// Varias de una vez: con una no válida no se guarda ninguna.
+	if err := FijarValores(ruta, OrigenGlobal, map[string]any{"servicio.buscar_actualizaciones": false, "servicio.puerto": "abc"}); err == nil {
+		t.Fatal("un valor no válido debe rechazarse")
+	}
+	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
+		t.Fatal("con una no válida no se guarda ninguna")
+	}
+	if err := FijarValores(ruta, OrigenGlobal, map[string]any{"servicio.buscar_actualizaciones": false, "servicio.buscar_versiones_agentes": false}); err != nil {
+		t.Fatal(err)
+	}
+	if capa, _ := CargarCapa(ruta, OrigenGlobal); capa.Valores["servicio.buscar_actualizaciones"] != false || capa.Valores["servicio.buscar_versiones_agentes"] != false {
+		t.Fatalf("%v", capa.Valores)
+	}
 }
 
 // Veinte ediciones a la vez del mismo config.yaml (pestañas, la TUI, la CLI) no se pisan: al final están todas.
@@ -211,6 +224,13 @@ func TestEscribirAtomicoServidorSinEnlaces(t *testing.T) {
 	}
 
 	t.Setenv("TRAMTAI_SERVIDOR", "")
+	// Un proceso con sandbox (el Bash de un agente en Windows) no puede crear archivos nuevos a través de un punto de
+	// unión (ERROR_FILE_EXISTS con CREATE_NEW, también con Win32 a pelo): no es un fallo de EscribirAtomico.
+	if sonda, err := os.OpenFile(filepath.Join(raiz, "otra", "sonda.tmp"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600); err != nil {
+		t.Skipf("este entorno no crea archivos nuevos a través de un punto de unión: %v", err)
+	} else {
+		_ = sonda.Close()
+	}
 	if err := EscribirAtomico(filepath.Join(raiz, "otra", "y.json"), []byte("{}"), 0o600); err != nil {
 		t.Fatalf("fuera del modo servidor se escribe como siempre: %v", err)
 	}

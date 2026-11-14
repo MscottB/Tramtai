@@ -4,7 +4,7 @@
       <q-item-section avatar top><q-icon name="o_report" color="negative" /></q-item-section>
       <q-item-section>
         <q-item-label class="text-weight-medium">{{ e.titulo }}<span v-if="e.codigo !== 'sin_conexion'" class="codigo texto-suave text-caption q-ml-sm">{{ e.codigo }}</span></q-item-label>
-        <q-item-label caption style="line-height: 1.5">{{ e.solucion }}</q-item-label>
+        <q-item-label caption style="line-height: 1.5"><TextoAyuda :texto="e.solucion" /></q-item-label>
       </q-item-section>
     </q-item>
   </q-list>
@@ -17,6 +17,7 @@ import { tituloError } from '../../api/cliente'
 import { t } from '../../i18n'
 import { ERRORES } from '../../ayuda/temas/problemas'
 import type { Bloque } from '../../ayuda/tipos'
+import TextoAyuda from './TextoAyuda.vue'
 
 const props = defineProps<{ bloque: Extract<Bloque, { tipo: 'errores' }>; ancla?: string }>()
 const errores = computed(() => props.bloque.codigos.map((codigo) => {

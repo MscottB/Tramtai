@@ -23,8 +23,8 @@ var servicioConversor = asegurarServicio
 const plazoConversor = 35 * time.Minute
 
 func comandoConversor() *cobra.Command {
-	grupo := &cobra.Command{Use: "conversor", Short: idioma.T("Conversor de archivos (markitdown): estado y preparación")}
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si el conversor de archivos está listo"), Args: cobra.NoArgs,
+	grupo := &cobra.Command{Use: "conversor", Aliases: []string{"converter"}, Short: idioma.T("Conversor de archivos (markitdown): estado y preparación")}
+	estado := &cobra.Command{Use: "estado", Aliases: []string{"status"}, Short: idioma.T("Muestra si el conversor de archivos está listo"), Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, inst, ctx, cancelar, err := conectarConversor(cmd)
 			if err != nil {
@@ -39,7 +39,7 @@ func comandoConversor() *cobra.Command {
 			return nil
 		}}
 	var en string
-	preparar := &cobra.Command{Use: "preparar", Short: idioma.T("Descarga Python y markitdown en la carpeta de Tramtai (no instala nada en el sistema)"), Args: cobra.NoArgs,
+	preparar := &cobra.Command{Use: "preparar", Aliases: []string{"prepare"}, Short: idioma.T("Descarga Python y markitdown en la carpeta de Tramtai (no instala nada en el sistema)"), Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
 			if en != "" {

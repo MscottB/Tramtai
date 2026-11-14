@@ -28,6 +28,9 @@ func (p *Pagina) Vista() string {
 	if p.form != nil {
 		return p.vistaForm()
 	}
+	if p.herr.sel != nil {
+		return p.herr.sel.Vista(max(ancho, 1), max(alto, 1))
+	}
 	if v, ok := e.Preambulo(p.lengua, ancho, p.sinServ, !p.cargado && p.err == ""); ok {
 		return v
 	}
@@ -38,6 +41,9 @@ func (p *Pagina) Vista() string {
 		return p.vistaDetalle()
 	}
 	lineas := []string{p.pestanas()}
+	if p.pestana == pestanaHerramientas {
+		return p.vistaHerramientas(lineas)
+	}
 	if p.pestana == pestanaClave {
 		return p.conVisor(lineas, p.textoClave())
 	}
@@ -83,7 +89,7 @@ func (p *Pagina) conVisor(arriba []string, texto string) string {
 // corchetes, como los filtros de Agentes.
 func (p *Pagina) pestanas() string {
 	e := p.estilos
-	nombres := []string{p.tx("puntos.pestana", "n", strconv.Itoa(len(p.datos.Puntos))), p.tx("puntos.principal")}
+	nombres := []string{p.tx("puntos.pestana", "n", strconv.Itoa(len(p.datos.Puntos))), p.tx("puntos.principal"), p.tx("herramientas.titulo")}
 	partes := make([]string, len(nombres))
 	for i, n := range nombres {
 		if i == p.pestana {

@@ -1,0 +1,7 @@
+name: Mío
+version: 1.0.0
+schema: v1
+models:
+  - name: Tramtai
+    provider: ollama
+    model: llama3

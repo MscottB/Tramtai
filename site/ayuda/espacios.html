@@ -18,16 +18,17 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../manifest.webmanifest">
-<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
 <script src="../sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 </head>
 <body>
 <a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
@@ -37,12 +38,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
-        <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-        <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
-        <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
-        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+        <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+        <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
         <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+        <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+        <a href="../descargar.html" class="solo-menu"><span lang="es">Descargar</span><span lang="en">Download</span></a>
       </nav>
+      <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span lang="es" class="solo-lectores">Buscar</span><span lang="en" class="solo-lectores">Search</span></button>
       <div class="preferencias">
         <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
           <button type="button" data-idioma="es" aria-pressed="true">ES</button>
@@ -56,25 +59,65 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       </div>
     </div>
     <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
-    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+    <a class="boton principal" href="../descargar.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main id="contenido" tabindex="-1" class="envoltura ayuda">
-<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
-  <ol>
-    <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
-    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
-    <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
-    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
-    <li><a href="#s-errores"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
-    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
-  </ol>
+<main class="envoltura doc-envoltura tema-ayuda">
+<div class="doc">
+<nav class="doc-indice" aria-label="Índice" data-aria-en="Contents">
+<button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
+<div class="doc-indice-lista" id="doc-indice-lista">
+<button type="button" class="buscar-campo" data-buscar hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span><span lang="es">Buscar</span><span lang="en">Search</span></span><kbd>Ctrl K</kbd></button>
+<ul>
+  <li><a href="index.html"><span lang="es">Inicio de la Ayuda</span><span lang="en">Help home</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+<ul aria-labelledby="i-g-empezar">
+  <li><a href="empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
+  <li><a href="agentes.html"><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></a></li>
+  <li><a href="preparar.html"><span lang="es">Preparar tus agentes</span><span lang="en">Set up your agents</span></a></li>
+  <li><a href="probar.html"><span lang="es">Probar</span><span lang="en">Playground</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-apps"><span lang="es">Desde tus apps</span><span lang="en">From your apps</span></p>
+<ul aria-labelledby="i-g-apps">
+  <li><a href="conectar.html"><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></a></li>
+  <li><a href="conectar-herramientas.html"><span lang="es">Conectar tus herramientas</span><span lang="en">Connect your tools</span></a></li>
+  <li><a href="archivos.html"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
+  <li><a href="json.html"><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></a></li>
+  <li><a href="recetas.html"><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></a></li>
+  <li><a href="herramientas.html"><span lang="es">Herramientas</span><span lang="en">Tools</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dia"><span lang="es">Día a día</span><span lang="en">Day to day</span></p>
+<ul aria-labelledby="i-g-dia">
+  <li><a href="presupuestos.html"><span lang="es">Presupuestos</span><span lang="en">Budgets</span></a></li>
+  <li><a href="historial.html"><span lang="es">Historial</span><span lang="en">History</span></a></li>
+  <li><a href="espacios.html" aria-current="page"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></a></li>
+  <li><a href="claves.html"><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></a></li>
+  <li><a href="ajustes.html"><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-servidor"><span lang="es">Servidor</span><span lang="en">Server</span></p>
+<ul aria-labelledby="i-g-servidor">
+  <li><a href="servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a></li>
+  <li><a href="entornos.html"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-g-dudas"><span lang="es">Dudas y errores</span><span lang="en">Questions and errors</span></p>
+<ul aria-labelledby="i-g-dudas">
+  <li><a href="problemas.html"><span lang="es">Algo falló</span><span lang="en">Something failed</span></a></li>
+  <li><a href="conceptos.html"><span lang="es">Conceptos</span><span lang="en">Concepts</span></a></li>
+  <li><a href="preguntas.html"><span lang="es">Preguntas frecuentes</span><span lang="en">Frequently asked questions</span></a></li>
+</ul>
+<p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+<ul aria-labelledby="i-mas">
+  <li><a href="../servidor.html"><span lang="es">Guía del servidor</span><span lang="en">Server guide</span></a></li>
+  <li><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
+</ul>
+</div>
 </nav>
-<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
-<header>
-  <h1><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h1>
+<article id="contenido" tabindex="-1" class="prosa">
+<header class="doc-cabeza">
+  <p class="fig doc-ruta"><span lang="es">Ayuda</span><span lang="en">Help</span> · <span lang="es">Día a día</span><span lang="en">Day to day</span></p>
+  <h1 class="titular"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h1>
   <p class="entradilla"><span lang="es">La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.</span><span lang="en">The global one and one per project, each with its own history, APIs and settings.</span></p>
 </header>
 
@@ -111,13 +154,13 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <details id="olvidar"><summary><span lang="es">¿Qué borra «Olvidar»?</span><span lang="en">What does “Forget” delete?</span></summary><p><span lang="es">Su historial, sus archivos subidos, su clave y las claves de sus APIs en Tramtai. La carpeta del proyecto, con su .tramtai/, no se toca.</span><span lang="en">Its history, uploaded files, key and API keys in Tramtai. The project folder, with its .tramtai/, is not touched.</span></p></details>
 <details id="no-encontrado"><summary><span lang="es">¿Por qué un espacio sale «No encontrado»?</span><span lang="en">Why does a workspace show “Not found”?</span></summary><p><span lang="es">Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa ajustes de seguridad); «Olvidar», si ya no lo necesitas.</span><span lang="en">Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security settings); “Forget” if you no longer need it.</span></p></details>
 <details id="heredar"><summary><span lang="es">¿Cómo sé si un ajuste es del proyecto o de la global?</span><span lang="en">How do I know whether a setting is the project’s or the global one?</span></summary><p><span lang="es">En Ajustes, cada uno dice «Propio» o «De Global». Los propios tienen «Volver al de Global», que quita el valor del local.yaml del proyecto.</span><span lang="en">In Settings each one says “Own” or “From Global”. Own ones have “Back to Global”, which removes the value from the project’s local.yaml.</span></p></details>
-<details id="espacios-terminal"><summary><span lang="es">¿Y desde la terminal?</span><span lang="en">And from the terminal?</span></summary><p><span lang="es">«tramtai espacios» los lista; «tramtai espacio iniciar», «detener» y «olvidar» hacen lo mismo que la página.</span><span lang="en">“tramtai espacios” lists them; “tramtai espacio iniciar”, “detener” and “olvidar” do the same as the page.</span></p></details>
+<details id="espacios-terminal"><summary><span lang="es">¿Y desde la terminal?</span><span lang="en">And from the terminal?</span></summary><p><span lang="es">«tramtai espacios» los lista; «tramtai espacio iniciar», «detener» y «olvidar» hacen lo mismo que la página.</span><span lang="en">“tramtai workspaces” lists them; “tramtai workspace start”, “stop” and “forget” do the same as the page.</span></p></details>
 </section>
 
 <section id="s-errores"><h2><span lang="es">Si algo falla</span><span lang="en">If something fails</span></h2>
 <dl class="errores">
   <div id="e-confianza_requerida"><dt><span lang="es">Hay que decidir si confías en esa carpeta</span><span lang="en">You need to decide whether you trust that folder</span> <code>confianza_requerida</code></dt><dd><span lang="es">La carpeta ya tenía configuración de Tramtai. Decide si confías en ella: si no, se abre sin sus APIs ni su presupuesto.</span><span lang="en">The folder already had a Tramtai configuration. Decide whether you trust it: if not, it opens without its APIs or budget.</span></dd></div>
-  <div id="e-espacio_detenido"><dt><span lang="es">El espacio de este proyecto está detenido</span><span lang="en">This project’s workspace is stopped</span> <code>espacio_detenido</code></dt><dd><span lang="es">Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa --global para mandar a la global.</span><span lang="en">You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one.</span></dd></div>
+  <div id="e-espacio_detenido"><dt><span lang="es">El espacio de este proyecto está detenido</span><span lang="en">This project’s workspace is stopped</span> <code>espacio_detenido</code></dt><dd><span lang="es">Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa <span class="opcion-cli">--global</span> para mandar a la global.</span><span lang="en">You are inside a stopped project. Start it with tramtai workspace start, or use <span class="opcion-cli">--global</span> to send to the global one.</span></dd></div>
 </dl>
 </section>
 
@@ -131,16 +174,33 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </div>
 </section>
 </article>
+<aside class="doc-pagina">
+<nav aria-label="En esta página" data-aria-en="On this page">
+<p class="fig doc-grupo" aria-hidden="true"><span lang="es">En esta página</span><span lang="en">On this page</span></p>
+<ul>
+  <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
+  <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+  <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
+  <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+  <li><a href="#s-errores"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
+  <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+</ul>
+</nav>
+</aside>
+</div>
 </main>
 
 <footer>
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
-      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
-      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
-      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../"><span lang="es">Inicio</span><span lang="en">Home</span></a>
+      <a href="../producto.html"><span lang="es">Producto</span><span lang="en">Product</span></a>
+      <a href="../agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
-      <a href="../servidor.html"><span lang="es">Modo servidor</span><span lang="en">Server mode</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../descargar.html"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>
       <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
       <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>

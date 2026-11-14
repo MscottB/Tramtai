@@ -42,7 +42,7 @@ func contexto() (context.Context, context.CancelFunc) {
 }
 
 func conectar() (*cliente.Cliente, error) {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func conectar() (*cliente.Cliente, error) {
 
 // asegurarServicio conecta con el servicio o lo inicia en segundo plano.
 func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func esperaReinicio() time.Duration { return cliente.PlazoDrenaje() + time.Minut
 
 // esperarCierreServicio espera, como mucho esperaReinicio, a que el servicio en marcha termine (drena sus trabajos).
 func esperarCierreServicio() {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return
 	}
@@ -101,7 +101,7 @@ func esperarCierreServicio() {
 
 // seguirRegistro muestra las últimas n líneas de servicio.log y, con seguir, lo que se añada hasta Ctrl+C.
 func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
@@ -158,12 +158,12 @@ func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
 }
 
 func comandoServicio() *cobra.Command {
-	grupo := &cobra.Command{Use: "servicio", Short: idioma.T("Servicio único: todos los espacios y sus APIs en un puerto")}
+	grupo := &cobra.Command{Use: "servicio", Aliases: []string{"service"}, Short: idioma.T("Servicio único: todos los espacios y sus APIs en un puerto")}
 	var abrirAlIniciar, navegadorAlIniciar bool
 	var archivoRegistro string
 	var esperarCierre bool
 	var segundoPlano, si bool
-	iniciar := &cobra.Command{Use: "iniciar", Short: idioma.T("Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano"),
+	iniciar := &cobra.Command{Use: "iniciar", Aliases: []string{"start"}, Short: idioma.T("Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !segundoPlano {
 				if esperarCierre {
@@ -184,18 +184,20 @@ func comandoServicio() *cobra.Command {
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, idioma.T("inicia el servicio desacoplado de esta terminal"))
 	iniciar.Flags().BoolVar(&abrirAlIniciar, "abrir", false, idioma.T("en primer plano, abre la interfaz cuando el servicio responda (modo desarrollo)"))
 	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, idioma.T("con --abrir, usa el navegador en lugar de la app de escritorio"))
+	iniciar.Flags().BoolVar(&abrirAlIniciar, "open", false, "")
+	_ = iniciar.Flags().MarkHidden("open") // alias en inglés de --abrir
 	iniciar.Flags().StringVar(&archivoRegistro, "registro", "", idioma.T("escribe el registro en este archivo, con servicio.registro_mb y servicio.registro_copias"))
 	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
 	iniciar.Flags().BoolVar(&esperarCierre, "esperar-cierre", false, idioma.T("espera a que termine el servicio en marcha (reinicio)"))
 	_ = iniciar.Flags().MarkHidden("esperar-cierre")
-	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el servicio y todos sus espacios"),
+	detener := &cobra.Command{Use: "detener", Aliases: []string{"stop"}, Short: idioma.T("Detiene el servicio y todos sus espacios"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if errors.Is(err, cliente.ErrServicioAnterior) { // tras actualizar, también el de la versión anterior
 				if !si && !confirmar(cmd, idioma.T("¿Detener el servicio y todos sus espacios?")) {
 					return nil
 				}
-				datos, err := carpetas.DirDatos()
+				datos, err := dirDatos()
 				if err == nil {
 					err = cliente.DetenerAnterior(datos)
 				}
@@ -233,7 +235,7 @@ func comandoServicio() *cobra.Command {
 			return errors.New(idioma.T("el servicio no confirmó la detención"))
 		}}
 	detener.Flags().BoolVarP(&si, "si", "s", false, idioma.T("no pedir confirmación"))
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra el servicio, sus espacios y sus APIs"),
+	estado := &cobra.Command{Use: "estado", Aliases: []string{"status"}, Short: idioma.T("Muestra el servicio, sus espacios y sus APIs"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if errors.Is(err, cliente.ErrServicioInactivo) {
@@ -255,7 +257,7 @@ func comandoServicio() *cobra.Command {
 			imprimirEstado(cmd.OutOrStdout(), e)
 			return nil
 		}}
-	recargar := &cobra.Command{Use: "recargar", Short: idioma.T("Aplica los cambios de las APIs sin reiniciar"),
+	recargar := &cobra.Command{Use: "recargar", Aliases: []string{"reload"}, Short: idioma.T("Aplica los cambios de las APIs sin reiniciar"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -308,7 +310,7 @@ func comandoServicio() *cobra.Command {
 		}}
 	autoarranqueCmd.Flags().StringVar(&modoArranque, "modo", "app", idioma.T("con activar, qué arranca: app (en la bandeja) o servicio (solo el servicio)"))
 	var automaticoPuerto bool
-	puertoCmd := &cobra.Command{Use: "puerto [número]", Short: idioma.T("Muestra o cambia el puerto del servicio; comprueba que esté libre y se aplica al reiniciar"),
+	puertoCmd := &cobra.Command{Use: "puerto [número]", Aliases: []string{"port"}, Short: idioma.T("Muestra o cambia el puerto del servicio; comprueba que esté libre y se aplica al reiniciar"),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := configuracion.CargarConfiguracion("", agentes.Internos())
@@ -356,7 +358,7 @@ func comandoServicio() *cobra.Command {
 	puertoCmd.Flags().BoolVar(&automaticoPuerto, "automatico", true, idioma.T("si el puerto está ocupado al iniciar, usar otro libre"))
 	var lineasRegistro int
 	var seguirRegistroVivo bool
-	registroCmd := &cobra.Command{Use: "registro", Short: idioma.T("Muestra lo que procesa el servicio en segundo plano (servicio.log); -f lo sigue en vivo"),
+	registroCmd := &cobra.Command{Use: "registro", Aliases: []string{"log"}, Short: idioma.T("Muestra lo que procesa el servicio en segundo plano (servicio.log); -f lo sigue en vivo"),
 		Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			return seguirRegistro(cmd, lineasRegistro, seguirRegistroVivo)
 		}}
@@ -452,12 +454,17 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (er
 	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
+	var ordenConsola func(string, []string) string
+	if carpetas.Servidor() { // a mano, el inicio de sesión de un CLI va como la cuenta del servicio
+		ordenConsola = servidor.OrdenConsola
+	}
 	sv, err := nuevoServicio(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), Expuesto: servidor.Expuesto(red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
-		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
+		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar"), PrepararAgentes: true,
+		OrdenConsola: ordenConsola})
 	if err != nil {
 		oyente.Close()
 		return err
@@ -581,6 +588,10 @@ func (e errConfiguracionServicio) Unwrap() error { return e.error }
 
 // codigoSalida es el código con el que termina el proceso tras un error.
 func codigoSalida(err error) int {
+	var con errConCodigo
+	if errors.As(err, &con) {
+		return con.codigo
+	}
 	if errors.Is(err, errReinicioPedido) {
 		return codigoReinicio
 	}
@@ -687,6 +698,6 @@ func identificar(ambito string) (raiz, id string, c *configuracion.Configuracion
 
 // idDeCarpeta es el espacio de la carpeta raiz con la regla del servicio, sobre el registro de la carpeta de datos.
 func idDeCarpeta(raiz string, c *configuracion.Configuracion) string {
-	datos, _ := carpetas.DirDatos()
+	datos, _ := dirDatos()
 	return servicio.IDDeCarpeta(datos, raiz, c)
 }

@@ -131,6 +131,40 @@ type EstadoClave struct {
 	Archivo  string `json:"archivo,omitempty"`
 }
 
+// EstadoHerramienta es una herramienta de terceros (Claude Code, Codex…) vista desde un espacio: GET /api/v1/herramientas.
+type EstadoHerramienta struct {
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+	// Estado: no_detectada, detectada, activa, desactivada, desactualizada o solo_global (desde un proyecto, la que
+	// solo tiene archivo global).
+	Estado string `json:"estado"`
+	Modelo string `json:"modelo,omitempty"`
+	Ruta   string `json:"ruta,omitempty"` // el archivo que toca (o tocaría) Tramtai
+	// Motivo explica lo que no va: por qué está desactualizada, qué impide activarla, si está activa en otro archivo o
+	// si la gestiona una política de la organización.
+	Motivo string `json:"motivo,omitempty"`
+	// MotivoCodigo y MotivoDatos dicen lo mismo que Motivo para que la Web UI lo traduzca a su idioma (Motivo va en el del
+	// servicio): gestionado, solo_global, sin_https_propio, api_no_existe{api}, api_detenida{api},
+	// modelo_no_permitido{api,modelo}, puerto{actual,anotado}, orden_no_existe{ruta}, clave_no_almacen, editada_a_mano{ruta},
+	// otro_archivo{ruta}, anotacion_ilegible{detalle}, continue_json y previa. Un código que la Web UI no conozca se queda
+	// con Motivo.
+	MotivoCodigo   string            `json:"motivo_codigo,omitempty"`
+	MotivoDatos    map[string]string `json:"motivo_datos,omitempty"`
+	ClaveEnArchivo bool              `json:"clave_en_archivo"`
+	Gestionado     bool              `json:"gestionado"`
+	HayCopia       bool              `json:"hay_copia"` // hay copia del archivo de antes de activarla: Restaurar tiene a qué volver
+	// FechaCopia (RFC 3339) es de cuándo es esa copia: la de la primera activación, aunque se haya vuelto a activar.
+	FechaCopia string `json:"fecha_copia,omitempty"`
+}
+
+// ActivarHerramientas es el cuerpo de POST /api/v1/herramientas/activar: los ids o todas las detectadas, con el modelo
+// agente/modelo (vacío: el primer agente conectado con su modelo por defecto).
+type ActivarHerramientas struct {
+	IDs    []string `json:"ids,omitempty"`
+	Todas  bool     `json:"todas,omitempty"`
+	Modelo string   `json:"modelo,omitempty"`
+}
+
 // EntradaConfiguracion es una fila de la configuración efectiva de una instancia.
 type EntradaConfiguracion struct {
 	Clave  string `json:"clave"`
@@ -273,4 +307,57 @@ type EstadoConversor struct {
 	// Paquete dice si hay paquete del conversor para el sistema del servicio (solo se publica para Windows x64): solo
 	// entonces se ofrece, tras un error, para cuando la red de la empresa bloquea la descarga.
 	Paquete bool `json:"paquete,omitempty"`
+}
+
+// PedidoPreparacion es lo que pide POST /api/v1/agentes/{id}/preparacion.
+type PedidoPreparacion struct {
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	// BorrarDatos, al desinstalar, borra también la sesión y los ajustes del CLI.
+	BorrarDatos bool `json:"borrar_datos"`
+	// Confirmar sigue con una versión aún no comprobada.
+	Confirmar bool `json:"confirmar"`
+}
+
+// EstadoPreparacion es el de la preparación de un agente (internal/preparar): la que está en marcha o la última.
+type EstadoPreparacion struct {
+	Agente string `json:"agente"`
+	Accion string `json:"accion" ts:"'instalar' | 'actualizar' | 'iniciar_sesion' | 'desinstalar'"`
+	Estado string `json:"estado" ts:"'instalando' | 'actualizando' | 'desinstalando' | 'comprobando' | 'esperando_usuario' | 'listo' | 'error' | 'cancelado'"`
+	Etapa  string `json:"etapa,omitempty" ts:"'descarga' | 'orden' | 'borrado'"`
+	// Enlace y Codigo son los del inicio de sesión; PidePegar, si el CLI espera que se le pegue un código.
+	Enlace    string `json:"enlace,omitempty"`
+	Codigo    string `json:"codigo,omitempty"`
+	PidePegar bool   `json:"pide_pegar,omitempty"`
+	// MotivoCodigo es el código del error (estado error) y Mensaje, el texto legible.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'peticiones_en_curso' | 'ya_en_curso' | 'instalador_fallo' | 'no_encontrado_tras_instalar' | 'plazo_agotado' | 'salida_no_reconocida' | 'inicio_sesion_fallo' | 'sin_red' | 'interrumpida'"`
+	Mensaje      string `json:"mensaje,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando Mensaje dice cómo hacerlo (salida_no_reconocida,
+	// inicio_sesion_fallo o version_no_comprobada al iniciar sesión): las pantallas arman la frase en su idioma. Vacía
+	// ahí, la cuenta del servicio no tiene consola y queda la clave de API.
+	OrdenConsola string `json:"orden_consola,omitempty"`
+	// Lineas son las últimas 20 de la salida, sin nada con forma de secreto.
+	Lineas         []string   `json:"lineas,omitempty"`
+	VersionAntes   string     `json:"version_antes,omitempty"`
+	VersionDespues string     `json:"version_despues,omitempty"`
+	Inicio         *time.Time `json:"inicio,omitempty"`
+	Fin            *time.Time `json:"fin,omitempty"`
+}
+
+// VersionesAgente es lo que GET /api/v1/agentes/versiones dice de un agente (internal/preparar).
+type VersionesAgente struct {
+	Agente string `json:"agente"`
+	// Instalada es la versión del CLI instalado (vacía si no está); Ultima, la última publicada (vacía si no se sabe).
+	Instalada string `json:"instalada,omitempty"`
+	Ultima    string `json:"ultima,omitempty"`
+	// Comprobadas dice, por cada acción posible ahora, si la versión que usaría está comprobada.
+	Comprobadas map[string]bool `json:"comprobadas"`
+	// Acciones son las habilitadas ahora. Instalar, actualizar o desinstalar una versión sin comprobar (Comprobadas en
+	// false) siguen habilitadas pero piden confirmar; iniciar sesión con una sin comprobar no está.
+	Acciones []string `json:"acciones"`
+	// MotivoCodigo y Motivo dicen por qué falta alguna o qué hay que avisar antes.
+	MotivoCodigo string `json:"motivo_codigo,omitempty" ts:"'version_no_comprobada' | 'sin_red'"`
+	Motivo       string `json:"motivo,omitempty"`
+	// OrdenConsola es la orden para iniciar sesión a mano cuando iniciar sesión no está comprobado (como en
+	// EstadoPreparacion); vacía entonces, la cuenta del servicio no tiene consola.
+	OrdenConsola string `json:"orden_consola,omitempty"`
 }

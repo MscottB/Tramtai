@@ -15,7 +15,7 @@ import (
 
 func comandoActualizar() *cobra.Command {
 	var comprobar, si bool
-	cmd := &cobra.Command{Use: "actualizar", Short: idioma.T("Comprueba si hay una versión nueva de Tramtai y la instala"),
+	cmd := &cobra.Command{Use: "actualizar", Aliases: []string{"update"}, Short: idioma.T("Comprueba si hay una versión nueva de Tramtai y la instala"),
 		Long: idioma.T("Consulta en GitHub la última versión publicada. Si es más nueva, descarga el instalador, comprueba su suma " +
 			"SHA-256 y lo ejecuta en silencio: la app se cierra, el servicio se detiene y ambos vuelven con la versión nueva, " +
 			"con tu configuración y tus datos. La instalación automática solo funciona en una copia instalada con el instalador de Windows."),

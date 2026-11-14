@@ -27,7 +27,7 @@
           "tipo": "pasos",
           "lineas": [
             "Instala Tramtai: instalador o portable en Windows, Homebrew o .dmg en macOS, .deb o .rpm en Linux.",
-            "En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.",
+            "En Agentes, prepara un agente: Tramtai instala su CLI y te ayuda a iniciar sesión (tu suscripción, uso personal), o le pones una clave de API.",
             "En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.",
             "En Mis APIs copia la URL y crea la clave del espacio (se ve una vez), y ponlas en tu app (tema «Conectar mi app»)."
           ]
@@ -59,6 +59,10 @@
         {
           "tipo": "preguntas",
           "pares": [
+            [
+              "¿Tengo que instalar los agentes aparte?",
+              "No: la primera vez, si no tienes ningún agente listo, Tramtai ofrece «Prepara tus agentes», los instala uno tras otro y, tras iniciar sesión, te ofrece usar tu suscripción. Después, desde Agentes."
+            ],
             [
               "¿Necesito una clave para entrar?",
               "No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps."
@@ -109,7 +113,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.",
+      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles, c comprueba, d conecta o desconecta, a cambia la autenticación (tras iniciar sesión, usa tu suscripción); i instala y s inicia sesión.",
       "bloques": [
         {
           "tipo": "web",
@@ -123,8 +127,8 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Abre Agentes: cada uno dice si está listo o qué le falta, y cómo instalarlo si no está.",
-            "Con tu suscripción: inicia sesión en su CLI (por ejemplo, copilot login) y pulsa «Usar mi suscripción».",
+            "Abre Agentes: cada uno dice si está listo o qué le falta; si no está instalado, «Instalar» lo instala (tema «Preparar tus agentes»).",
+            "Con tu suscripción: inicia sesión en su CLI desde su tarjeta (Tramtai te enseña el enlace y el código) y, al terminar, pulsa «Usar mi suscripción», que sale ahí mismo.",
             "Con una clave: «tramtai claves guardar ANTHROPIC_API_KEY» la guarda cifrada y vale sin reiniciar.",
             "En Ajustes elige el modelo y el esfuerzo que se usan cuando una petición no los dice."
           ]
@@ -142,7 +146,7 @@
           "pares": [
             [
               "¿Qué agentes puedo usar?",
-              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
+              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con «Instalar»."
             ],
             [
               "¿Suscripción o clave de API?",
@@ -193,6 +197,146 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "preparar",
+      "titulo": "Preparar tus agentes",
+      "pagina": "agentes",
+      "resumen": "Tramtai instala el CLI de cada agente, te ayuda a iniciar sesión y lo mantiene al día, solo con versiones comprobadas.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+      "terminal": "En la terminal: 2 abre Agentes. i instala, s inicia sesión (y luego a usa tu suscripción), u actualiza, x desinstala (X con sus datos), y sigue, k cancela, l enseña el registro y e vuelve al código.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+          "lineas": [
+            "1. Instalar · Con el instalador oficial del CLI, para tu usuario (o para la cuenta del servicio).",
+            "2. Iniciar sesión · Tramtai lanza el del propio CLI y te enseña su enlace y su código.",
+            "3. Al día · Avisa de cada versión nueva; actualizar o desinstalar es un clic."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Agentes, abre «Otros agentes que puedes instalar» y pulsa «Instalar». La primera vez, si no tienes ningún agente listo, Tramtai te lo ofrece con «Prepara tus agentes».",
+            "Tramtai sigue con el inicio de sesión: abre el enlace, escribe el código (o pega el que te den) y vuelve. Sigue solo en cuanto lo apruebas.",
+            "Al terminar, Tramtai ofrece ahí mismo «Usar mi suscripción» (antes te enseña el riesgo): hasta entonces el agente no está listo. Si no, ponle su clave de API. Antigravity va siempre con clave.",
+            "Si hay una versión nueva, la tarjeta lo dice y «Actualizar» la instala. En «⋯» están Comprobar versión, Actualizar, Desinstalar y Ver registro."
+          ]
+        },
+        {
+          "tipo": "pantalla"
+        },
+        {
+          "tipo": "web",
+          "titulo": "La bienvenida ofrece preparar tus agentes: marcas los que quieres y Tramtai los instala uno tras otro",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Cómo inicia sesión"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "Con un enlace en tu navegador; si te da un código, lo pegas en Tramtai."
+            ],
+            [
+              "Codex",
+              "Con un código de dispositivo, que activas una vez en ChatGPT › Seguridad («Abrir los ajustes de seguridad de ChatGPT»)."
+            ],
+            [
+              "GitHub Copilot",
+              "Con un código de dispositivo de GitHub, que escribes en github.com/login/device."
+            ],
+            [
+              "Antigravity",
+              "No inicia sesión: solo se instala, y después le pones la clave de la Gemini API."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai nunca lee ni guarda tu sesión: la guarda el propio CLI. De su salida solo toma el enlace y el código, y lo que pegas va al CLI sin quedar en el registro."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Versiones comprobadas",
+          "lineas": [
+            "Tramtai instala, actualiza e inicia sesión de forma automática solo con versiones de cada CLI que ya comprobó: que su instalador y su inicio de sesión siguen como espera.",
+            "Con una versión sin comprobar, el inicio de sesión automático sale desactivado en ese agente, con la orden para hacerlo en una consola; instalar, actualizar o desinstalar piden confirmar.",
+            "El uso normal del agente sigue igual: sus peticiones funcionan con las comprobaciones de siempre. Solo se desactiva la preparación automática.",
+            "La lista se pone al día sola: cada semana se prueban las versiones nuevas y se publica una lista firmada que Tramtai lee una vez al día. Una versión que entra se habilita sola."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Con la CLI de Tramtai",
+          "lineas": [
+            "«tramtai agentes instalar claude codex» los instala y sigue con el inicio de sesión; «tramtai agentes entrar codex» solo inicia sesión. Enseñan el enlace y el código y piden el que te den.",
+            "«tramtai agentes actualizar --todos» actualiza los que tienen una versión nueva; «tramtai agentes desinstalar codex» pregunta antes (con --borrar-datos, también su sesión y ajustes).",
+            "«tramtai agentes versiones» enseña la instalada, la última y si está comprobada (--comprobar las consulta ahora). Con --confirmar no pregunta por una versión sin comprobar ni antes de desinstalar.",
+            "Si tras iniciar sesión el agente sigue con clave de API y sin clave, piden «acepto» para usar tu suscripción (antes enseñan el riesgo; --confirmar no se lo salta). En el servidor, dan la orden.",
+            "Códigos de salida: 0 listo; 1 error; 2 versión sin comprobar no confirmada o acción no posible ahora; 3 hecho, pero falta un paso (sesión, clave o suscripción) o no se pudo comprobar; 130 cancelado."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Dónde queda instalado cada CLI?",
+              "Donde lo deja su instalador oficial, para tu usuario: sirve también fuera de Tramtai. Si queda fuera del PATH del servicio, Tramtai guarda su ruta en comandos_agentes."
+            ],
+            [
+              "¿Necesito Node o npm?",
+              "No: los cuatro se instalan con su instalador oficial, sin Node. GitHub Copilot, en Windows, se descarga de GitHub y Tramtai comprueba su suma antes de instalarlo."
+            ],
+            [
+              "¿Puedo cerrar la pantalla mientras se instala?",
+              "Sí: la preparación sigue en el servicio y, al volver a Agentes, ves dónde va. Cualquier preparación (instalar, actualizar, desinstalar o iniciar sesión) se corta a los 15 minutos."
+            ],
+            [
+              "¿Por qué sale desactivado el inicio de sesión automático?",
+              "Porque esa versión del CLI aún no está comprobada con Tramtai. El aviso trae la orden para hacerlo en una consola, y vuelve solo cuando la versión entra en la lista."
+            ],
+            [
+              "¿Por qué la orden para la consola lleva una ruta?",
+              "Si la consola no encuentra el CLI por su nombre (el instalador de Claude no toca el PATH), la orden lleva su ruta completa. En Windows va para PowerShell; en cmd, quita el «&» del principio."
+            ],
+            [
+              "¿Y si el inicio de sesión no avanza?",
+              "Si el CLI escribe algo que Tramtai no reconoce, lo cancela, enseña sus últimas líneas con el enlace resaltado y la orden para la consola, y aparta esa versión hasta que la lista la confirme."
+            ],
+            [
+              "¿A qué sitios se conecta para ver las versiones?",
+              "Una vez al día, al sitio oficial de cada CLI (GitHub, downloads.claude.ai y el servidor de actualizaciones de Antigravity) y al release «compatibilidad» de Tramtai en GitHub. No envía datos tuyos."
+            ],
+            [
+              "¿Cómo desactivo esa consulta?",
+              "En Ajustes, «Comprobar versiones nuevas de los agentes» (v en la terminal), o con servicio.buscar_versiones_agentes: false. Siguen valiendo las versiones comprobadas que trae Tramtai."
+            ],
+            [
+              "¿Por qué no se actualiza ahora?",
+              "Porque el agente tiene peticiones en curso: espera a que terminen y vuelve a intentarlo. Mientras se actualiza, ese agente no está disponible para peticiones nuevas."
+            ],
+            [
+              "¿Desinstalar borra mi sesión?",
+              "No, salvo que marques «Borrar también su sesión y ajustes». Borra los archivos que dejó su instalador (ningún CLI trae orden para eso) y pide confirmar: deja de estar también fuera de Tramtai."
+            ],
+            [
+              "¿Y en el modo servidor?",
+              "Se hace igual, con la cuenta del servicio: desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes …». Solo el administrador. La suscripción no se acepta ahí: va con su orden."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
         }
       ]
     },
@@ -259,7 +403,7 @@
       "pagina": "conectar",
       "resumen": "Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
-      "terminal": "En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio.",
+      "terminal": "En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio y a Herramientas (tema «Conectar tus herramientas»).",
       "bloques": [
         {
           "tipo": "web",
@@ -400,6 +544,193 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        }
+      ]
+    },
+    {
+      "id": "conectar-herramientas",
+      "titulo": "Conectar tus herramientas",
+      "resumen": "Apunta Claude Code, Codex, Continue, opencode y Kilo a Tramtai desde Mis APIs, y déjalas como estaban cuando quieras.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
+      "terminal": "En la terminal: Mis APIs (4), ← → a Herramientas. Espacio activa o desactiva; Enter reactiva una desactualizada; t activa todas y T las desactiva; m cambia el modelo; R restaura; o olvida; r refresca.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Archivo que toca",
+            "Dónde queda la clave"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "settings.json de ~/.claude (o de CLAUDE_CONFIG_DIR); en un proyecto, .claude/settings.local.json, nunca settings.json",
+              "En el almacén cifrado del sistema: Claude Code la pide con «tramtai herramientas clave claude-code»"
+            ],
+            [
+              "Codex",
+              "config.toml de ~/.codex (o de CODEX_HOME): model, model_provider y un proveedor tramtai, en bloques con marcas de Tramtai",
+              "En el almacén cifrado del sistema: Codex la pide con «tramtai herramientas clave codex»"
+            ],
+            [
+              "Continue",
+              "config.yaml de ~/.continue: un modelo llamado Tramtai",
+              "En su archivo, dentro de tu carpeta de usuario"
+            ],
+            [
+              "opencode",
+              "opencode.json (o opencode.jsonc) de ~/.config/opencode: un proveedor llamado tramtai",
+              "En su archivo, dentro de tu carpeta de usuario"
+            ],
+            [
+              "Kilo Code",
+              "kilo.jsonc de ~/.config/kilo: un proveedor llamado tramtai",
+              "En su archivo, dentro de tu carpeta de usuario"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Cada herramienta usa su propia API (grupo «Herramientas», su id de nombre), limitada al modelo elegido y con una clave que solo vale allí. Por ejemplo, /p/claude-code/anthropic o /p/codex/openai/v1."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Mis APIs abre la pestaña «Herramientas»: una fila por herramienta, con su estado, su modelo y el archivo que toca.",
+            "Activa una con su interruptor y elige el agente y el modelo. «Activar todas» lo hace con todas las detectadas, con un solo modelo.",
+            "Tramtai crea su API, guarda una copia del archivo y escribe solo lo suyo. Si la herramienta estaba abierta, ábrela de nuevo.",
+            "Para dejarla como estaba, apaga el interruptor: Tramtai quita lo suyo y respeta lo que cambiaste después."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La pestaña Herramientas de Mis APIs, con cada herramienta y su estado",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Qué significa"
+          ],
+          "filas": [
+            [
+              "No detectada",
+              "No hay rastro de ella en este equipo: ni su programa ni su carpeta de configuración."
+            ],
+            [
+              "Detectada",
+              "Está instalada y todavía no apunta a Tramtai."
+            ],
+            [
+              "Activa",
+              "Su archivo apunta a Tramtai y conserva lo que escribió Tramtai."
+            ],
+            [
+              "Desactivada",
+              "Estuvo activa: su archivo está como estaba y su API sigue en Mis APIs, detenida."
+            ],
+            [
+              "Desactualizada",
+              "Estuvo activa pero ya no funciona. La fila dice por qué y «Volver a activar» lo arregla."
+            ],
+            [
+              "Solo global",
+              "Desde el espacio de un proyecto solo Claude Code tiene archivo propio: las demás se activan desde el espacio global."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "«Desactualizada» pasa si su API se borró, se detuvo o no admite su modelo, cambió el puerto, Tramtai se movió o actualizó, falta la clave, se editó a mano o activas el HTTPS propio."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Dejarlas como estaban",
+          "lineas": [
+            "Con el interruptor «Usar con Tramtai» (o «Desactivar todas») se quita solo lo que puso Tramtai y vuelven los valores de antes; lo que cambiaste se queda. La API se detiene y la clave se guarda.",
+            "«Olvidar» desactiva y además borra la clave y lo que Tramtai anotó. Su API queda detenida en Mis APIs, por si quieres borrarla.",
+            "«Restaurar la copia» repone el archivo entero, con la fecha de la copia. Es el último recurso: pierdes lo que cambiaste desde entonces, y pide confirmación."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Antes de cambiar nada, Tramtai copia el archivo entero en herramientas/copias, dentro de su carpeta de datos. Guarda las 3 últimas de cada herramienta."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "«Restaurar la copia» usa la de esta activación; las otras, 2 como mucho, quedan en esa carpeta para recuperarlas a mano. Si el archivo no existía antes, no hay copia y no se ofrece restaurar."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Si sincronizas ~/.claude, ~/.codex o tus dotfiles, esa configuración llega a equipos sin Tramtai y la herramienta no conectaría: desactívala antes o deja el archivo fuera."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Si tu empresa gestiona Claude Code con ajustes de organización, mandan sobre los tuyos: la fila lo avisa, pero Tramtai no puede cambiarlos."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Por qué la clave de Continue, opencode y Kilo va en su archivo?",
+              "Porque no saben pedirla con una orden, como Claude Code y Codex. Tramtai la escribe en su archivo, dentro de tu carpeta de usuario; es la de su API, que no vale en ningún otro sitio."
+            ],
+            [
+              "¿Por qué no puedo activar una herramienta?",
+              "La fila lo dice. No se ofrecen en el modo servidor ni con el HTTPS propio de Tramtai, y el agente debe valer para apps. Si está activa en otro espacio, desactívala allí antes."
+            ],
+            [
+              "¿Puedo activar una herramienta solo en un proyecto?",
+              "Solo Claude Code, desde el espacio del proyecto: escribe en .claude/settings.local.json y nunca en settings.json, que se comparte por git. Las demás, desde el espacio global."
+            ],
+            [
+              "¿Por qué Tramtai me pide pasar Continue a config.yaml?",
+              "Continue lee config.yaml si existe y, si no, config.json. Con solo config.json, crear el YAML dejaría tu JSON sin uso: pásalo a config.yaml y vuelve a activarla."
+            ],
+            [
+              "¿Qué hago si dice que ya hay un proveedor «tramtai» en config.toml?",
+              "Esa tabla no la escribió Tramtai, o quedó una antigua tras editar el archivo a mano. Renómbrala o bórrala. Un model o model_provider en varias líneas tampoco vale: déjalo en una."
+            ],
+            [
+              "¿Y si cambio el modelo de Codex con /model?",
+              "Esa línea pasa a ser tuya: al desactivar, Tramtai no la devuelve a como estaba. Si quieres otro modelo, cámbialo en config.toml."
+            ],
+            [
+              "¿Y si edito a mano el archivo de una herramienta?",
+              "Desactivar solo quita lo que sigue como Tramtai lo escribió y deja lo demás. Si cambias lo suyo, la fila pasa a «Desactualizada». Un archivo ilegible no se toca: la fila dice qué hacer."
+            ],
+            [
+              "¿Y si ya tengo una API con el nombre de la herramienta?",
+              "Tramtai no la toca y no activa la herramienta: cámbiale el nombre en Mis APIs y vuelve a activarla."
+            ],
+            [
+              "¿Para qué sirve «tramtai herramientas clave»?",
+              "La usan Claude Code y Codex para pedir su clave. Responde mientras Tramtai la guarda (activa o desactivada, no tras «Olvidar») y escribe solo la clave; desactivada, su API detenida no la acepta."
+            ],
+            [
+              "¿Qué órdenes tiene la CLI?",
+              "tramtai herramientas (o tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) y clave (key)."
+            ],
+            [
+              "¿Cómo activo o desactivo varias a la vez?",
+              "Con varios ids o con --todas (--all), por ejemplo «tramtai herramientas activar --todas». activar acepta --modelo (--model) con agente/modelo, como claude/sonnet."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
         }
       ]
     },
@@ -1107,8 +1438,24 @@
               "El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale."
             ],
             [
+              "¿Cómo instalo los agentes en el servidor?",
+              "Desde Agentes en la Web UI remota, la terminal o «tramtai-servidor agentes instalar»: Tramtai instala, actualiza y desinstala sus CLI con la cuenta del servicio. Solo el administrador."
+            ],
+            [
+              "¿Y si el inicio de sesión no se puede hacer desde Tramtai?",
+              "En Linux, el aviso da la orden para hacerlo como la cuenta del servicio. En Windows Server esa cuenta no tiene consola: a mano no se puede, así que usa la clave de API del agente."
+            ],
+            [
+              "¿Puedo conectar mis herramientas?",
+              "Aquí no: el modo servidor no ofrece Claude Code, Codex, Continue, opencode ni Kilo Code. Conéctalas desde Tramtai con tu usuario normal, fuera del modo servidor."
+            ],
+            [
               "¿Puedo usar mi suscripción en el servidor?",
               "Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas)."
+            ],
+            [
+              "¿Cómo activo mi suscripción en el servidor?",
+              "Inicia sesión con «tramtai-servidor agentes entrar [id]» y, cuando termine, actívala con «tramtai-servidor agentes suscripcion [id]» (abierto a la red, con --personal). Una y, después, la otra."
             ],
             [
               "¿Qué riesgo tiene Codex en el servidor?",
@@ -1458,7 +1805,7 @@
           "tipo": "pasos",
           "lineas": [
             "Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.",
-            "In Agents, connect an agent with your subscription (personal use) or with an API key.",
+            "In Agents, set up an agent: Tramtai installs its CLI and helps you sign in (your subscription, personal use), or you give it an API key.",
             "In the Playground, type a message, pick agent and model and watch the response live.",
             "In My APIs copy the URL and create the workspace key (shown only once), and put them in your app (topic “Connect my app”)."
           ]
@@ -1467,7 +1814,7 @@
           "tipo": "pasos",
           "titulo": "Terminal only",
           "lineas": [
-            "Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.",
+            "Start the service in the background with “tramtai service start -d”: it serves your apps without opening the app, even after you close the terminal.",
             "Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.",
             "Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back, W opens the Web UI in the browser and q quits. In the Playground, c cancels the running request.",
             "Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters."
@@ -1491,12 +1838,16 @@
           "tipo": "preguntas",
           "pares": [
             [
+              "Do I have to install the agents separately?",
+              "No: the first time, if no agent is ready, Tramtai offers “Set up your agents”, installs them one after another and, after you sign in, offers to use your subscription. Later, from Agents."
+            ],
+            [
               "Do I need a key to get in?",
-              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps."
+              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai open” opens it already signed in. My APIs keys are only for your apps."
             ],
             [
               "How do I know it is running, and how do I stop it?",
-              "The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it."
+              "The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai service stop” stops it."
             ],
             [
               "Windows says “Windows protected your PC”",
@@ -1540,7 +1891,7 @@
       "pagina": "agentes",
       "resumen": "Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
-      "terminal": "In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.",
+      "terminal": "In the terminal: 2 opens Agents. Enter shows the details, c checks, d connects or disconnects, a switches authentication (after signing in, uses your subscription); i installs and s signs in.",
       "bloques": [
         {
           "tipo": "web",
@@ -1554,9 +1905,9 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Open Agents: each one says whether it is ready or what it is missing, and how to install it.",
-            "With your subscription: sign in to its CLI (for example, copilot login) and click “Use my subscription”.",
-            "With a key: “tramtai claves guardar ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
+            "Open Agents: each one says whether it is ready or what it is missing; if it isn’t installed, “Install” installs it (topic “Set up your agents”).",
+            "With your subscription: sign in to its CLI from its card (Tramtai shows you the link and the code) and, when it’s done, click “Use my subscription”, right there.",
+            "With a key: “tramtai keys set ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
             "In Settings pick the model and effort used when a request does not say."
           ]
         },
@@ -1573,7 +1924,7 @@
           "pares": [
             [
               "Which agents can I use?",
-              "Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. The ones not installed appear at the end of Agents, with their link."
+              "Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. The ones not installed appear at the end of Agents, with “Install”."
             ],
             [
               "Subscription or API key?",
@@ -1624,6 +1975,146 @@
         {
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "preparar",
+      "titulo": "Set up your agents",
+      "pagina": "agentes",
+      "resumen": "Tramtai installs each agent’s CLI, helps you sign in and keeps it up to date, only with checked versions.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+      "terminal": "In the terminal: 2 opens Agents. i installs, s signs in (then a uses your subscription), u updates, x uninstalls (X with its data), y continues, k cancels, l shows the log and e goes back to the code.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html",
+          "lineas": [
+            "1. Install · With the CLI’s official installer, for your user (or for the service account).",
+            "2. Sign in · Tramtai runs the CLI’s own sign-in and shows you its link and code.",
+            "3. Up to date · It tells you about each new version; updating or uninstalling takes one click."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In Agents, open “Other agents you can install” and click “Install”. The first time, if no agent is ready yet, Tramtai offers it with “Set up your agents”.",
+            "Tramtai goes on with sign-in: open the link, enter the code (or paste the one you get) and come back. It carries on as soon as you approve.",
+            "When it’s done, Tramtai offers “Use my subscription” right there (it shows you the risk first): until then the agent isn’t ready. Otherwise, give it its API key. Antigravity always uses a key.",
+            "When there is a new version, the card says so and “Update” installs it. Under “⋯” you have Check version, Update, Uninstall and View log."
+          ]
+        },
+        {
+          "tipo": "pantalla"
+        },
+        {
+          "tipo": "web",
+          "titulo": "The welcome offers to set up your agents: you tick the ones you want and Tramtai installs them one after another",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "How it signs in"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "With a link in your browser; if it gives you a code, you paste it into Tramtai."
+            ],
+            [
+              "Codex",
+              "With a device code, which you turn on once in ChatGPT › Security (“Open ChatGPT security settings”)."
+            ],
+            [
+              "GitHub Copilot",
+              "With a GitHub device code, which you enter at github.com/login/device."
+            ],
+            [
+              "Antigravity",
+              "It doesn’t sign in: it is only installed, and then you add its Gemini API key."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai never reads or stores your session: the CLI keeps it. From its output it only takes the link and the code, and what you paste goes to the CLI without reaching the log."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Checked versions",
+          "lineas": [
+            "Tramtai installs, updates and signs in automatically only with CLI versions it has already checked: that their installer and sign-in still work as it expects.",
+            "With an unchecked version, automatic sign-in is turned off for that agent, with the command to do it in a console; installing, updating or uninstalling ask you to confirm.",
+            "Using the agent works as usual: its requests run with the usual checks. Only the automatic setup is turned off.",
+            "The list updates itself: every week the new versions are tested and a signed list is published, which Tramtai reads once a day. A version that gets in is turned on by itself."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "With the Tramtai CLI",
+          "lineas": [
+            "“tramtai agents install claude codex” installs them and goes on with sign-in; “tramtai agents login codex” only signs in. They show the link and the code and ask for the one you get.",
+            "“tramtai agents update --all” updates the ones with a new version; “tramtai agents uninstall codex” asks first (with --delete-data, its session and settings too).",
+            "“tramtai agents versions” shows the installed version, the latest and whether it is checked (--check looks now). With --confirm it doesn’t ask about an unchecked version or before uninstalling.",
+            "If, after signing in, the agent is on an API key with none saved, they ask for “accept” to use your subscription (risk shown first; --confirm doesn’t skip it). On a server, they give the command.",
+            "Exit codes: 0 ready; 1 error; 2 unchecked version not confirmed, or an action not possible now; 3 done, but a step is missing (session, key or subscription) or it couldn’t be checked; 130 canceled."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Where does each CLI get installed?",
+              "Where its official installer puts it, for your user: it also works outside Tramtai. If it ends up outside the service’s PATH, Tramtai saves its path in comandos_agentes."
+            ],
+            [
+              "Do I need Node or npm?",
+              "No: all four are installed with their official installer, without Node. GitHub Copilot, on Windows, is downloaded from GitHub and Tramtai checks its checksum before installing it."
+            ],
+            [
+              "Can I close the screen while it installs?",
+              "Yes: the setup keeps going in the service and, when you come back to Agents, you see where it is. Any setup (installing, updating, uninstalling or signing in) stops after 15 minutes."
+            ],
+            [
+              "Why is automatic sign-in turned off?",
+              "Because that CLI version hasn’t been checked with Tramtai yet. The notice has the command to do it in a console, and it comes back by itself once the version is on the list."
+            ],
+            [
+              "Why does the console command have a path?",
+              "If the console can’t find the CLI by name (Claude’s installer doesn’t touch the PATH), the command has its full path. On Windows it’s for PowerShell; in cmd, remove the “&” at the start."
+            ],
+            [
+              "What if sign-in doesn’t move on?",
+              "If the CLI writes something Tramtai doesn’t recognize, it cancels, shows its last lines with the link highlighted and the console command, and sets that version aside until the list confirms it."
+            ],
+            [
+              "Which sites does it connect to for the versions?",
+              "Once a day, to each CLI’s official site (GitHub, downloads.claude.ai and the Antigravity update server) and to Tramtai’s “compatibilidad” release on GitHub. It sends none of your data."
+            ],
+            [
+              "How do I turn that check off?",
+              "In Settings, “Check for new agent versions” (v in the terminal), or with servicio.buscar_versiones_agentes: false. The checked versions Tramtai ships with still apply."
+            ],
+            [
+              "Why won’t it update now?",
+              "Because the agent has requests in progress: wait for them to finish and try again. While it updates, that agent isn’t available for new requests."
+            ],
+            [
+              "Does uninstalling delete my session?",
+              "No, unless you tick “Also delete its session and settings”. It deletes the files its installer left (no CLI has a command for that) and asks you to confirm: it’s gone outside Tramtai too."
+            ],
+            [
+              "And in server mode?",
+              "It works the same, with the service account: from Agents in the remote Web UI, the terminal or “tramtai-servidor agents …”. Administrator only. The subscription takes its own command there."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/preparar.html"
         }
       ]
     },
@@ -1690,7 +2181,7 @@
       "pagina": "conectar",
       "resumen": "Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
-      "terminal": "In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.",
+      "terminal": "In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key and to Tools (topic “Connect your tools”).",
       "bloques": [
         {
           "tipo": "web",
@@ -1835,6 +2326,193 @@
       ]
     },
     {
+      "id": "conectar-herramientas",
+      "titulo": "Connect your tools",
+      "resumen": "Point Claude Code, Codex, Continue, opencode and Kilo at Tramtai from My APIs, and put them back as they were whenever you want.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html",
+      "terminal": "In the terminal: My APIs (4), ← → to Tools. Space turns on or off; Enter turns on again an out-of-date tool; t turns on all and T turns them off; m changes model; R restores; o forgets; r refreshes.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "File it changes",
+            "Where the key goes"
+          ],
+          "filas": [
+            [
+              "Claude Code",
+              "settings.json in ~/.claude (or in CLAUDE_CONFIG_DIR); in a project, .claude/settings.local.json, never settings.json",
+              "In the encrypted system store: Claude Code asks for it with “tramtai tools key claude-code”"
+            ],
+            [
+              "Codex",
+              "config.toml in ~/.codex (or in CODEX_HOME): model, model_provider and a tramtai provider, in blocks with Tramtai markers",
+              "In the encrypted system store: Codex asks for it with “tramtai tools key codex”"
+            ],
+            [
+              "Continue",
+              "config.yaml in ~/.continue: a model named Tramtai",
+              "In its file, inside your user folder"
+            ],
+            [
+              "opencode",
+              "opencode.json (or opencode.jsonc) in ~/.config/opencode: a provider named tramtai",
+              "In its file, inside your user folder"
+            ],
+            [
+              "Kilo Code",
+              "kilo.jsonc in ~/.config/kilo: a provider named tramtai",
+              "In its file, inside your user folder"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Each tool uses its own API (“Herramientas” group, its id as name), limited to the chosen model, with a key that only works there. For example, /p/claude-code/anthropic or /p/codex/openai/v1."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In My APIs open the “Tools” tab: one row per tool, with its state, its model and the file it changes.",
+            "Turn one on with its switch and pick the agent and model. “Turn on all” does it for every detected tool, with a single model.",
+            "Tramtai creates its API, saves a copy of the file and writes only its own part. If the tool was open, open it again.",
+            "To put it back as it was, turn the switch off: Tramtai removes its part and keeps what you changed afterwards."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The Tools tab in My APIs, with each tool and its state",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "What it means"
+          ],
+          "filas": [
+            [
+              "Not detected",
+              "There is no trace of it on this computer: neither its program nor its configuration folder."
+            ],
+            [
+              "Detected",
+              "It is installed and does not point at Tramtai yet."
+            ],
+            [
+              "Active",
+              "Its file points at Tramtai and still has what Tramtai wrote."
+            ],
+            [
+              "Turned off",
+              "It was on: its file is as it was and its API is still in My APIs, stopped."
+            ],
+            [
+              "Out of date",
+              "It was on but no longer works. The row says why, and “Turn on again” fixes it."
+            ],
+            [
+              "Global only",
+              "From a project workspace only Claude Code has its own file: turn the others on from the global workspace."
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "It is “Out of date” if its API was deleted, stopped or no longer allows its model, the port changed, Tramtai moved or updated, its key is missing, it was edited by hand or you turn on your own HTTPS."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Put them back as they were",
+          "lineas": [
+            "The “Use with Tramtai” switch (or “Turn off all”) removes only what Tramtai added and brings back the earlier values; what you changed stays. The API stops and the key is kept.",
+            "“Forget” turns it off and also deletes the key and what Tramtai noted. Its API stays stopped in My APIs, in case you want to delete it.",
+            "“Restore the copy” puts back the whole file, as of the copy’s date. It is the last resort: you lose what you changed since then, and it asks you to confirm."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Before changing anything, Tramtai copies the whole file into herramientas/copias, inside its data folder. It keeps the last 3 copies of each tool."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "“Restore the copy” uses the one from this activation; the others, at most 2, stay in that folder to recover by hand. If the file did not exist before, there is no copy and Restore is not offered."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "If you sync ~/.claude, ~/.codex or your dotfiles, that configuration reaches computers without Tramtai and the tool could not connect: turn it off first or leave the file out."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "If your company manages Claude Code with organization settings, they override yours: the row warns you, but Tramtai cannot change them."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Why do the keys of Continue, opencode and Kilo go in their file?",
+              "Because they cannot ask for it with a command, as Claude Code and Codex can. Tramtai writes it in their file, inside your user folder; it is the key of their own API, which works nowhere else."
+            ],
+            [
+              "Why can’t I turn a tool on?",
+              "The row says why. Tools are not offered in server mode or with Tramtai’s own HTTPS, and the agent must be allowed for apps. If it is on in another workspace, turn it off there first."
+            ],
+            [
+              "Can I turn a tool on for just one project?",
+              "Only Claude Code, from the project workspace: it writes to .claude/settings.local.json and never to settings.json, which is shared through git. The others, from the global workspace."
+            ],
+            [
+              "Why does Tramtai ask me to move Continue to config.yaml?",
+              "Continue reads config.yaml if it exists and config.json if not. With only config.json, creating the YAML would leave your JSON unused: move it to config.yaml and turn the tool on again."
+            ],
+            [
+              "What if it says config.toml already has a “tramtai” provider?",
+              "Tramtai did not write that table, or an old one was left after editing the file by hand. Rename or delete it. A model or model_provider on several lines does not work either: put it on one line."
+            ],
+            [
+              "What if I change Codex’s model with /model?",
+              "That line becomes yours: when you turn the tool off, Tramtai does not put it back as it was. If you want another model, change it in config.toml."
+            ],
+            [
+              "What if I edit a tool’s file by hand?",
+              "Turning off removes only what is still as Tramtai wrote it and leaves the rest. If you change its part, the row becomes “Out of date”. An unreadable file is not touched: the row says what to do."
+            ],
+            [
+              "What if I already have an API with the tool’s name?",
+              "Tramtai does not touch it and does not turn the tool on: rename it in My APIs and turn the tool on again."
+            ],
+            [
+              "What is “tramtai tools key” for?",
+              "Claude Code and Codex use it to ask for their key. It responds while Tramtai keeps the key (on or turned off, not after “Forget”) and prints only the key; turned off, its stopped API rejects it."
+            ],
+            [
+              "Which commands does the CLI have?",
+              "tramtai herramientas (or tools): listar (list), activar (enable), desactivar (disable), olvidar (forget), restaurar (restore) and clave (key)."
+            ],
+            [
+              "How do I turn several on or off at once?",
+              "Pass several ids or --all, for example “tramtai tools enable --all”. enable takes --model with agent/model, such as claude/sonnet."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar-herramientas.html"
+        }
+      ]
+    },
+    {
       "id": "archivos",
       "titulo": "Files",
       "resumen": "Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.",
@@ -1894,7 +2572,7 @@
             ],
             [
               "What if the converter is missing?",
-              "Settings → Files → “Prepare files”, or “tramtai conversor preparar”. If your network blocks the download, use the converter package for Windows."
+              "Settings → Files → “Prepare files”, or “tramtai converter prepare”. If your network blocks the download, use the converter package for Windows."
             ],
             [
               "Does anything leave my computer when converting?",
@@ -2196,11 +2874,11 @@
             ],
             [
               "How do I watch what it processes while developing?",
-              "“tramtai servicio registro -f” shows one live line per request: agent, model, duration, tokens and the API it came from."
+              "“tramtai service log -f” shows one live line per request: agent, model, duration, tokens and the API it came from."
             ],
             [
               "Can I run the service in the foreground?",
-              "Yes: stop the service and run “tramtai servicio iniciar --abrir”: it runs with the log in view, opens the app and Ctrl+C stops it."
+              "Yes: stop the service and run “tramtai service start --abrir”: it runs with the log in view, opens the app and Ctrl+C stops it."
             ],
             [
               "How do I delete test data?",
@@ -2276,7 +2954,7 @@
             ],
             [
               "And from the terminal?",
-              "“tramtai espacios” lists them; “tramtai espacio iniciar”, “detener” and “olvidar” do the same as the page."
+              "“tramtai workspaces” lists them; “tramtai workspace start”, “stop” and “forget” do the same as the page."
             ]
           ]
         },
@@ -2289,7 +2967,7 @@
             ],
             [
               "This project’s workspace is stopped (espacio_detenido)",
-              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+              "You are inside a stopped project. Start it with tramtai workspace start, or use --global to send to the global one."
             ]
           ]
         },
@@ -2350,11 +3028,11 @@
             ],
             [
               "What if the workspace key leaks?",
-              "Regenerate it in “Workspace key” in My APIs, or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project). The old one stops working at once. Per-app APIs do not change."
+              "Regenerate it in “Workspace key” in My APIs, or with “tramtai global token --rotar” (“tramtai project token --rotar” in a project). The old one stops working at once. Per-app APIs do not change."
             ],
             [
               "Where do I see the workspace key?",
-              "Only when you create or regenerate it. A new workspace has no key: create it in “Workspace key” in My APIs or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project)."
+              "Only when you create or regenerate it. A new workspace has no key: create it in “Workspace key” in My APIs or with “tramtai global token --rotar” (“tramtai project token --rotar” in a project)."
             ],
             [
               "What if I use the TRAMTAI_TOKEN_GLOBAL variable?",
@@ -2383,7 +3061,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Choose how it starts when you sign in: “The app in the tray” or “Just the service”, with no window. Without signing in, it’s the server (“tramtai-servidor instalar”), another environment.",
+            "Choose how it starts when you sign in: “The app in the tray” or “Just the service”, with no window. Without signing in, it’s the server (“tramtai-servidor install”), another environment.",
             "Pick the model and effort used when a request does not say.",
             "In History decide how long requests are kept; in Files, prepare the converter."
           ]
@@ -2414,7 +3092,7 @@
             ],
             [
               "How do I update without the Windows installer?",
-              "Homebrew: “brew upgrade”. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, “tramtai actualizar” (“--comprobar” only checks)."
+              "Homebrew: “brew upgrade”. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, “tramtai update” (“--comprobar” only checks)."
             ],
             [
               "Can I check for a version now?",
@@ -2527,7 +3205,7 @@
             ],
             [
               "And from the server itself?",
-              "“tramtai-servidor abrir”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside."
+              "“tramtai-servidor open”, the W key and the app come in through the local entrance. With trusted proxies, opening the public port by hand on the server counts as coming from outside."
             ],
             [
               "Where do the agents’ keys go?",
@@ -2538,8 +3216,24 @@
               "The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works."
             ],
             [
+              "How do I install the agents on the server?",
+              "From Agents in the remote Web UI, the terminal or “tramtai-servidor agents install”: Tramtai installs, updates and uninstalls their CLIs with the service account. Administrator only."
+            ],
+            [
+              "What if sign-in can’t be done from Tramtai?",
+              "On Linux, the notice gives the command to do it as the service account. On Windows Server that account has no console: it can’t be done by hand, so use the agent’s API key."
+            ],
+            [
+              "Can I connect my tools?",
+              "Not here: server mode doesn’t offer Claude Code, Codex, Continue, opencode or Kilo Code. Connect them from Tramtai with your normal user, outside server mode."
+            ],
+            [
               "Can I use my subscription on the server?",
               "By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas)."
+            ],
+            [
+              "How do I turn on my subscription on the server?",
+              "Sign in with “tramtai-servidor agents login [id]” and, when it’s done, turn it on with “tramtai-servidor agents subscription [id]” (open to the network, with --personal). One, then the other."
             ],
             [
               "What’s the risk with Codex on the server?",
@@ -2666,7 +3360,7 @@
           "pares": [
             [
               "Offline",
-              "The service is not running. Open the app or run “tramtai servicio iniciar”. With start-up in Settings it starts on its own when you sign in."
+              "The service is not running. Open the app or run “tramtai service start”. With start-up in Settings it starts on its own when you sign in."
             ],
             [
               "The key is missing or not valid (no_autorizado)",
@@ -2754,7 +3448,7 @@
             ],
             [
               "This project’s workspace is stopped (espacio_detenido)",
-              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+              "You are inside a stopped project. Start it with tramtai workspace start, or use --global to send to the global one."
             ]
           ]
         },

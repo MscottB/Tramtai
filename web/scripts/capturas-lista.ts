@@ -3,16 +3,35 @@ import { capturaDeAncla } from '../src/ayuda/vista.ts'
 import { pasosBienvenida } from '../src/recorrido.ts'
 
 // CAPTURAS son las zonas de la app que muestra la Ayuda: cada una es el elemento [data-captura=<id>] de esa página.
-// PORTADA son las pantallas completas de la página del producto (site/capturas/<nombre>-<claro|oscuro>-<640|960|1440>.webp).
+// PORTADA son las pantallas completas de la página del producto (site/capturas/<nombre>-<claro|oscuro>-<es|en>-<640|960|1440>.webp).
 // guardado son valores de localStorage que la página necesita (la pestaña de Ajustes donde está la zona). servidor dice
 // que sale del Tramtai en modo servidor (en contenedores, detrás de Caddy); cabecera, que la zona es la cabecera fija;
 // ancho, el de la ventana si no es el de siempre (1280).
-export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number }[] = [
+// Las de sitio no son de la Ayuda: son los recortes de FIG 4 y 5 de Inicio y de las tarjetas de funciones de Producto
+// (site/capturas/<id>-<es|en>-<claro|oscuro>.webp, a 2×). zona es lo que se recorta (si casa con varios elementos, el
+// recorte los abarca a todos), con margen px alrededor (12 si no se dice) y hasta alto px; preparar, JavaScript que deja la zona a la vista y da true cuando ya está
+// (se repite hasta entonces). Salen en una ventana estrecha (ancho, 420 si no se dice) para que se lean también en el
+// móvil, y sin el Historial: no hacen peticiones reales.
+export interface Captura {
+  id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number
+  sitio?: true; zona?: string; preparar?: string; alto?: number; margen?: number
+}
+// Lo que preparan los recortes del sitio: el panel de la Ayuda de Inicio (el «?» de su cabecera) y las opciones de la
+// receta de Probar, plegadas al abrirla.
+const AYUDA = `(() => { if (document.querySelector('.panel-ayuda .vista-tema')) return true; document.querySelector('[data-recorrido="app.ayuda"]')?.click(); return false })()`
+const OPCIONES = `document.querySelector('[data-recorrido="ejecutar.receta"] .q-expansion-item')`
+const ABRIR_OPCIONES = `(() => { const e = ${OPCIONES}; if (!e) return false; if (e.classList.contains('q-expansion-item--expanded')) return true; e.querySelector('.q-item').click(); return false })()`
+const EN_OPCIONES = '[data-recorrido="ejecutar.receta"] .q-expansion-item__content > div'
+// salida estructurada: el segundo interruptor de las opciones (el primero es «forzar el modelo»), con su texto debajo
+const SALIDA = `${EN_OPCIONES} > div:has(> .q-toggle + .text-caption)`
+const GUIA = '[data-captura="mis-apis"] .guia-url'
+export const CAPTURAS: Captura[] = [
   { id: 'inicio', pagina: 'inicio' },
   { id: 'agente', pagina: 'agentes' },
   { id: 'receta', pagina: 'ejecutar' },
   { id: 'mis-apis', pagina: 'conectar' },
   { id: 'presupuesto', pagina: 'conectar' },
+  { id: 'herramientas', pagina: 'conectar', guardado: { 'tramtai.pestanaApis': 'herramientas' } },
   { id: 'historial', pagina: 'historial' },
   { id: 'conversor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'tramtai' } },
   { id: 'actualizaciones', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'tramtai' } },
@@ -23,77 +42,201 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   { id: 'marca', pagina: 'inicio', servidor: true, cabecera: true, ancho: 720 },
   { id: 'servidor', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'servidor' }, servidor: true },
   { id: 'seguridad', pagina: 'configuracion', guardado: { 'tramtai.pestanaAjustes': 'seguridad' }, servidor: true },
+  // La oferta «Prepara tus agentes» de la bienvenida: sale si la bienvenida no tiene respuesta y ningún agente está listo
+  // (SIMULAR con tramtai.capturas.sinListos; no se instala ni se quita ningún CLI).
+  { id: 'preparar', pagina: 'inicio', guardado: { 'tramtai.bienvenida': 'pendiente', 'tramtai.capturas.sinListos': true } },
+  // FIG 4 y 5 de Inicio: Mis APIs y el mapa de Inicio del Tramtai en modo servidor, en vertical (el de las ventanas de
+  // menos de 600 px: el horizontal mide al menos 860 y no se leería en el móvil).
+  { id: 'portada-fig-apis', pagina: 'conectar', sitio: true, zona: '[data-captura="mis-apis"] .q-tab-panel', alto: 600, margen: 0 },
+  { id: 'portada-fig-servidor', pagina: 'inicio', sitio: true, servidor: true, zona: '[data-captura="inicio"]', alto: 760 },
+  // Las tarjetas de funciones de Producto, en su orden (FIG 8 a 19; la 17, la terminal, es texto: terminal.json).
+  { id: 'funcion-sdk', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' },
+    zona: `[data-captura="mis-apis"] .text-weight-medium:has(+ .row .guia-url), ${GUIA}:not(:has(a.enlace))` },
+  { id: 'funcion-api-propia', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' }, zona: `${GUIA}:has(a.enlace)` },
+  // del interruptor a «Añadir campo»: sin el ejemplo de respuesta ni los reintentos, que van debajo
+  { id: 'funcion-forma', pagina: 'ejecutar', sitio: true, zona: `${SALIDA}, ${SALIDA} ~ :not(.q-expansion-item, .q-select)`,
+    preparar: `(() => { if (!${ABRIR_OPCIONES}) return false
+      if (document.querySelector('${EN_OPCIONES} .q-btn-toggle')) return true
+      document.querySelector('${SALIDA} .q-toggle')?.click(); return false })()` },
+  { id: 'funcion-espacios', pagina: 'espacios', sitio: true, zona: '[data-captura="espacios"]' },
+  // el diálogo entero no cabe en una tarjeta: su cabecera y sus cuatro primeros campos (nombre, grupo, instrucciones y
+  // agente y modelo), cerrado justo bajo el último
+  { id: 'funcion-una-api', pagina: 'conectar', sitio: true,
+    zona: '.q-dialog .q-card > .q-card__section:first-child, .q-dialog form > .q-card__section > .q-field, .q-dialog form > .q-card__section > div > .q-field:nth-child(-n+2)',
+    preparar: `(() => { if (document.querySelector('.q-dialog .q-card')) return true; document.querySelector('[data-recorrido="conectar.nueva"]')?.click(); return false })()` },
+  // el modelo (el primero que ofrece) y, debajo, el esfuerzo: los dos selectores sueltos de la receta (el de respaldo va
+  // en las opciones). Elegido el modelo, la lista se cierra con Esc y el campo pierde el foco; si no ofrece ninguno (sin
+  // agentes listos), sale vacío.
+  { id: 'funcion-modelo', pagina: 'ejecutar', sitio: true, zona: '[data-recorrido="ejecutar.receta"] > div > .q-select, [data-recorrido="ejecutar.receta"] > div > .q-select ~ .text-caption',
+    preparar: `(() => {
+      const campo = document.querySelector('[data-recorrido="ejecutar.receta"] > div > .q-select')
+      if (!campo) return false
+      window.intentosModelo = (window.intentosModelo ?? 0) + 1
+      if (campo.querySelector('.q-field__native')?.innerText.trim() || window.intentosModelo > 40) {
+        if (!document.querySelector('.q-menu')) { document.activeElement?.blur(); return true }
+        campo.querySelector('input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }))
+        return false
+      }
+      const opcion = document.querySelector('.q-menu .q-item:not(.disabled)')
+      const entrada = campo.querySelector('input')
+      if (opcion) opcion.click()
+      else if (!document.querySelector('.q-menu')) { entrada.focus(); entrada.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true })) }
+      return false })()` },
+  // el respaldo, con lo que hace: hasta tres agentes que siguen si el principal falla
+  { id: 'funcion-respaldo', pagina: 'ejecutar', sitio: true, zona: `${EN_OPCIONES} > .q-select`, preparar: ABRIR_OPCIONES },
+  // las dos clases de clave: la del espacio y la de cada API, que se ven una sola vez y se revocan por separado
+  { id: 'funcion-claves', pagina: 'conectar', sitio: true, zona: '.q-card:has([data-recorrido="conectar.clave-espacio"])' },
+  // Sin pantalla propia: la nota de la Ayuda de Inicio que lo cuenta (el último .info-caja es la de la terminal).
+  { id: 'funcion-aislados', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .info-caja:not(:last-child)' },
+  { id: 'funcion-adjuntos', pagina: 'ejecutar', sitio: true, zona: '[data-captura="receta"] .q-file, [data-captura="receta"] .q-file ~ .text-caption' },
+  // el recorrido de la página, en el panel que abre su «?»
+  { id: 'funcion-recorrido', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .apilado:has(> .pasos-guia):has(> div > .q-btn)' },
 ]
 
-// TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal-<nombre>-<claro|oscuro>-<es|en>-
-// <960|1440>.webp), con las teclas que llevan a ella desde Inicio.
-export const TERMINAL: { nombre: string; teclas: string[] }[] = [
+// SIMULAR corre en cada página antes que la app (Page.addScriptToEvaluateOnNewDocument) y cambia lo que el servicio
+// responde de los agentes, sin tocar ningún CLI real: en Agentes, Antigravity sale sin instalar, para que se vea
+// «Instalar» (el ancla agentes.instalar) en cualquier equipo; con tramtai.capturas.sinListos en localStorage, ningún
+// agente está listo y la bienvenida ofrece prepararlos (la captura preparar).
+export const SIMULAR = `(() => {
+  const original = window.fetch
+  window.fetch = async (...args) => {
+    const r = await original(...args)
+    const url = String(args[0]?.url ?? args[0])
+    // los agentes llegan con las capacidades (Agentes, Probar) y con los primeros pasos (Inicio)
+    const capacidades = ['/api/v1/capacidades', '/api/v1/instancia/pasos'].some((r) => url.includes(r)), versiones = url.includes('/api/v1/agentes/versiones')
+    if (!r.ok || !(capacidades || versiones)) return r
+    const enAgentes = location.hash.startsWith('#agentes'), sinListos = localStorage.getItem('tramtai.capturas.sinListos') !== null
+    const datos = await r.clone().json()
+    if (capacidades)
+      for (const a of datos.adaptadores)
+        if ((enAgentes && a.agente === 'antigravity') || (sinListos && a.estado === 'listo')) Object.assign(a, { estado: 'no_instalado', version_detectada: '' })
+    if (versiones && enAgentes)
+      for (const v of datos) if (v.agente === 'antigravity') Object.assign(v, { instalada: undefined, acciones: ['instalar'], comprobadas: { instalar: true }, motivo_codigo: undefined, motivo: undefined })
+    return new Response(JSON.stringify(datos), { status: r.status, statusText: r.statusText, headers: r.headers })
+  }
+})()`
+
+// POR_SACAR son las capturas de la Ayuda que un tema ya cita y todavía no se han sacado, con el motivo: mientras tanto el tema sale
+// sin imagen (la Web UI y el sitio la omiten). Al sacarla (npm run capturas) la entrada sobra y la prueba lo avisa.
+export const POR_SACAR: Record<string, string> = {}
+
+// TERMINAL son las páginas de la terminal de la portada (site/capturas/terminal.json), con las teclas que llevan a ella
+// desde Inicio. Agentes no está: enseñaría los CLI reales del equipo que saca la captura.
+export const TERMINAL: { nombre: 'inicio' | 'apis' | 'historial'; teclas: string[] }[] = [
   { nombre: 'inicio', teclas: [] },
   { nombre: 'apis', teclas: ['4'] },
+  { nombre: 'historial', teclas: ['5'] },
 ]
 
-// ANSI16 son los 16 colores básicos (los de la paleta de Windows Terminal); 256 sigue la tabla de xterm.
-const ANSI16 = ['#0c0c0c', '#c50f1f', '#13a10e', '#c19c00', '#0037da', '#881798', '#3a96dd', '#cccccc',
-  '#767676', '#e74856', '#16c60c', '#f9f1a5', '#3b78ff', '#b4009e', '#61d6d6', '#f2f2f2']
-const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
-function color256(n: number): string {
-  if (n < 16) return ANSI16[n]
-  if (n >= 232) { const v = 8 + (n - 232) * 10; return hex(v, v, v) }
-  const c = n - 16, nivel = (x: number) => (x ? 55 + x * 40 : 0)
-  return hex(nivel(Math.floor(c / 36)), nivel(Math.floor(c / 6) % 6), nivel(c % 6))
+// PETICIONES son las peticiones de ejemplo que llenan el Historial, en el idioma de cada captura (las del inglés no
+// deben enseñar texto en español, ni al revés).
+export const PETICIONES: Record<'es' | 'en', string[]> = {
+  es: ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.'],
+  en: ['Summarize in one line: Tramtai puts AI agents behind an API.', 'Say hello in three languages.'],
 }
 
-// ansiAHtml convierte lo que pinta la terminal (SGR: negrita, tenue, cursiva, subrayado, inverso y color de 16, 256 y
-// 24 bits) en HTML con estilos en línea, para sacarle una captura en el navegador. Lo demás (mover el cursor, borrar,
-// enlaces OSC 8) se quita. tema da los colores por defecto, que el inverso intercambia.
-export function ansiAHtml(ansi: string, tema: { fondo: string; texto: string }): string {
+// TOKENS_TERMINAL traduce cada color que pinta la TUI (internal/tui/tema.go, la paleta clara y la oscura de
+// docs/diseno/DESIGN.md) al token de DESIGN.md: por eso un solo HTML sirve en los dos temas del sitio. Cada token lleva su
+// color de día y el de noche; velo es el fondo de la fila elegida.
+export const TOKENS_TERMINAL: Record<string, string> = {
+  '#0b6e64': 'acento', '#2dd4bf': 'acento', '#0f1b1e': 'texto', '#e5edf0': 'texto', '#55666a': 'suave', '#93a5ac': 'suave',
+  '#166534': 'ok', '#4ade80': 'ok', '#b42525': 'error', '#f87171': 'error', '#854d0e': 'aviso', '#fbbf24': 'aviso',
+  '#c4561d': 'claude', '#f28a4f': 'claude', '#2563eb': 'codex', '#5b8def': 'codex', '#1f883d': 'copilot', '#3fb950': 'copilot',
+  '#7c3aed': 'gemini', '#a78bfa': 'gemini', '#db2777': 'antigravity', '#f472b6': 'antigravity', '#d3e5e3': 'velo', '#113838': 'velo',
+}
+
+// GLIFOS son los símbolos que Cascadia Mono no trae todos (flechas, formas geométricas y dingbats: ← ↑ → ↓ ▸ ▾ ○ ● ✓ ✗…):
+// con la fuente de reserva miden distinto de una celda y descuadrarían la línea. ansiAHtml envuelve cada uno en su
+// <span class="g"> (la hoja le da el ancho de una celda). El trazo de cajas (│) y el sombreado (░) sí están en la fuente.
+const GLIFOS = /[←-⇿■-➿]/u
+
+// redEnMovimiento reconoce, con los textos de la terminal en un idioma (internal/tui/datos/textos.json), lo que dice la
+// red de Inicio mientras todavía cambia: la cabecera con peticiones en curso («2 peticiones en curso.») y las filas que
+// ya terminaron, fallaron o se cancelaron («terminada 9 s») y siguen a la vista unos segundos. Una captura con eso
+// enseñaría una pantalla que cambia a los pocos segundos. Es el equivalente de redEnMovimiento en internal/tui/captura.go.
+export function redEnMovimiento(t: Record<string, string>): RegExp {
+  const q = (clave: string) => t[clave].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const con = (clave: string, marca: string) => q(clave).replace(`\\{${marca}\\}`, '\\d+')
+  const etapas = ['vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada'].map(q).join('|')
+  return new RegExp(`${con('vivo.enCurso', 'n')}|${q('vivo.enCursoUno')}|(?:${etapas})\\s+${con('vivo.hace', 's')}`)
+}
+
+// ansiAHtml convierte lo que pinta la terminal en HTML para la portada: cada trozo con el mismo estilo es un
+// <span class="…"> con t-<token> (tinta), tf-<token> (fondo) y t-b (negrita); la hoja del sitio da a cada clase el valor
+// de su tema. Cada glifo de GLIFOS va en su propio <span>, con las clases de su estilo y g. Solo entiende lo que usa la
+// TUI: color de 24 bits que esté en TOKENS_TERMINAL y negrita. Un color sin token, o cualquier otro estilo (16 y 256
+// colores, tenue, inverso, subrayado…), lanza un error: así no se cuela un color suelto ni un estilo que se pierde sin
+// avisar. Lo demás (mover el cursor, borrar, enlaces OSC 8) se quita.
+export function ansiAHtml(ansi: string): string {
   const limpio = ansi.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '').replace(/\x1b\[[0-9;?]*[A-Za-ln-z]/g, '')
-  let e = { fg: '', bg: '', negrita: false, tenue: false, cursiva: false, subrayado: false, inverso: false }
-  const inicial = { ...e }
-  let html = ''
+  const vacio = { fg: '', bg: '', negrita: false }
+  let e = { ...vacio }
+  let html = '', clase = '', texto = ''
+  const volcar = () => {
+    if (texto) html += clase ? `<span class="${clase}">${texto}</span>` : texto
+    texto = ''
+  }
+  const token = (hex: string) => {
+    const t = TOKENS_TERMINAL[hex]
+    if (!t) throw new Error(`ansiAHtml: el color ${hex} no tiene token en TOKENS_TERMINAL`)
+    return t
+  }
   for (const trozo of limpio.split(/(\x1b\[[0-9;]*m)/)) {
     const sgr = trozo.match(/^\x1b\[([0-9;]*)m$/)
     if (!sgr) {
       if (!trozo) continue
-      const texto = trozo.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      let fg = e.fg, bg = e.bg
-      if (e.inverso) [fg, bg] = [bg || tema.fondo, fg || tema.texto]
-      const estilo = [fg && `color:${fg}`, bg && `background:${bg}`, e.negrita && 'font-weight:bold', e.tenue && 'opacity:.65',
-        e.cursiva && 'font-style:italic', e.subrayado && 'text-decoration:underline'].filter(Boolean).join(';')
-      html += estilo ? `<span style="${estilo}">${texto}</span>` : texto
+      const nueva = [e.fg && 't-' + e.fg, e.bg && 'tf-' + e.bg, e.negrita && 't-b'].filter(Boolean).join(' ')
+      if (nueva !== clase) { volcar(); clase = nueva }
+      for (const c of trozo) {
+        if (GLIFOS.test(c)) { volcar(); html += `<span class="${clase ? clase + ' g' : 'g'}">${c}</span>` }
+        else texto += c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c
+      }
       continue
     }
     const p = sgr[1] === '' ? [0] : sgr[1].split(';').map(Number)
     for (let i = 0; i < p.length; i++) {
       const n = p[i]
-      if (n === 0) e = { ...inicial }
+      if (n === 0) e = { ...vacio }
       else if (n === 1) e.negrita = true
-      else if (n === 2) e.tenue = true
-      else if (n === 22) e.negrita = e.tenue = false
-      else if (n === 3 || n === 23) e.cursiva = n === 3
-      else if (n === 4 || n === 24) e.subrayado = n === 4
-      else if (n === 7 || n === 27) e.inverso = n === 7
+      else if (n === 22) e.negrita = false
       else if (n === 39) e.fg = ''
       else if (n === 49) e.bg = ''
-      else if ((n === 38 || n === 48) && p[i + 1] === 5) { e[n === 38 ? 'fg' : 'bg'] = color256(p[i + 2]); i += 2 }
-      else if ((n === 38 || n === 48) && p[i + 1] === 2) { e[n === 38 ? 'fg' : 'bg'] = hex(p[i + 2], p[i + 3], p[i + 4]); i += 4 }
-      else if (n >= 30 && n <= 37) e.fg = ANSI16[n - 30]
-      else if (n >= 90 && n <= 97) e.fg = ANSI16[n - 82]
-      else if (n >= 40 && n <= 47) e.bg = ANSI16[n - 40]
-      else if (n >= 100 && n <= 107) e.bg = ANSI16[n - 92]
+      else if ((n === 38 || n === 48) && p[i + 1] === 2) {
+        const [r, g, b] = p.slice(i + 2, i + 5)
+        e[n === 38 ? 'fg' : 'bg'] = token('#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join(''))
+        i += 4
+      } else throw new Error(`ansiAHtml: el estilo SGR ${n} no se sabe pintar`)
     }
   }
+  volcar()
   return html
 }
 
 // ANCLAS son los elementos que señalan los recorridos guiados (data-recorrido): una captura por ancla aunque salga en
 // varias páginas, la primera que la cita. Salen de los temas, así que un paso nuevo trae su captura sin tocar esta lista.
-export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string }
+export interface AnclaCaptura { ancla: string; id: string; pagina: string; preparar?: string; arriba?: string }
+// ARRIBA hace empezar el recorte de un ancla en el borde de arriba de su contenedor (closest): una fila suelta, con el
+// margen de 16 px, dejaba ver medio renglón de lo de encima. La fila de preparar sale con la cabecera de su agente.
+const ARRIBA: Record<string, string> = { 'agentes.preparar': '.q-expansion-item' }
 // PREPARAR deja visible un ancla que la página no muestra al abrirla: es JavaScript que corre en la página y da true
 // cuando ya hizo lo suyo (se repite hasta entonces, por si los datos aún no llegaron).
 const PREPARAR: Record<string, string> = {
   // el detalle de un trabajo es el panel que se abre al pulsar una fila del Historial
   'historial.detalle': `(() => { const fila = document.querySelector('[data-recorrido="historial.lista"] tbody tr'); fila?.click(); return !!fila })()`,
+  // los que faltan por instalar van plegados: se despliegan para que se vea su «Instalar»
+  'agentes.instalar': `(() => {
+    const e = document.querySelector('[data-recorrido="agentes.instalar"]')
+    if (e?.querySelector('.q-expansion-item--expanded .q-btn')?.getBoundingClientRect().height) return true
+    if (e && !e.querySelector('.q-expansion-item--expanded')) e.querySelector('.q-item')?.click()
+    return false
+  })()`,
+  // lo de preparar un agente está en su tarjeta desplegada: se abre la primera si no hay ninguna abierta (pulsar otra vez
+  // la cerraría) y se espera a que lleguen sus versiones
+  'agentes.preparar': `(() => {
+    if ([...document.querySelectorAll('[data-recorrido="agentes.preparar"]')].some((e) => e.getBoundingClientRect().height > 0)) return true
+    if (!document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item--expanded')) document.querySelector('[data-recorrido="agentes.tarjeta"] .q-expansion-item .q-item')?.click()
+    return false
+  })()`,
 }
 export const ANCLAS: AnclaCaptura[] = []
 for (const tema of temas)
@@ -101,7 +244,7 @@ for (const tema of temas)
     if (bloque.tipo === 'recorrido')
       for (const { ancla } of bloque.pasos)
         if (tema.paginaApp && !ANCLAS.some((a) => a.ancla === ancla))
-          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla] })
+          ANCLAS.push({ ancla, id: capturaDeAncla(ancla), pagina: tema.paginaApp, preparar: PREPARAR[ancla], arriba: ARRIBA[ancla] })
 
 // SIN_CAPTURA son las anclas que la demo no puede mostrar, con el motivo: su paso sale en el sitio sin imagen.
 // Primero se intenta que los datos de demostración la hagan visible; esto es el último recurso.

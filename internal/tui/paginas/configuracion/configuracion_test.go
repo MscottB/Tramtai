@@ -406,7 +406,7 @@ func TestConfiguracionServidorSoloLectura(t *testing.T) {
 	ir(t, a, tx("servidor.titulo"))
 	v := strings.Join(strings.Fields(a.Vista()), " ")
 	for _, quiero := range []string{tx("servidor.https") + ": " + tx("servidor.tlsNinguno"), tx("servidor.enConfig") + " servicio.tls.modo", tx("servidor.dominios"),
-		"tramtai-servidor agentes entrar <agente>", // en local, el inicio de sesión del CLI
+		"tramtai-servidor agentes entrar <agente>", "tramtai-servidor agentes suscripcion <agente>", // en local, la sesión del CLI y la suscripción
 		tx("servidor.administrador") + ": " + tx("servidor.sinAdministrador"), "tramtai-servidor administrador contraseña",
 		tx("servidor.cambiaEn")[:strings.Index(tx("servidor.cambiaEn"), "config.yaml")]} { // las órdenes largas se parten por el guion
 		if !strings.Contains(v, quiero) {
@@ -512,6 +512,37 @@ func TestBuscarAhora(t *testing.T) {
 	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return e.Buscar })
 	a.Pulsar("space")
 	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return !e.Buscar })
+}
+
+// TestBuscarVersionesAgentes: Actualizaciones enseña también «Comprobar versiones nuevas de los agentes» y v lo cambia en
+// el servicio, sin tocar la búsqueda de Tramtai.
+func TestBuscarVersionesAgentes(t *testing.T) {
+	cli, id := conVersion(t)
+	a := abierta(t, cli, id)
+	todoTramtai(t, a)
+	ir(t, a, tx("actualizacion.ajustesTitulo"))
+	a.HastaVer(tx("versionesAgentes.titulo"))
+	if !slices.ContainsFunc(a.P.Teclas(), func(k pagina.Tecla) bool { return k.Tecla == "v" }) {
+		t.Fatalf("el pie dice qué tecla lo cambia: %+v", a.P.Teclas())
+	}
+	estado := func() contrato.EstadoActualizacion {
+		e, err := cli.Actualizacion(context.Background(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	if e := estado(); !e.BuscarVersionesAgentes || !e.Buscar {
+		t.Fatalf("de serie, las dos búsquedas están activas: %+v", e)
+	}
+	a.Pulsar("v")
+	a.Hasta(func() bool { return !estado().BuscarVersionesAgentes })
+	if !estado().Buscar {
+		t.Fatal("v no toca la búsqueda de Tramtai")
+	}
+	a.HastaVer("[ ] " + tx("versionesAgentes.titulo"))
+	a.Pulsar("v")
+	a.Hasta(func() bool { return estado().BuscarVersionesAgentes })
 }
 
 // TestReiniciarTrasElPuerto: con un servicio que se puede reiniciar, guardar otro puerto pregunta si se reinicia ahora,

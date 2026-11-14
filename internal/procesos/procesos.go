@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -30,6 +32,13 @@ type Orden struct {
 	Entorno    []string
 	Entrada    string
 	MemoriaMB  int // tope de memoria del proceso (0: sin tope); en macOS no se aplica
+	// EntradaAbierta, si no es nil, sustituye a Entrada: el extremo de lectura de un os.Pipe que sigue abierto mientras
+	// el proceso corre (un inicio de sesión espera ahí un código pegado). Es un archivo para que Wait no espere a copiarla.
+	// Ejecutar la cierra en este proceso nada más lanzar el hijo (él tiene la suya): cuando el hijo termina, escribir en
+	// el otro extremo falla.
+	EntradaAbierta *os.File
+	// Bruto, si no es nil, recibe además stdout tal cual llega, sin partir en líneas (un aviso sin salto de línea).
+	Bruto io.Writer
 }
 
 // Resultado es el final del proceso: código de salida y las últimas líneas de stderr.
@@ -65,10 +74,20 @@ func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado
 	salida := &lineas{alLinea: linea}
 	errores := &cola{limite: maximoErrores}
 	cmd.Stdout, cmd.Stderr = salida, errores
+	if o.EntradaAbierta != nil {
+		cmd.Stdin = o.EntradaAbierta
+	}
+	if o.Bruto != nil {
+		cmd.Stdout = io.MultiWriter(salida, o.Bruto)
+	}
 	// Un nieto que herede stdout no debe bloquear Wait cuando el proceso principal ya terminó.
 	cmd.WaitDelay = 2 * time.Second
 	preparar(cmd)
-	if err := cmd.Start(); err != nil {
+	err := cmd.Start()
+	if o.EntradaAbierta != nil {
+		_ = o.EntradaAbierta.Close()
+	}
+	if err != nil {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo lanzar el agente: %s", err.Error()))
 	}
 	g, err := agrupar(cmd, o.MemoriaMB)

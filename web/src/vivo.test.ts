@@ -73,6 +73,14 @@ test('como mucho 12 visibles, los más recientes, y el resto', () => {
   assert.ok(!lista.some((x) => x.id === 't0'))
 })
 
+test('en curso no cuenta los que ya llegaron y siguen a la vista unos segundos', () => {
+  const t: Tranvias = new Map()
+  for (let i = 0; i < 14; i++) aplicar(t, ev({ id: 't' + i }), i, new Set())
+  aplicar(t, ev({ id: 't0', estado: 'completado', etapa: 'llegada' }), 20, new Set()) // fuera de los 12 visibles
+  aplicar(t, ev({ id: 't13', estado: 'fallido', etapa: 'llegada' }), 20, new Set())
+  assert.equal(visibles(t).enCurso, 12)
+})
+
 test('esperas de reconexión', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(esperaReconexion), [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
 })

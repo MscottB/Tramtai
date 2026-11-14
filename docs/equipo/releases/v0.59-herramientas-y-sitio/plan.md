@@ -32,7 +32,7 @@ como «spec Herramientas › …» y «spec §N» (las del sitio).
   `github.com/pelletier/go-toml/v2` (solo para validar el TOML que se escribe).
 - **Herramientas e identificadores:**
 
-  | id | Nombre (API y UI) | Archivo global | Archivo en un proyecto | Clave |
+  | id (y nombre de su API) | Nombre en la UI | Archivo global | Archivo en un proyecto | Clave |
   |---|---|---|---|---|
   | `claude-code` | Claude Code | `~/.claude/settings.json` (o `$CLAUDE_CONFIG_DIR/settings.json`) | `<proyecto>/.claude/settings.local.json` | almacén, `apiKeyHelper` |
   | `codex` | Codex | `$CODEX_HOME/config.toml` (`~/.codex/config.toml`) | — | almacén, `auth.command` |
@@ -40,8 +40,9 @@ como «spec Herramientas › …» y «spec §N» (las del sitio).
   | `opencode` | opencode | `~/.config/opencode/opencode.json` (o `.jsonc` si existe) | — | en el archivo |
   | `kilo` | Kilo Code | `~/.config/kilo/kilo.jsonc` | — | en el archivo |
 
-- **URLs:** Anthropic `http://127.0.0.1:<puerto>/anthropic`; OpenAI `http://127.0.0.1:<puerto>/openai/v1`. El puerto es
-  el del servicio en marcha.
+- **URLs:** las de la API de la herramienta, porque su clave solo vale ahí (M0, `m0.md`): Anthropic
+  `http://127.0.0.1:<puerto>/p/<api>/anthropic`; OpenAI `http://127.0.0.1:<puerto>/p/<api>/openai/v1`. En `/anthropic`
+  y `/openai/v1` solo vale la clave del espacio. El puerto es el del servicio en marcha.
 - **Nombres en el almacén:** `TRAMTAI_HERRAMIENTA_CLAUDE_CODE` y `TRAMTAI_HERRAMIENTA_CODEX`. Se añaden a `Internos` en
   `internal/credenciales/credenciales.go:20`.
 - **Archivos de Tramtai** (0600, con `configuracion.EscribirAtomico`):
@@ -50,7 +51,8 @@ como «spec Herramientas › …» y «spec §N» (las del sitio).
     de cada activación.
 - **Marcas** en TOML: las líneas `# >>> tramtai` y `# <<< tramtai`. En YAML, el modelo de Continue lleva `name: Tramtai`.
   En opencode/Kilo, el proveedor se llama `tramtai`.
-- **API de cada herramienta:** grupo `Herramientas`, nombre el de la tabla, `ModelosPermitidos` solo el elegido.
+- **API de cada herramienta:** grupo `Herramientas`, nombre = su id (los nombres de API cumplen
+  `^[a-z0-9][a-z0-9_-]{0,39}$`; el nombre en la UI es el de la tabla), `ModelosPermitidos` solo el elegido.
 - **CLI:** `tramtai herramientas` (alias `tools`), con `listar` (`list`), `activar` (`enable`), `desactivar` (`disable`),
   `olvidar` (`forget`), `restaurar` (`restore`) y `clave` (`key`). `activar` y `desactivar` aceptan `<id>…` o `--todas`
   (`--all`), y `activar` acepta además `--modelo` (`--model`).
@@ -320,7 +322,8 @@ apiKey: v.Clave, roles: [chat, edit, apply], capabilities: [tool_use]}`. Si el a
 
 **Reglas:**
 - **Activar:**
-  1. Crea la API `Nombre` en el grupo `Herramientas` del espacio, o la reanuda si existe.
+  1. Crea la API `ID` (por ejemplo, `codex`) en el grupo `Herramientas` del espacio, o la reanuda si existe. Las URLs
+     de `Valores` son las suyas, `/p/<ID>/anthropic` y `/p/<ID>/openai/v1`.
   2. Genera la clave con `NuevaClave`.
   3. Si `!ClaveEnArchivo`, la guarda con `guardarClave("TRAMTAI_HERRAMIENTA_"+ID_MAYUS, clave)` y pasa en `Valores.Orden`
      el `os.Executable()` + `herramientas clave <id>`. Si no, la pasa en `Valores.Clave`.
@@ -337,9 +340,9 @@ apiKey: v.Clave, roles: [chat, edit, apply], capabilities: [tool_use]}`. Si el a
 
 - [ ] **Paso 1: pruebas que fallan** en `herramientas_test.go`, con un servicio de prueba, `HOME`/`CODEX_HOME`
   temporales y un mapa en memoria como almacén:
-  - `TestActivarCodexCreaAPIYGuardaClave`: tras activar, existe la API «Codex» en el grupo «Herramientas» con
+  - `TestActivarCodexCreaAPIYGuardaClave`: tras activar, existe la API `codex` en el grupo «Herramientas» con
     `ModelosPermitidos == ["claude/haiku"]`. La clave guardada como `TRAMTAI_HERRAMIENTA_CODEX` autentica contra
-    `/openai/v1/models`, y el `config.toml` no la contiene.
+    `/p/codex/openai/v1`, y el `config.toml` no la contiene.
   - `TestActivarTodasSoloDetectadas`: con solo `codex` y `continue` detectadas, `Todas` activa esas dos.
   - `TestDesactivarDetieneAPI`: la API queda con `Activo == false` y la clave sigue en el almacén.
   - `TestOlvidarBorraClave`: tras olvidar, la clave ya no está en el almacén y no hay anotación.

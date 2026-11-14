@@ -6,8 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
 )
@@ -107,5 +110,63 @@ func TestClienteActualizarYArranque(t *testing.T) {
 		if recibido[i] != esperado[i] {
 			t.Fatalf("petición %d: %q, esperada %q", i, recibido[i], esperado[i])
 		}
+	}
+}
+
+// TestPreparacionAgentes: los métodos de la preparación de los agentes piden lo suyo a la instancia y entienden las
+// respuestas, también un 409 con su código.
+func TestPreparacionAgentes(t *testing.T) {
+	var recibido []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cuerpo, _ := io.ReadAll(r.Body)
+		recibido = append(recibido, r.Method+" "+r.URL.RequestURI()+" "+r.Header.Get("Tramtai-Instancia")+" "+string(cuerpo))
+		switch {
+		case r.URL.Path == "/api/v1/agentes/versiones":
+			json.NewEncoder(w).Encode([]map[string]any{{"agente": "claude", "instalada": "2.1.300", "acciones": []string{"actualizar"}}})
+		case r.Method == "GET":
+			w.Write([]byte("null"))
+		case r.URL.Path == "/api/v1/agentes/codex/preparacion":
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"codigo": "ya_en_curso", "mensaje": "ya hay una"}})
+		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/preparacion"):
+			w.WriteHeader(http.StatusAccepted)
+			json.NewEncoder(w).Encode(map[string]string{"agente": "claude", "accion": "instalar", "estado": "instalando"})
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer srv.Close()
+	c := &Cliente{Base: srv.URL, token: "x", http: srv.Client()}
+	ctx := context.Background()
+	if e, err := c.Preparacion(ctx, "global", "claude"); err != nil || e.Estado != "" {
+		t.Fatalf("sin preparación: %+v %v", e, err)
+	}
+	if e, err := c.Preparar(ctx, "global", "claude", contrato.PedidoPreparacion{Accion: "instalar"}); err != nil || e.Estado != "instalando" {
+		t.Fatalf("preparar: %+v %v", e, err)
+	}
+	if _, err := c.Preparar(ctx, "global", "codex", contrato.PedidoPreparacion{Accion: "actualizar", Confirmar: true}); nucleo.CodigoDe(err) != "ya_en_curso" {
+		t.Fatalf("409: %v", err)
+	}
+	if err := c.CodigoPreparacion(ctx, "global", "claude", "abc-12345"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.CancelarPreparacion(ctx, "global", "claude"); err != nil {
+		t.Fatal(err)
+	}
+	if v, err := c.VersionesAgentes(ctx, "global", true); err != nil || len(v) != 1 || v[0].Instalada != "2.1.300" {
+		t.Fatalf("versiones: %+v %v", v, err)
+	}
+	c.VersionesAgentes(ctx, "global", false)
+	esperado := []string{
+		"GET /api/v1/agentes/claude/preparacion global ",
+		`POST /api/v1/agentes/claude/preparacion global {"accion":"instalar","borrar_datos":false,"confirmar":false}`,
+		`POST /api/v1/agentes/codex/preparacion global {"accion":"actualizar","borrar_datos":false,"confirmar":true}`,
+		`POST /api/v1/agentes/claude/preparacion/codigo global {"codigo":"abc-12345"}`,
+		"DELETE /api/v1/agentes/claude/preparacion global ",
+		"GET /api/v1/agentes/versiones?forzar=1 global ",
+		"GET /api/v1/agentes/versiones global ",
+	}
+	if !slices.Equal(recibido, esperado) {
+		t.Fatalf("recibido:\n%s", strings.Join(recibido, "\n"))
 	}
 }
