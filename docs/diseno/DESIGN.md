@@ -227,9 +227,9 @@ Alojadas en `site/`, subconjuntos con los caracteres del sitio en español e ing
 | `--serifa` | Instrument Serif cursiva | `instrument-italica.woff2`, 16 KB | la parte clave de cada titular |
 | `--mono` | `Tramtai Mono`, un subconjunto de Cascadia Mono (el nombre «Cascadia Code» está reservado por la licencia) | `cascadia.woff2`, 19 KB | código, comandos, rótulos, terminal |
 
-Inter y Instrument Serif suman unos 64 KB; el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila `sitio.test.ts`, que además comprueba que cada carácter del texto está en la lista.
+Inter y Instrument Serif suman unos 64 KB; el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila `sitio.test.ts`. La misma prueba lee la tabla `cmap` real de cada letra (el WOFF2, sin dependencias) y comprueba que cada carácter del texto lo dibuja Inter, y cada carácter de la parte clave de los titulares, Instrument Serif; `FUERA_DE_INTER` lista lo que llega a propósito de la letra del sistema («⋯», citado en la Ayuda).
 
-- **Cuerpo:** Inter a 1rem (16 px si quien lee no cambió la letra de su navegador) con interlineado 1,6.
+- **Cuerpo:** Inter a `1rem` (16 px si quien lee no cambió la letra de su navegador) con interlineado 1,6.
 - **Títulos** (`h1` a `h4`): peso 600, letras algo juntas (`-0.025em`) e interlineado 1,15. `h2`, de 1,6 a 2,2 rem según el ancho.
 - **`.titular`** (el h1 de cada página): de 2,4 a 4,2 rem, 600, `-0.03em`. En las páginas de documentación, de 2 a 2,75 rem.
 - **La parte clave** va en `<em>`: `h2 em, .titular em` pasan a Instrument Serif cursiva, peso 400 y color de acento («Tus agentes de IA, *como una API local.*»).
@@ -305,7 +305,7 @@ Sus colores de línea se usan solo donde la terminal pinta el nombre o la estaci
 ## Excepciones del sitio
 
 - **Controles de 44 px.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
-- **Cortes en em.** Los anchos de las media queries van en m (los px de este documento son a 16 px por em): con la letra del navegador al 200 %, una pantalla de 1440 px se maqueta como una de 720 y no hay desplazamiento horizontal.
+- **Cortes en em.** Los anchos de las media queries van en `em` (los px de este documento son a 16 px por em): con la letra del navegador al 200 %, una pantalla de 1440 px se maqueta como una de 720 y no hay desplazamiento horizontal.
 - **Barra y menú.** Hasta 1100 px (y en tabletas táctiles hasta 1180) las secciones, el idioma y el tema van en un panel que abre el botón del menú. Hasta 640 px, Descargar queda en un botón con su icono y, hasta 420, el nombre de la marca solo lo oyen los lectores.
 - **`t-claude` de día.** Vale `#ba521c`, el valor de la chapa de la Web UI, y no `#c4561d`: es texto sobre el fondo blanco de la ventana y el color de la ficha da 4,47:1. De noche conserva `#f28a4f`. La variable `--claude` del sitio, que solo pinta puntos y líneas, sí es `#c4561d`.
 - **Código sobre tinta.** El foco usa `--tablero-clave` porque el acento no llega a 3:1 sobre la tinta.
