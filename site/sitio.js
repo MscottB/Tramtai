@@ -92,7 +92,7 @@
     boton.setAttribute('aria-expanded', String(si));
   }
   boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true'); });
-  document.getElementById('menu').addEventListener('click', function (e) { if (e.target.closest('a')) abrir(false); });
+  document.getElementById('menu').addEventListener('click', function (e) { if (e.target.closest('a, [data-buscar]')) abrir(false); });
   document.addEventListener('click', function (e) { if (!barra.contains(e.target)) abrir(false); });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape' || !barra.classList.contains('abierta')) return;
@@ -296,15 +296,18 @@
   elegir(0);
 })();
 
-// Buscador de la Ayuda (site/ayuda/): busca por palabras en indice.json, en el idioma que se ve. Sin JavaScript queda
-// oculto y se navega por las tarjetas.
+// Buscador del sitio: Ctrl K, ⌘K, / o un botón con data-buscar (la barra, el campo de la Ayuda) abren un diálogo que busca
+// por palabras en buscar.json, en el idioma que se ve. Las flechas mueven, Enter abre, Esc cierra y el foco vuelve a quien
+// lo abrió. Sin JavaScript los botones siguen ocultos y se navega por la barra y las tarjetas.
 (function () {
-  var caja = document.querySelector('.buscar-ayuda');
-  var campo = document.getElementById('buscar-ayuda');
-  var lista = document.getElementById('resultados-ayuda');
-  if (!caja || !campo || !lista) return;
-  var indice = null;
-  caja.hidden = false;
+  var botones = document.querySelectorAll('[data-buscar]');
+  if (!botones.length || typeof HTMLDialogElement !== 'function') return;
+  // buscar.json está en la raíz del sitio, junto a este script, desde cualquier página.
+  var script = document.currentScript || document.querySelector('script[src*="sitio.js"]');
+  var base = script ? new URL('.', script.src).href : '';
+  var dialogo, campo, lista, cuenta, indice = null, cargando = null, opciones = [], activo = -1, quien = null;
+  function lengua() { return document.documentElement.lang === 'en' ? 'en' : 'es'; }
+  function tx(es, en) { return lengua() === 'en' ? en : es; }
   function normalizar(s) {
     return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim();
   }
@@ -314,52 +317,122 @@
     var corta = p.replace(/(aciones|acion|adas|ados|ada|ado|idas|idos|ida|ido|es|s)$/, '');
     return corta.length >= 4 ? corta : p;
   }
-  function mostrar() {
+  function cargar() {
+    if (!cargando) cargando = fetch(base + 'buscar.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
+      ['es', 'en'].forEach(function (l) { datos[l].forEach(function (e) { e.n = normalizar(e.ti + ' ' + e.d); }); });
+      indice = datos;
+    }).catch(function () { cargando = null; });
+    return cargando;
+  }
+  function mover(n) {
+    if (!opciones.length) return;
+    activo = (n + opciones.length) % opciones.length;
+    opciones.forEach(function (o, i) { o.setAttribute('aria-selected', String(i === activo)); });
+    campo.setAttribute('aria-activedescendant', opciones[activo].id);
+    opciones[activo].scrollIntoView({ block: 'nearest' });
+  }
+  function ir(u) {
+    dialogo.close();
+    location.href = base + u;
+  }
+  function buscar() {
     var palabras = normalizar(campo.value).split(' ').filter(Boolean).map(raiz);
-    var cuenta = document.getElementById('cuenta-ayuda');
-    lista.innerHTML = '';
-    if (cuenta) cuenta.textContent = '';
-    if (!palabras.length || !indice) return;
-    var entradas = indice[document.documentElement.lang === 'en' ? 'en' : 'es'] || [];
-    var hallados = entradas.filter(function (e) {
-      return palabras.every(function (p) { return e.x.indexOf(p) >= 0; });
+    lista.textContent = '';
+    opciones = [];
+    activo = -1;
+    cuenta.textContent = '';
+    campo.removeAttribute('aria-activedescendant');
+    campo.setAttribute('aria-expanded', 'false');
+    if (!palabras.length) return;
+    if (!indice) { if (!cargando) cuenta.textContent = tx('No se pudo cargar el buscador.', 'The search could not load.'); return; }
+    var coincide = function (e, p) { return e.x.indexOf(p) >= 0 || e.n.indexOf(p) >= 0; };
+    var hallados = indice[lengua()].filter(function (e) {
+      return palabras.every(function (p) { return coincide(e, p); });
     }).sort(function (a, b) {
-      var pa = palabras.every(function (p) { return normalizar(a.d).indexOf(p) >= 0; }) ? 0 : 1;
-      var pb = palabras.every(function (p) { return normalizar(b.d).indexOf(p) >= 0; }) ? 0 : 1;
+      var pa = palabras.every(function (p) { return a.n.indexOf(p) >= 0; }) ? 0 : 1;
+      var pb = palabras.every(function (p) { return b.n.indexOf(p) >= 0; }) ? 0 : 1;
       return pa - pb;
     }).slice(0, 30);
-    hallados.forEach(function (e) {
+    hallados.forEach(function (e, i) {
       var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.href = e.t + '.html' + (e.a ? '#' + e.a : '');
-      a.textContent = e.d;
-      if (e.d !== e.ti) {
-        var donde = document.createElement('span');
-        donde.textContent = e.ti;
-        a.appendChild(donde);
-      }
-      li.appendChild(a);
+      li.id = 'buscador-' + i;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
+      var ti = document.createElement('span');
+      ti.textContent = e.ti;
+      var d = document.createElement('span');
+      d.className = 'b-d';
+      d.textContent = e.d;
+      li.append(ti, d);
+      li.addEventListener('click', function () { ir(e.u); });
       lista.appendChild(li);
+      opciones.push(li);
     });
-    var en = document.documentElement.lang === 'en';
-    if (cuenta) cuenta.textContent = hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'));
-    if (!hallados.length) {
-      var vacio = document.createElement('li');
-      vacio.textContent = (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
-      lista.appendChild(vacio);
-    }
+    var en = lengua() === 'en';
+    cuenta.textContent = hallados.length
+      ? hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'))
+      : (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
+    if (hallados.length) { campo.setAttribute('aria-expanded', 'true'); mover(0); }
   }
-  fetch('indice.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
-    indice = datos;
-    mostrar();
-  }).catch(function () { caja.hidden = true; });
-  campo.addEventListener('input', mostrar);
-  // Desde «Buscar» de cada tema se llega con el campo listo para escribir.
-  if (location.hash === '#buscar-ayuda') campo.focus();
-  // Al cambiar de idioma, los resultados se rehacen en el nuevo.
-  document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
+  function crear() {
+    dialogo = document.createElement('dialog');
+    dialogo.className = 'buscador';
+    dialogo.setAttribute('aria-labelledby', 'buscador-titulo');
+    dialogo.innerHTML = '<div class="buscador-caja">' +
+      '<h2 id="buscador-titulo" class="solo-lectores"><span lang="es">Buscar en el sitio</span><span lang="en">Search the site</span></h2>' +
+      '<input type="text" role="combobox" aria-controls="buscador-lista" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false" enterkeyhint="search">' +
+      '<p id="buscador-cuenta" class="buscador-cuenta" aria-live="polite"></p>' +
+      '<ul id="buscador-lista" role="listbox"></ul>' +
+      '<p class="buscador-pie" aria-hidden="true"><span lang="es"><kbd>↑</kbd> <kbd>↓</kbd> para moverte, <kbd>Enter</kbd> para abrir, <kbd>Esc</kbd> para cerrar</span><span lang="en"><kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Enter</kbd> to open, <kbd>Esc</kbd> to close</span></p></div>';
+    document.body.appendChild(dialogo);
+    campo = dialogo.querySelector('input');
+    lista = dialogo.querySelector('ul');
+    cuenta = dialogo.querySelector('.buscador-cuenta');
+    campo.addEventListener('input', buscar);
+    campo.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); mover(activo + (e.key === 'ArrowDown' ? 1 : -1)); }
+      else if (e.key === 'Enter' && activo >= 0) { e.preventDefault(); opciones[activo].click(); }
+    });
+    // Clic en el fondo (el propio diálogo, sin su caja) cierra.
+    dialogo.addEventListener('click', function (e) { if (e.target === dialogo) dialogo.close(); });
+    // El foco vuelve a quien lo abrió; si era el botón del menú de la barra, ya cerrado, vuelve al botón del menú.
+    dialogo.addEventListener('close', function () {
+      var f = quien && quien.offsetParent ? quien : document.querySelector('.menu-boton:not([hidden])');
+      quien = null;
+      if (f) f.focus();
+    });
+  }
+  function abrir() {
+    if (!dialogo) crear();
+    if (dialogo.open) return;
+    quien = document.activeElement;
+    var rotulo = tx('Buscar en el sitio', 'Search the site');
+    campo.placeholder = rotulo;
+    campo.setAttribute('aria-label', rotulo);
+    lista.setAttribute('aria-label', tx('Resultados', 'Results'));
+    campo.value = '';
+    buscar();
+    dialogo.showModal();
+    campo.focus();
+    cargar().then(function () { if (dialogo.open) buscar(); });
+  }
+  botones.forEach(function (b) {
+    b.hidden = false;
+    b.setAttribute('aria-keyshortcuts', 'Control+K Meta+K /');
+    b.addEventListener('click', abrir);
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    var escribiendo = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (dialogo && dialogo.open) dialogo.close(); else abrir();
+    } else if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !escribiendo) {
+      e.preventDefault();
+      abrir();
+    }
+  });
 })();
-
 // Al llegar a una pregunta de la Ayuda por su ancla (#terminos), también desde un enlace de la misma página, se abre.
 (function () {
   function abrir() {

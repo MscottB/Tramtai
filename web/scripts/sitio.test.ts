@@ -6,7 +6,9 @@ import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { ANCLAS_VIEJAS, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
 
+const SITIO = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
 const fuente: Fuente = {
+  paginas: { 'servidor.html': SITIO('servidor.html'), 'desarrolladores.html': SITIO('desarrolladores.html') },
   temas, es, en, capturas: new Map([['inicio.claro.es.webp', { ancho: 1280, alto: 720 }]]),
   ejemplos: (_b, idioma) => [{ id: 'python', titulo: 'Python', codigo: idioma === 'es' ? 'print("<hola> & adiós")' : 'print("hi")' }],
 }
@@ -16,10 +18,10 @@ test('escapar deja el texto sin HTML', () => {
   assert.equal(escapar(`<a & "b" 'c'>`), '&lt;a &amp; &quot;b&quot; &#39;c&#39;&gt;')
 })
 
-test('genera el inicio, una página por tema, el índice de búsqueda y la página de paso', () => {
+test('genera el inicio, una página por tema, el buscador y la página de paso', () => {
   assert.ok(paginas.has('ayuda/index.html'))
   for (const t of temas) assert.ok(paginas.has(`ayuda/${t.id}.html`), t.id)
-  assert.ok(paginas.has('ayuda/indice.json'))
+  assert.ok(paginas.has('buscar.json'))
   assert.ok(paginas.has('ayuda.html'))
 })
 
@@ -65,9 +67,29 @@ test('el script de la página de paso funciona tal cual sale en ayuda.html', () 
   }
 })
 
-test('el índice de búsqueda tiene los 20 temas en los dos idiomas', () => {
-  const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
-  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 20)
+test('buscar.json tiene una entrada por tema y apartado', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en']) {
+    const us: string[] = indice[idioma].map((e: { u: string }) => e.u)
+    for (const t of temas) assert.ok(us.includes('ayuda/' + t.id + '.html'), t.id)
+    assert.ok(us.some((u) => u.startsWith('ayuda/agentes.html#')), 'anclas de un tema')
+    for (const p of ['servidor.html#', 'desarrolladores.html#']) assert.ok(us.some((u) => u.startsWith(p)), p)
+    for (const e of indice[idioma]) assert.deepEqual(Object.keys(e), ['u', 'ti', 'd', 'x'])
+  }
+  const [s] = indice.es.filter((e: { u: string }) => e.u === 'servidor.html#red')
+  assert.equal(s.ti, 'Abrir a la red')
+  assert.match(s.x, /abrir a la red \w/, 'lleva también el párrafo')
+  assert.equal(indice.en.find((e: { u: string }) => e.u === 'servidor.html#red').ti, 'Open to the network')
+})
+
+test('cada u de buscar.json lleva a un ancla que existe', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en'])
+    for (const { u } of indice[idioma] as { u: string }[]) {
+      const [archivo, ancla] = u.split('#')
+      const html = paginas.get(archivo) ?? SITIO(archivo)
+      if (ancla) assert.match(html, new RegExp('\\sid="' + ancla + '"'), u)
+    }
 })
 
 const leer = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
@@ -257,7 +279,7 @@ const PROHIBIDAS = [/Sin cortes/, /No outages/, /Todo se queda en tu equipo/i, /
   /jamás/, /no vuelve a pasar/, /won’t happen again/]
 
 test('el sitio no tiene rayas largas ni promesas absolutas', () => {
-  const textos = new Map([...todas, ['sitio.js', leer('sitio.js')], ['ayuda/indice.json', paginas.get('ayuda/indice.json')!]])
+  const textos = new Map([...todas, ['sitio.js', leer('sitio.js')], ['buscar.json', paginas.get('buscar.json')!]])
   for (const [ruta, html] of textos) {
     assert.ok(!html.includes('—'), `${ruta}: raya larga`)
     for (const p of PROHIBIDAS) assert.ok(!p.test(html), `${ruta}: ${p}`)
@@ -381,7 +403,7 @@ test('los temas largos tienen «En esta página» con un h2 por sección y el bu
   const anclas = [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
   assert.ok(anclas.length >= 3, 'faltan secciones en el índice')
   for (const a of anclas) assert.match(html, new RegExp(`<section id="${a}"><h2>`), a)
-  assert.match(html, /<a href="index\.html#buscar-ayuda">/)
+  assert.match(html, /<button type="button" class="enlace-boton" data-buscar hidden>/)
 })
 
 test('iconos, imagen para compartir, manifest y datos estructurados', () => {
