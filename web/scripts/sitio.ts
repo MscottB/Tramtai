@@ -218,6 +218,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)"[^>]*>/)?.[1] ?? '')
   const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel, l.actual) }
   const opcionales: Record<string, string> = {
+    anclas: saltoPortada(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
   }
@@ -245,16 +246,34 @@ export function destinoAncla(hash: string): string {
   return 'ayuda/' + (Object.hasOwn(ANCLAS_VIEJAS, ancla) ? ANCLAS_VIEJAS[ancla] : '')
 }
 
-// ANCLAS_PORTADA lleva cada anclaje de la portada de hoy a su sitio nuevo (spec §7); Inicio la incrusta como salto.
+// ANCLAS_PORTADA lleva cada anclaje de la portada de hoy a su sitio nuevo (spec §7); Inicio la incrusta como salto. Las
+// tres últimas son de la portada de antes de la v0.59 (#pagas, #capturas y #aviso).
 export const ANCLAS_PORTADA: Record<string, string> = {
   descargar: 'descargar.html', como: 'producto.html#como', funciones: 'producto.html#funciones', 'por-que': 'producto.html#por-que',
   privacidad: 'producto.html#privacidad', agentes: 'agentes.html', app: '#formas', terminal: '#formas', servidor: 'servidor.html',
+  pagas: 'producto.html#por-que', capturas: '#formas', aviso: 'producto.html#privacidad',
 }
 
 // destinoPortada es el destino de un anclaje viejo, o null si no está en la tabla (la portada nueva lo conserva o no existe).
 export function destinoPortada(hash: string): string | null {
   const ancla = hash.replace(/^#/, '')
   return Object.hasOwn(ANCLAS_PORTADA, ancla) ? ANCLAS_PORTADA[ancla] : null
+}
+
+// saltoPortada es el salto de Inicio (comun:anclas, en su <head>): un anclaje viejo va a su sitio nuevo antes de pintar,
+// y también si cambia con la página abierta. Sin JavaScript, cada anclaje viejo es el id de la tarjeta de «Sigue por
+// aquí» (o de la ventana) que lleva a ese sitio.
+// Es JavaScript escrito tal cual (no el texto de destinoPortada, que cambia con cómo se compile): las pruebas lo ejecutan.
+function saltoPortada(): string {
+  return `<script>(function () {
+  var anclas = ${JSON.stringify(ANCLAS_PORTADA)};
+  function saltar() {
+    var ancla = location.hash.slice(1);
+    if (Object.prototype.hasOwnProperty.call(anclas, ancla)) location.replace(anclas[ancla]);
+  }
+  saltar();
+  addEventListener('hashchange', saltar);
+})();</script>`
 }
 
 export function escapar(s: string): string {
@@ -374,7 +393,7 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
       return `<p class="aviso">${tx(b.texto)}</p>`
     case 'descargas':
       // Lo que frena el primer arranque va junto al botón, no solo en las preguntas de más abajo.
-      return `<p><a class="boton principal" href="../index.html#descargar">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>
+      return `<p><a class="boton principal" href="../descargar.html">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>
 <p class="aviso">${bilingue(AVISO_DESCARGA.es, AVISO_DESCARGA.en)} <a href="#windows">${bilingue('Qué hacer con el aviso de Windows', 'What to do about the Windows warning')}</a></p>`
     default:
       return ''

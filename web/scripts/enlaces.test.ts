@@ -42,7 +42,7 @@ const tieneId = (archivo: string, ancla: string) => new RegExp(`\\sid="${ancla.r
 test('la prueba ve las comillas simples, los srcset, las mayúsculas y los data-id', () => {
   assert.deepEqual(enlaces(`<a href='zzz.html'><img srcset="a.png 1x, b.png 2x" src="c.png">`), ['zzz.html', 'a.png', 'b.png', 'c.png'])
   assert.ok(existe('ayuda/index.html') && !existe('Ayuda/index.html') && !existe('INDEX.html') && !existe('zzz.html'))
-  assert.ok(tieneId('index.html', 'descargar') && !new RegExp('\\sid="x"').test('<b data-id="x">'))
+  assert.ok(tieneId('descargar.html', 'descargar') && !new RegExp('\\sid="x"').test('<b data-id="x">'))
 })
 
 test('cada enlace interno lleva a un archivo que existe', () => {

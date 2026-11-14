@@ -129,7 +129,7 @@ test('riesgos da los cinco riesgos de los catálogos, con la variante del escrit
 })
 
 test('el aviso de la portada y de la guía del servidor salen de riesgos.*, en los dos idiomas', () => {
-  for (const [archivo, servidor] of [['index.html', false], ['servidor.html', true]] as const) {
+  for (const [archivo, servidor] of [['producto.html', false], ['servidor.html', true]] as const) {
     const html = fijas.get(archivo)!
     const zona = html.match(new RegExp(`<!-- comun:${servidor ? 'riesgos-servidor' : 'riesgos'} -->([\\s\\S]*?)<!-- /comun:`))?.[1] ?? ''
     for (const [i, r] of riesgos(es, servidor).entries()) assert.ok(zona.includes(`<span lang="es">${escapar(r)}</span>`), `${archivo}: riesgo ${i + 1} en español`)
@@ -417,4 +417,35 @@ test('iconos, imagen para compartir, manifest y datos estructurados', () => {
   const ld = JSON.parse(fijas.get('index.html')!.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1])
   assert.equal(ld['@type'], 'SoftwareApplication')
   assert.match(leer('sitio.js'), /'tramtai\.lenguaje-ayuda'/, 'la Ayuda recuerda su lenguaje aparte de la guía')
+})
+
+// funcionDe saca una función de arriba del todo de sitio.js (sin sangría) para probarla sin navegador, como el script de
+// la página de paso.
+const funcionDe = (nombre: string) =>
+  new Function(`${leer('sitio.js').match(new RegExp(`\\nfunction ${nombre}\\([\\s\\S]*?\\n\\}`))![0]}\nreturn ${nombre}`)()
+
+// Pendiente de la Tarea 1: con el margen de abajo recortado un 20 %, un .vivo corto al final de la página no llegaba.
+test('lo vivo arranca con un cuarto a la vista, también al final de la página o si es más alto que ella', () => {
+  const visto = funcionDe('bastanteVisto')
+  const e = (ratio: number, alto: number) => ({ intersectionRatio: ratio, intersectionRect: { height: alto } })
+  assert.equal(visto(e(1, 80), 900), true, 'corto y entero a la vista, al final de la página')
+  assert.equal(visto(e(0.1, 60), 900), false, 'solo asoma')
+  assert.equal(visto(e(0.12, 300), 900), true, 'más alto que la pantalla: un cuarto de ella')
+  assert.equal(visto(e(0.2, 200), 900), false)
+  assert.match(leer('sitio.js'), /\{ threshold: \[0, 0\.25\] \}/)
+  assert.doesNotMatch(leer('sitio.js'), /rootMargin: '0px 0px -20% 0px'/)
+})
+
+// Pendientes de la Tarea 3.
+test('en el buscador, Ctrl+Enter o ⌘+Enter abre el resultado en otra pestaña', () => {
+  assert.match(leer('sitio.js'), /e\.key === 'Enter' && activo >= 0\) \{[\s\S]{0,80}opciones\[activo\]\.dispatchEvent\(new MouseEvent\('click', \{[^}]*ctrlKey: e\.ctrlKey, metaKey: e\.metaKey/)
+})
+
+test('cada tema de buscar.json tiene texto donde buscar', () => {
+  const indice = JSON.parse(paginas.get('buscar.json')!)
+  for (const idioma of ['es', 'en'])
+    for (const t of temas) {
+      const e = indice[idioma].find((x: { u: string }) => x.u === `ayuda/${t.id}.html`)
+      assert.ok(e?.x.trim(), `${idioma}: ${t.id}`)
+    }
 })
