@@ -338,10 +338,92 @@ test('sin JavaScript el menú se ve y nada se mueve; el paso del cursor no levan
   assert.doesNotMatch(css, /translateY/)
 })
 
-test('la portada de antes no deja restos: ni tranvía, ni demo, ni accesos', () => {
-  assert.doesNotMatch(js, /Recorrido de la portada|Demo del recorrido guiado|escribirLeyenda/)
-  assert.doesNotMatch(css, /\.(portada|accesos|escenas|mapa-pestana|demo-|tranvia|terminal-figura|teclas)\b|#demo\b/)
-  assert.doesNotMatch(html, /class="(portada|accesos|escenas|mapa|demo)[ "]/)
+test('la portada de antes no deja restos: ni tranvía ni accesos; el recorrido guiado está en Producto', () => {
+  assert.doesNotMatch(js, /Recorrido de la portada/)
+  assert.doesNotMatch(css, /\.(portada|accesos|escenas|mapa-pestana|tranvia|terminal-figura|teclas)\b/)
+  assert.doesNotMatch(html, /class="(portada|accesos|escenas|mapa)[ "]/)
+  assert.doesNotMatch(inicio, /class="demo|id="demo"/)
+})
+
+// Ruling 7: «La app» (#app, «Tu red, a la vista») y el recorrido guiado de 14 pasos (#demo) pasaron tal cual a Producto,
+// con su JavaScript y su CSS, hasta que la Tarea 6 los meta en Funciones.
+const producto = leer('producto.html')
+const app = seccion('app', producto)
+const corte = app.indexOf('<div id="demo"')
+const asi = corte < 0 ? app : app.slice(0, corte)
+const demo = corte < 0 ? '' : app.slice(corte)
+const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
+
+test('Producto tiene «La app»: sus cinco pares de texto y captura, y el recorrido de 14 pasos', () => {
+  assert.match(app, /^<section id="app">/)
+  assert.match(asi, /Tu red, a la vista\./)
+  const etiquetas = [...asi.matchAll(/<span class="etiqueta"><span lang="es">([^<]+)<\/span>/g)].map((m) => m[1])
+  assert.deepEqual(etiquetas, ['Inicio', 'Espacios', 'Probar', 'Mis APIs', 'Agentes'])
+  assert.equal(figuras.length, 14)
+  assert.match(figuras[13], /Historial y Ajustes tienen su recorrido en su \?\. Ábrelo cuando llegues allí\./)
+  assert.match(figuras[13], /History and Settings have their own tour behind their \? button\. Open it when you get there\./)
+  // «Míralo paso a paso» lleva al recorrido entero, en Producto y en la guía del desarrollador.
+  assert.match(seccion('funciones', producto), /href="#demo">míralo paso a paso<\/a>/)
+  assert.equal((leer('desarrolladores.html').match(/href="producto\.html#demo"/g) ?? []).length, 2)
+})
+
+test('cada captura de «La app» tiene su pareja en el otro idioma, con lang, srcset y carga diferida', () => {
+  const imgs = asi.match(/<img [^>]*>/g) ?? []
+  assert.equal(imgs.length, 20, 'cinco pantallas, en claro y oscuro y en los dos idiomas')
+  for (const img of imgs) {
+    const m = img.match(/class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/([a-z-]+)-\1-\2-1440\.webp"/)
+    assert.ok(m, img.slice(0, 120))
+    const [, tema, idioma, nombre] = m
+    const base = `capturas/${nombre}-${tema}-${idioma}`
+    assert.ok(img.includes(`srcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1440.webp 1440w"`), `${base}: srcset`)
+    assert.match(img, /width="1440" height="900"/)
+    assert.match(img, /loading="lazy"/)
+    const otro = idioma === 'es' ? 'en' : 'es'
+    assert.ok(imgs.some((i) => i.includes(`class="solo-${tema}" lang="${otro}" src="capturas/${nombre}-${tema}-${otro}-1440.webp"`)), `${base}: falta su pareja`)
+  }
+  const inicioPar = asi.match(/<article class="par">\s*<div>\s*<span class="etiqueta"><span lang="es">Inicio[\s\S]*?<\/article>/)?.[0] ?? ''
+  assert.match(inicioPar, /en vivo/)
+  const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(nota, /datos de ejemplo[\s\S]*17388[\s\S]*17373/)
+})
+
+test('el recorrido es una figura por paso de la bienvenida, con su captura en claro y oscuro y en los dos idiomas', () => {
+  assert.equal(figuras.length, pasos.length, 'una figura por paso')
+  figuras.forEach((figura, i) => {
+    const n = i + 1
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en']) {
+        const base = `capturas/bienvenida-${n}-${tema}-${idioma}`
+        assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
+      }
+    const escapar = (s: string) => s.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(es[pasos[i].texto])}`))
+    assert.match(figura, new RegExp(`<figcaption>[\\s\\S]*${escapar(en[pasos[i].texto])}`))
+  })
+  // La primera se ve; el resto espera su turno (sin JavaScript se ven las 14, una debajo de otra).
+  assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
+  for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
+  const botones = [...demo.matchAll(/<button type="button" class="demo-ir" data-paso="(\d+)"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/button>/g)]
+  assert.deepEqual(botones.map((m) => [m[2], m[3]]), pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+})
+
+// Con el recorrido vuelve su JavaScript (ruling 7): sin él, con html.js, solo se vería el primer paso.
+const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'), js.indexOf('// Plano de metro de Funciones'))
+test('el recorrido funciona con su JavaScript y su CSS: flechas con el foco dentro, pausa y leyenda', () => {
+  assert.ok(demoJs.length > 1000, 'falta el bloque del recorrido en sitio.js')
+  assert.match(demoJs, /caja\.addEventListener\('keydown'/)
+  assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
+  assert.match(demoJs, /if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey\) return/)
+  assert.match(demoJs, /pausaManual = pausado/)
+  assert.match(demoJs, /escribirLeyenda\(leyenda, /)
+  assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/)
+  assert.match(demoJs, /siguiente\.loading = 'eager'/)
+  assert.match(demo, /<p class="demo-leyenda" aria-live="off">/)
+  assert.match(css, /html\.js \.demo \{[^}]*grid-template-columns: 220px minmax\(0, 1fr\)/)
+  assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
+  assert.match(css, /\.demo-flecha \{[^}]*width: 44px; height: 44px/)
+  assert.match(css, /\.demo-pausa \{[^}]*min-height: 44px/)
+  assert.match(css, /#demo \{[^}]*scroll-margin-top: 72px/)
 })
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -527,8 +609,8 @@ test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin 
   for (const p of paradas) { assert.match(p, /<h4 class="parada-titulo">/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
   for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
     assert.match(funciones, new RegExp(t))
-  // El recorrido guiado de la app, paso a paso, está en la Ayuda («Qué verás en pantalla»).
-  assert.match(funciones, /href="ayuda\/empezar\.html#s-recorrido"/)
+  // El recorrido guiado de la app, paso a paso, está en esta misma página (ruling 7).
+  assert.match(funciones, /href="#demo"/)
   for (const linea of funciones.match(/<section class="metro-linea"[\s\S]*?<\/section>/g) ?? [])
     assert.equal((linea.match(/<li class="parada">/g) ?? []).length, 3)
   assert.match(funciones, /<div class="metro-panel" aria-live="polite" hidden><\/div>/, 'el panel solo lo usa el JavaScript')

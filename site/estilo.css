@@ -618,7 +618,7 @@ body:has(dialog.buscador[open]) { overflow: hidden; }
    también en oscuro (le gana a .solo-oscuro). */
 html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"],
 html[lang="es"] .captura a[lang="en"], html[lang="en"] .captura a[lang="es"] { display: none !important; }
-.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.solo-lectores, .demo-leyenda { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Inicio (spec §4): el arranque, el mosaico «FIG», la ventana de cuatro formas y «Sigue por aquí». */
 #arranque { padding: 104px 0 56px; text-align: center; }
@@ -715,4 +715,80 @@ a.pagina h3::after { content: ' →'; color: var(--acento); }
   .inicio .tarjeta { padding: 16px; }
   .ventana .pestanas-lista button { padding: 0 10px; }
   .terminal-viva { padding: 14px; font-size: .78rem; white-space: pre-wrap; word-break: break-all; }
+}
+
+/* «La app» y el recorrido guiado, tal cual vinieron de la portada (ruling 7): en Producto hasta que la Tarea 6 los meta en
+   Funciones. */
+/* El recorrido guiado va dentro de «La app», después de las capturas, y también es destino de enlaces. */
+#demo { margin-top: 96px; scroll-margin-top: 72px; }
+/* La etiqueta nombra la pantalla de cada captura: Label de DESIGN.md, sin mayúsculas. */
+.etiqueta { font: 600 .78rem var(--fuente); color: var(--acento); margin-bottom: 8px; display: block; }
+/* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */
+.par { display: grid; grid-template-columns: 1fr 1.6fr; gap: 48px; align-items: center; margin-top: 56px; }
+.par:first-of-type { margin-top: 0; }
+.par.invertido { grid-template-columns: 1.6fr 1fr; }
+.par.invertido > div { order: 2; }
+.par h3 { font-size: 1.45rem; margin-bottom: 12px; }
+@media (max-width: 900px) {
+  .par, .par.invertido { grid-template-columns: 1fr; }
+  .par.invertido > div { order: 0; }
+  .par { gap: 20px; }
+}
+/* Demo del recorrido guiado de la portada (sitio.js): a la izquierda, la lista de pasos por página (en el móvil, un
+   desplegable encima); a la derecha, la zona del paso con su texto debajo, una flecha encima de cada borde, el progreso
+   y la pausa. La leyenda solo la oyen los lectores de pantalla. Sin JavaScript se ven todos los pasos, uno debajo de
+   otro. Cada imagen declara su tamaño: no hay saltos. */
+.demo { max-width: 1120px; margin: 0 auto; }
+/* Con la lista a 220 px la imagen mide 820 en el escritorio, lo mismo que el tope de la zona en capturas.mjs: 1× o más. */
+html.js .demo { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
+html:not(.js) .demo-pasos { display: none; }
+html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
+.demo-pasos-movil > summary { font: 600 .95rem/1.3 var(--fuente); color: var(--texto); padding: 12px 0; cursor: pointer; }
+.demo-lista, .demo-grupo ol { list-style: none; margin: 0; padding: 0; }
+.demo-grupo + .demo-grupo { margin-top: 12px; }
+.demo-pagina { display: block; font: 600 .875rem var(--fuente); color: var(--texto-suave); padding: 4px 12px; }
+.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
+.demo-ir:hover { background: var(--superficie-suave); }
+.demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
+/* La imagen y su texto usan todo el ancho del escenario. Las flechas van encima de los bordes de la imagen, a media
+   altura (cqw es el ancho del escenario, y la imagen, 16:10 de él), con su fondo de superficie y su borde para que se
+   lean sobre la captura; la desactivada, sin transparencia. */
+html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); }
+.demo-escena { grid-area: 1 / 1; }
+/* Con JavaScript los pasos comparten celda: la escena mide lo del más largo y la pausa y la barra no suben y bajan con
+   cada paso. Los ocultos no bajan su imagen (carga diferida): guardan su sitio con un hueco de 16:10. */
+html.js .demo-escena { display: grid; }
+html.js .demo-paso { grid-area: 1 / 1; }
+html.js .demo-paso[hidden] { display: block; visibility: hidden; }
+html.js .demo-paso[hidden] img { display: none; }
+html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 16 / 10; }
+.demo-flecha { grid-area: 1 / 1; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; margin: calc(100cqw / 3.2 - 22px) 12px 0; padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
+.demo-flecha:hover:not(:disabled) { color: var(--acento); border-color: var(--acento); }
+.demo-flecha:disabled { color: var(--borde-control); cursor: default; }
+.demo-anterior { justify-self: start; }
+.demo-siguiente { justify-self: end; }
+.demo-flecha[hidden] { display: none; }
+.demo-paso img { background: var(--superficie-suave); }
+.demo-paso figcaption { margin-top: 16px; }
+.demo-donde { margin: 0; font-size: .9rem; color: var(--texto-suave); }
+.demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--fuente); }
+.demo-texto { margin: 0; font-size: 1.05rem; line-height: 1.6; }
+/* El enlace a la imagen a tamaño real: la del tema y el idioma que se ven (los otros se ocultan como sus img). */
+.demo-ampliar { margin: 8px 0 0; font-size: .9rem; }
+.demo-ampliar a { width: fit-content; }
+.demo-controles { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
+.demo-controles[hidden] { display: none; }
+.demo-progreso { flex: 1; height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
+.demo-progreso span { display: block; width: 0; height: 100%; background: var(--acento); transition: width .3s; }
+.demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
+/* En el escritorio la lista va fija al lado: su rótulo no es un desplegable (sitio.js no la deja plegar). */
+@media (min-width: 900px) {
+  .demo-pasos-movil > summary { list-style: none; cursor: default; }
+  .demo-pasos-movil > summary::-webkit-details-marker { display: none; }
+}
+@media (max-width: 899px) {
+  html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .demo-flecha { margin: calc(100cqw / 3.2 - 22px) 8px 0; }
+  .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
+  .demo-pasos-movil[open] { padding-bottom: 12px; }
 }

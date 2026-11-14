@@ -477,6 +477,149 @@ function sistemaDe(ua, plataforma) {
   window.addEventListener('hashchange', abrir);
 })();
 
+// escribirLeyenda cambia el texto de la leyenda del tranvía o de la demo un momento después de fijar su aria-live
+// (anunciar): algunos lectores no anuncian el cambio que llega a la vez que el atributo.
+function escribirLeyenda(leyenda, partes) {
+  clearTimeout(leyenda.pendiente);
+  leyenda.pendiente = setTimeout(function () {
+    leyenda.innerHTML = '';
+    partes.forEach(function (p) { leyenda.appendChild(p); });
+  }, 100);
+}
+
+// Demo del recorrido guiado (en Producto): la zona de la app que señala cada paso de la bienvenida, un paso cada 6 s:
+// pausa que cambia su texto, la leyenda solo se anuncia cuando elige la persona,
+// quieta con «reducir movimiento» y sin avanzar con la pestaña oculta, fuera de la pantalla ni con el foco dentro. La
+// lista de pasos (un desplegable en el móvil) y las flechas eligen el paso; ← → solo con el foco dentro de la demo. Sin
+// JavaScript se ven todos los pasos, uno debajo de otro, con su texto.
+(function () {
+  var caja = document.querySelector('.demo');
+  var controles = caja && caja.querySelector('.demo-controles');
+  if (!controles) return;
+  var figuras = caja.querySelectorAll('.demo-paso');
+  var botones = caja.querySelectorAll('.demo-ir');
+  var anterior = caja.querySelector('.demo-anterior');
+  var siguiente = caja.querySelector('.demo-siguiente');
+  var progreso = caja.querySelector('.demo-progreso span');
+  var detalles = caja.querySelector('.demo-pasos-movil');
+  var leyenda = caja.querySelector('.demo-leyenda');
+  var pausa = caja.querySelector('.demo-pausa');
+  var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var movil = window.matchMedia('(max-width: 899px)');
+  var CADA_MS = 6000;
+  // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
+  // foco: el foco está dentro de la demo; el avance solo se para mientras tanto (patrón de carrusel), sin contar como pausa.
+  var actual = 0, pausado = movimiento.matches, pausaManual = false, foco = false, enPantalla = !('IntersectionObserver' in window), temporizador = null;
+
+  function mostrar(n) {
+    actual = n;
+    figuras.forEach(function (f, i) { f.hidden = i !== n; });
+    botones.forEach(function (b, i) { if (i === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+    // La flecha que no lleva a ninguna parte se desactiva.
+    anterior.disabled = n === 0;
+    siguiente.disabled = n === figuras.length - 1;
+    progreso.style.width = (n + 1) / figuras.length * 100 + '%';
+    escribirLeyenda(leyenda, ['es', 'en'].map(function (idioma) {
+      var s = document.createElement('span');
+      s.lang = idioma;
+      s.textContent = [figuras[n].querySelector('.demo-donde'), figuras[n].querySelector('h3')].map(function (e) {
+        return e.querySelector('[lang="' + idioma + '"]').textContent;
+      }).join(' · ');
+      return s;
+    }));
+  }
+  // precargar trae la imagen del paso siguiente que se va a ver (la del tema y el idioma activos, no las cuatro), así no
+  // sale en blanco al avanzar: las de los pasos ocultos tienen carga diferida y no bajan hasta que se ven.
+  function precargar(n) {
+    var vista = [].filter.call(figuras[n].querySelectorAll('img'), function (i) { return i.offsetWidth > 0; })[0];
+    var siguiente = vista && figuras[(n + 1) % figuras.length].querySelector('img.' + vista.classList[0] + '[lang="' + vista.lang + '"]');
+    if (siguiente) siguiente.loading = 'eager';
+  }
+  // La leyenda se anuncia cuando la elige la persona, no cada vez que avanza sola.
+  function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
+  function programar() {
+    clearTimeout(temporizador);
+    if (pausado || foco || !enPantalla || document.hidden) return;
+    precargar(actual);
+    temporizador = setTimeout(function () {
+      anunciar(false);
+      mostrar((actual + 1) % figuras.length);
+      programar();
+    }, CADA_MS);
+  }
+  function rotulo() {
+    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+  }
+
+  // Solo lo que elige la persona mueve el foco: si la flecha que lo tenía se desactiva, se lo pasa a la otra.
+  function elegir(n) {
+    var conFoco = document.activeElement;
+    anunciar(true);
+    mostrar(n);
+    if (conFoco === anterior && anterior.disabled) siguiente.focus();
+    if (conFoco === siguiente && siguiente.disabled) anterior.focus();
+    programar();
+  }
+  botones.forEach(function (b, i) {
+    b.addEventListener('click', function () {
+      elegir(i);
+      if (!movil.matches) return;
+      // En el móvil el desplegable se cierra y deja ver el paso; el foco, que estaba en la lista, vuelve a su rótulo.
+      detalles.open = false;
+      detalles.querySelector('summary').focus();
+    });
+  });
+  // En el escritorio la lista va fija al lado: su rótulo no la pliega.
+  detalles.querySelector('summary').addEventListener('click', function (e) { if (!movil.matches) e.preventDefault(); });
+  anterior.addEventListener('click', function () { elegir(actual - 1); });
+  siguiente.addEventListener('click', function () { elegir(actual + 1); });
+  caja.addEventListener('focusin', function () { foco = true; programar(); });
+  caja.addEventListener('focusout', function (e) {
+    if (caja.contains(e.relatedTarget)) return;
+    foco = false;
+    programar();
+  });
+  caja.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return; // Alt+← es el atrás del navegador
+    var n = actual + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0);
+    if (n === actual || n < 0 || n >= figuras.length) return;
+    e.preventDefault();
+    elegir(n);
+  });
+  // La lista va abierta al lado en el escritorio y cerrada encima en el móvil.
+  function desplegable() { detalles.open = !movil.matches; }
+  movil.addEventListener('change', desplegable);
+  desplegable();
+  pausa.addEventListener('click', function () {
+    pausado = !pausado;
+    pausaManual = pausado;
+    // «Seguir» es querer el avance: el foco, que sigue en la pausa, no lo para hasta moverse por la demo.
+    if (!pausado) foco = false;
+    rotulo();
+    programar();
+  });
+  document.addEventListener('visibilitychange', programar);
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entradas) {
+      enPantalla = entradas[entradas.length - 1].isIntersecting;
+      programar();
+    }, { threshold: 0.25 }).observe(caja);
+  }
+  // «Reducir movimiento» se respeta también si cambia con la página abierta.
+  movimiento.addEventListener('change', function () {
+    pausado = movimiento.matches || pausaManual;
+    pausa.hidden = movimiento.matches;
+    rotulo();
+    programar();
+  });
+  pausa.hidden = pausado;
+  rotulo();
+  anterior.hidden = siguiente.hidden = controles.hidden = false;
+  mostrar(0);
+  programar();
+})();
+
+
 // Plano de metro de Funciones: sin JavaScript, o por debajo de 900 px, cada línea va en vertical con el texto de sus
 // paradas, y el título de cada una es texto. Con pantalla ancha va en horizontal (metro--plano): el título pasa a ser un
 // botón que enseña su título y su texto en el panel de debajo, y la elegida queda marcada con aria-current. Como las
