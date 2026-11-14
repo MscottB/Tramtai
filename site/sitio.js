@@ -6,8 +6,10 @@ function bastanteVisto(e, alto) {
 
 // Lo vivo (estilo.css) arranca su animación cuando entra en pantalla: .visto, una sola vez. Sin observador, ya. Va lo
 // primero para que un fallo más abajo no deje nada esperando oculto. Este bloque solo ve los .vivo que ya están en la
-// página: un .vivo creado después tiene que ponerse .visto él mismo.
+// página: un .vivo creado después tiene que ponerse .visto él mismo. vivo-listo le dice al script de la cabeza que
+// sitio.js llegó: sin ella, a los 3 s, lo vivo pasa a su estado final.
 (function () {
+  document.documentElement.classList.add('vivo-listo');
   var vivos = document.querySelectorAll('.vivo');
   if (!('IntersectionObserver' in window)) return vivos.forEach(function (v) { v.classList.add('visto'); });
   var vigia = new IntersectionObserver(function (entradas) {
@@ -162,7 +164,8 @@ function sistemaDe(ua, plataforma) {
   if (/android|iphone|ipad|ipod|mobile|cros/i.test(p)) return null;
   if (/\bwin(dows|32|64)\b/i.test(p)) return 'windows';
   if (/mac/i.test(p)) return 'macos';
-  if (/linux|x11/i.test(p) && /x86_64|amd64/i.test(p) && !/aarch64|arm/i.test(p)) return 'linux';
+  // Solo Linux: FreeBSD u OpenBSD también dicen X11 y amd64, y los paquetes .deb y .rpm no son para ellos.
+  if (/linux/i.test(p) && /x86_64|amd64/i.test(p) && !/aarch64|arm/i.test(p)) return 'linux';
   return null;
 }
 
@@ -248,8 +251,8 @@ function destinoDescarga(sistema, archivo, archivos) {
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
-  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía, «Cómo funciona» en Producto) comparte uno. Si el
-  // guardado no está en la página, sale la primera pestaña.
+  // La Ayuda recuerda su lenguaje aparte; el resto del sitio (la guía) comparte uno. «Cómo funciona» en Producto es su
+  // propio juego («sdk»). Si el guardado no está en la página, sale la primera pestaña.
   var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
   // Cada data-pestanas="nombre" es un juego aparte (el de lenguajes no tiene nombre; Linux · Windows Server es
   // «sistema»): sus pestañas cambian a la vez y recuerdan su elección sin tocar las del otro juego.
@@ -296,7 +299,7 @@ function destinoDescarga(sistema, archivo, archivos) {
   });
   var guardado = null;
   try { guardado = localStorage.getItem(clave); } catch (e) {}
-  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña (OpenAI en «Cómo funciona»). Sin JavaScript se ven
+  // Sin nada guardado, Python donde lo hay y, si no, la primera pestaña. Sin JavaScript se ven
   // todos los paneles de la guía, cada uno con su enlace a GitHub.
   elegir(guardado || 'python');
   // Cada juego con nombre (Linux · Windows Server es «sistema»; las cuatro formas de Inicio, «formas», que no se
@@ -552,7 +555,8 @@ function escribirLeyenda(leyenda, partes) {
   var leyenda = caja.querySelector('.demo-leyenda');
   var pausa = caja.querySelector('.demo-pausa');
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var movil = window.matchMedia('(max-width: 899px)');
+  // El mismo corte que estilo.css (en em, como allí: sigue a la letra del navegador).
+  var movil = window.matchMedia('(max-width: 56.1875em)');
   var CADA_MS = 6000;
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
   // foco: el foco está dentro de la demo; el avance solo se para mientras tanto (patrón de carrusel), sin contar como pausa.

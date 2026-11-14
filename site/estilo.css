@@ -65,7 +65,8 @@ html { scroll-behavior: smooth; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .vivo, .vivo * { animation: none !important; }
 }
-body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.6 var(--fuente); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+/* Con la letra muy grande en un teléfono, una palabra larga se parte antes que salirse de la pantalla. */
+body { margin: 0; background: var(--fondo); color: var(--texto); font: 1rem/1.6 var(--fuente); overflow-wrap: break-word; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
 html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none; }
 a { color: var(--acento); }
 .envoltura { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
@@ -84,7 +85,7 @@ main:focus { outline: none; }
 /* La barra fija no tapa el principio de la sección a la que lleva un ancla. */
 section[id] { scroll-margin-top: 72px; }
 /* Saltar al contenido: fuera de la vista hasta que recibe el foco. */
-.saltar { position: absolute; left: 16px; top: -60px; z-index: 30; background: var(--acento); color: var(--acento-texto); padding: 10px 16px; border-radius: 8px; font-weight: 600; }
+.saltar { position: absolute; left: 16px; top: -10em; z-index: 30; background: var(--acento); color: var(--acento-texto); padding: 10px 16px; border-radius: 8px; font-weight: 600; }
 .saltar:focus { top: 12px; }
 
 /* Piezas del sistema (v0.61), comunes a todas las páginas. */
@@ -106,7 +107,7 @@ h2 em, .titular em { font-family: var(--serifa); font-style: italic; font-weight
 .mosaico { display: grid; grid-template-columns: repeat(var(--col, 3), minmax(0, 1fr)); gap: 12px; }
 .mosaico > .ancha { grid-column: span 2; }
 .mosaico > .alta { grid-row: span 2; }
-@media (max-width: 720px) {
+@media (max-width: 45em) {
   .mosaico { grid-template-columns: minmax(0, 1fr); }
   .mosaico > .ancha, .mosaico > .alta { grid-column: auto; grid-row: auto; }
 }
@@ -137,11 +138,14 @@ h2 em, .titular em { font-family: var(--serifa); font-style: italic; font-weight
 
 /* Barra superior */
 .barra { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--fondo) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--borde); }
-.barra .envoltura { position: relative; display: flex; align-items: center; gap: 12px; height: 64px; }
+.barra .envoltura { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; }
 .marca { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 700 1.15rem var(--fuente); color: var(--texto); text-decoration: none; }
 .marca img { width: 30px; height: 30px; }
 /* En escritorio el panel del menú no existe: sus secciones y preferencias se colocan en la barra. */
 .menu-panel, .preferencias { display: contents; }
+/* ES/EN y el tema los cambia sitio.js: sin JavaScript no harían nada y no se ven (manda el idioma de la página y el tema
+   del sistema). */
+html:not(.js) .preferencias { display: none; }
 .barra nav { display: flex; gap: 16px; margin-left: auto; }
 .barra nav a, .barra .boton { white-space: nowrap; }
 .barra .github, .barra .idioma, .barra .boton { flex: none; }
@@ -203,13 +207,13 @@ section { padding: 72px 0; }
 .ventana-barra .pestanas-lista { margin: 0; }
 .ventana-rotulo { margin-left: auto; color: var(--texto-suave); font: .85rem var(--mono); }
 /* En pantallas estrechas, semáforo y rótulo en una fila y las pestañas debajo. */
-@media (max-width: 900px) { .ventana-barra .pestanas-lista { order: 1; } }
+@media (max-width: 56.25em) { .ventana-barra .pestanas-lista { order: 1; } }
 .ventana-pantalla { overflow-x: auto; padding: 14px 16px; }
 /* La ventana recorta sus esquinas: el foco de la pantalla va por dentro. */
 .ventana-pantalla:focus-visible { outline-offset: -3px; }
 .ventana-mas { border-top: 1px solid var(--borde); }
 .ventana-mas summary { padding: 10px 16px; min-height: 44px; cursor: pointer; font-weight: 600; }
-.pantalla { margin: 0; width: max-content; font: 400 clamp(11px, (100vw - 112px) / 60, 15px)/1.2 'Tramtai Mono', 'Cascadia Mono', Consolas, monospace; }
+.pantalla { margin: 0; width: max-content; font: 400 clamp(.6875rem, (100vw - 112px) / 60, .9375rem)/1.2 'Tramtai Mono', 'Cascadia Mono', Consolas, monospace; }
 .t-acento { color: light-dark(#0b6e64, #2dd4bf); }
 .t-texto { color: light-dark(#0f1b1e, #e5edf0); }
 .t-suave { color: light-dark(#55666a, #93a5ac); }
@@ -256,14 +260,14 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .pagas-diagrama.con svg { max-width: calc(420px * 384 / 340); }
 .pagas-diagrama text { font-family: var(--fuente); }
 .pagas-diagrama figcaption { font-weight: 600; }
-@media (max-width: 720px) { .pagas-diagramas { grid-template-columns: 1fr; } }
+@media (max-width: 45em) { .pagas-diagramas { grid-template-columns: 1fr; } }
 /* Cuatro cifras sobrias del producto en una franja: número en Inter tabular y etiqueta pequeña. */
 .cifras { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); }
 .cifra { display: flex; flex-direction: column; gap: 6px; padding: 20px 24px; }
 .cifra + .cifra { border-left: 1px dashed var(--borde-discontinuo); }
 .cifra-numero { font: 600 2.5rem/1 var(--fuente); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--texto); }
 .cifra-texto { color: var(--texto-suave); font-size: .95rem; line-height: 1.4; }
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cifra:nth-child(3) { border-left: 0; }
   .cifra:nth-child(n+3) { border-top: 1px dashed var(--borde-discontinuo); }
@@ -301,7 +305,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .fig-mapa text { font-family: var(--fuente); }
 .fig-mapa .base { opacity: .35; }
 .fig-mapa .servidor-alto { display: none; max-width: 340px; }
-@container (max-width: 560px) {
+@container (max-width: 35rem) {
   .fig-mapa .servidor-ancho { display: none; }
   .fig-mapa .servidor-alto { display: block; }
 }
@@ -312,10 +316,10 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .pasos-panel .paradas p { margin-top: 4px; }
 /* Una línea con Copiar a la derecha; en el móvil la orden no cabe al lado y Copiar va encima, como en el resto. */
 .prosa .pasos-panel .codigo { margin: 12px 0 0; padding: 14px 92px 14px 18px; }
-@media (max-width: 640px) { .prosa .pasos-panel .codigo { padding: 56px 16px 14px; } }
+@media (max-width: 40em) { .prosa .pasos-panel .codigo { padding: 56px 16px 14px; } }
 .servidor-capturas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 20px; }
 .servidor-capturas figcaption { margin-top: 10px; font-size: .92rem; color: var(--texto-suave); }
-@media (max-width: 1000px) {
+@media (max-width: 62.5em) {
   .para-ti, .servidor-capturas { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -324,7 +328,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px sol
 .riesgos-cabeza h3 { font-size: 1.45rem; }
 /* Cierre, al final de Descargar: tres tarjetas para empezar y la licencia */
 .cierre { margin-top: 72px; }
-.empezar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1040px; margin: 0 auto; }
+.empezar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; max-width: 1040px; margin: 0 auto; }
 a.tarjeta { color: inherit; text-decoration: none; transition: border-color .15s ease; }
 a.tarjeta:hover { border-color: var(--acento); }
 .licencia { text-align: center; margin: 28px auto 0; max-width: 44em; font-size: .92rem; }
@@ -337,7 +341,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 /* Pantallas medianas y pequeñas (y tabletas táctiles algo más anchas, donde los controles de 44 px no caben en la barra):
    las secciones, el idioma y el tema van al panel del menú, que abre su botón. Sin JavaScript (sin la clase js) no hay
    botón: las secciones bajan a una segunda fila de la barra. */
-@media (max-width: 1100px), (pointer: coarse) and (max-width: 1180px) {
+@media (max-width: 68.75em), (pointer: coarse) and (max-width: 73.75em) {
   .menu-boton:not([hidden]) { display: inline-grid; }
   .idioma button { min-width: 44px; }
   .barra nav { flex-direction: column; gap: 0; margin: 0; }
@@ -348,7 +352,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .barra .buscar .solo-lectores { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .preferencias { display: flex; flex-wrap: wrap; gap: 8px; }
   .tema { margin: 0; }
-  html.js .menu-panel { display: none; position: absolute; top: 64px; right: 16px; flex-direction: column; gap: 8px; min-width: 260px; padding: 8px;
+  html.js .menu-panel { display: none; position: absolute; top: 100%; right: 16px; flex-direction: column; gap: 8px; min-width: 260px; padding: 8px;
     background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); }
   html.js .barra.abierta .menu-panel { display: flex; }
   html.js .preferencias { padding: 8px 4px 4px; border-top: 1px solid var(--borde); }
@@ -356,17 +360,17 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   html:not(.js) .barra { position: static; }
   html:not(.js) .barra .envoltura { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; }
   html:not(.js) .menu-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; order: 5; width: 100%; }
-  html:not(.js) .barra nav { flex-direction: row; flex-wrap: wrap; }
+  html:not(.js) .barra nav { flex-direction: row; flex-wrap: wrap; gap: 0 16px; }
   html:not(.js) .barra nav a { padding: 10px 0; }
   html:not(.js) .github { margin-left: auto; }
 }
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .tablero { grid-template-columns: 1fr; }
 }
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   .envoltura { padding: 0 16px; }
   section { padding: 52px 0; }
-  .empezar { grid-template-columns: 1fr; }
+  .empezar { grid-template-columns: minmax(0, 1fr); }
   .pagas-diagrama { padding: 16px; }
   .tablero { padding: 24px; }
   .tablero li { grid-template-columns: 1fr; gap: 4px; }
@@ -377,7 +381,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .barra .boton svg { display: block; }
   .barra .boton-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
-@media (max-width: 420px) {
+@media (max-width: 26.25em) {
   .marca-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
@@ -386,7 +390,8 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 #descargar .arranque { padding: 72px 0 36px; text-align: center; }
 #descargar .arranque .entrada { max-width: 37em; margin: 20px auto 0; font-size: 1.1rem; color: var(--texto-suave); }
 #descargar .arranque code, .descargas :not(pre) > code, .paquetes code, #requisitos code { font: .85em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
-#descargar, #todas, #requisitos, #empezar { padding: 36px 0; }
+/* section#descargar: en Inicio, #descargar es la tarjeta de «Sigue por aquí» (anclaje viejo) y conserva su relleno. */
+section#descargar, #todas, #requisitos, #empezar { padding: 36px 0; }
 .pestanas.descargas { max-width: 820px; margin: 0 auto; }
 .descargas .tarjeta { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 26px; }
 .descargas .tarjeta[hidden] { display: none; }
@@ -411,7 +416,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .paquetes td a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-weight: 600; }
 #todas .cabeza, #requisitos .cabeza { max-width: 820px; margin-left: auto; margin-right: auto; }
 #requisitos .mosaico { max-width: 820px; margin: 0 auto; }
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   #descargar .arranque { padding: 48px 0 24px; }
   .descargas .tarjeta { padding: 18px 16px; }
   .paquetes th, .paquetes td { padding: 0 10px; }
@@ -419,9 +424,11 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 }
 
 /* Documentación (spec §6: Servidor, Desarrolladores y la Ayuda): el índice a la izquierda, el contenido en medio y «En
-   esta página» a la derecha, las dos columnas fijas al bajar. Por debajo de 1180 px «En esta página» se va; por debajo de
-   900, una sola columna y el índice, encima del contenido, se abre con su botón (sin JavaScript, abierto). Nada se pone
-   encima del texto. */
+   esta página» a la derecha, las dos columnas fijas al bajar. Por debajo de 1180 px «En esta página» pasa encima del
+   contenido, en fila; por debajo de 900, una sola columna y el índice, encima del contenido, se abre con su botón (sin
+   JavaScript, abierto), y «En esta página» solo queda donde el índice no lleva ya a los apartados (la Ayuda). Nada se
+   pone encima del texto. Los cortes van en em: con la letra del navegador más grande, la página pasa antes a menos
+   columnas (a 16 px por em, los px de los comentarios). */
 /* Más ancha que las de presentación, y la barra y el pie con ella, alineados con el índice. */
 body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
 .doc { display: grid; grid-template-columns: 228px minmax(0, 1fr) 200px; gap: 48px; align-items: start; padding: 40px 0 80px; }
@@ -463,7 +470,7 @@ body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
 .pagina-sola { padding-top: 56px; padding-bottom: 80px; }
 .pagina-sola .prosa { max-width: 46em; }
 /* Por debajo de 1180 px, «En esta página» pasa encima del contenido, en fila. */
-@media (max-width: 1180px) {
+@media (max-width: 73.75em) {
   .doc { grid-template-columns: 220px minmax(0, 1fr); gap: 16px 40px; }
   .doc-indice { grid-row: 1 / span 2; }
   .doc-pagina { position: static; max-height: none; overflow: visible; grid-column: 2; grid-row: 1; }
@@ -473,11 +480,13 @@ body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
   .doc-pagina a[aria-current="true"] { color: var(--acento); }
 }
 /* Sin JavaScript (o si sitio.js falla) el botón sigue oculto y la lista, abierta. */
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .doc { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 20px; }
   .doc-indice, .doc-pagina, .doc #contenido { grid-column: auto; grid-row: auto; }
   .doc-indice { order: -2; position: static; max-height: none; overflow: visible; margin-bottom: 8px; }
   .doc-pagina { order: -1; margin-bottom: 8px; }
+  /* En Servidor y Desarrolladores el índice ya lleva a los apartados: repetirlos empujaría el titular hacia abajo. */
+  .doc:has(.doc-indice a[href^="#"]) .doc-pagina { display: none; }
   .doc-indice-boton:not([hidden]) { display: flex; }
   .doc-indice:not(.abierto) .doc-indice-boton:not([hidden]) + .doc-indice-lista { display: none; }
   .doc-indice-boton:not([hidden]) + .doc-indice-lista { margin-top: 8px; padding: 4px 16px 12px; border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); background: var(--superficie); }
@@ -493,7 +502,7 @@ body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
 .ciclo { list-style: none; counter-reset: paso; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 !important; margin: 4px 0 22px !important; }
 .ciclo li { counter-increment: paso; background: var(--superficie); border: 1px dashed var(--borde-discontinuo); border-radius: 10px; padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
 .ciclo li::before { content: '0' counter(paso); content: '0' counter(paso) / ''; display: block; font: 500 .75rem var(--mono); color: var(--acento); margin-bottom: 4px; }
-@media (max-width: 1180px) { .ciclo { grid-template-columns: 1fr; } }
+@media (max-width: 73.75em) { .ciclo { grid-template-columns: 1fr; } }
 .prosa :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
 .opcion-cli { white-space: nowrap; } /* una opción de la CLI (--comprobar) no se parte tras el guion */
 .tabla { overflow-x: auto; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; }
@@ -557,9 +566,9 @@ body:has(dialog.buscador[open]) { overflow: hidden; }
 .buscador [role="option"] span { display: block; }
 .buscador [role="option"] .b-d { color: var(--texto-suave); font-size: .85rem; }
 .buscador-pie { margin: 8px 4px 0; font-size: .8rem; color: var(--texto-suave); }
-@media (max-width: 640px) { .buscador-pie { display: none; } }
-@media (pointer: coarse), (max-width: 640px) { .buscar-campo kbd { display: none; } }
-@media (max-width: 900px) {
+@media (max-width: 40em) { .buscador-pie { display: none; } }
+@media (pointer: coarse), (max-width: 40em) { .buscar-campo kbd { display: none; } }
+@media (max-width: 56.25em) {
   .diagrama { grid-template-columns: 1fr; }
   .diagrama li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -16px; }
 }
@@ -581,9 +590,9 @@ html[lang="es"] .captura a[lang="en"], html[lang="en"] .captura a[lang="es"] { d
 .desplegable > summary { list-style: none; height: 100%; padding: 0 12px; border-radius: 0 8px 8px 0; border-left-color: color-mix(in srgb, var(--acento-texto) 30%, transparent); cursor: pointer; }
 .desplegable > summary::-webkit-details-marker { display: none; }
 .desplegable[open] > summary svg { transform: rotate(180deg); }
-.desplegable ul { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 6px; list-style: none; text-align: left;
+.desplegable ul { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; width: max-content; min-width: 100%; max-width: calc(100vw - 32px); margin: 0; padding: 6px; list-style: none; text-align: left;
   background: var(--superficie); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); box-shadow: var(--sombra); }
-.desplegable a { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 44px; padding: 0 12px; border-radius: 6px; color: var(--texto); text-decoration: none; white-space: nowrap; }
+.desplegable a { display: flex; align-items: center; justify-content: space-between; gap: 0 20px; flex-wrap: wrap; min-height: 44px; padding: 0 12px; border-radius: 6px; color: var(--texto); text-decoration: none; }
 .desplegable a:hover { background: var(--acento-suave); }
 /* Cómo se instala: los tres sistemas o, si sitio.js lo conoce, solo el del visitante. */
 .instalar { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 12px; max-width: 1000px; margin: 28px auto 0; text-align: left; }
@@ -619,7 +628,7 @@ figure.tarjeta { margin: 0; min-width: 0; display: flex; flex-direction: column;
 .fig-camino .base { opacity: .3; }
 /* FIG 3: un punto por agente, que late si está listo. */
 .estado-agentes { margin: 0; padding: 0; list-style: none; }
-.estado-agentes li { display: flex; align-items: center; gap: 10px; min-height: 36px; border-bottom: 1px dashed var(--borde); font-size: .93rem; }
+.estado-agentes li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 36px; padding: 6px 0; border-bottom: 1px dashed var(--borde); font-size: .93rem; }
 .estado-agentes li:last-child { border-bottom: 0; }
 .punto { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
 .estado { margin-left: auto; font: .78rem var(--mono); color: var(--acento); }
@@ -653,12 +662,16 @@ a.pagina { display: flex; flex-direction: column; gap: 8px; color: var(--texto);
 a.pagina h3 { margin: 0; }
 a.pagina h3::after { content: ' →'; color: var(--acento); }
 .ancla-vieja { position: absolute; scroll-margin-top: 80px; }
+/* Sin JavaScript, debajo de las tarjetas: cada anclaje viejo con el enlace a su sitio exacto (comun:anclas-sin-js). */
+.anclas-viejas { margin-top: 28px; }
+.anclas-viejas ul { margin: 8px 0 0; padding-left: 20px; }
+.anclas-viejas code { font: .85em var(--mono); color: var(--texto-suave); }
 
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .instalar { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
   .forma { padding: 18px 16px; }
 }
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   #arranque { padding: 56px 0 36px; }
   #arranque .entrada { font-size: 1.05rem; }
   .inicio .tarjeta { padding: 16px; }
@@ -686,9 +699,9 @@ figure.fig-codigo { margin-top: 12px; }
 .funcion { display: flex; flex-direction: column; min-width: 0; }
 .funcion .captura { margin: auto 0 0; padding-top: 16px; }
 .funcion .captura img { box-shadow: none; }
-/* FIG 17: la pantalla de Inicio de la terminal, en su letra de 12 px y recortada a su esquina de arriba a la izquierda
+/* FIG 17: la pantalla de Inicio de la terminal, en su letra de .75rem (12 px, y más si el navegador la agranda) y recortada a su esquina de arriba a la izquierda
    (el menú y el principio de Inicio): 16 filas, lo que no cabe a lo ancho queda fuera. */
-.recorte-terminal { height: calc(16 * 1.2em + 12px); overflow: hidden; padding: 12px 14px 0; font-size: 12px; background: light-dark(#ffffff, #0b0d10); color: var(--texto); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
+.recorte-terminal { height: calc(16 * 1.2em + 12px); overflow: hidden; padding: 12px 14px 0; font-size: .75rem; background: light-dark(#ffffff, #0b0d10); color: var(--texto); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
 .recorte-terminal .pantalla { font-size: 1em; }
 .pantallas + .nota-capturas { margin-top: 14px; }
 .linea-funciones { margin-top: 56px; }
@@ -702,14 +715,14 @@ figure.fig-codigo { margin-top: 12px; }
 .comparativa > summary { min-height: 44px; padding: 12px 22px; font-weight: 600; cursor: pointer; }
 .comparativa[open] > summary { border-bottom: 1px dashed var(--borde-discontinuo); }
 .comparativa .pagas-diagramas { padding: 22px; }
-@media (max-width: 720px) {
+@media (max-width: 45em) {
   .pasos-como { grid-template-columns: minmax(0, 1fr); }
   /* Los rótulos del diagrama no se leerían a esta escala: el texto de cada paso va debajo. */
   .fig-camino .mono { display: none; }
   /* Sin los rótulos queda vacía la franja de arriba del dibujo (y < 37 de 200, 720 de ancho): sube a su sitio. */
   .fig-camino .pasos-svg { margin-top: -5%; }
 }
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   .producto .arranque, .agentes-pagina .arranque { padding: 56px 0 16px; }
   .producto .tarjeta, .agentes-pagina .tarjeta { padding: 16px; }
   .comparativa .pagas-diagramas { padding: 12px; }
@@ -729,9 +742,10 @@ html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
 .demo-lista, .demo-grupo ol { list-style: none; margin: 0; padding: 0; }
 .demo-grupo + .demo-grupo { margin-top: 12px; }
 .demo-pagina { display: block; font: 600 .875rem var(--fuente); color: var(--texto-suave); padding: 4px 12px; }
-.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
+.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
 .demo-ir:hover { background: var(--superficie-suave); }
-.demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
+/* El paso actual: el fondo del acento suave, en negrita y con el texto del acento (sin borde de color a un lado). */
+.demo-ir[aria-current="step"] { font-weight: 600; color: var(--acento); background: var(--acento-suave); }
 /* La imagen y su texto usan todo el ancho del escenario. Las flechas van encima de los bordes de la imagen, a media
    altura (cqw es el ancho del escenario, y la imagen, 16:10 de él), con su fondo de superficie y su borde para que se
    lean sobre la captura; la desactivada, sin transparencia. */
@@ -764,11 +778,11 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 .demo-progreso span { display: block; width: 0; height: 100%; background: var(--acento); transition: width .3s; }
 .demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 /* En el escritorio la lista va fija al lado: su rótulo no es un desplegable (sitio.js no la deja plegar). */
-@media (min-width: 900px) {
+@media (min-width: 56.25em) {
   .demo-pasos-movil > summary { list-style: none; cursor: default; }
   .demo-pasos-movil > summary::-webkit-details-marker { display: none; }
 }
-@media (max-width: 899px) {
+@media (max-width: 56.1875em) {
   html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .demo-flecha { margin: calc(100cqw / 3.2 - 22px) 8px 0; }
   .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
@@ -780,12 +794,12 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 .agentes-pagina code { font: .85em var(--mono); overflow-wrap: anywhere; }
 .router-cabeza { margin: 0 0 4px; }
 .router-cabeza code { display: inline-block; padding: 4px 8px; color: var(--texto); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; }
-.router-cuerpo { display: grid; grid-template-columns: 280px minmax(0, 1fr); margin: auto 0; }
+.router-cuerpo { display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); margin: auto 0; }
 /* El SVG mide lo que la lista (cinco filas iguales, que crecen con el texto) y se escala con ella: sus líneas siguen
    llegando al centro de cada fila. */
-.router-lineas { display: block; width: 280px; height: 100%; }
+.router-lineas { display: block; width: 17.5rem; height: 100%; }
 .router-lineas text { font: 600 13px var(--fuente); fill: var(--texto); }
-.router-destinos { display: grid; grid-auto-rows: minmax(64px, 1fr); margin: 0; padding: 0; list-style: none; }
+.router-destinos { display: grid; grid-auto-rows: minmax(4rem, 1fr); margin: 0; padding: 0; list-style: none; }
 .router-destinos li { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--borde); }
 .router-destinos li:last-child { border-bottom: 0; }
 .router-destinos a { display: flex; flex-direction: column; justify-content: center; min-height: 44px; line-height: 1.3; color: var(--texto); text-decoration: none; }
@@ -796,7 +810,7 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 /* Lo que aún no llega a tus apps: el punto hueco, en su color, y quieto. */
 .punto.hueco { background: none; border: 1.5px solid var(--c); }
 .agente { display: flex; flex-direction: column; min-width: 0; }
-.agente-cabeza { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.agente-cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
 .agente-cabeza h3 { margin: 0; font-size: 1.15rem; }
 .agente-de { margin-left: auto; font: .75rem var(--mono); color: var(--texto-suave); }
 .agente > p { margin-bottom: 10px; }
@@ -814,24 +828,24 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 .agente-sdk h3 { font-size: 1.15rem; }
 .sdk { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; padding: 0; list-style: none; }
 .sdk li { padding: 4px 10px; border: 1px dashed var(--borde-discontinuo); border-radius: 999px; font-size: .88rem; }
-@media (max-width: 1000px) {
+@media (max-width: 62.5em) {
   .agentes-pagina .mosaico { --col: 2; }
   .router-leyenda { grid-column: span 2; }
 }
 /* Más estrecho, el SVG se recorta por la derecha (slice) donde las líneas ya son rectas, y lo que hace cada agente va
    debajo de cómo se conecta. */
-@media (max-width: 900px) {
-  .router-cuerpo { grid-template-columns: 132px minmax(0, 1fr); }
-  .router-lineas { width: 132px; }
+@media (max-width: 56.25em) {
+  .router-cuerpo { grid-template-columns: 8.25rem minmax(0, 1fr); }
+  .router-lineas { width: 8.25rem; }
   .router-destinos li { grid-template-columns: 9px minmax(0, 1fr); column-gap: 10px; align-content: center; }
   .router-destinos .punto { grid-row: 1 / 3; }
   .router-hace { grid-column: 2; font-size: .8rem; text-align: left; }
 }
-@media (max-width: 720px) {
+@media (max-width: 45em) {
   .router-leyenda { grid-column: auto; }
 }
 /* En un teléfono estrecho no caben las líneas y el texto: las líneas (decoración, aria-hidden) se van. */
-@media (max-width: 420px) {
+@media (max-width: 26.25em) {
   .router-cuerpo { grid-template-columns: minmax(0, 1fr); }
   .router-lineas { display: none; }
 }

@@ -62,9 +62,11 @@ export function rellenarMarkdown(md: string, es: Textos, en: Textos): string {
 }
 
 // PRIMERO aplica el tema y el idioma guardados antes de pintar (sitio.js hace el resto con defer). La clase js deja al
-// CSS esconder el menú tras su botón solo si hay JavaScript que lo abra.
+// CSS esconder el menú tras su botón solo si hay JavaScript que lo abra. Si a los 3 s sitio.js no ha empezado (no ha
+// puesto vivo-listo: no cargó o falló), lo vivo pasa a su estado final, que con la clase js esperaba oculto.
 const PRIMERO = `<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>`
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>`
 
 // cabeza es lo común del <head>: metadatos para buscadores y para compartir, iconos, estilos y scripts.
 export function cabeza(l: Lugar, titulo: string, descripcion: string): string {
@@ -303,7 +305,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)"[^>]*>/)?.[1] ?? '')
   const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel, l.actual) }
   const opcionales: Record<string, string> = {
-    anclas: saltoPortada(),
+    anclas: saltoPortada(), 'anclas-sin-js': anclasSinJs(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal), 'terminal-recorte': recorteTerminal(textos.terminal) } : {}),
     'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)), camino: CAMINO,
@@ -333,11 +335,12 @@ export function destinoAncla(hash: string): string {
 }
 
 // ANCLAS_PORTADA lleva cada anclaje de la portada de hoy a su sitio nuevo (spec §7); Inicio la incrusta como salto. Las
-// tres últimas son de la portada de antes de la v0.59 (#pagas, #capturas y #aviso).
+// de #pagas a #aviso son de la portada de antes de la v0.59; #demo (el recorrido guiado) y #riesgos, de la de la v0.60.
 export const ANCLAS_PORTADA: Record<string, string> = {
   descargar: 'descargar.html', como: 'producto.html#como', funciones: 'producto.html#funciones', 'por-que': 'producto.html#por-que',
   privacidad: 'producto.html#privacidad', agentes: 'agentes.html', app: '#formas', terminal: '#formas', servidor: 'servidor.html',
-  pagas: 'producto.html#por-que', capturas: '#formas', aviso: 'producto.html#privacidad',
+  pagas: 'producto.html#por-que', capturas: '#formas', aviso: 'producto.html#privacidad', demo: 'producto.html#demo',
+  riesgos: 'producto.html#riesgos',
 }
 
 // destinoPortada es el destino de un anclaje viejo, o null si no está en la tabla (la portada nueva lo conserva o no existe).
@@ -360,6 +363,36 @@ function saltoPortada(): string {
   saltar();
   addEventListener('hashchange', saltar);
 })();</script>`
+}
+
+// DESTINOS_PORTADA nombra cada destino de ANCLAS_PORTADA para la lista que se ve sin JavaScript.
+const DESTINOS_PORTADA: Record<string, [string, string]> = {
+  'descargar.html': ['Descargar', 'Download'], 'producto.html#como': ['Producto · Cómo funciona', 'Product · How it works'],
+  'producto.html#funciones': ['Producto · Funciones', 'Product · Features'], 'producto.html#por-que': ['Producto · Por qué Tramtai', 'Product · Why Tramtai'],
+  'producto.html#privacidad': ['Producto · Privacidad', 'Product · Privacy'], 'agentes.html': ['Agentes', 'Agents'],
+  'producto.html#demo': ['Producto · El recorrido guiado', 'Product · The guided tour'],
+  'producto.html#riesgos': ['Producto · Los cinco riesgos', 'Product · The five risks'],
+  '#formas': ['Inicio · Cuatro formas de usarla', 'Home · Four ways to use it'], 'servidor.html': ['Servidor', 'Server'],
+}
+
+// anclasSinJs es la lista de Inicio (comun:anclas-sin-js, spec §7) que hace el salto sin JavaScript: cada destino, con
+// los anclajes viejos que llevan a él, en un <noscript>.
+export function anclasSinJs(): string {
+  const porDestino = new Map<string, string[]>()
+  for (const [ancla, destino] of Object.entries(ANCLAS_PORTADA)) porDestino.set(destino, [...(porDestino.get(destino) ?? []), ancla])
+  const filas = [...porDestino].map(([destino, anclas]) => {
+    const nombre = DESTINOS_PORTADA[destino]
+    if (!nombre) throw new Error(`falta el nombre de ${destino} en DESTINOS_PORTADA`)
+    return `    <li>${anclas.map((a) => `<code>#${a}</code>`).join(' ')} → <a href="${destino}">${bilingue(nombre[0], nombre[1])}</a></li>`
+  })
+  return `<noscript>
+  <div class="anclas-viejas">
+    <p class="nota">${bilingue('¿Llegas por una dirección de antes? Lo que había allí está ahora aquí:', 'Followed an old link? What was there is now here:')}</p>
+    <ul class="lista-enlaces">
+${filas.join('\n')}
+    </ul>
+  </div>
+</noscript>`
 }
 
 export function escapar(s: string): string {

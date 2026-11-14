@@ -27,7 +27,8 @@
 <link rel="stylesheet" href="../estilo.css">
 <script src="../sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 </head>
 <body>
 <a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>

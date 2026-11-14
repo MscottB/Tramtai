@@ -280,3 +280,25 @@ GitHub Pages no redirige, así que los anclajes viejos de la portada (`#descarga
 - **Romper enlaces de las apps instaladas:** las direcciones de la sección 7 no cambian y una prueba lo comprueba.
 - **Que la Ayuda del sitio y la de la app se separen:** los textos siguen viniendo del mismo `ayuda.*.ts`; solo cambia la
   plantilla del sitio.
+
+## Decisiones tomadas durante la versión
+
+Del registro de la implementación (`.superpowers/sdd/plan/progress.md`), las que cambian o precisan el diseño:
+
+- **Ruling 3:** antes de rehacer Inicio, sus secciones viejas se movieron tal cual a Descargar, Producto y Agentes, y de
+  ahí se rediseñaron; no se perdió contenido entre tareas.
+- **Ruling 5:** «oscuro por defecto» es el tema del diseño y de las imágenes; el sitio sigue la preferencia del sistema
+  salvo que se elija Claro u Oscuro.
+- **Ruling 6:** `buscar.json` se acepta en 96,8 KB (26,5 KB con gzip), con un tope de 100 KB en la prueba.
+- **Ruling 7:** lo que salía de la portada sin destino (la sección «Tu red, a la vista» y el recorrido guiado de 14
+  pasos) pasó a Producto, donde lo rediseñó Funciones.
+- **Ruling 8:** FIG 1 enseña `tramtai servicio iniciar` / `tramtai service start`; `tramtai serve` no existe (§4
+  corregida).
+- **Ruling 10:** los nombres de los agentes del router van en una lista junto al SVG (que es decorativo), no dentro.
+- **Ruling 11:** la Parte 2 de `DESIGN.md` (la Web UI) conserva Overpass y la «Red de tranvía»: la app no cambia en esta
+  versión.
+- **Ruling 12:** sin JavaScript, Inicio enseña en un `<noscript>` adónde va cada anclaje viejo (§7), generado desde
+  `ANCLAS_PORTADA`.
+- **Cierre:** la letra sigue a la que elige quien lee en su navegador (el `body` en `1rem`) y los cortes de ancho van en
+  `em`, así que con la letra grande la página pasa antes a menos columnas; «Cómo funciona» de Producto recuerda su SDK
+  aparte del lenguaje de Desarrolladores.

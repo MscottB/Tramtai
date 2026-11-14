@@ -9,7 +9,7 @@
 <!-- Un enlace guardado a una sección de la portada de antes (#descargar, #como…) salta a su página nueva (spec §7). -->
 <!-- comun:anclas -->
 <script>(function () {
-  var anclas = {"descargar":"descargar.html","como":"producto.html#como","funciones":"producto.html#funciones","por-que":"producto.html#por-que","privacidad":"producto.html#privacidad","agentes":"agentes.html","app":"#formas","terminal":"#formas","servidor":"servidor.html","pagas":"producto.html#por-que","capturas":"#formas","aviso":"producto.html#privacidad"};
+  var anclas = {"descargar":"descargar.html","como":"producto.html#como","funciones":"producto.html#funciones","por-que":"producto.html#por-que","privacidad":"producto.html#privacidad","agentes":"agentes.html","app":"#formas","terminal":"#formas","servidor":"servidor.html","pagas":"producto.html#por-que","capturas":"#formas","aviso":"producto.html#privacidad","demo":"producto.html#demo","riesgos":"producto.html#riesgos"};
   function saltar() {
     var ancla = location.hash.slice(1);
     if (Object.prototype.hasOwnProperty.call(anclas, ancla)) location.replace(anclas[ancla]);
@@ -41,7 +41,8 @@
 <link rel="stylesheet" href="estilo.css">
 <script src="sitio.js" defer></script>
 <script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
-document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'
+setTimeout(function () { if (!document.documentElement.classList.contains('vivo-listo')) document.querySelectorAll('.vivo').forEach(function (v) { v.classList.add('visto') }) }, 3000)</script>
 <!-- /comun:cabeza -->
 </head>
 <body>
@@ -482,14 +483,14 @@ tramtai terminal</pre>
   </section>
 
   <!-- 4. Sigue por aquí: una tarjeta por página. Sin JavaScript, un anclaje de la portada de antes (#descargar, #como…)
-       cae en la tarjeta que lleva a su sitio nuevo. -->
+       cae en la tarjeta que lleva a su sitio nuevo, y debajo la lista de comun:anclas-sin-js lleva a su sitio exacto. -->
   <section id="sigue">
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Sigue por aquí.</span><span lang="en">Keep going.</span></h2>
       </div>
       <div class="mosaico" style="--col: 3">
-        <a class="tarjeta pagina" id="como" href="producto.html"><span id="funciones" class="ancla-vieja"></span><span id="por-que" class="ancla-vieja"></span><span id="privacidad" class="ancla-vieja"></span><span id="pagas" class="ancla-vieja"></span><span id="aviso" class="ancla-vieja"></span>
+        <a class="tarjeta pagina" id="como" href="producto.html"><span id="funciones" class="ancla-vieja"></span><span id="por-que" class="ancla-vieja"></span><span id="privacidad" class="ancla-vieja"></span><span id="pagas" class="ancla-vieja"></span><span id="aviso" class="ancla-vieja"></span><span id="demo" class="ancla-vieja"></span><span id="riesgos" class="ancla-vieja"></span>
           <h3><span lang="es">Producto</span><span lang="en">Product</span></h3>
           <p><span lang="es">Cómo funciona, qué hace, por qué Tramtai y qué datos salen de tu equipo.</span><span lang="en">How it works, what it does, why Tramtai and which data leaves your computer.</span></p>
         </a>
@@ -514,6 +515,25 @@ tramtai terminal</pre>
           <p><span lang="es">Windows, macOS y Linux: instalador, paquetes, CLI y servidor, con sus sumas SHA-256.</span><span lang="en">Windows, macOS and Linux: installer, packages, CLI and server, with their SHA-256 checksums.</span></p>
         </a>
       </div>
+      <!-- comun:anclas-sin-js -->
+<noscript>
+  <div class="anclas-viejas">
+    <p class="nota"><span lang="es">¿Llegas por una dirección de antes? Lo que había allí está ahora aquí:</span><span lang="en">Followed an old link? What was there is now here:</span></p>
+    <ul class="lista-enlaces">
+    <li><code>#descargar</code> → <a href="descargar.html"><span lang="es">Descargar</span><span lang="en">Download</span></a></li>
+    <li><code>#como</code> → <a href="producto.html#como"><span lang="es">Producto · Cómo funciona</span><span lang="en">Product · How it works</span></a></li>
+    <li><code>#funciones</code> → <a href="producto.html#funciones"><span lang="es">Producto · Funciones</span><span lang="en">Product · Features</span></a></li>
+    <li><code>#por-que</code> <code>#pagas</code> → <a href="producto.html#por-que"><span lang="es">Producto · Por qué Tramtai</span><span lang="en">Product · Why Tramtai</span></a></li>
+    <li><code>#privacidad</code> <code>#aviso</code> → <a href="producto.html#privacidad"><span lang="es">Producto · Privacidad</span><span lang="en">Product · Privacy</span></a></li>
+    <li><code>#agentes</code> → <a href="agentes.html"><span lang="es">Agentes</span><span lang="en">Agents</span></a></li>
+    <li><code>#app</code> <code>#terminal</code> <code>#capturas</code> → <a href="#formas"><span lang="es">Inicio · Cuatro formas de usarla</span><span lang="en">Home · Four ways to use it</span></a></li>
+    <li><code>#servidor</code> → <a href="servidor.html"><span lang="es">Servidor</span><span lang="en">Server</span></a></li>
+    <li><code>#demo</code> → <a href="producto.html#demo"><span lang="es">Producto · El recorrido guiado</span><span lang="en">Product · The guided tour</span></a></li>
+    <li><code>#riesgos</code> → <a href="producto.html#riesgos"><span lang="es">Producto · Los cinco riesgos</span><span lang="en">Product · The five risks</span></a></li>
+    </ul>
+  </div>
+</noscript>
+<!-- /comun:anclas-sin-js -->
     </div>
   </section>
 </main>

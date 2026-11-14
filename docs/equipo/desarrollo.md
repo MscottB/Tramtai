@@ -162,8 +162,11 @@ desde los mismos datos.
   ```
 
   Las dos juntas pesan unos 64 KB (48 y 16); el tope de las letras de Inicio, sin Cascadia, es de 150 KB y lo vigila
-  `sitio.test.ts`. La misma prueba comprueba que cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni
-  scripts, que pinta Tramtai Mono) está en la lista. Si falta alguno, se añade a la lista y se rehacen las dos.
+  `sitio.test.ts`. La misma prueba lee la tabla `cmap` real de cada letra (descomprime el WOFF2 con `node:zlib`) y
+  comprueba que Inter dibuja cada carácter del texto de `site/**/*.html` (sin `<pre>`, `<code>` ni scripts, que pinta
+  Tramtai Mono) y que Instrument Serif dibuja la parte clave (`<em>`) de los `h1` y `h2`. `FUERA_DE_INTER` lista lo que
+  llega a propósito de la letra del sistema («⋯», citado en la Ayuda). Si falta alguno, se añade a la lista y se rehacen
+  las dos.
 - **El sitio (v0.61):** siete páginas con la misma barra: Inicio (`index.html`), Producto, Agentes, Servidor,
   Desarrolladores, Ayuda (`ayuda/`) y Descargar. El sistema visual está en [DESIGN.md](../diseno/DESIGN.md) (Parte 1).
   - **Escritas a mano:** `index.html`, `producto.html`, `agentes.html`, `servidor.html`, `desarrolladores.html` y

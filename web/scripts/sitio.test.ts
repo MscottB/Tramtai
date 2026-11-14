@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { brotliDecompressSync } from 'node:zlib'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
@@ -335,16 +336,82 @@ test('ninguna página usa var(--titulo)', () => {
   for (const [ruta, html] of html_) assert.doesNotMatch(html, /var\(--titulo\)/, ruta)
 })
 
-// Inter e Instrument Serif llevan las letras de letras-caracteres.txt (receta en docs/equipo/desarrollo.md). El código, la
-// terminal (<pre>, <code>) y los scripts los pinta Tramtai Mono: van aparte.
-test('cada carácter del sitio está en el subconjunto de las letras', () => {
-  const lista = new Set(readFileSync(new URL('letras-caracteres.txt', import.meta.url), 'utf8'))
-  const entidades: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" }
-  for (const [ruta, html] of html_) {
-    const texto = html.replace(/<(pre|code|script|style)\b[\s\S]*?<\/\1>/g, ' ').replace(/<[^>]*>/g, ' ').replace(/&[#\w]+;/g, (e) => entidades[e] ?? e)
-    const faltan = [...new Set(texto)].filter((c) => !lista.has(c) && !/\s/.test(c))
-    assert.deepEqual(faltan, [], `${ruta}: rehaz las letras con estos caracteres`)
+// caracteresDe lee los caracteres que dibuja de verdad una letra WOFF2 del sitio: su tabla cmap (formatos 4 y 12), sin
+// dependencias (la cabecera, el directorio y los datos con Brotli, que trae node:zlib).
+function caracteresDe(archivo: string): Set<number> {
+  const b = readFileSync(new URL('../../site/' + archivo, import.meta.url))
+  assert.equal(b.toString('latin1', 0, 4), 'wOF2', archivo)
+  const ETIQUETAS = ['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post', 'cvt ', 'fpgm', 'glyf', 'loca', 'prep', 'CFF ', 'VORG', 'EBDT', 'EBLC', 'gasp',
+    'hdmx', 'kern', 'LTSH', 'PCLT', 'VDMX', 'vhea', 'vmtx', 'BASE', 'GDEF', 'GPOS', 'GSUB', 'EBSC', 'JSTF', 'MATH', 'CBDT', 'CBLC', 'COLR', 'CPAL', 'SVG ', 'sbix', 'acnt', 'avar',
+    'bdat', 'bloc', 'bsln', 'cvar', 'fdsc', 'feat', 'fmtx', 'fvar', 'gvar', 'hsty', 'just', 'lcar', 'mort', 'morx', 'opbd', 'prop', 'trak', 'Zapf', 'Silf', 'Glat', 'Gloc', 'Feat', 'Sill']
+  let p = 48
+  const base128 = () => { let v = 0; for (let i = 0; i < 5; i++) { const x = b[p++]; v = v * 128 + (x & 127); if (!(x & 128)) return v } throw new Error('UIntBase128') }
+  let desde = 0, largoCmap = -1, cmap = 0
+  for (let i = b.readUInt16BE(12); i > 0; i--) {
+    const f = b[p++]
+    const etiqueta = (f & 63) === 63 ? b.toString('latin1', p, (p += 4)) : ETIQUETAS[f & 63]
+    const original = base128()
+    const transformada = etiqueta === 'glyf' || etiqueta === 'loca' ? f >> 6 === 0 : f >> 6 !== 0
+    const largo = transformada ? base128() : original
+    if (etiqueta === 'cmap') { cmap = desde; largoCmap = largo }
+    desde += largo
   }
+  assert.ok(largoCmap > 0, `${archivo}: sin cmap`)
+  const d = brotliDecompressSync(b.subarray(p, p + b.readUInt32BE(20))).subarray(cmap, cmap + largoCmap)
+  const hay = new Set<number>()
+  for (let t = 0; t < d.readUInt16BE(2); t++) {
+    const s = d.readUInt32BE(4 + t * 8 + 4)
+    if (d.readUInt16BE(s) === 12) {
+      for (let g = 0; g < d.readUInt32BE(s + 12); g++) for (let c = d.readUInt32BE(s + 16 + g * 12); c <= d.readUInt32BE(s + 20 + g * 12); c++) hay.add(c)
+    } else if (d.readUInt16BE(s) === 4) {
+      const n = d.readUInt16BE(s + 6) / 2
+      const fin = s + 14, inicio = fin + 2 * n + 2, delta = inicio + 2 * n, rango = delta + 2 * n
+      for (let i = 0; i < n; i++) {
+        const [a, z, dd, r] = [d.readUInt16BE(inicio + 2 * i), d.readUInt16BE(fin + 2 * i), d.readUInt16BE(delta + 2 * i), d.readUInt16BE(rango + 2 * i)]
+        for (let c = a; c <= z && c !== 0xffff; c++) {
+          const g = r === 0 ? c + dd : d.readUInt16BE(rango + 2 * i + r + 2 * (c - a))
+          if ((r === 0 ? g & 0xffff : g) !== 0) hay.add(c)
+        }
+      }
+    }
+  }
+  return hay
+}
+
+// Inter e Instrument Serif llevan las letras de letras-caracteres.txt (receta en docs/equipo/desarrollo.md), y se mira en
+// la letra misma, no en la lista: pyftsubset deja fuera sin avisar lo que la letra no tiene. El código, la terminal
+// (<pre>, <code>) y los scripts los pinta Tramtai Mono: van aparte. FUERA_DE_INTER no está en Inter y llega de la letra del
+// sistema: «⋯» es el botón de las tarjetas de la app, citado en la Ayuda (web/src/idiomas/ayuda.*.ts, que no cambia).
+const FUERA_DE_INTER = new Set(['⋯'])
+test('cada carácter del sitio lo dibuja su letra', () => {
+  const inter = caracteresDe('inter.woff2'), serifa = caracteresDe('instrument-italica.woff2')
+  assert.ok(inter.has(0x41) && inter.has(0xf1) && inter.has(0x2019), 'la cmap de Inter se lee')
+  const entidades: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" }
+  const legible = (h: string) => h.replace(/<[^>]*>/g, ' ').replace(/&[#\w]+;/g, (e) => entidades[e] ?? e)
+  for (const [ruta, html] of html_) {
+    const texto = legible(html.replace(/<(pre|code|script|style)\b[\s\S]*?<\/\1>/g, ' '))
+    const faltan = [...new Set(texto)].filter((c) => !inter.has(c.codePointAt(0)!) && !/\s/.test(c) && !FUERA_DE_INTER.has(c))
+    assert.deepEqual(faltan, [], `${ruta}: Inter no tiene estos caracteres: añádelos a letras-caracteres.txt y rehaz la letra`)
+    // La serifa cursiva solo pinta la parte clave de los titulares y de los h2 (<em>).
+    const clave = [...html.matchAll(/<(h1|h2)\b[^>]*>([\s\S]*?)<\/\1>/g)].flatMap((m) => [...m[2].matchAll(/<em>([\s\S]*?)<\/em>/g)].map((e) => legible(e[1]))).join('')
+    const sinSerifa = [...new Set(clave)].filter((c) => !serifa.has(c.codePointAt(0)!) && !/\s/.test(c))
+    assert.deepEqual(sinSerifa, [], `${ruta}: Instrument Serif no tiene estos caracteres`)
+  }
+})
+
+// WCAG 1.4.4: la letra sale de la que elige quien lee en su navegador, y los cortes van en em para que con la letra
+// grande la página pase antes a menos columnas (a 1440 px con la letra al 200 % no hay desplazamiento horizontal).
+test('la letra del navegador manda: el body en rem y los cortes en em', () => {
+  assert.match(estilo, /\nbody \{[^}]*font: 1rem\/1\.6 /)
+  for (const [, regla] of estilo.matchAll(/@(?:media|container)([^{]*)\{/g)) assert.doesNotMatch(regla, /width: [\d.]+px/, regla.trim())
+  assert.doesNotMatch(leer('sitio.js'), /matchMedia\('[^']*\d+px/, 'sitio.js usa los cortes de estilo.css')
+})
+
+test('en el móvil, «En esta página» solo queda donde el índice no lleva ya a los apartados', () => {
+  const corte = estilo.slice(estilo.indexOf('@media (max-width: 56.25em) {\n  .doc {'))
+  assert.match(corte.slice(0, corte.indexOf('\n}')), /\.doc:has\(\.doc-indice a\[href\^="#"\]\) \.doc-pagina \{ display: none; \}/)
+  for (const pagina of ['servidor.html', 'desarrolladores.html']) assert.match(leer(pagina), /class="doc-indice[\s\S]*?href="#/, pagina)
+  assert.doesNotMatch(leer('ayuda/conectar.html').match(/class="doc-indice[\s\S]*?<\/nav>/)?.[0] ?? '', /href="#/, 'la Ayuda la conserva')
 })
 
 test('reducir movimiento para lo vivo', () => {
@@ -502,6 +569,31 @@ test('lo vivo arranca con un cuarto a la vista, también al final de la página 
   assert.equal(visto(e(0.2, 200), 900), false)
   assert.match(leer('sitio.js'), /\{ threshold: \[0, 0\.25\] \}/)
   assert.doesNotMatch(leer('sitio.js'), /rootMargin: '0px 0px -20% 0px'/)
+})
+
+// Si sitio.js no llega (no carga o falla), la clase js de la cabeza dejaría lo vivo oculto para siempre: a los 3 s, el
+// script de la cabeza lo pasa a su estado final, salvo que sitio.js haya puesto vivo-listo.
+test('sin sitio.js, lo vivo pasa a su estado final a los 3 s', () => {
+  for (const [ruta, html] of todas) assert.ok(html.includes("classList.contains('vivo-listo')"), ruta)
+  const script = leer('index.html').match(/<script>(document\.documentElement\.classList\.add\('js'\);[\s\S]*?)<\/script>/)?.[1] ?? ''
+  assert.ok(script, 'falta el script de la cabeza en Inicio (cd web; npm run sitio)')
+  const correr = (listo: boolean) => {
+    const clases = new Set<string>(listo ? ['vivo-listo'] : [])
+    const vivos = [new Set<string>(), new Set<string>()]
+    let espera = 0
+    let alFinal = () => {}
+    const document = {
+      documentElement: { classList: { add: (c: string) => clases.add(c), contains: (c: string) => clases.has(c) }, dataset: {}, lang: '' },
+      querySelectorAll: (s: string) => (s === '.vivo' ? vivos.map((v) => ({ classList: { add: (c: string) => v.add(c) } })) : []),
+    }
+    new Function('document', 'localStorage', 'navigator', 'setTimeout', script)(document, { getItem: () => null }, { language: 'es' }, (f: () => void, ms: number) => { alFinal = f; espera = ms })
+    alFinal()
+    return { espera, vistos: vivos.filter((v) => v.has('visto')).length }
+  }
+  assert.deepEqual(correr(false), { espera: 3000, vistos: 2 }, 'sin sitio.js')
+  assert.deepEqual(correr(true), { espera: 3000, vistos: 0 }, 'con sitio.js, lo vivo espera a entrar en pantalla')
+  // sitio.js lo marca lo primero, antes de cualquier cosa que pueda fallar.
+  assert.match(leer('sitio.js'), /^[\s\S]{0,1200}?\(function \(\) \{\n {2}document\.documentElement\.classList\.add\('vivo-listo'\);\n {2}var vivos = document\.querySelectorAll\('\.vivo'\);/)
 })
 
 // Pendientes de la Tarea 3.
