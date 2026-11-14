@@ -7,7 +7,25 @@ import { pasosBienvenida } from '../src/recorrido.ts'
 // guardado son valores de localStorage que la página necesita (la pestaña de Ajustes donde está la zona). servidor dice
 // que sale del Tramtai en modo servidor (en contenedores, detrás de Caddy); cabecera, que la zona es la cabecera fija;
 // ancho, el de la ventana si no es el de siempre (1280).
-export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number }[] = [
+// Las de sitio no son de la Ayuda: son los recortes de FIG 4 y 5 de Inicio y de las tarjetas de funciones de Producto
+// (site/capturas/<id>-<es|en>-<claro|oscuro>.webp, a 2×). zona es lo que se recorta (si casa con varios elementos, el
+// recorte los abarca a todos), con margen px alrededor (12 si no se dice) y hasta alto px; preparar, JavaScript que deja la zona a la vista y da true cuando ya está
+// (se repite hasta entonces). Salen en una ventana estrecha (ancho, 420 si no se dice) para que se lean también en el
+// móvil, y sin el Historial: no hacen peticiones reales.
+export interface Captura {
+  id: string; pagina: string; guardado?: Record<string, unknown>; servidor?: true; cabecera?: true; ancho?: number
+  sitio?: true; zona?: string; preparar?: string; alto?: number; margen?: number
+}
+// Lo que preparan los recortes del sitio: el panel de la Ayuda de Inicio (el «?» de su cabecera) y las opciones de la
+// receta de Probar, plegadas al abrirla.
+const AYUDA = `(() => { if (document.querySelector('.panel-ayuda .vista-tema')) return true; document.querySelector('[data-recorrido="app.ayuda"]')?.click(); return false })()`
+const OPCIONES = `document.querySelector('[data-recorrido="ejecutar.receta"] .q-expansion-item')`
+const ABRIR_OPCIONES = `(() => { const e = ${OPCIONES}; if (!e) return false; if (e.classList.contains('q-expansion-item--expanded')) return true; e.querySelector('.q-item').click(); return false })()`
+const EN_OPCIONES = '[data-recorrido="ejecutar.receta"] .q-expansion-item__content > div'
+// salida estructurada: el segundo interruptor de las opciones (el primero es «forzar el modelo»), con su texto debajo
+const SALIDA = `${EN_OPCIONES} > div:has(> .q-toggle + .text-caption)`
+const GUIA = '[data-captura="mis-apis"] .guia-url'
+export const CAPTURAS: Captura[] = [
   { id: 'inicio', pagina: 'inicio' },
   { id: 'agente', pagina: 'agentes' },
   { id: 'receta', pagina: 'ejecutar' },
@@ -27,6 +45,52 @@ export const CAPTURAS: { id: string; pagina: string; guardado?: Record<string, u
   // La oferta «Prepara tus agentes» de la bienvenida: sale si la bienvenida no tiene respuesta y ningún agente está listo
   // (SIMULAR con tramtai.capturas.sinListos; no se instala ni se quita ningún CLI).
   { id: 'preparar', pagina: 'inicio', guardado: { 'tramtai.bienvenida': 'pendiente', 'tramtai.capturas.sinListos': true } },
+  // FIG 4 y 5 de Inicio: Mis APIs y el mapa de Inicio del Tramtai en modo servidor, en vertical (el de las ventanas de
+  // menos de 600 px: el horizontal mide al menos 860 y no se leería en el móvil).
+  { id: 'portada-fig-apis', pagina: 'conectar', sitio: true, zona: '[data-captura="mis-apis"] .q-tab-panel', alto: 600, margen: 0 },
+  { id: 'portada-fig-servidor', pagina: 'inicio', sitio: true, servidor: true, zona: '[data-captura="inicio"]', alto: 760 },
+  // Las tarjetas de funciones de Producto, en su orden (FIG 8 a 19; la 17, la terminal, es texto: terminal.json).
+  { id: 'funcion-sdk', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' },
+    zona: `[data-captura="mis-apis"] .text-weight-medium:has(+ .row .guia-url), ${GUIA}:not(:has(a.enlace))` },
+  { id: 'funcion-api-propia', pagina: 'conectar', sitio: true, guardado: { 'tramtai.pestanaApis': 'principal' }, zona: `${GUIA}:has(a.enlace)` },
+  // del interruptor a «Añadir campo»: sin el ejemplo de respuesta ni los reintentos, que van debajo
+  { id: 'funcion-forma', pagina: 'ejecutar', sitio: true, zona: `${SALIDA}, ${SALIDA} ~ :not(.q-expansion-item, .q-select)`,
+    preparar: `(() => { if (!${ABRIR_OPCIONES}) return false
+      if (document.querySelector('${EN_OPCIONES} .q-btn-toggle')) return true
+      document.querySelector('${SALIDA} .q-toggle')?.click(); return false })()` },
+  { id: 'funcion-espacios', pagina: 'espacios', sitio: true, zona: '[data-captura="espacios"]' },
+  // el diálogo entero no cabe en una tarjeta: su cabecera y sus cuatro primeros campos (nombre, grupo, instrucciones y
+  // agente y modelo), cerrado justo bajo el último
+  { id: 'funcion-una-api', pagina: 'conectar', sitio: true,
+    zona: '.q-dialog .q-card > .q-card__section:first-child, .q-dialog form > .q-card__section > .q-field, .q-dialog form > .q-card__section > div > .q-field:nth-child(-n+2)',
+    preparar: `(() => { if (document.querySelector('.q-dialog .q-card')) return true; document.querySelector('[data-recorrido="conectar.nueva"]')?.click(); return false })()` },
+  // el modelo (el primero que ofrece) y, debajo, el esfuerzo: los dos selectores sueltos de la receta (el de respaldo va
+  // en las opciones). Elegido el modelo, la lista se cierra con Esc y el campo pierde el foco; si no ofrece ninguno (sin
+  // agentes listos), sale vacío.
+  { id: 'funcion-modelo', pagina: 'ejecutar', sitio: true, zona: '[data-recorrido="ejecutar.receta"] > div > .q-select, [data-recorrido="ejecutar.receta"] > div > .q-select ~ .text-caption',
+    preparar: `(() => {
+      const campo = document.querySelector('[data-recorrido="ejecutar.receta"] > div > .q-select')
+      if (!campo) return false
+      window.intentosModelo = (window.intentosModelo ?? 0) + 1
+      if (campo.querySelector('.q-field__native')?.innerText.trim() || window.intentosModelo > 40) {
+        if (!document.querySelector('.q-menu')) { document.activeElement?.blur(); return true }
+        campo.querySelector('input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }))
+        return false
+      }
+      const opcion = document.querySelector('.q-menu .q-item:not(.disabled)')
+      const entrada = campo.querySelector('input')
+      if (opcion) opcion.click()
+      else if (!document.querySelector('.q-menu')) { entrada.focus(); entrada.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true })) }
+      return false })()` },
+  // el respaldo, con lo que hace: hasta tres agentes que siguen si el principal falla
+  { id: 'funcion-respaldo', pagina: 'ejecutar', sitio: true, zona: `${EN_OPCIONES} > .q-select`, preparar: ABRIR_OPCIONES },
+  // las dos clases de clave: la del espacio y la de cada API, que se ven una sola vez y se revocan por separado
+  { id: 'funcion-claves', pagina: 'conectar', sitio: true, zona: '.q-card:has([data-recorrido="conectar.clave-espacio"])' },
+  // Sin pantalla propia: la nota de la Ayuda de Inicio que lo cuenta (el último .info-caja es la de la terminal).
+  { id: 'funcion-aislados', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .info-caja:not(:last-child)' },
+  { id: 'funcion-adjuntos', pagina: 'ejecutar', sitio: true, zona: '[data-captura="receta"] .q-file, [data-captura="receta"] .q-file ~ .text-caption' },
+  // el recorrido de la página, en el panel que abre su «?»
+  { id: 'funcion-recorrido', pagina: 'inicio', sitio: true, preparar: AYUDA, zona: '.panel-ayuda .vista-tema > .apilado:has(> .pasos-guia):has(> div > .q-btn)' },
 ]
 
 // SIMULAR corre en cada página antes que la app (Page.addScriptToEvaluateOnNewDocument) y cambia lo que el servicio

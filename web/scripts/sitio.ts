@@ -210,6 +210,13 @@ ${paneles.join('\n')}
 </div>`
 }
 
+// recorteTerminal es FIG 17 de Producto (comun:terminal-recorte): la pantalla de Inicio de la terminal, la misma de la
+// ventana de Inicio, que la hoja recorta a su esquina de arriba a la izquierda (el menú con sus páginas).
+function recorteTerminal(t: Terminal): string {
+  const alt = { es: 'La terminal en Inicio: el menú con las páginas de la app y el estado del servicio', en: 'The terminal on Home: the menu with the app’s pages and the service status' }
+  return (['es', 'en'] as const).map((i) => `<pre class="pantalla" lang="${i}" role="img" aria-label="${escapar(alt[i])}">${t[i].inicio}</pre>`).join('\n')
+}
+
 // CAMINO es el dibujo de tu app → Tramtai → los agentes (comun:camino): FIG 2 de Inicio y FIG 1 de Desarrolladores. Cada
 // página pone su <figure class="tarjeta fig-camino vivo"> y su rótulo; las líneas se dibujan al aparecer y el flujo
 // corre por ellas.
@@ -288,7 +295,7 @@ function apartadosDe(html: string): Apartado[] {
 
 // rellenar pone al día las zonas comunes (<!-- comun:x --> … <!-- /comun:x -->) de una página escrita a mano, con su
 // título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor), la terminal
-// (comun:terminal), el camino (comun:camino) y las piezas de la documentación (comun:indice-boton y
+// (comun:terminal y su recorte, comun:terminal-recorte), el camino (comun:camino) y las piezas de la documentación (comun:indice-boton y
 // comun:en-esta-pagina) solo van donde la página
 // los pide, con los textos de los catálogos, las pantallas de terminal.json y los apartados de la propia página.
 export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos; terminal?: Terminal }): string {
@@ -298,7 +305,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
   const opcionales: Record<string, string> = {
     anclas: saltoPortada(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
-    ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
+    ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal), 'terminal-recorte': recorteTerminal(textos.terminal) } : {}),
     'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)), camino: CAMINO,
   }
   for (const [zona, contenido] of [...Object.entries(zonas), ...Object.entries(opcionales)]) {
