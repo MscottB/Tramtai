@@ -307,7 +307,7 @@ test('sitemap.xml lista las siete páginas y los 20 temas de la Ayuda', () => {
 test('404.html lleva a la portada, la Ayuda y Descargar con direcciones absolutas', () => {
   const html = paginas.get('404.html')!
   assert.match(html, /<meta name="robots" content="noindex">/)
-  for (const u of [URL_SITIO, URL_SITIO + 'ayuda/', URL_SITIO + '#descargar']) assert.ok(html.includes(`href="${u}"`), u)
+  for (const u of [URL_SITIO, URL_SITIO + 'ayuda/', URL_SITIO + 'descargar.html']) assert.ok(html.includes(`href="${u}"`), u)
   assert.doesNotMatch(html, /(href|src)="(?!https?:|#)/, 'en una ruta cualquiera, lo relativo no carga')
 })
 

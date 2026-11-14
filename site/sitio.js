@@ -142,6 +142,14 @@ function sistemaDe(ua, plataforma) {
   return null;
 }
 
+// pestanaDe dice qué pestaña de Descargar abrir: la de sistemaDe y, si no hay, Linux en cualquier arquitectura (Firefox en
+// aarch64, por ejemplo). Móvil, tableta y ChromeOS, ninguna. El botón del arranque sigue con sistemaDe.
+function pestanaDe(ua, plataforma) {
+  var s = sistemaDe(ua, plataforma);
+  if (s) return s;
+  return /linux|x11/i.test((plataforma || '') + ' ' + (ua || '')) && !/android|iphone|ipad|ipod|mobile|cros/i.test((plataforma || '') + ' ' + (ua || '')) ? 'linux' : null;
+}
+
 // destinoDescarga dice adónde lleva el botón [data-descarga]: al archivo del release (archivos, de #descargas) del
 // primer [data-archivo] del bloque del sistema. En Linux no: .deb o .rpm depende de la distribución y se elige en
 // Descargar. null deja el botón en descargar.html.
@@ -167,6 +175,9 @@ function destinoDescarga(sistema, archivo, archivos) {
   if (sistema === 'macos' && navigator.maxTouchPoints > 1) sistema = null;
   // Inicio enseña solo cómo se instala en ese sistema (estilo.css).
   if (sistema) document.documentElement.dataset.tuSistema = sistema;
+  // La pestaña de Descargar que se abre: la de tu sistema, y la de Linux en cualquier arquitectura (enseña los dos paquetes).
+  var tuya = sistema || pestanaDe(navigator.userAgent, navigator.platform);
+  if (tuya === 'macos' && navigator.maxTouchPoints > 1) tuya = null;
   var datos = {};
   try { datos = JSON.parse(document.getElementById('descargas').textContent); } catch (e) {}
 
@@ -176,6 +187,9 @@ function destinoDescarga(sistema, archivo, archivos) {
       var url = archivos[a.dataset.archivo];
       if (url) a.href = url;
     });
+    // Las pestañas de Descargar (el código de más abajo las prepara antes de que esto corra): abre la de tu sistema.
+    var pestana = tuya && document.querySelector('[data-pestanas="descargar"] [role="tab"][data-lenguaje="' + tuya + '"]');
+    if (pestana) pestana.click();
     var bloque = sistema && document.querySelector('[data-sistema="' + sistema + '"]');
     if (!bloque) return;
     document.querySelectorAll('[data-descarga] .texto-descarga').forEach(function (t) { t.innerHTML = nombres[sistema]; });
@@ -238,7 +252,7 @@ function destinoDescarga(sistema, archivo, archivos) {
       });
     });
     // El sistema elegido vale en la portada y en servidor.html. La ventana de Inicio siempre abre en su primera forma.
-    if (guardar && nombre !== 'formas') try { localStorage.setItem(nombre ? 'tramtai.' + nombre : clave, lenguaje); } catch (e) {}
+    if (guardar && nombre !== 'formas' && nombre !== 'descargar') try { localStorage.setItem(nombre ? 'tramtai.' + nombre : clave, lenguaje); } catch (e) {}
   }
   grupos.forEach(function (g) {
     var botones = Array.prototype.slice.call(pestanasDe(g));
@@ -265,7 +279,7 @@ function destinoDescarga(sistema, archivo, archivos) {
   // recuerda): el guardado, si sigue siendo de ese juego, o su primera pestaña. Sin JavaScript se ven todos sus paneles.
   document.querySelectorAll('[data-pestanas]:not([data-pestanas=""])').forEach(function (g) {
     var nombre = g.dataset.pestanas, elegido = null;
-    if (nombre !== 'formas') try { elegido = localStorage.getItem('tramtai.' + nombre); } catch (e) {}
+    if (nombre !== 'formas' && nombre !== 'descargar') try { elegido = localStorage.getItem('tramtai.' + nombre); } catch (e) {}
     elegir(elegido && juego(elegido) === nombre ? elegido : pestanasDe(g)[0].dataset.lenguaje);
   });
   // Cada panel lleva un <code lang="es"> y uno lang="en" (los de docs/ejemplos/*/en): el CSS enseña el del idioma

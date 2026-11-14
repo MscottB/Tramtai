@@ -477,7 +477,7 @@ function pagina404(): string {
 <ul>
   <li><a href="${URL_SITIO}">${bilingue('La portada de Tramtai', 'Tramtai’s home page')}</a></li>
   <li><a href="${URL_SITIO}ayuda/">${bilingue('La Ayuda, con su buscador', 'The Help, with its search box')}</a></li>
-  <li><a href="${URL_SITIO}#descargar">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></li>
+  <li><a href="${URL_SITIO}descargar.html">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></li>
 </ul>
 </article>`
   return pagina({ rel: URL_SITIO, ruta: null, actual: '' }, ['Página no encontrada', 'Page not found'], 'Esta página no existe.', cuerpo)

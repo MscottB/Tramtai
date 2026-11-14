@@ -228,8 +228,8 @@ test('la ventana tiene cuatro pestañas', () => {
   for (const c of cli.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
   // Las pestañas son las de su lista: la terminal de dentro lleva las suyas. La ventana abre siempre en Web UI.
   assert.match(js, /function pestanasDe\(g\) \{ return g\.querySelector\('\[role="tablist"\]'\)\.querySelectorAll\('\[role="tab"\]'\); \}/)
-  assert.match(js, /if \(guardar && nombre !== 'formas'\)/)
-  assert.match(js, /if \(nombre !== 'formas'\) try \{ elegido = localStorage\.getItem\('tramtai\.' \+ nombre\); \}/, 'tampoco lee lo que guardaba antes')
+  assert.match(js, /if \(guardar && nombre !== 'formas' && nombre !== 'descargar'\)/)
+  assert.match(js, /if \(nombre !== 'formas' && nombre !== 'descargar'\) try \{ elegido = localStorage\.getItem\('tramtai\.' \+ nombre\); \}/, 'tampoco lee lo que guardaba antes')
   // La clave del lenguaje no depende de una página: Producto, la guía y quien venga la comparten; la Ayuda, la suya.
   assert.match(js, /var clave = document\.querySelector\('\.tema-ayuda'\) \? 'tramtai\.lenguaje-ayuda' : 'tramtai\.lenguaje';/)
   assert.doesNotMatch(js, /lenguaje-portada/)
@@ -534,7 +534,7 @@ test('«Cómo funciona» tiene pestañas OpenAI, Anthropic y curl, con su panel 
   assert.match(js, /lista\.hidden = false/)
   assert.match(js, /setAttribute\('role', 'tabpanel'\)/)
   // M6: al cargar no se guarda nada; solo la pestaña que elige la persona.
-  assert.match(js, /if \(guardar && nombre !== 'formas'\) try \{ localStorage\.setItem\(nombre \? 'tramtai\.' \+ nombre : clave, lenguaje\)/)
+  assert.match(js, /if \(guardar && nombre !== 'formas' && nombre !== 'descargar'\) try \{ localStorage\.setItem\(nombre \? 'tramtai\.' \+ nombre : clave, lenguaje\)/)
   assert.match(js, /elegir\(b\.dataset\.lenguaje, null, true\)/)
   // Cada juego de pestañas (data-pestanas="nombre") cambia y se recuerda aparte: elegir Windows no toca OpenAI · curl.
   assert.match(js, /if \(\(g\.dataset\.pestanas \|\| ''\) !== nombre\) return;/)
@@ -555,7 +555,7 @@ test('el paso 3 de «Cómo funciona» dice que Tramtai apunta tus herramientas y
 test('Agentes, Privacidad y Descargar conservan lo que absorbieron', () => {
   assert.match(seccion('agentes'), /Conecta estos agentes[\s\S]*Desde tus apps y SDK/)
   assert.match(seccion('privacidad'), /class="tablero"[\s\S]*<!-- comun:riesgos -->/)
-  assert.match(seccion('descargar'), /Gratis para uso personal y no comercial/)
+  assert.match(leer('descargar.html'), /Gratis para uso personal y no comercial/)
   assert.doesNotMatch(html, /href="#(pagas|capturas|aviso)"/)
 })
 
@@ -682,7 +682,7 @@ test('la entradilla de Funciones explica las cuatro líneas del plano', () => {
 
 test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {
   const tap = 'brew tap mscottb/tramtai https://github.com/MscottB/Tramtai'
-  const linux = html.match(/<article class="tarjeta" data-sistema="linux">[\s\S]*?<\/article>/)?.[0] ?? ''
+  const linux = html.match(/<article class="tarjeta"[^>]* data-sistema="linux">[\s\S]*?<\/article>/)?.[0] ?? ''
   assert.ok(linux.includes(tap + '\nbrew install tramtai'), 'tarjeta de Linux')
   assert.ok(inicio.includes(tap + '\nbrew install --cask tramtai'), 'macOS en Inicio')
   for (const textos of [es, en]) {

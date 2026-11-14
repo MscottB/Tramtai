@@ -45,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view --repo "$GITHUB_REPOSITORY" --json tagName,assets > "$RUNNER_TEMP/release.json"; then
-            node web/scripts/descargas.mjs "$RUNNER_TEMP/release.json" site/index.html
+            node web/scripts/descargas.mjs "$RUNNER_TEMP/release.json" site/index.html site/descargar.html
           fi
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
