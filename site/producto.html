@@ -71,7 +71,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <div class="arranque">
     <div class="envoltura">
       <h1 class="titular"><span lang="es">Tus agentes de IA, <em>una sola</em> API local.</span><span lang="en">Your AI agents, <em>one</em> local API.</span></h1>
-      <p class="entrada"><span lang="es">Cómo funciona, qué hace y por qué usarlo, y qué datos salen de tu equipo.</span><span lang="en">How it works, what it does and why use it, and which data leaves your computer.</span></p>
+      <p class="entrada"><span lang="es">Cómo funciona, qué hace, por qué usarlo y qué datos salen de tu equipo.</span><span lang="en">How it works, what it does, why use it and which data leaves your computer.</span></p>
       <nav class="acciones" aria-label="En esta página" data-aria-en="On this page">
         <a class="boton secundario" href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
         <a class="boton secundario" href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
@@ -91,7 +91,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       </div>
       <figure class="tarjeta fig-camino vivo">
         <figcaption class="fig"><span lang="es">FIG 1 · Cómo funciona</span><span lang="en">FIG 1 · How it works</span></figcaption>
-        <svg viewBox="0 0 720 200" role="img" aria-label="Tres pasos: instala Tramtai, prepara tus agentes y cambia la URL y la clave de tu app" data-aria-en="Three steps: install Tramtai, set up your agents and change your app’s URL and key">
+        <svg class="pasos-svg" viewBox="0 0 720 200" role="img" aria-label="Tres pasos: instala Tramtai, prepara tus agentes y cambia la URL y la clave de tu app" data-aria-en="Three steps: install Tramtai, set up your agents and change your app’s URL and key">
           <g fill="var(--acento-suave)">
             <path class="aparece" style="--retraso: 0.6s" d="M50 142 L120 107 L190 142 L120 177 Z"/>
             <path class="aparece" style="--retraso: 1.2s" d="M290 107 L360 72 L430 107 L360 142 Z"/>
@@ -239,7 +239,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
         <h3><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
         <div class="mosaico" style="--col: 3">
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 8 · Tus primeros pasos</span><span lang="en">FIG 8 · Your first steps</span></span>
+            <span class="fig"><span lang="es">FIG 8 · Tus SDK</span><span lang="en">FIG 8 · Your SDKs</span></span>
             <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
             <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
             <figure class="captura">
@@ -250,7 +250,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 9 · Ver como código</span><span lang="en">FIG 9 · View as code</span></span>
+            <span class="fig"><span lang="es">FIG 9 · API propia</span><span lang="en">FIG 9 · Native API</span></span>
             <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
             <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
             <figure class="captura">
@@ -261,7 +261,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 10 · La receta</span><span lang="en">FIG 10 · The recipe</span></span>
+            <span class="fig"><span lang="es">FIG 10 · Respuestas con forma</span><span lang="en">FIG 10 · Shaped responses</span></span>
             <h4><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
             <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
             <figure class="captura">
@@ -277,7 +277,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
         <h3><span lang="es">Controla</span><span lang="en">Control</span></h3>
         <div class="mosaico" style="--col: 3">
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 11 · El espacio de trabajo</span><span lang="en">FIG 11 · The workspace</span></span>
+            <span class="fig"><span lang="es">FIG 11 · Espacios</span><span lang="en">FIG 11 · Workspaces</span></span>
             <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
             <p><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
             <figure class="captura">
@@ -288,7 +288,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 12 · Una API por aplicación</span><span lang="en">FIG 12 · One API per app</span></span>
+            <span class="fig"><span lang="es">FIG 12 · Una API por app</span><span lang="en">FIG 12 · One API per app</span></span>
             <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
             <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
             <figure class="captura">
@@ -299,7 +299,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 13 · Tus agentes</span><span lang="en">FIG 13 · Your agents</span></span>
+            <span class="fig"><span lang="es">FIG 13 · Modelo y esfuerzo</span><span lang="en">FIG 13 · Model and effort</span></span>
             <h4><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
             <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
             <figure class="captura">
@@ -315,7 +315,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
         <h3><span lang="es">Protege</span><span lang="en">Protect</span></h3>
         <div class="mosaico" style="--col: 3">
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 14 · Listos y por conectar</span><span lang="en">FIG 14 · Ready and to connect</span></span>
+            <span class="fig"><span lang="es">FIG 14 · Respaldo</span><span lang="en">FIG 14 · Fallback</span></span>
             <h4><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
             <p><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
             <figure class="captura">
@@ -326,7 +326,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 15 · La clave del espacio</span><span lang="en">FIG 15 · The workspace key</span></span>
+            <span class="fig"><span lang="es">FIG 15 · Claves cifradas</span><span lang="en">FIG 15 · Encrypted keys</span></span>
             <h4><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
             <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs y de tus espacios se ven una sola vez, solo se guarda su huella, y se regeneran con un clic si se filtran. La clave que Tramtai da a Continue, opencode o Kilo Code va además en el archivo de cada herramienta, dentro de tu carpeta de usuario.</span><span lang="en">Your provider keys stay encrypted in the system store, and the keys of your APIs and workspaces are shown only once, only a hash of them is stored, and they can be regenerated in one click if they leak. The key Tramtai gives Continue, opencode or Kilo Code also goes in each tool’s file, inside your user folder.</span></p>
             <figure class="captura">
@@ -337,7 +337,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 16 · Abrir un proyecto</span><span lang="en">FIG 16 · Open a project</span></span>
+            <span class="fig"><span lang="es">FIG 16 · Sin terminal ni web</span><span lang="en">FIG 16 · No terminal, no web</span></span>
             <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
             <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and doesn’t get the other agents’ keys.</span></p>
             <figure class="captura">
@@ -353,7 +353,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
         <h3><span lang="es">Usa</span><span lang="en">Use</span></h3>
         <div class="mosaico" style="--col: 3">
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 17 · El mapa en vivo</span><span lang="en">FIG 17 · The live map</span></span>
+            <span class="fig"><span lang="es">FIG 17 · La terminal</span><span lang="en">FIG 17 · The terminal</span></span>
             <h4><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
             <p><span lang="es">Las ocho páginas de la app en <a href="./#formas"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="./#formas"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
             <figure class="captura">
@@ -364,7 +364,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 18 · El mensaje de prueba</span><span lang="en">FIG 18 · The test message</span></span>
+            <span class="fig"><span lang="es">FIG 18 · Adjuntos</span><span lang="en">FIG 18 · Attachments</span></span>
             <h4><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
             <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
             <figure class="captura">
@@ -375,7 +375,7 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
             </figure>
           </article>
           <article class="tarjeta funcion">
-            <span class="fig"><span lang="es">FIG 19 · El botón ? de cada página</span><span lang="en">FIG 19 · The ? button on every page</span></span>
+            <span class="fig"><span lang="es">FIG 19 · Recorrido y Ayuda</span><span lang="en">FIG 19 · Tour and Help</span></span>
             <h4><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
             <p><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
             <figure class="captura">
@@ -637,43 +637,43 @@ curl http://127.0.0.1:17373/openai/v1/chat/completions \
       </ul>
       <ol class="mosaico ventajas" style="--col: 3">
         <li class="tarjeta ancha">
-          <span class="fig">01</span>
+          <span class="fig" aria-hidden="true">01</span>
           <h3><span lang="es">Usa lo que ya pagas</span><span lang="en">Use what you already pay for</span></h3>
           <p><span lang="es">Tu clave de API o, solo para tu uso personal, tu suscripción de Claude, ChatGPT o GitHub Copilot. Sin cuentas nuevas.</span><span lang="en">Your API key or, only for your personal use, your Claude, ChatGPT or GitHub Copilot subscription. No new accounts.</span></p>
         </li>
         <li class="tarjeta">
-          <span class="fig">02</span>
+          <span class="fig" aria-hidden="true">02</span>
           <h3><span lang="es">Tramtai instala y conecta tus agentes</span><span lang="en">Tramtai installs and connects your agents</span></h3>
           <p><span lang="es">Instala Claude Code, Codex, GitHub Copilot o Antigravity, te ayuda a iniciar sesión y los mantiene al día, sin abrir otra consola.</span><span lang="en">It installs Claude Code, Codex, GitHub Copilot or Antigravity, helps you sign in and keeps them up to date, with no other console.</span></p>
         </li>
         <li class="tarjeta">
-          <span class="fig">03</span>
+          <span class="fig" aria-hidden="true">03</span>
           <h3><span lang="es">Sin tocar tu código</span><span lang="en">No changes to your code</span></h3>
           <p><span lang="es">Con el SDK de OpenAI o Anthropic, cambias la URL y la clave. A Claude Code, Codex, Continue, opencode y Kilo Code los apunta Tramtai.</span><span lang="en">With the OpenAI or Anthropic SDK, you change the URL and the key. Tramtai points Claude Code, Codex, Continue, opencode and Kilo Code at itself.</span></p>
         </li>
         <li class="tarjeta">
-          <span class="fig">04</span>
+          <span class="fig" aria-hidden="true">04</span>
           <h3><span lang="es">Si un agente falla, sigue otro</span><span lang="en">If an agent fails, another carries on</span></h3>
           <p><span lang="es">Llega a su límite y la petición continúa con el siguiente de tu lista.</span><span lang="en">It hits its limit and the request continues with the next one on your list.</span></p>
         </li>
         <li class="tarjeta">
-          <span class="fig">05</span>
+          <span class="fig" aria-hidden="true">05</span>
           <h3><span lang="es">Todo corre en tu equipo</span><span lang="en">It all runs on your computer</span></h3>
           <p><span lang="es">Sin servidor nuestro ni telemetría; tus claves, cifradas en el almacén del sistema, salvo la de Continue, opencode y Kilo Code: en su archivo.</span><span lang="en">No server of ours and no telemetry; your keys, encrypted in the system store, except Continue’s, opencode’s and Kilo Code’s: in each tool’s file.</span></p>
         </li>
         <li class="tarjeta">
-          <span class="fig">06</span>
+          <span class="fig" aria-hidden="true">06</span>
           <h3><span lang="es">Cada app, con su clave y su límite</span><span lang="en">Each app, with its own key and limit</span></h3>
           <p><span lang="es">Presupuesto diario o mensual por app y cada petición a la vista.</span><span lang="en">A daily or monthly budget per app, and every request in view.</span></p>
         </li>
         <li class="tarjeta ancha">
-          <span class="fig">07</span>
+          <span class="fig" aria-hidden="true">07</span>
           <h3><span lang="es">Escritorio, terminal o servidor</span><span lang="en">Desktop, terminal or server</span></h3>
           <p><span lang="es">La misma Tramtai en la app, por SSH o siempre encendida en tu servidor.</span><span lang="en">The same Tramtai in the app, over SSH, or always on your server.</span></p>
         </li>
       </ol>
       <details class="comparativa" id="comparativa">
-        <summary><span lang="es">Sin Tramtai y con Tramtai, lado a lado</span><span lang="en">Without and with Tramtai, side by side</span></summary>
+        <summary><span lang="es">Sin Tramtai y con Tramtai</span><span lang="en">Without and with Tramtai</span></summary>
         <div class="pagas-diagramas">
         <figure class="pagas-diagrama sin">
           <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>

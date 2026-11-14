@@ -440,6 +440,9 @@ describe('producto', () => {
     assert.deepEqual([...producto.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]), ['como', 'funciones', 'por-que', 'privacidad'])
     assert.equal((producto.match(/<h1\b/g) ?? []).length, 1)
     assert.match(producto, /<main id="contenido" tabindex="-1" class="producto">\s*(<!--[^>]*-->\s*)?<div class="arranque">/, 'el arranque corto, con la cuadrícula y el brillo')
+    assert.match(producto, /<p class="entrada"><span lang="es">Cómo funciona, qué hace, por qué usarlo y qué datos salen de tu equipo\.<\/span><span lang="en">How it works, what it does, why use it and which data leaves your computer\.<\/span><\/p>/)
+    // La parte en serifa de los h2 sale de una sola regla, la del titular, en todas las páginas.
+    assert.deepEqual([...css.matchAll(/([^{}]*\bem\b[^{}]*)\{[^}]*var\(--serifa\)/g)].map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim()), ['h2 em, .titular em'])
     assert.match(seccion('por-que', producto), /<details class="comparativa" id="comparativa">/)
     assert.match(funcionesProducto, /<div id="demo">/, 'el recorrido guiado va dentro de Funciones')
     for (const id of ['como', 'funciones', 'por-que', 'comparativa', 'privacidad', 'demo', 'riesgos'])
@@ -461,6 +464,9 @@ describe('producto', () => {
     // Un mosaico de distinto tamaño: la primera y la última, anchas.
     assert.match(ventajas[0], /^<li class="tarjeta ancha">/)
     assert.match(ventajas[6], /^<li class="tarjeta ancha">/)
+    // El número de cada una es adorno: el lector de pantalla ya dice el de la lista.
+    for (const v of ventajas) assert.match(v, /<span class="fig" aria-hidden="true">0\d<\/span>/)
+    assert.match(css, /\.pasos-como li::before \{ content: '0' counter\(paso\); content: '0' counter\(paso\) \/ '';/)
     assert.doesNotMatch(lista, COLORES_LINEA)
   })
 
@@ -468,7 +474,7 @@ describe('producto', () => {
     const comparativa = producto.match(/<details class="comparativa" id="comparativa">[\s\S]*?<\/details>/)?.[0] ?? ''
     assert.ok(comparativa, 'falta el <details> de la comparativa')
     assert.doesNotMatch(comparativa, /<details[^>]* open/)
-    assert.match(comparativa, /<summary>[\s\S]*lang="es"[\s\S]*lang="en"[\s\S]*<\/summary>/)
+    assert.match(comparativa, /<summary><span lang="es">Sin Tramtai y con Tramtai<\/span><span lang="en">Without and with Tramtai<\/span><\/summary>/)
     assert.equal((comparativa.match(/<figure class="pagas-diagrama[^"]*">/g) ?? []).length, 2, 'Sin Tramtai y Con Tramtai')
     // Va debajo de las ventajas, y sitio.js la abre si se llega por su ancla.
     assert.ok(producto.indexOf('class="mosaico ventajas"') < producto.indexOf('id="comparativa"'))
@@ -509,9 +515,18 @@ describe('producto', () => {
       assert.match(t, /<h4><span lang="es">[^<]+<\/span><span lang="en">[^<]+<\/span><\/h4>\s*<p><span lang="es">[\s\S]*<\/span><span lang="en">/)
       assert.equal((t.match(/<img class="solo-(claro|oscuro)" lang="(es|en)" src="capturas\/[a-z0-9-]+\.webp"[^>]* loading="lazy" decoding="async" alt="[^"]+">/g) ?? []).length, 4, t.slice(0, 160))
     }
-    for (const t of ['Compatible con tus SDK', 'API propia con OpenAPI', 'Respuestas con forma', 'Espacios de trabajo', 'Una API por aplicación', 'Modelo y esfuerzo en cada petición',
-      'Respaldo entre agentes', 'Claves cifradas en el almacén del sistema', 'Sin terminal ni web', 'La terminal, a la par de la app', 'Adjunta PDF, Word y Excel', 'Recorrido y Ayuda'])
-      assert.ok(tarjetas.some((x) => x.includes(`<h4><span lang="es">${t}</span>`)), t)
+    // Las doce funciones de antes, en su orden y en los dos idiomas.
+    assert.deepEqual(tarjetas.map((x) => x.match(/<h4><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/h4>/)?.slice(1)), [
+      ['Compatible con tus SDK', 'Works with your SDKs'], ['API propia con OpenAPI', 'Native API with OpenAPI'], ['Respuestas con forma', 'Shaped responses'],
+      ['Espacios de trabajo', 'Workspaces'], ['Una API por aplicación', 'One API per app'], ['Modelo y esfuerzo en cada petición', 'Model and effort per request'],
+      ['Respaldo entre agentes', 'Agent fallback'], ['Claves cifradas en el almacén del sistema', 'Keys encrypted in the system store'], ['Sin terminal ni web', 'No terminal, no web'],
+      ['La terminal, a la par de la app', 'The terminal, on par with the app'], ['Adjunta PDF, Word y Excel', 'Attach PDF, Word and Excel'], ['Recorrido y Ayuda', 'Tour and Help'],
+    ])
+    // Cada rótulo nombra su función, no la captura provisional (la Tarea 9 trae los recortes sin tocarlos).
+    assert.deepEqual(tarjetas.map((x) => x.match(/<span class="fig"><span lang="es">(FIG \d+ · [^<]+)<\/span>/)?.[1]), [
+      'FIG 8 · Tus SDK', 'FIG 9 · API propia', 'FIG 10 · Respuestas con forma', 'FIG 11 · Espacios', 'FIG 12 · Una API por app', 'FIG 13 · Modelo y esfuerzo',
+      'FIG 14 · Respaldo', 'FIG 15 · Claves cifradas', 'FIG 16 · Sin terminal ni web', 'FIG 17 · La terminal', 'FIG 18 · Adjuntos', 'FIG 19 · Recorrido y Ayuda',
+    ])
     // La de la terminal lleva a la ventana de Inicio; la del recorrido, al recorrido de esta página.
     const terminal = tarjetas.find((x) => x.includes('La terminal, a la par de la app')) ?? ''
     assert.match(terminal, /href="\.\/#formas"/)
@@ -520,7 +535,7 @@ describe('producto', () => {
     assert.equal((leer('desarrolladores.html').match(/href="producto\.html#demo"/g) ?? []).length, 2)
     assert.doesNotMatch(asi, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
     // El plano de metro se fue con su JavaScript y su CSS.
-    assert.doesNotMatch(producto + js + css, /metro|parada-(boton|titulo|texto)/)
+    assert.doesNotMatch(producto + js + css, /\bmetro\b|\.metro|parada-(boton|titulo|texto)/)
   })
 
   test('Funciones guarda «La app»: sus cinco pantallas con su texto y su captura, en tarjetas de distinto tamaño', () => {
