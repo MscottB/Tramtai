@@ -22,7 +22,9 @@ function ejemplosDe(b, lengua) {
 }
 
 const archivos = generar({ temas, es, en, ejemplos: ejemplosDe,
-  capturas: new Map(capturas.map((a) => [a, medidas(readFileSync(new URL(a, origen)))])) })
+  capturas: new Map(capturas.map((a) => [a, medidas(readFileSync(new URL(a, origen)))])),
+  // El buscador indexa los apartados de estas dos páginas escritas a mano.
+  paginas: Object.fromEntries(['servidor.html', 'desarrolladores.html'].map((a) => [a, readFileSync(new URL(a, sitio), 'utf8')])) })
 // La portada y las guías son escritas a mano: solo se les ponen al día la cabeza, la barra, el pie, el aviso y, en la
 // portada, la terminal (las pantallas de capturas --terminal).
 const terminal = JSON.parse(readFileSync(new URL('capturas/terminal.json', sitio), 'utf8'))

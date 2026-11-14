@@ -16,6 +16,8 @@ export interface Fuente {
   ejemplos: (b: Extract<Bloque, { tipo: 'ejemplo' }>, idioma: 'es' | 'en') => { id: string; titulo: string; codigo: string }[]
   // capturas son los archivos de web/src/ayuda/capturas que existen, con su tamaño en píxeles.
   capturas: Map<string, { ancho: number; alto: number }>
+  // paginas es el HTML de servidor.html y desarrolladores.html (de site/): el buscador indexa sus apartados.
+  paginas?: Record<string, string>
 }
 
 // URL_SITIO es la dirección pública del sitio (GitHub Pages): canonical, Open Graph, sitemap y 404 la necesitan absoluta.
@@ -415,7 +417,7 @@ function paginaTema(f: Fuente, tema: Tema): string {
     ? `<section id="${s.id}"><h2>${bilingue(...s.titulo)}</h2>\n${s.partes.join('\n\n')}\n</section>`
     : s.partes.join('\n\n'))).join('\n\n')
   const articulo = `${indice}<article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html">${bilingue('Ayuda', 'Help')}</a> › ${tx(tema.titulo)} · <a href="index.html#buscar-ayuda">${bilingue('Buscar', 'Search')}</a></nav>
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html">${bilingue('Ayuda', 'Help')}</a> › ${tx(tema.titulo)} · <button type="button" class="enlace-boton" data-buscar hidden>${bilingue('Buscar', 'Search')}</button></nav>
 <header>
   <h1>${tx(tema.titulo)}</h1>
   <p class="entradilla">${tx(tema.resumen)}</p>
@@ -433,11 +435,7 @@ function paginaInicio(f: Fuente): string {
   <h1>${bilingue('Ayuda', 'Help')}</h1>
   <p class="entradilla">${bilingue('Qué hace Tramtai, cómo empezar, cada función y qué hacer si algo falla.', 'What Tramtai does, how to start, every feature and what to do if something fails.')}</p>
 </header>
-<div class="buscar-ayuda" hidden>
-  <input type="search" id="buscar-ayuda" placeholder="Buscar en la ayuda" data-placeholder-en="Search help" aria-label="Buscar en la ayuda" data-aria-en="Search help">
-  <p id="cuenta-ayuda" class="solo-lectores" aria-live="polite"></p>
-  <ol id="resultados-ayuda"></ol>
-</div>
+<button type="button" class="buscar-campo" data-buscar hidden>${svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}<span>${bilingue('Buscar en el sitio', 'Search the site')}</span><kbd>Ctrl K</kbd></button>
 ${tarjetas(f, f.temas)}
 <h2>${bilingue('Más documentación', 'More documentation')}</h2>
 <ul>
@@ -475,21 +473,72 @@ ${urls.map((u) => `  <url><loc>${URL_SITIO}${u}</loc></url>`).join('\n')}
 `
 }
 
-// indiceBusqueda es lo que busca sitio.js: por idioma, una entrada por tema y ancla con su texto ya normalizado.
+// Entrada es una fila del buscador del sitio (buscar.json): u es la dirección desde la raíz con su ancla, ti el título, d
+// dónde está («Ayuda › Agentes», «Servidor») y x el texto normalizado donde se busca.
+// compactar deja el texto de una entrada en sus palabras distintas de más de 2 letras y 160 caracteres: la búsqueda es por palabras sueltas, y así buscar.json sigue pequeño.
+const compactar = (x: string) => [...new Set(x.split(' '))].filter((w) => w.length > 2).join(' ').slice(0, 160)
+
+interface Entrada { u: string; ti: string; d: string; x: string }
+
+// soloIdioma deja de un HTML solo lo que se ve en un idioma: quita los elementos con lang del otro (un span, un div
+// entero con su contenido). Supone un HTML bien cerrado, como el de las páginas del sitio.
+function soloIdioma(html: string, idioma: 'es' | 'en'): string {
+  const VACIOS = /^(?:img|br|hr|input|meta|link|source)$/i
+  const pila: boolean[] = []
+  let saltar = 0
+  let salida = ''
+  for (const [, etiqueta, texto] of html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/(<[^>]+>)|([^<]+)/g)) {
+    if (texto !== undefined) { if (!saltar) salida += texto; continue }
+    const m = etiqueta.match(/^<(\/?)([a-z][a-z0-9]*)([^>]*?)(\/?)>$/i)
+    if (!m) continue
+    if (m[1]) { if (pila.pop()) saltar--; else if (!saltar) salida += etiqueta; continue }
+    if (m[4] || VACIOS.test(m[2])) { if (!saltar) salida += etiqueta; continue }
+    const otro = m[2] !== 'html' && m[3].includes(`lang="${idioma === 'es' ? 'en' : 'es'}"`)
+    pila.push(otro)
+    if (otro) saltar++
+    else if (!saltar) salida += etiqueta
+  }
+  return salida
+}
+
+// apartados saca de una página escrita a mano cada <section id> (con el título que abre) o <h2|h3 id>, con el primer
+// párrafo que sigue, en un idioma.
+function apartados(pagina: string, idioma: 'es' | 'en'): { id: string; titulo: string; texto: string }[] {
+  const html = soloIdioma(pagina, idioma)
+  const limpio = (s: string) => desescapar(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim()
+  return [...html.matchAll(/<(?:section\b[^>]*\bid="([^"]+)"[^>]*>\s*<h[23]\b[^>]*>|h[23]\b[^>]*\bid="([^"]+)"[^>]*>)([\s\S]*?)<\/h[23]>/g)].map((m) => {
+    const resto = html.slice(m.index + m[0].length)
+    const corte = resto.search(/<(?:h[23]|section)\b/)
+    const p = (corte < 0 ? resto : resto.slice(0, corte)).match(/<p\b[^>]*>([\s\S]*?)<\/p>/)
+    return { id: m[1] ?? m[2], titulo: limpio(m[3]), texto: p ? limpio(p[1]) : '' }
+  })
+}
+const DONDE: Record<string, [string, string]> = { 'servidor.html': ['Servidor', 'Server'], 'desarrolladores.html': ['Desarrolladores', 'Developers'] }
+
+// indiceBusqueda es lo que busca sitio.js: por idioma, una entrada por tema y ancla de la Ayuda y otra por apartado de
+// Servidor y Desarrolladores (leídos de site/, que da f.paginas), con su texto ya normalizado.
 function indiceBusqueda(f: Fuente): string {
-  const indice: Record<string, { t: string; a: string; ti: string; d: string; x: string }[]> = {}
-  for (const idioma of ['es', 'en'] as const) {
+  const indice: Record<string, Entrada[]> = {}
+  for (const [i, idioma] of (['es', 'en'] as const).entries()) {
     const textos = idioma === 'es' ? f.es : f.en
     const titulo = (c: string) => textos['error.' + c] ?? c
+    const ayuda = idioma === 'es' ? 'Ayuda' : 'Help'
     indice[idioma] = f.temas.flatMap((tema) => {
-      const porAncla = new Map<string, { d: string; x: string[] }>()
+      const nombre = textos[tema.titulo] ?? tema.id
+      const porAncla = new Map<string, { ti: string; n: number; x: string[] }>()
       for (const c of campos(tema, textos, titulo)) {
-        const e = porAncla.get(c.ancla) ?? { d: c.donde, x: [] }
-        e.x.push(normalizar(c.texto))
+        const e = porAncla.get(c.ancla) ?? { ti: c.donde, n: 0, x: [] }
+        const x = normalizar(c.texto)
+        // El título ya se busca en ti + d. El tema entero (sin ancla) guarda solo su introducción, la segunda: el resto del
+        // texto está en las entradas de sus apartados.
+        if (c.ancla ? x !== normalizar(e.ti) : e.n === 1) e.x.push(x)
+        e.n++
         porAncla.set(c.ancla, e)
       }
-      return [...porAncla].map(([a, e]) => ({ t: tema.id, a, ti: textos[tema.titulo] ?? tema.id, d: e.d, x: e.x.join(' ') }))
+      return [...porAncla].map(([a, e]) => ({ u: `ayuda/${tema.id}.html${a ? '#' + a : ''}`, ti: e.ti, d: a ? `${ayuda} › ${nombre}` : ayuda, x: compactar(e.x.join(' ')) }))
     })
+    for (const [archivo, html] of Object.entries(f.paginas ?? {}))
+      for (const a of apartados(html, idioma)) indice[idioma].push({ u: `${archivo}#${a.id}`, ti: a.titulo, d: DONDE[archivo][i], x: compactar(normalizar(a.texto)) })
   }
   return JSON.stringify(indice)
 }
@@ -518,7 +567,7 @@ export function generar(f: Fuente): Map<string, string> {
   const archivos = new Map<string, string>()
   archivos.set('ayuda/index.html', paginaInicio(f))
   for (const tema of f.temas) archivos.set(`ayuda/${tema.id}.html`, paginaTema(f, tema))
-  archivos.set('ayuda/indice.json', indiceBusqueda(f))
+  archivos.set('buscar.json', indiceBusqueda(f))
   archivos.set('ayuda.html', paginaDePaso())
   archivos.set('404.html', pagina404())
   archivos.set('sitemap.xml', sitemap(f))
