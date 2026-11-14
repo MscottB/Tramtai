@@ -75,13 +75,13 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
 <!-- /comun:indice-boton -->
       <div class="doc-indice-lista" id="doc-indice-lista">
-        <p class="fig doc-grupo"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+        <ul aria-labelledby="i-empezar">
           <li><a href="#empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
           <li><a href="#primer-mensaje"><span lang="es">Tu primer mensaje</span><span lang="en">Your first message</span></a></li>
         </ul>
-        <p class="fig doc-grupo"><span lang="es">Peticiones</span><span lang="en">Requests</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-peticiones"><span lang="es">Peticiones</span><span lang="en">Requests</span></p>
+        <ul aria-labelledby="i-peticiones">
           <li><a href="#archivos"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
           <li><a href="#json"><span lang="es">Respuestas en JSON</span><span lang="en">JSON responses</span></a></li>
           <li><a href="#herramientas"><span lang="es">Herramientas</span><span lang="en">Tool calling</span></a></li>
@@ -89,14 +89,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <li><a href="#en-vivo"><span lang="es">Seguir lo que pasa</span><span lang="en">Follow what happens</span></a></li>
           <li><a href="#errores"><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></a></li>
         </ul>
-        <p class="fig doc-grupo"><span lang="es">Referencia</span><span lang="en">Reference</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-referencia"><span lang="es">Referencia</span><span lang="en">Reference</span></p>
+        <ul aria-labelledby="i-referencia">
           <li><a href="#openapi"><span lang="es">Postman y clientes</span><span lang="en">Postman and clients</span></a></li>
           <li><a href="#limites"><span lang="es">Límites</span><span lang="en">Limits</span></a></li>
           <li><a href="#terminal"><span lang="es">Desde la terminal</span><span lang="en">From the terminal</span></a></li>
         </ul>
-        <p class="fig doc-grupo"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+        <ul aria-labelledby="i-mas">
           <li><a href="servidor.html"><span lang="es">Guía del servidor</span><span lang="en">Server guide</span></a></li>
           <li><a href="ayuda/conectar.html"><span lang="es">Ayuda: Conectar mi app</span><span lang="en">Help: Connect my app</span></a></li>
           <li><a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a></li>
@@ -117,29 +117,31 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
          el flujo. -->
     <figure class="tarjeta fig-camino vivo">
       <figcaption class="fig"><span lang="es">FIG 1 · Lo que pasa</span><span lang="en">FIG 1 · What happens</span></figcaption>
-      <svg viewBox="0 0 352 196" role="img" aria-label="Tu app habla con Tramtai, y Tramtai con Claude Code, Codex, GitHub Copilot y la Gemini API" data-aria-en="Your app talks to Tramtai, and Tramtai to Claude Code, Codex, GitHub Copilot and the Gemini API">
-        <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linejoin="round">
-          <path class="dibuja" pathLength="1" d="M8 140 L44 122 L80 140 L44 158 Z M8 140 V150 L44 168 L80 150 V140 M44 158 V168"/>
-          <path class="dibuja" pathLength="1" style="--retraso: .4s" d="M102 88 L148 65 L194 88 L148 111 Z M102 88 V100 L148 123 L194 100 V88 M148 111 V123"/>
-        </g>
-        <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
-          <path class="base" d="M62 131 L125 99.5 M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
-          <path class="flujo" stroke-dasharray="4 6" d="M62 131 L125 99.5"/>
-          <path class="flujo" stroke-dasharray="4 6" d="M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
-        </g>
-        <circle class="pulso" cx="236" cy="38" r="5" fill="var(--claude)"/>
-        <circle class="pulso" cx="236" cy="70" r="5" fill="var(--codex)" style="--retraso: .6s"/>
-        <circle class="pulso" cx="236" cy="102" r="5" fill="var(--copilot)" style="--retraso: 1.2s"/>
-        <circle class="pulso" cx="236" cy="134" r="5" fill="var(--gemini)" style="--retraso: 1.8s"/>
-        <g font-size="13">
-          <text x="44" y="190" text-anchor="middle" lang="es">tu app</text><text x="44" y="190" text-anchor="middle" lang="en">your app</text>
-          <text class="nombre" x="148" y="92.5" text-anchor="middle">Tramtai</text>
-          <text x="246" y="42.5">Claude Code</text>
-          <text x="246" y="74.5">Codex</text>
-          <text x="246" y="106.5">GitHub Copilot</text>
-          <text x="246" y="138.5">Gemini API</text>
-        </g>
-      </svg>
+<!-- comun:camino -->
+<svg viewBox="0 0 352 196" role="img" aria-label="Tu app habla con Tramtai, y Tramtai con Claude Code, Codex, GitHub Copilot y la Gemini API" data-aria-en="Your app talks to Tramtai, and Tramtai to Claude Code, Codex, GitHub Copilot and the Gemini API">
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linejoin="round">
+    <path class="dibuja" pathLength="1" d="M8 140 L44 122 L80 140 L44 158 Z M8 140 V150 L44 168 L80 150 V140 M44 158 V168"/>
+    <path class="dibuja" pathLength="1" style="--retraso: .4s" d="M102 88 L148 65 L194 88 L148 111 Z M102 88 V100 L148 123 L194 100 V88 M148 111 V123"/>
+  </g>
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+    <path class="base" d="M62 131 L125 99.5 M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M62 131 L125 99.5"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+  </g>
+  <circle class="pulso" cx="236" cy="38" r="5" fill="var(--claude)"/>
+  <circle class="pulso" cx="236" cy="70" r="5" fill="var(--codex)" style="--retraso: .6s"/>
+  <circle class="pulso" cx="236" cy="102" r="5" fill="var(--copilot)" style="--retraso: 1.2s"/>
+  <circle class="pulso" cx="236" cy="134" r="5" fill="var(--gemini)" style="--retraso: 1.8s"/>
+  <g font-size="13">
+    <text x="44" y="190" text-anchor="middle" lang="es">tu app</text><text x="44" y="190" text-anchor="middle" lang="en">your app</text>
+    <text class="nombre" x="148" y="92.5" text-anchor="middle">Tramtai</text>
+    <text x="246" y="42.5">Claude Code</text>
+    <text x="246" y="74.5">Codex</text>
+    <text x="246" y="106.5">GitHub Copilot</text>
+    <text x="246" y="138.5">Gemini API</text>
+  </g>
+</svg>
+<!-- /comun:camino -->
       <p class="suave fig-pie"><span lang="es">Tu app pide <code>agente/modelo</code> en el campo <code>model</code> y Tramtai pasa la petición a ese agente, con tu suscripción o tu clave.</span><span lang="en">Your app asks for <code>agent/model</code> in the <code>model</code> field and Tramtai passes the request to that agent, with your subscription or your key.</span></p>
     </figure>
 

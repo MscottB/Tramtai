@@ -462,16 +462,25 @@ body:has(.doc-envoltura) .envoltura { max-width: 1360px; }
 .lista-enlaces a { display: inline-block; min-height: 44px; padding: 10px 0; }
 .pagina-sola { padding-top: 56px; padding-bottom: 80px; }
 .pagina-sola .prosa { max-width: 46em; }
+/* Por debajo de 1180 px, «En esta página» pasa encima del contenido, en fila. */
 @media (max-width: 1180px) {
-  .doc { grid-template-columns: 220px minmax(0, 1fr); gap: 40px; }
-  .doc-pagina { display: none; }
+  .doc { grid-template-columns: 220px minmax(0, 1fr); gap: 16px 40px; }
+  .doc-indice { grid-row: 1 / span 2; }
+  .doc-pagina { position: static; max-height: none; overflow: visible; grid-column: 2; grid-row: 1; }
+  .doc #contenido { grid-column: 2; grid-row: 2; }
+  .doc-pagina ul { display: flex; flex-wrap: wrap; gap: 0 18px; border-left: 0; }
+  .doc-pagina a { margin-left: 0; padding: 6px 0; border-left: 0; }
+  .doc-pagina a[aria-current="true"] { color: var(--acento); }
 }
+/* Sin JavaScript (o si sitio.js falla) el botón sigue oculto y la lista, abierta. */
 @media (max-width: 900px) {
   .doc { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 20px; }
-  .doc-indice { position: static; max-height: none; overflow: visible; margin-bottom: 8px; }
+  .doc-indice, .doc-pagina, .doc #contenido { grid-column: auto; grid-row: auto; }
+  .doc-indice { order: -2; position: static; max-height: none; overflow: visible; margin-bottom: 8px; }
+  .doc-pagina { order: -1; margin-bottom: 8px; }
   .doc-indice-boton:not([hidden]) { display: flex; }
-  html.js .doc-indice:not(.abierto) .doc-indice-lista { display: none; }
-  html.js .doc-indice-lista { margin-top: 8px; padding: 4px 16px 12px; border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); background: var(--superficie); }
+  .doc-indice:not(.abierto) .doc-indice-boton:not([hidden]) + .doc-indice-lista { display: none; }
+  .doc-indice-boton:not([hidden]) + .doc-indice-lista { margin-top: 8px; padding: 4px 16px 12px; border: 1px dashed var(--borde-discontinuo); border-radius: var(--radio); background: var(--superficie); }
 }
 .pestanas { margin: 0 0 18px; }
 .pestanas-lista { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }

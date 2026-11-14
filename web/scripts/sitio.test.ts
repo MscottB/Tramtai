@@ -5,7 +5,7 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { bloquesVisibles } from '../src/ayuda/vista.ts'
-import { ANCLAS_VIEJAS, GRUPOS_AYUDA, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
+import { ANCLAS_VIEJAS, CAMINO, GRUPOS_AYUDA, PAGINAS_FIJAS, URL_SITIO, destinoAncla, escapar, generar, rellenar, rellenarMarkdown, riesgos, type Fuente } from './sitio.ts'
 
 const SITIO = (archivo: string) => readFileSync(new URL('../../site/' + archivo, import.meta.url), 'utf8')
 const fuente: Fuente = {
@@ -428,7 +428,7 @@ test('cada tema de la Ayuda va en tres columnas', () => {
     assert.match(html, tresColumnas, ruta)
     const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
     for (const t of temas) assert.ok(indice.includes(`<a href="${t.id}.html"`), `${ruta}: el índice no lleva a ${t.id}`)
-    for (const g of GRUPOS_AYUDA) assert.ok(indice.includes(`<p class="fig doc-grupo"><span lang="es">${g.es}</span><span lang="en">${g.en}</span></p>`), `${ruta}: ${g.es}`)
+    for (const g of GRUPOS_AYUDA) assert.ok(indice.includes(`<p class="fig doc-grupo" id="i-${g.id}"><span lang="es">${g.es}</span><span lang="en">${g.en}</span></p>\n<ul aria-labelledby="i-${g.id}">`), `${ruta}: ${g.es}`)
     assert.deepEqual([...indice.matchAll(/<a href="([^"]+)" aria-current="page"/g)].map((m) => m[1]), [actual], ruta)
     const { secciones, enlaces } = enLaPagina(html)
     assert.deepEqual(enlaces, secciones, `${ruta}: «En esta página» no sigue sus apartados`)
@@ -449,7 +449,14 @@ test('Servidor y Desarrolladores, en tres columnas', () => {
     // El índice de la izquierda lleva a cada apartado de la página.
     const indice = html.match(/<nav class="doc-indice"[\s\S]*?<\/nav>/)![0]
     for (const id of secciones) assert.ok(indice.includes(`href="#${id}"`), `${archivo}: el índice no lleva a #${id}`)
+    // Cada lista del índice se nombra con el rótulo de su grupo.
+    const listas = [...indice.matchAll(/<ul( aria-labelledby="([^"]+)")?>/g)]
+    assert.ok(listas.length >= 3, archivo)
+    for (const [ul, , id] of listas) assert.ok(id && indice.includes(`<p class="fig doc-grupo" id="${id}">`), `${archivo}: ${ul}`)
   }
+  // El camino de Inicio y de Desarrolladores es el mismo dibujo, el de sitio.ts.
+  for (const archivo of ['index.html', 'desarrolladores.html'])
+    assert.equal(fijas.get(archivo)!.match(/<!-- comun:camino -->\n([\s\S]*?)\n<!-- \/comun:camino -->/)?.[1], CAMINO, archivo)
   // Los diagramas: el mapa del servidor y, en Desarrolladores, tu app → Tramtai → agente; con su FIG y vivos.
   assert.match(servidor, /<figure class="tarjeta fig-mapa vivo">\s*<figcaption class="fig">/)
   assert.match(fijas.get('desarrolladores.html')!, /<figure class="tarjeta fig-camino vivo">\s*<figcaption class="fig">/)

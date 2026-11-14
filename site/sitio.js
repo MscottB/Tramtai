@@ -126,12 +126,18 @@ function bastanteVisto(e, alto) {
     var observador = new IntersectionObserver(function (entradas) {
       entradas.forEach(function (e) {
         if (!e.isIntersecting) return;
-        enlaces.forEach(function (a) { a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)); });
+        enlaces.forEach(function (a) {
+          if (a.getAttribute('href') === '#' + e.target.id) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
       });
     }, { rootMargin: '-80px 0px -70% 0px' });
     document.querySelectorAll('#contenido section[id]').forEach(function (s) { observador.observe(s); });
   }
   var indice = document.querySelector('.doc-indice');
+  // El índice de la Ayuda es más alto que su columna: se desplaza solo él (no la página) hasta dejar a la vista el tema actual.
+  var actual = indice && indice.querySelector('[aria-current="page"]');
+  if (actual && indice.scrollHeight > indice.clientHeight) indice.scrollTop = actual.offsetTop - indice.clientHeight / 2;
   var boton = indice && indice.querySelector('.doc-indice-boton');
   if (!boton) return;
   boton.hidden = false;

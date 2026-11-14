@@ -210,6 +210,33 @@ ${paneles.join('\n')}
 </div>`
 }
 
+// CAMINO es el dibujo de tu app → Tramtai → los agentes (comun:camino): FIG 2 de Inicio y FIG 1 de Desarrolladores. Cada
+// página pone su <figure class="tarjeta fig-camino vivo"> y su rótulo; las líneas se dibujan al aparecer y el flujo
+// corre por ellas.
+export const CAMINO = `<svg viewBox="0 0 352 196" role="img" aria-label="Tu app habla con Tramtai, y Tramtai con Claude Code, Codex, GitHub Copilot y la Gemini API" data-aria-en="Your app talks to Tramtai, and Tramtai to Claude Code, Codex, GitHub Copilot and the Gemini API">
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linejoin="round">
+    <path class="dibuja" pathLength="1" d="M8 140 L44 122 L80 140 L44 158 Z M8 140 V150 L44 168 L80 150 V140 M44 158 V168"/>
+    <path class="dibuja" pathLength="1" style="--retraso: .4s" d="M102 88 L148 65 L194 88 L148 111 Z M102 88 V100 L148 123 L194 100 V88 M148 111 V123"/>
+  </g>
+  <g fill="none" stroke="var(--acento)" stroke-width="1.3" stroke-linecap="round">
+    <path class="base" d="M62 131 L125 99.5 M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M62 131 L125 99.5"/>
+    <path class="flujo" stroke-dasharray="4 6" d="M194 88 L232 38 M194 88 L232 70 M194 88 L232 102 M194 88 L232 134"/>
+  </g>
+  <circle class="pulso" cx="236" cy="38" r="5" fill="var(--claude)"/>
+  <circle class="pulso" cx="236" cy="70" r="5" fill="var(--codex)" style="--retraso: .6s"/>
+  <circle class="pulso" cx="236" cy="102" r="5" fill="var(--copilot)" style="--retraso: 1.2s"/>
+  <circle class="pulso" cx="236" cy="134" r="5" fill="var(--gemini)" style="--retraso: 1.8s"/>
+  <g font-size="13">
+    <text x="44" y="190" text-anchor="middle" lang="es">tu app</text><text x="44" y="190" text-anchor="middle" lang="en">your app</text>
+    <text class="nombre" x="148" y="92.5" text-anchor="middle">Tramtai</text>
+    <text x="246" y="42.5">Claude Code</text>
+    <text x="246" y="74.5">Codex</text>
+    <text x="246" y="106.5">GitHub Copilot</text>
+    <text x="246" y="138.5">Gemini API</text>
+  </g>
+</svg>`
+
 // Apartado es una entrada de «En esta página»: el id de su sección y su título en cada idioma, en texto.
 export interface Apartado { id: string; es: string; en: string }
 
@@ -261,7 +288,8 @@ function apartadosDe(html: string): Apartado[] {
 
 // rellenar pone al día las zonas comunes (<!-- comun:x --> … <!-- /comun:x -->) de una página escrita a mano, con su
 // título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor), la terminal
-// (comun:terminal) y las piezas de la documentación (comun:indice-boton y comun:en-esta-pagina) solo van donde la página
+// (comun:terminal), el camino (comun:camino) y las piezas de la documentación (comun:indice-boton y
+// comun:en-esta-pagina) solo van donde la página
 // los pide, con los textos de los catálogos, las pantallas de terminal.json y los apartados de la propia página.
 export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos; terminal?: Terminal }): string {
   const titulo = desescapar(html.match(/<title[^>]*>([^<]*)<\/title>/)?.[1] ?? 'Tramtai')
@@ -271,7 +299,7 @@ export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Texto
     anclas: saltoPortada(),
     riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
     ...(textos.terminal ? { terminal: ventanaTerminal(textos.terminal) } : {}),
-    'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)),
+    'indice-boton': BOTON_INDICE, 'en-esta-pagina': enEstaPagina(apartadosDe(html)), camino: CAMINO,
   }
   for (const [zona, contenido] of [...Object.entries(zonas), ...Object.entries(opcionales)]) {
     const re = new RegExp(`<!-- comun:${zona} -->[\\s\\S]*?<!-- /comun:${zona} -->`)
@@ -396,9 +424,9 @@ function indiceAyuda(f: Fuente, actual: string): string {
   return `<button type="button" class="buscar-campo" data-buscar hidden>${LUPA}<span>${bilingue('Buscar', 'Search')}</span><kbd>Ctrl K</kbd></button>
 <ul>${enlace('index.html', bilingue('Inicio de la Ayuda', 'Help home'), actual === '')}
 </ul>
-${GRUPOS_AYUDA.map((g) => `<p class="fig doc-grupo">${bilingue(g.es, g.en)}</p>\n<ul>${g.temas.map((id) => enlace(`${id}.html`, titulo(id), id === actual)).join('')}\n</ul>`).join('\n')}
-<p class="fig doc-grupo">${bilingue('Más documentación', 'More documentation')}</p>
-<ul>${enlace('../servidor.html', bilingue('Guía del servidor', 'Server guide'))}${enlace('../desarrolladores.html', bilingue('Guía del desarrollador', 'Developer guide'))}
+${GRUPOS_AYUDA.map((g) => `<p class="fig doc-grupo" id="i-${g.id}">${bilingue(g.es, g.en)}</p>\n<ul aria-labelledby="i-${g.id}">${g.temas.map((id) => enlace(`${id}.html`, titulo(id), id === actual)).join('')}\n</ul>`).join('\n')}
+<p class="fig doc-grupo" id="i-mas">${bilingue('Más documentación', 'More documentation')}</p>
+<ul aria-labelledby="i-mas">${enlace('../servidor.html', bilingue('Guía del servidor', 'Server guide'))}${enlace('../desarrolladores.html', bilingue('Guía del desarrollador', 'Developer guide'))}
 </ul>`
 }
 

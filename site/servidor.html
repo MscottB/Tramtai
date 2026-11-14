@@ -77,14 +77,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <button type="button" class="doc-indice-boton" aria-expanded="false" aria-controls="doc-indice-lista" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span lang="es">Índice</span><span lang="en">Contents</span></button>
 <!-- /comun:indice-boton -->
       <div class="doc-indice-lista" id="doc-indice-lista">
-        <p class="fig doc-grupo"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></p>
+        <ul aria-labelledby="i-empezar">
           <li><a href="#para-ti"><span lang="es">¿Es para ti?</span><span lang="en">Is it for you?</span></a></li>
           <li><a href="#pasos"><span lang="es">En tres pasos</span><span lang="en">In three steps</span></a></li>
           <li><a href="#pantallas"><span lang="es">Así se ve</span><span lang="en">What it looks like</span></a></li>
         </ul>
-        <p class="fig doc-grupo"><span lang="es">La guía</span><span lang="en">The guide</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-guia"><span lang="es">La guía</span><span lang="en">The guide</span></p>
+        <ul aria-labelledby="i-guia">
           <li><a href="#que-es"><span lang="es">Qué es</span><span lang="en">What it is</span></a></li>
           <li><a href="#entornos"><span lang="es">Dos entornos</span><span lang="en">Two environments</span></a></li>
           <li><a href="#aviso"><span lang="es">Aviso</span><span lang="en">Notice</span></a></li>
@@ -95,8 +95,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <li><a href="#actualizar"><span lang="es">Actualizar y quitar</span><span lang="en">Update and remove</span></a></li>
           <li><a href="#problemas"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
         </ul>
-        <p class="fig doc-grupo"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
-        <ul>
+        <p class="fig doc-grupo" id="i-mas"><span lang="es">Más documentación</span><span lang="en">More documentation</span></p>
+        <ul aria-labelledby="i-mas">
           <li><a href="desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a></li>
           <li><a href="ayuda/servidor.html"><span lang="es">Ayuda: Modo servidor</span><span lang="en">Help: Server mode</span></a></li>
           <li><a href="ayuda/entornos.html"><span lang="es">Ayuda: Dos entornos</span><span lang="en">Help: Two environments</span></a></li>
