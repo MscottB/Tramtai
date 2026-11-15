@@ -556,8 +556,9 @@ test('iconos, imagen para compartir, manifest y datos estructurados', () => {
 
 // funcionDe saca una función de arriba del todo de sitio.js (sin sangría) para probarla sin navegador, como el script de
 // la página de paso.
-const funcionDe = (nombre: string) =>
-  new Function(`${leer('sitio.js').match(new RegExp(`\\nfunction ${nombre}\\([\\s\\S]*?\\n\\}`))![0]}\nreturn ${nombre}`)()
+// Con globales, la función ve esos objetos en lugar de document, localStorage…
+const funcionDe = (nombre: string, globales: Record<string, unknown> = {}) =>
+  new Function(...Object.keys(globales), `${leer('sitio.js').match(new RegExp(`\\nfunction ${nombre}\\([\\s\\S]*?\\n\\}`))![0]}\nreturn ${nombre}`)(...Object.values(globales))
 
 // Pendiente de la Tarea 1: con el margen de abajo recortado un 20 %, un .vivo corto al final de la página no llegaba.
 test('lo vivo arranca con un cuarto a la vista, también al final de la página o si es más alto que ella', () => {
@@ -594,6 +595,92 @@ test('sin sitio.js, lo vivo pasa a su estado final a los 3 s', () => {
   assert.deepEqual(correr(true), { espera: 3000, vistos: 0 }, 'con sitio.js, lo vivo espera a entrar en pantalla')
   // sitio.js lo marca lo primero, antes de cualquier cosa que pueda fallar.
   assert.match(leer('sitio.js'), /^[\s\S]{0,1200}?\(function \(\) \{\n {2}document\.documentElement\.classList\.add\('vivo-listo'\);\n {2}var vivos = document\.querySelectorAll\('\.vivo'\);/)
+})
+
+// La barra, como la de BoldoAtlas (VitePress): el idioma en un botón con su menú y el tema en un interruptor.
+test('la barra lleva el botón de idioma con su menú y el interruptor del tema', () => {
+  for (const [ruta, html] of todas) {
+    const barra = html.match(/<header class="barra">[\s\S]*?<\/header>/)?.[0] ?? ''
+    assert.match(barra, /<button type="button" class="idioma-boton" aria-haspopup="true" aria-expanded="false" aria-controls="idiomas" aria-label="Cambiar idioma" data-aria-en="Change language">/, ruta)
+    assert.match(barra, /<div class="idioma-lista" id="idiomas" role="menu"[^>]*>/, ruta)
+    for (const i of ['es', 'en']) assert.match(barra, new RegExp(`<button type="button" role="menuitemradio" data-idioma="${i}" aria-checked="(true|false)"`), `${ruta}: ${i}`)
+    assert.match(barra, />Español</, ruta)
+    assert.match(barra, />English</, ruta)
+    assert.match(barra, /<button type="button" class="interruptor" id="interruptor-tema" role="switch" aria-checked="false" aria-label="Cambiar a tema oscuro" data-aria-en="Switch to dark theme" title="Cambiar a tema oscuro">/, ruta)
+    assert.match(barra, /<label class="apariencia" for="interruptor-tema">.*Apariencia.*Appearance/, ruta)
+    assert.doesNotMatch(barra, /aria-pressed|data-tema=/, `${ruta}: quedan los botones de antes`)
+  }
+})
+
+// documentoFalso es lo justo de un DOM para correr el idioma y el tema de sitio.js sin navegador.
+function documentoFalso(elementos: Record<string, ReturnType<typeof elemento>[]>) {
+  return {
+    documentElement: { lang: '', dataset: {} as Record<string, string> },
+    title: '',
+    querySelectorAll: (s: string) => elementos[s] ?? [],
+    querySelector: (s: string) => elementos[s]?.[0] ?? null,
+  }
+}
+function elemento(dataset: Record<string, string> = {}, atributos: Record<string, string> = {}) {
+  const oyentes: (() => void)[] = []
+  return {
+    dataset, atributos, hidden: false, title: atributos.title ?? '',
+    getAttribute: (a: string) => atributos[a] ?? null,
+    setAttribute: (a: string, v: string) => { atributos[a] = v },
+    addEventListener: (_: string, f: () => void) => { oyentes.push(f) },
+    click: () => oyentes.forEach((f) => f()),
+  }
+}
+const almacen = (inicial: Record<string, string>) => ({ datos: inicial, getItem: (k: string) => inicial[k] ?? null, setItem: (k: string, v: string) => { inicial[k] = v } })
+
+test('sitio.js cambia el idioma desde su menú y lo guarda en tramtai.idioma', () => {
+  const es = elemento({ idioma: 'es' }), en = elemento({ idioma: 'en' })
+  const boton = elemento({ ariaEn: 'Change language' }, { 'aria-label': 'Cambiar idioma' })
+  const document = documentoFalso({ '[data-idioma]': [es, en], '[data-aria-en]': [boton] })
+  const localStorage = almacen({})
+  funcionDe('prepararIdioma', { document, localStorage, navigator: { language: 'en-US' } })()
+  assert.equal(document.documentElement.lang, 'en', 'sin elección, el del navegador')
+  assert.deepEqual([es.atributos['aria-checked'], en.atributos['aria-checked']], ['false', 'true'])
+  assert.equal(boton.atributos['aria-label'], 'Change language')
+  es.click()
+  assert.equal(document.documentElement.lang, 'es')
+  assert.equal(localStorage.datos['tramtai.idioma'], 'es')
+  assert.deepEqual([es.atributos['aria-checked'], en.atributos['aria-checked']], ['true', 'false'])
+  assert.equal(boton.atributos['aria-label'], 'Cambiar idioma')
+})
+
+test('sitio.js alterna el tema con el interruptor, lo guarda en tramtai.tema y trata «sistema» como sin preferencia', () => {
+  const correr = (guardado: string | null, oscuroDelSistema: boolean, lang = 'es') => {
+    const interruptor = elemento({}, { 'aria-checked': 'false', 'aria-label': 'Cambiar a tema oscuro', title: 'Cambiar a tema oscuro' })
+    const document = documentoFalso({ '#interruptor-tema': [interruptor] })
+    document.documentElement.lang = lang
+    const localStorage = almacen(guardado ? { 'tramtai.tema': guardado } : {})
+    const matchMedia = () => ({ matches: oscuroDelSistema, addEventListener: () => {} })
+    funcionDe('prepararTema', { document, localStorage, matchMedia })()
+    const estado = () => ({ tema: document.documentElement.dataset.tema, marcado: interruptor.atributos['aria-checked'],
+      etiqueta: interruptor.atributos['aria-label'], titulo: interruptor.title, guardado: localStorage.datos['tramtai.tema'] })
+    return { interruptor, estado }
+  }
+  // Un «sistema» de antes es como no haber elegido: manda el sistema, aquí oscuro.
+  const viejo = correr('sistema', true)
+  assert.deepEqual(viejo.estado(), { tema: undefined, marcado: 'true', etiqueta: 'Cambiar a tema claro', titulo: 'Cambiar a tema claro', guardado: 'sistema' })
+  viejo.interruptor.click()
+  assert.deepEqual(viejo.estado(), { tema: 'claro', marcado: 'false', etiqueta: 'Cambiar a tema oscuro', titulo: 'Cambiar a tema oscuro', guardado: 'claro' })
+  viejo.interruptor.click()
+  assert.deepEqual(viejo.estado(), { tema: 'oscuro', marcado: 'true', etiqueta: 'Cambiar a tema claro', titulo: 'Cambiar a tema claro', guardado: 'oscuro' })
+  // Sin elección y con el sistema en claro.
+  assert.deepEqual(correr(null, false).estado(), { tema: undefined, marcado: 'false', etiqueta: 'Cambiar a tema oscuro', titulo: 'Cambiar a tema oscuro', guardado: undefined })
+  // Lo guardado manda sobre el sistema; en inglés, la etiqueta en inglés.
+  assert.deepEqual(correr('oscuro', false, 'en').estado(), { tema: 'oscuro', marcado: 'true', etiqueta: 'Switch to light theme', titulo: 'Switch to light theme', guardado: 'oscuro' })
+})
+
+test('el script de la cabeza tampoco fija un tema con un «sistema» guardado', () => {
+  const script = leer('index.html').match(/<script>(document\.documentElement\.classList\.add\('js'\);[\s\S]*?)<\/script>/)![1]
+  for (const [guardado, tema] of [['sistema', undefined], ['oscuro', 'oscuro'], ['claro', 'claro']]) {
+    const document = { documentElement: { classList: { add: () => {}, contains: () => true }, dataset: {} as Record<string, string>, lang: '' }, querySelectorAll: () => [] }
+    new Function('document', 'localStorage', 'navigator', 'setTimeout', script)(document, { getItem: (k: string) => (k === 'tramtai.tema' ? guardado : null) }, { language: 'es' }, () => {})
+    assert.equal(document.documentElement.dataset.tema, tema, String(guardado))
+  }
 })
 
 // Pendientes de la Tarea 3.

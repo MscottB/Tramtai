@@ -95,12 +95,11 @@ ${PRIMERO}`
 }
 
 const GITHUB = 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'
-const ICONO_TEMA = {
-  sistema: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
-  claro: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-  oscuro: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
-}
-const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const SOL = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+const LUNA = '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
+// El icono de idioma: un ideograma (文) y una A, como el de VitePress, dibujado aquí.
+const IDIOMA = '<path d="M3 5h10M8 3v2M11 5c-1 4-3.5 7-7 9M6 8.5c1.3 2 3 3.6 5 4.5M12.5 21l4.25-10L21 21M14 17.5h5.5"/>'
+const svg = (d: string, clase = '') => `<svg${clase ? ` class="${clase}"` : ''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const soloLectores = (es: string, en: string) => `<span lang="es" class="solo-lectores">${es}</span><span lang="en" class="solo-lectores">${en}</span>`
 
 // enlacePagina arma el enlace a una página del sitio con su nombre en los dos idiomas y marca la página actual.
@@ -109,11 +108,11 @@ const enlacePagina = (rel: string, actual: Actual) => (a: Actual, ruta: string, 
 
 // cabecera es el enlace para saltar al contenido y la barra: las siete páginas (Inicio también, no solo el logo), el buscador (oculto hasta que sitio.js lo
 // encienda), idioma, tema, GitHub y Descargar. En pantallas medianas y pequeñas las páginas, el buscador, el idioma y el
-// tema van juntos en el panel del menú (#menu), así cada control cabe con 44 px.
+// tema van juntos en el panel del menú (#menu), así cada control cabe con 44 px. El idioma y el tema son como los de
+// VitePress: un botón con su menú (arriba el idioma actual) y un interruptor claro/oscuro; en el panel, en filas.
 export function cabecera(rel: string, actual: Actual): string {
   const enlace = enlacePagina(rel, actual)
-  const tema = (t: keyof typeof ICONO_TEMA, es: string, en: string) =>
-    `<button type="button" data-tema="${t}" aria-pressed="${t === 'sistema'}">${svg(ICONO_TEMA[t])}${soloLectores(es, en)}</button>`
+  const idioma = (i: string, nombre: string) => `<button type="button" role="menuitemradio" data-idioma="${i}" aria-checked="${i === 'es'}" tabindex="-1">${nombre}</button>`
   return `<a class="saltar" href="#contenido">${bilingue('Saltar al contenido', 'Skip to content')}</a>
 <header class="barra">
   <div class="envoltura">
@@ -131,15 +130,14 @@ export function cabecera(rel: string, actual: Actual): string {
       </nav>
       <button type="button" class="buscar" data-buscar aria-label="Buscar" data-aria-en="Search" hidden>${svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}${soloLectores('Buscar', 'Search')}</button>
       <div class="preferencias">
-        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
-          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
-          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        <div class="idioma-menu">
+          <button type="button" class="idioma-boton" aria-haspopup="true" aria-expanded="false" aria-controls="idiomas" aria-label="Cambiar idioma" data-aria-en="Change language">${svg(IDIOMA)}<span class="solo-panel">${bilingue('Idioma', 'Language')}</span>${svg('<path d="m6 9 6 6 6-6"/>', 'flecha')}</button>
+          <div class="idioma-lista" id="idiomas" role="menu" aria-label="Idioma" data-aria-en="Language">
+            ${idioma('es', 'Español')}
+            ${idioma('en', 'English')}
+          </div>
         </div>
-        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
-          ${tema('sistema', 'Tema del sistema', 'System theme')}
-          ${tema('claro', 'Tema claro', 'Light theme')}
-          ${tema('oscuro', 'Tema oscuro', 'Dark theme')}
-        </div>
+        <label class="apariencia" for="interruptor-tema"><span class="solo-panel">${bilingue('Apariencia', 'Appearance')}</span><button type="button" class="interruptor" id="interruptor-tema" role="switch" aria-checked="false" aria-label="Cambiar a tema oscuro" data-aria-en="Switch to dark theme" title="Cambiar a tema oscuro"><span class="perilla">${svg(SOL, 'solo-claro')}${svg(LUNA, 'solo-oscuro')}</span></button></label>
       </div>
     </div>
     <a class="github" href="${REPO}" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="${GITHUB}"/></svg></a>
