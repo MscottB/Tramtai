@@ -107,7 +107,7 @@ const soloLectores = (es: string, en: string) => `<span lang="es" class="solo-le
 const enlacePagina = (rel: string, actual: Actual) => (a: Actual, ruta: string, es: string, en: string, clase = ''): string =>
   `<a href="${ruta ? rel + ruta : rel || './'}"${clase ? ` class="${clase}"` : ''}${a === actual ? ' aria-current="page"' : ''}>${bilingue(es, en)}</a>`
 
-// cabecera es el enlace para saltar al contenido y la barra: las siete páginas, el buscador (oculto hasta que sitio.js lo
+// cabecera es el enlace para saltar al contenido y la barra: las siete páginas (Inicio también, no solo el logo), el buscador (oculto hasta que sitio.js lo
 // encienda), idioma, tema, GitHub y Descargar. En pantallas medianas y pequeñas las páginas, el buscador, el idioma y el
 // tema van juntos en el panel del menú (#menu), así cada control cabe con 44 px.
 export function cabecera(rel: string, actual: Actual): string {
@@ -121,6 +121,7 @@ export function cabecera(rel: string, actual: Actual): string {
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden>${svg('<path d="M4 7h16M4 12h16M4 17h16"/>')}${soloLectores('Menú', 'Menu')}</button>
     <div id="menu" class="menu-panel">
       <nav aria-label="Secciones" data-aria-en="Sections">
+        ${enlace('inicio', '', 'Inicio', 'Home')}
         ${enlace('producto', 'producto.html', 'Producto', 'Product')}
         ${enlace('agentes', 'agentes.html', 'Agentes', 'Agents')}
         ${enlace('servidor', 'servidor.html', 'Servidor', 'Server')}

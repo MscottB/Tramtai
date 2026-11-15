@@ -360,9 +360,10 @@ test('sin JavaScript, Inicio enseña adónde va cada anclaje viejo', () => {
 // ---------------------------------------------------------------------------------------------------------------------
 // Lo común del sitio que cuidaba la portada
 
-test('la barra lleva a Producto, Agentes, Servidor, Desarrolladores, Ayuda y Descargar', () => {
+test('la barra lleva a Inicio, Producto, Agentes, Servidor, Desarrolladores, Ayuda y Descargar', () => {
   const nav = inicio.match(/<nav aria-label="Secciones"[\s\S]*?<\/nav>/)?.[0] ?? ''
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html'])
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['./', 'producto.html', 'agentes.html', 'servidor.html', 'desarrolladores.html', 'ayuda/', 'descargar.html'])
+  assert.match(nav, /href="\.\/" aria-current="page">/, 'Inicio marca la página actual en la portada')
 })
 
 test('la cuadrícula y el brillo, solo en el arranque', () => {
