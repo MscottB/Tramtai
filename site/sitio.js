@@ -18,9 +18,10 @@ function bastanteVisto(e, alto) {
   vivos.forEach(function (v) { vigia.observe(v); });
 })();
 
-// Idioma: el elegido antes o, si no, el del navegador. Sin almacenamiento disponible también funciona.
-(function () {
-  var botones = document.querySelectorAll('[data-idioma]');
+// Idioma: el elegido antes o, si no, el del navegador. Sin almacenamiento disponible también funciona. Las opciones son
+// las del menú de idioma de la barra (más abajo lo abre y lo cierra).
+function prepararIdioma() {
+  var opciones = document.querySelectorAll('[data-idioma]');
   function aplicar(idioma) {
     document.documentElement.lang = idioma;
     // Los textos alternativos no admiten <span lang>: cada imagen guarda el inglés en data-alt-en.
@@ -32,6 +33,7 @@ function bastanteVisto(e, alto) {
     document.querySelectorAll('[data-aria-en]').forEach(function (e) {
       if (!e.dataset.ariaEs) e.dataset.ariaEs = e.getAttribute('aria-label');
       e.setAttribute('aria-label', idioma === 'en' ? e.dataset.ariaEn : e.dataset.ariaEs);
+      if (e.title) e.title = e.getAttribute('aria-label'); // el interruptor del tema dice lo mismo al pasar el ratón
     });
     document.querySelectorAll('[data-placeholder-en]').forEach(function (e) {
       if (!e.dataset.placeholderEs) e.dataset.placeholderEs = e.placeholder;
@@ -42,36 +44,95 @@ function bastanteVisto(e, alto) {
       if (!titulo.dataset.es) titulo.dataset.es = titulo.textContent;
       document.title = idioma === 'en' ? titulo.dataset.en : titulo.dataset.es;
     }
-    botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.idioma === idioma)); });
+    opciones.forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.idioma === idioma)); });
   }
   var guardado = null;
   try { guardado = localStorage.getItem('tramtai.idioma'); } catch (e) {}
-  aplicar(guardado || ((navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'));
-  botones.forEach(function (b) {
+  aplicar(guardado === 'es' || guardado === 'en' ? guardado : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en');
+  opciones.forEach(function (b) {
     b.addEventListener('click', function () {
       aplicar(b.dataset.idioma);
       try { localStorage.setItem('tramtai.idioma', b.dataset.idioma); } catch (e) {}
     });
   });
-})();
+}
+prepararIdioma();
 
-// Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
-(function () {
-  var botones = document.querySelectorAll('button[data-tema]'); // <html> también lleva data-tema
-  function aplicar(tema) {
-    if (tema === 'sistema') delete document.documentElement.dataset.tema;
-    else document.documentElement.dataset.tema = tema;
-    botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tema === tema)); });
+// Tema: un interruptor claro/oscuro. Sin elección (o con un «sistema» de antes) manda el sistema; al pulsarlo queda
+// fijo el contrario del que se ve. El script de <head> ya aplicó el guardado antes de pintar; la perilla y su icono los
+// coloca estilo.css con el tema efectivo, y aquí solo van el estado y la etiqueta, que dicen a cuál cambia.
+function prepararTema() {
+  var interruptor = document.querySelector('#interruptor-tema');
+  if (!interruptor) return;
+  var raiz = document.documentElement;
+  var sistema = matchMedia('(prefers-color-scheme: dark)');
+  function oscuro() { return raiz.dataset.tema ? raiz.dataset.tema === 'oscuro' : sistema.matches; }
+  function rotular() {
+    var es = oscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+    var en = oscuro() ? 'Switch to light theme' : 'Switch to dark theme';
+    interruptor.dataset.ariaEs = es;
+    interruptor.dataset.ariaEn = en;
+    interruptor.setAttribute('aria-checked', String(oscuro()));
+    interruptor.setAttribute('aria-label', raiz.lang === 'en' ? en : es);
+    interruptor.title = raiz.lang === 'en' ? en : es;
   }
   var guardado = null;
   try { guardado = localStorage.getItem('tramtai.tema'); } catch (e) {}
-  aplicar(guardado === 'claro' || guardado === 'oscuro' ? guardado : 'sistema');
-  botones.forEach(function (b) {
-    b.addEventListener('click', function () {
-      aplicar(b.dataset.tema);
-      try { localStorage.setItem('tramtai.tema', b.dataset.tema); } catch (e) {}
-    });
+  if (guardado === 'claro' || guardado === 'oscuro') raiz.dataset.tema = guardado;
+  else delete raiz.dataset.tema;
+  rotular();
+  sistema.addEventListener('change', rotular);
+  interruptor.addEventListener('click', function () {
+    var tema = oscuro() ? 'claro' : 'oscuro';
+    raiz.dataset.tema = tema;
+    try { localStorage.setItem('tramtai.tema', tema); } catch (e) {}
+    rotular();
   });
+}
+prepararTema();
+
+// El menú de idioma de la barra, como el de VitePress: con ratón en escritorio se abre al pasar por encima (estilo.css)
+// y con su botón; con el teclado, Enter o Espacio lo abren, las flechas recorren las opciones y Escape lo cierra y
+// devuelve el foco al botón. En el panel del móvil se despliega debajo del botón.
+(function () {
+  var caja = document.querySelector('.idioma-menu');
+  if (!caja) return;
+  var boton = caja.querySelector('.idioma-boton');
+  // La opción del idioma actual va primero (estilo.css la sube con order): las flechas siguen ese orden.
+  function opciones() {
+    return Array.prototype.slice.call(caja.querySelectorAll('[role="menuitemradio"]')).sort(function (a, b) {
+      return (b.getAttribute('aria-checked') === 'true') - (a.getAttribute('aria-checked') === 'true');
+    });
+  }
+  function abrir(si, foco) {
+    boton.setAttribute('aria-expanded', String(si));
+    if (si && foco) opciones()[0].focus();
+    if (!si && foco) boton.focus();
+  }
+  boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true', true); });
+  boton.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    abrir(true, false);
+    var lista = opciones();
+    lista[e.key === 'ArrowDown' ? 0 : lista.length - 1].focus();
+  });
+  caja.addEventListener('keydown', function (e) {
+    var lista = opciones();
+    var i = lista.indexOf(document.activeElement);
+    if (e.key === 'Escape' && boton.getAttribute('aria-expanded') === 'true') {
+      e.stopPropagation(); // solo este menú: el panel del móvil sigue abierto
+      abrir(false, true);
+    } else if (i >= 0 && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
+      e.preventDefault();
+      var n = e.key === 'Home' ? 0 : e.key === 'End' ? lista.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + lista.length) % lista.length;
+      lista[n].focus();
+    } else if (e.key === 'Tab') abrir(false, false);
+  });
+  caja.querySelectorAll('[role="menuitemradio"]').forEach(function (b) {
+    b.addEventListener('click', function () { abrir(false, true); });
+  });
+  document.addEventListener('click', function (e) { if (!caja.contains(e.target)) abrir(false, false); });
 })();
 
 // Menú de la barra en pantallas medianas y pequeñas: se abre con su botón y se cierra al elegir, con Escape o fuera.

@@ -184,7 +184,7 @@ El sitio es un sitio de producto con siete páginas con la misma barra (Inicio, 
 
 ## Colores
 
-Todas son variables de `:root` con `light-dark(claro, oscuro)`. El sistema decide el tema (`color-scheme: dark light`) y `data-tema="claro"` o `"oscuro"` en `<html>` lo fuerza (el selector Sistema, Claro u Oscuro de la barra lo guarda en `localStorage`, clave `tramtai.tema`; un script del `<head>` lo aplica antes de pintar). El diseño parte del oscuro y el claro es papel cálido con el acento oscurecido. Texto, texto suave y acento pasan AA (4,5:1) sobre el fondo y las dos superficies en los dos temas, y los bordes de controles, 3:1.
+Todas son variables de `:root` con `light-dark(claro, oscuro)`. El sistema decide el tema (`color-scheme: dark light`) y `data-tema="claro"` o `"oscuro"` en `<html>` lo fuerza (el interruptor claro/oscuro de la barra lo guarda en `localStorage`, clave `tramtai.tema`; un script del `<head>` lo aplica antes de pintar; sin elección, o con un `sistema` guardado de antes, manda el sistema). El diseño parte del oscuro y el claro es papel cálido con el acento oscurecido. Texto, texto suave y acento pasan AA (4,5:1) sobre el fondo y las dos superficies en los dos temas, y los bordes de controles, 3:1.
 
 | Variable | Claro | Oscuro | Uso |
 |---|---|---|---|
@@ -194,7 +194,7 @@ Todas son variables de `:root` con `light-dark(claro, oscuro)`. El sistema decid
 | `--borde` | `#e3ded4` | `#1f262e` | separadores |
 | `--borde-fuerte` | `#cbc4b6` | `#2e3742` | contorno de ventanas |
 | `--borde-discontinuo` | `#c4bcad` | `#353f4b` | borde fino discontinuo de las tarjetas (decorativo) |
-| `--borde-control` | `#78715f` | `#64707c` | campos, pestañas, ES/EN (3:1) |
+| `--borde-control` | `#78715f` | `#64707c` | campos, pestañas, el interruptor del tema (3:1) |
 | `--texto` | `#16191d` | `#eef1f4` | texto principal |
 | `--texto-suave` | `#5b5f66` | `#9aa3ad` | texto secundario |
 | `--acento` | `#0b6e64` | `#2dd4bf` | enlaces, foco, botón principal, líneas de los diagramas |
@@ -257,6 +257,10 @@ Clases de `site/estilo.css` comunes a todas las páginas:
   - `.pasos`: un disco del acento con el número en Inter 700.
   - `.diagrama`: no numera, une sus pasos con flechas.
 - **Documentación** (`.doc`): la plantilla de tres columnas de Servidor, Desarrolladores y la Ayuda. Índice de 228 px a la izquierda, el contenido en `.prosa` y «En esta página» de 200 px a la derecha, las dos columnas fijas al bajar (`position: sticky`). La barra, el pie y el contenido de estas páginas llegan a 1360 px; las de presentación, a 1120. Por debajo de 1180 px «En esta página» pasa encima del contenido, en fila; por debajo de 900 hay una sola columna y el índice se abre con su botón (sin JavaScript, abierto); ahí «En esta página» solo queda en la Ayuda, porque en Servidor y Desarrolladores el índice ya lleva a los apartados. Nada se pone encima del texto.
+- **Idioma y tema de la barra**, como los de VitePress (el sitio de BoldoAtlas):
+  - **Idioma** (`.idioma-menu`): un botón con el icono 文A y una flecha (`aria-haspopup`, `aria-expanded`, «Cambiar idioma»). Con ratón en escritorio, su menú se abre al pasar por encima o al pulsarlo: arriba, en negrita, el idioma actual, y debajo el otro (`menuitemradio`). Con el teclado, Enter o Espacio lo abren, las flechas recorren las opciones y Escape lo cierra y devuelve el foco al botón.
+  - **Tema** (`.interruptor`, `role="switch"`): una píldora con borde `--borde-control` y una perilla de 18 px en `--texto-suave` con el sol o la luna, que se desliza con transición (quieta con «reducir movimiento»). `aria-checked` dice si se ve oscuro; el `title` y la etiqueta, a cuál cambia («Cambiar a tema claro»). La perilla sigue el tema efectivo desde el CSS, así ya está en su sitio antes de que llegue `sitio.js`.
+  - **En el panel del menú:** filas de 44 px. El idioma se despliega debajo de su fila y «Apariencia» lleva el interruptor a la derecha; toda la fila lo pulsa.
 - **Buscador** (`dialog.buscador`): Ctrl K, ⌘K o `/` (y el botón de la barra o el campo del índice) abren un diálogo con el cuadro, la lista (`role="listbox"`) y el pie con las teclas. Busca en `buscar.json`, en el idioma que se ve.
 
 ## Movimiento
@@ -275,9 +279,9 @@ Lo vivo es CSS y SVG, nunca vídeo, y solo cambia la opacidad o el trazo: el tex
 - **Foco visible:** `:focus-visible` con contorno de 2 px del acento separado 2 px. Sobre la tinta del código, el contorno va en `--tablero-clave`; donde el contenedor recorta (la ventana, la pantalla de la terminal), por dentro.
 - **Controles de 44 px o más** en alto y en ancho: botones, enlaces del pie y de las listas, pestañas, Copiar, el botón del menú. La excepción está abajo.
 - **Reducir movimiento:** todo queda quieto y en su estado final.
-- **Sin JavaScript** cada página se ve completa: las pestañas se ven una debajo de otra, la demo muestra todos sus pasos, el índice de la documentación está abierto, la barra baja a una segunda fila, no se queda fija y no enseña ES/EN ni el tema (los cambia sitio.js), y los anclajes de la portada de antes llevan a su sitio por un enlace visible. Las animaciones, en su estado final.
+- **Sin JavaScript** cada página se ve completa: las pestañas se ven una debajo de otra, la demo muestra todos sus pasos, el índice de la documentación está abierto, la barra baja a una segunda fila, no se queda fija y no enseña el idioma ni el tema (los cambia sitio.js), y los anclajes de la portada de antes llevan a su sitio por un enlace visible. Las animaciones, en su estado final.
 - **Pestañas** con teclado y ARIA de pestañas (`role="tablist"`, `tab` y `tabpanel`, flechas, Inicio y Fin); la elección de lenguaje se recuerda.
-- **Idioma:** las dos lenguas en la misma página (`lang="es"` y `lang="en"` en cada trozo; `html[lang]` oculta la otra), con el selector ES/EN (`tramtai.idioma`). Las capturas y los comandos salen en el idioma elegido.
+- **Idioma:** las dos lenguas en la misma página (`lang="es"` y `lang="en"` en cada trozo; `html[lang]` oculta la otra), con el menú de idioma de la barra (`tramtai.idioma`). Las capturas y los comandos salen en el idioma elegido.
 - **«Saltar al contenido»** es lo primero al tabular.
 
 ## Páginas
@@ -304,7 +308,7 @@ Sus colores de línea se usan solo donde la terminal pinta el nombre o la estaci
 
 ## Excepciones del sitio
 
-- **Controles de 44 px.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
+- **Controles de 44 px.** El botón de idioma mide 44 × 44. Solo con ratón en escritorio, el interruptor del tema mide 40 × 22 y las opciones del menú de idioma, 32 de alto, como en VitePress. Con puntero táctil, las opciones miden 44 y el interruptor lleva alrededor un área de 44 × 44 que no se ve; en el panel del menú, cada fila mide 44.
 - **Cortes en em.** Los anchos de las media queries van en `em` (los px de este documento son a 16 px por em): con la letra del navegador al 200 %, una pantalla de 1440 px se maqueta como una de 720 y no hay desplazamiento horizontal.
 - **Barra y menú.** Hasta 1100 px (y en tabletas táctiles hasta 1180) las secciones, el idioma y el tema van en un panel que abre el botón del menú. Hasta 640 px, Descargar queda en un botón con su icono y, hasta 420, el nombre de la marca solo lo oyen los lectores.
 - **`t-claude` de día.** Vale `#ba521c`, el valor de la chapa de la Web UI, y no `#c4561d`: es texto sobre el fondo blanco de la ventana y el color de la ficha da 4,47:1. De noche conserva `#f28a4f`. La variable `--claude` del sitio, que solo pinta puntos y líneas, sí es `#c4561d`.

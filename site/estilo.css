@@ -1,7 +1,7 @@
 /* Estilos compartidos del sitio de Tramtai (v0.61, spec §1): la estructura de plano técnico (cuadrícula fina arriba,
    tarjetas de borde discontinuo y rótulos «FIG»), los colores oscuros con el acento #2dd4bf y lo vivo, que solo se mueve
    con JavaScript y sin «reducir movimiento». Borde antes que sombra (de noche sin sombra). Cada control mide al menos
-   44 px de alto (y de ancho, salvo ES/EN y tema con ratón en escritorio). */
+   44 px de alto y de ancho, salvo el interruptor del tema y las opciones del idioma con ratón en escritorio. */
 /* Inter variable (OFL, INTER-OFL.txt) para el texto y los títulos, e Instrument Serif cursiva (OFL, INSTRUMENT-OFL.txt)
    para la parte clave de cada titular: subconjuntos con las letras del sitio (docs/equipo/desarrollo.md). */
 @font-face {
@@ -33,7 +33,7 @@
   --borde: light-dark(#e3ded4, #1f262e); --borde-fuerte: light-dark(#cbc4b6, #2e3742);
   /* El borde de las tarjetas: fino y discontinuo, decorativo. */
   --borde-discontinuo: light-dark(#c4bcad, #353f4b);
-  /* Bordes de controles (campos, pestañas, ES/EN): al menos 3:1 con el fondo. */
+  /* Bordes de controles (campos, pestañas, el interruptor del tema): al menos 3:1 con el fondo. */
   --borde-control: light-dark(#78715f, #64707c);
   --texto: light-dark(#16191d, #eef1f4); --texto-suave: light-dark(#5b5f66, #9aa3ad);
   --acento: light-dark(#0b6e64, #2dd4bf); --acento-texto: light-dark(#ffffff, #04201c); --acento-suave: light-dark(rgba(11, 110, 100, .09), rgba(45, 212, 191, .1));
@@ -143,12 +143,12 @@ h2 em, .titular em { font-family: var(--serifa); font-style: italic; font-weight
 .marca img { width: 30px; height: 30px; }
 /* En escritorio el panel del menú no existe: sus secciones y preferencias se colocan en la barra. */
 .menu-panel, .preferencias { display: contents; }
-/* ES/EN y el tema los cambia sitio.js: sin JavaScript no harían nada y no se ven (manda el idioma de la página y el tema
-   del sistema). */
+/* El idioma y el tema los cambia sitio.js: sin JavaScript no harían nada y no se ven (manda el idioma de la página y el
+   tema del sistema). */
 html:not(.js) .preferencias { display: none; }
 .barra nav { display: flex; gap: 16px; margin-left: auto; }
 .barra nav a, .barra .boton { white-space: nowrap; }
-.barra .github, .barra .idioma, .barra .boton { flex: none; }
+.barra .github, .barra .boton { flex: none; }
 .barra nav a { color: var(--texto-suave); text-decoration: none; font-size: .95rem; padding: 10px 0; }
 .barra nav a:hover, .barra nav a[aria-current="page"] { color: var(--texto); }
 .barra nav a[aria-current="page"] { font-weight: 600; }
@@ -157,19 +157,38 @@ html:not(.js) .preferencias { display: none; }
 .github { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; color: var(--texto-suave); }
 .github:hover { color: var(--texto); background: var(--acento-suave); }
 .github svg { width: 22px; height: 22px; }
-/* ES/EN y tema: control segmentado. Sin overflow: hidden, para que el foco no quede recortado. */
-.idioma { display: inline-flex; border: 1px solid var(--borde-control); border-radius: 10px; }
-.idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 0 10px; min-height: 44px; min-width: 36px; cursor: pointer; }
-.idioma button:first-child { border-radius: 9px 0 0 9px; }
-.idioma button:last-child { border-radius: 0 9px 9px 0; }
-.idioma button:focus-visible { position: relative; z-index: 1; }
-.idioma button[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
-.tema button { display: inline-grid; place-items: center; }
-.tema svg { width: 16px; height: 16px; }
+/* Idioma y tema, como en VitePress (sin overflow: hidden, para que el foco no quede recortado). El idioma: un botón con
+   el icono 文A y una flecha que abre su menú al pasar el ratón o al pulsarlo; arriba, en negrita, el idioma actual. */
+.idioma-menu { position: relative; flex: none; }
+.idioma-boton { display: inline-flex; align-items: center; gap: 2px; min-width: 44px; min-height: 44px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--texto-suave); font: inherit; cursor: pointer; }
+.idioma-boton:hover, .idioma-boton[aria-expanded="true"] { color: var(--texto); }
+.idioma-boton svg { width: 20px; height: 20px; flex: none; }
+.idioma-boton .flecha { width: 14px; height: 14px; }
+.solo-panel { display: none; }
+.idioma-lista { position: absolute; top: calc(100% - 4px); right: 0; z-index: 1; display: flex; flex-direction: column; min-width: 128px; padding: 12px;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; box-shadow: var(--sombra); visibility: hidden; }
+.idioma-boton[aria-expanded="true"] + .idioma-lista, .idioma-menu:hover .idioma-lista { visibility: visible; }
+.idioma-lista button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: none; color: var(--texto); font: 500 .875rem/32px var(--fuente); text-align: left; white-space: nowrap; cursor: pointer; }
+.idioma-lista button:hover { background: var(--superficie-suave); color: var(--acento); }
+.idioma-lista [aria-checked="true"], .idioma-lista [aria-checked="true"]:hover { order: -1; background: none; color: var(--texto); font-weight: 700; cursor: default; }
+/* El tema: un interruptor de 40 × 22 con una perilla de 18 que lleva el sol o la luna. La perilla y su icono siguen el
+   tema efectivo (el elegido o el del sistema), como las capturas, y así ya están en su sitio antes de que llegue sitio.js. */
+.apariencia { display: contents; }
+.interruptor { position: relative; flex: none; width: 40px; height: 22px; padding: 0; border: 1px solid var(--borde-control); border-radius: 11px; background: var(--superficie-suave); cursor: pointer; transition: border-color .25s; }
+.interruptor:hover { border-color: var(--acento); }
+.interruptor::before { content: ''; position: absolute; inset: 0; }
+.perilla { position: absolute; top: 1px; left: 1px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--texto-suave); color: var(--superficie); transition: transform .25s; }
+.perilla svg { width: 12px; height: 12px; }
+:root[data-tema="oscuro"] .perilla { transform: translateX(18px); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .perilla { transform: translateX(18px); } }
 .menu-boton { display: none; flex: none; place-items: center; width: 44px; height: 44px; margin-left: auto; border: 1px solid var(--borde-control); border-radius: 8px; background: none; color: var(--texto); cursor: pointer; }
 .menu-boton svg { width: 20px; height: 20px; }
 .barra .boton svg { display: none; }
-@media (pointer: coarse) { .idioma button { min-width: 44px; } }
+/* Con el dedo, 44 px: las opciones del idioma y, alrededor del interruptor, un área que no se ve. */
+@media (pointer: coarse) {
+  .idioma-lista button { min-height: 44px; line-height: 44px; }
+  .interruptor::before { inset: -11px -2px; }
+}
 
 /* Botones: el paso del cursor solo cambia el borde, sin levantarse. */
 .boton { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: border-color .15s ease; }
@@ -343,15 +362,24 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
    botón: las secciones bajan a una segunda fila de la barra. */
 @media (max-width: 68.75em), (pointer: coarse) and (max-width: 73.75em) {
   .menu-boton:not([hidden]) { display: inline-grid; }
-  .idioma button { min-width: 44px; }
   .barra nav { flex-direction: column; gap: 0; margin: 0; }
   .barra nav a { padding: 10px 12px; border-radius: 8px; }
   .barra nav a.solo-menu { display: block; }
   .barra nav a:hover { background: var(--acento-suave); }
   .barra .buscar { width: auto; grid-auto-flow: column; justify-content: start; gap: 10px; padding: 0 12px; font: inherit; }
   .barra .buscar .solo-lectores { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
-  .preferencias { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tema { margin: 0; }
+  /* En el panel, filas de 44 px como en VitePress: el idioma se despliega debajo de su fila y «Apariencia» lleva el
+     interruptor a la derecha (toda la fila lo pulsa). */
+  .preferencias { display: flex; flex-direction: column; gap: 4px; }
+  .solo-panel { display: inline; }
+  .idioma-boton { width: 100%; gap: 10px; padding: 0 12px; color: var(--texto); }
+  .idioma-boton:hover, .apariencia:hover { background: var(--acento-suave); }
+  .idioma-boton .flecha { margin-left: auto; }
+  .idioma-boton[aria-expanded="true"] .flecha { transform: rotate(180deg); }
+  .idioma-lista { position: static; display: none; min-width: 0; padding: 0 0 4px 30px; border: 0; box-shadow: none; background: none; visibility: visible; }
+  .idioma-boton[aria-expanded="true"] + .idioma-lista { display: flex; }
+  .idioma-lista button { min-height: 44px; line-height: 44px; }
+  .apariencia { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; cursor: pointer; }
   html.js .menu-panel { display: none; position: absolute; top: 100%; right: 16px; flex-direction: column; gap: 8px; min-width: 260px; padding: 8px;
     background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); }
   html.js .barra.abierta .menu-panel { display: flex; }

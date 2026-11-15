@@ -381,15 +381,18 @@ test('mayúsculas espaciadas solo en los rótulos «FIG» y la cabecera del tabl
 test('cada control mide 44 px y la barra no tapa lo que enlaza un ancla (23, 62)', () => {
   for (const clase of ['.github', '.menu-boton'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
-  for (const clase of ['.boton', '.copiar', '.pestanas-lista button', '.idioma button'])
+  for (const clase of ['.boton', '.copiar', '.pestanas-lista button', '.idioma-boton', '.apariencia'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
+  // El menú de idioma y el interruptor: 44 px en el panel del móvil y con el dedo (con ratón en escritorio, la excepción).
+  assert.match(css, /\.idioma-lista button \{[^}]*min-height: 44px/)
+  assert.match(css, /@media \(pointer: coarse\) \{\n[^@]*\.interruptor::before \{ inset: -11px -2px; \}/)
   assert.match(css, /\.desplegable a \{[^}]*min-height: 44px/)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
   assert.match(css, /a\.pagina \{[^}]*scroll-margin-top: 80px/)
 })
 
-test('el foco se ve: sin recortes en ES/EN y en verde claro dentro del código (20)', () => {
-  assert.doesNotMatch(css, /\.idioma \{[^}]*overflow: hidden/)
+test('el foco se ve: sin recortes en el idioma y el tema y en verde claro dentro del código (20)', () => {
+  assert.doesNotMatch(css, /\.(idioma-menu|idioma-lista|interruptor) \{[^}]*overflow: hidden/)
   assert.match(css, /\.codigo :focus-visible \{ outline-color: var\(--tablero-clave\); \}/)
   assert.doesNotMatch(css, /:focus-visible \{[^}]*border-radius/)
 })
