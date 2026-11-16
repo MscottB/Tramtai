@@ -108,7 +108,8 @@ Detalle por agente:
   `rateLimitsByLimitId`. La ventana se nombra por `windowDurationMins` (300 → 5 h; 10080 → semanal; otra → «N min»).
   También guarda `planType` y `credits` si vienen.
 - **Copilot:** de cada `quotaSnapshot` se guarda el porcentaje restante, las peticiones usadas, el derecho (`-1` es
-  ilimitado) y `resetDate`. Además, las `premiumRequests` de cada petición pasan a guardarse con el trabajo.
+  ilimitado) y `resetDate`. Las `premiumRequests` de cada petición siguen quedando, como hoy, en el evento del
+  trabajo.
 
 Cuándo se lee:
 - Al terminar cada petición, si el CLI lo trae (Claude).
@@ -212,8 +213,8 @@ Rutas nuevas bajo `/api/v1/servicio/`, con la misma autenticación que las de ho
 - `GET uso`: totales, series y la tabla, con los filtros de 2.1 y 2.4;
 - `GET uso/cuotas` y `POST uso/cuotas/actualizar` (con `peticion_minima: true` para Claude);
 - `GET uso/avisos`;
-- `GET uso/precios` (la tabla con su fecha y los precios propios) y `PUT uso/precios/{modelo}` / `DELETE` para los
-  propios;
+- `GET uso/precios` (la tabla con su fecha y los precios propios; los propios se guardan en la clave global
+  `uso.precios_propios`, que se edita en Ajustes);
 - `POST puntos/{nombre}/comprobar` (ver 4.2).
 
 Las herramientas apuntadas se comprueban con `POST /api/v1/herramientas/{id}/comprobar`, junto a las rutas de
@@ -250,8 +251,8 @@ Se elige por API y se combinan:
 - **Solo mostrar:** sin avisos ni cambios; el dato se ve en Uso.
 
 Las reacciones se eligen por separado para los presupuestos y para la cuota, en el formulario de la API (Web UI y
-terminal) y con `tramtai acceso crear|editar --al-limite presupuesto=avisar,parar --al-limite cuota=avisar,respaldo`.
-«Solo mostrar» es elegir ninguna.
+terminal) y con `tramtai acceso crear|editar --al-limite presupuesto=avisar,parar --al-limite cuota=respaldo,parar`.
+«Solo mostrar» es elegir ninguna. Los avisos de la cuota son del agente, no de cada API (ver Ruling 9).
 
 Valores por defecto:
 - **Presupuestos propios (dinero, peticiones y tokens):** avisar y parar, como hasta hoy. Un presupuesto que ya tenga
@@ -425,3 +426,13 @@ Ajustes al diseño aprobado, por cómo está hecho Tramtai hoy:
 - **Ruling 7:** «Pasar al respaldo» solo tiene sentido con la cuota de un agente: un presupuesto de la API se agota igual
   con cualquier agente.
 - **Ruling 8:** el presupuesto del espacio, que hoy solo se edita en YAML, pasa a editarse en la Web UI y la terminal.
+
+Al escribir el plan:
+- **Ruling 9:** los avisos de la cuota son por agente, con su umbral de aviso (0 los apaga), porque la cuota es de la
+  cuenta y no de una API; por API se eligen «Pasar al respaldo» y «Parar».
+- **Ruling 10:** Tramtai solo guarda la huella de la clave de cada API, así que «Comprobar conexión» admite escribir la
+  clave que usa la app para comprobarla. Sin ella, solo comprueba que la API tiene clave.
+- **Ruling 11:** los precios propios se guardan en la clave global `uso.precios_propios`, editada en Ajustes, sin
+  rutas propias.
+- **Ruling 12:** el coste estimado se guarda en `trabajos.costo_usd` y suma a `consumo.usd` al terminar, calculado por
+  el planificador con la tabla; el `total_cost_usd` que informa Claude deja de usarse.
